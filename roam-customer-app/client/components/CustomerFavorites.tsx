@@ -377,7 +377,7 @@ export function CustomerFavorites() {
                               {provider.first_name} {provider.last_name}
                             </h3>
                             <p className="text-sm text-foreground/60">
-                              {provider.business_name}
+                              {provider.business_profiles?.business_name}
                             </p>
                             {provider.experience_years && (
                               <p className="text-xs text-foreground/50">

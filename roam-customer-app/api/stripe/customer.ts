@@ -99,12 +99,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         // Attach payment method to customer
-        await stripeService.stripe.paymentMethods.attach(paymentMethodId, {
+        await stripeService.getStripe().paymentMethods.attach(paymentMethodId, {
           customer: customerId,
         });
 
         // Set as default payment method
-        await stripeService.stripe.customers.update(customerId, {
+        await stripeService.getStripe().customers.update(customerId, {
           invoice_settings: {
             default_payment_method: paymentMethodId,
           },
@@ -121,7 +121,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           return res.status(400).json({ error: 'Customer ID is required' });
         }
 
-        const customer = await stripeService.stripe.customers.retrieve(customerId);
+        const customer = await stripeService.getStripe().customers.retrieve(customerId);
         
         return res.status(200).json({
           success: true,

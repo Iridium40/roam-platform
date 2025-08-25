@@ -47,6 +47,11 @@ export class StripePaymentService extends BasePaymentService {
     });
   }
 
+  // Public getter for stripe instance
+  getStripe(): Stripe {
+    return this.stripe;
+  }
+
   async createPaymentIntent(options: CreatePaymentIntentOptions): Promise<PaymentIntentResult> {
     try {
       this.validatePaymentIntentOptions(options);

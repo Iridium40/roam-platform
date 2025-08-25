@@ -12,7 +12,9 @@ export interface Favorite {
     id: string;
     first_name: string;
     last_name: string;
-    business_name: string;
+    business_profiles: {
+      business_name: string;
+    };
     image_url: string | null;
     rating: number | null;
     service_categories: string[] | null;
@@ -47,7 +49,9 @@ export const useFavorites = () => {
             id,
             first_name,
             last_name,
-            business_name,
+            business_profiles (
+              business_name
+            ),
             image_url,
             rating,
             service_categories

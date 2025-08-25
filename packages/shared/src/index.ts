@@ -17,6 +17,7 @@ export * from './services/supabase-auth-service';
 export * from './services/mfa-service';
 export * from './services/notification-api';
 export * from './services/notification-service';
+export * from './services/twilio-conversations';
 
 // Utils
 export * from './utils/validation';

@@ -38,7 +38,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         // Create subscription using Stripe
-        const subscription = await stripeService.stripe.subscriptions.create({
+        const subscription = await stripeService.getStripe().subscriptions.create({
           customer: customerId,
           items: [{ price: priceId }],
           payment_behavior: 'default_incomplete',
@@ -63,7 +63,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           return res.status(400).json({ error: 'Subscription ID is required' });
         }
 
-        const subscription = await stripeService.stripe.subscriptions.update(subscriptionId, {
+        const subscription = await stripeService.getStripe().subscriptions.update(subscriptionId, {
           cancel_at_period_end: true,
         });
 
@@ -80,7 +80,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           return res.status(400).json({ error: 'Subscription ID and Payment Method ID are required' });
         }
 
-        const subscription = await stripeService.stripe.subscriptions.update(subscriptionId, {
+        const subscription = await stripeService.getStripe().subscriptions.update(subscriptionId, {
           default_payment_method: paymentMethodId,
         });
 

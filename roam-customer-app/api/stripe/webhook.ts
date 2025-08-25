@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { createStripePaymentService } from '@roam/shared';
 import { createClient } from "@supabase/supabase-js";
+import Stripe from 'stripe';
 
 const stripeService = createStripePaymentService();
 const supabase = createClient(
@@ -94,8 +95,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       case 'invoice.payment_succeeded': {
-        const invoice = event.data.object;
-        const subscriptionId = invoice.subscription;
+        const invoice = event.data.object as Stripe.Invoice;
+        const subscriptionId = invoice.subscription as string;
         
         if (subscriptionId) {
           // Update subscription status
@@ -113,8 +114,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       case 'invoice.payment_failed': {
-        const invoice = event.data.object;
-        const subscriptionId = invoice.subscription;
+        const invoice = event.data.object as Stripe.Invoice;
+        const subscriptionId = invoice.subscription as string;
         
         if (subscriptionId) {
           // Update subscription status
