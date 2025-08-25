@@ -1,0 +1,27 @@
+{
+  "buildCommand": "cd ../../ && npm run build && cd apps/roam-admin-app && npm run build",
+  "outputDirectory": "dist/spa",
+  "installCommand": "cd ../../ && npm install && cd apps/roam-admin-app && npm install",
+  "framework": "vite",
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
+    }
+  ],
+  "functions": {
+    "api/**/*.ts": {
+      "runtime": "@vercel/node"
+    }
+  },
+  "env": {
+    "SHARED_PACKAGE_URL": "@shared-package-url",
+    "AUTH_SERVICE_URL": "@auth-service-url",
+    "NOTIFICATION_SERVICE_URL": "@notification-service-url"
+  },
+  "build": {
+    "env": {
+      "NODE_ENV": "production"
+    }
+  }
+}

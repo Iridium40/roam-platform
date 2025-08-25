@@ -1,0 +1,38 @@
+{
+  "name": "roam-platform",
+  "version": "1.0.0",
+  "description": "ROAM Platform - Unified marketplace platform with admin, provider, and customer applications",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "roam-*-app"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "clean": "turbo run clean",
+    "deploy:admin": "cd apps/roam-admin-app && npm run deploy",
+    "deploy:provider": "cd apps/roam-provider-app && npm run deploy",
+    "deploy:customer": "cd apps/roam-customer-app && npm run deploy",
+    "deploy:services": "turbo run deploy --filter=./packages/*",
+    "deploy:all": "turbo run deploy",
+    "setup": "npm install && npm run build",
+    "dev:admin": "cd apps/roam-admin-app && npm run dev",
+    "dev:provider": "cd apps/roam-provider-app && npm run dev",
+    "dev:customer": "cd apps/roam-customer-app && npm run dev"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.0",
+    "prettier": "^3.5.3",
+    "turbo": "^1.13.4",
+    "typescript": "^5.5.3"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "packageManager": "npm@10.0.0"
+}

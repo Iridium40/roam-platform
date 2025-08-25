@@ -1,0 +1,50 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": false,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "baseUrl": ".",
+    "paths": {
+      "@roam/shared": ["packages/shared/src"],
+      "@roam/shared/*": ["packages/shared/src/*"],
+      "@roam/auth-service": ["packages/auth-service/src"],
+      "@roam/notification-service": ["packages/notification-service/src"],
+      "@roam/payment-service": ["packages/payment-service/src"]
+    }
+  },
+  "include": [
+    "packages/*/src/**/*",
+    "apps/*/src/**/*",
+    "apps/*/api/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "build",
+    ".next",
+    ".vercel"
+  ],
+  "references": [
+    { "path": "./packages/shared" },
+    { "path": "./packages/auth-service" },
+    { "path": "./packages/notification-service" },
+    { "path": "./packages/payment-service" },
+    { "path": "./apps/roam-admin-app" },
+    { "path": "./apps/roam-provider-app" },
+    { "path": "./apps/roam-customer-app" }
+  ]
+}

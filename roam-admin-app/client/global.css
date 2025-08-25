@@ -1,0 +1,102 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /**
+   * Roam Design System Color Variables
+   * All values are in HSL format for consistent usage with Tailwind
+   */
+  :root {
+    /* Roam Brand Colors - converted to HSL */
+    --background: 210 40% 98%; /* #fafafa */
+    --foreground: 222 84% 15%; /* #0f172a */
+
+    --card: 0 0% 100%; /* #ffffff */
+    --card-foreground: 222 84% 15%; /* #0f172a */
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 84% 15%;
+
+    --primary: 220 52% 36%; /* #375289 roam-blue */
+    --primary-foreground: 210 40% 98%; /* #fafafa */
+
+    --secondary: 210 40% 96%; /* #f1f5f9 */
+    --secondary-foreground: 216 59% 24%; /* #1e293b */
+
+    --muted: 210 40% 96%; /* #f1f5f9 */
+    --muted-foreground: 215 20% 65%; /* #64748b */
+
+    --accent: 220 89% 78%; /* #9BC1F9 roam-light-blue */
+    --accent-foreground: 216 59% 24%; /* #1e293b */
+
+    --destructive: 0 84% 60%; /* #ef4444 */
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 213 27% 84%; /* #e2e8f0 */
+    --input: 213 27% 84%; /* #e2e8f0 */
+    --ring: 220 52% 36%;
+
+    --radius: 0.5rem;
+
+    --sidebar-background: 0 0% 100%; /* #ffffff */
+    --sidebar-foreground: 215 25% 27%; /* #475569 */
+    --sidebar-primary: 220 52% 36%; /* #375289 */
+    --sidebar-primary-foreground: 210 40% 98%;
+    --sidebar-accent: 210 40% 96%; /* #f1f5f9 */
+    --sidebar-accent-foreground: 216 59% 24%;
+    --sidebar-border: 213 27% 84%;
+    --sidebar-ring: 220 52% 36%;
+  }
+
+  .dark {
+    --background: 220 52% 15%;
+    --foreground: 210 40% 98%;
+
+    --card: 220 52% 15%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 220 52% 15%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 210 40% 98%;
+    --primary-foreground: 220 52% 36%;
+
+    --secondary: 217 33% 18%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217 33% 18%;
+    --muted-foreground: 215 20% 65%;
+
+    --accent: 220 89% 78%;
+    --accent-foreground: 220 52% 15%;
+
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217 33% 18%;
+    --input: 217 33% 18%;
+    --ring: 212 27% 84%;
+
+    --sidebar-background: 220 52% 10%;
+    --sidebar-foreground: 210 40% 96%;
+    --sidebar-primary: 220 89% 78%;
+    --sidebar-primary-foreground: 220 52% 10%;
+    --sidebar-accent: 217 33% 16%;
+    --sidebar-accent-foreground: 210 40% 96%;
+    --sidebar-border: 217 33% 16%;
+    --sidebar-ring: 220 89% 78%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
+  }
+}
