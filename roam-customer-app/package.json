@@ -3,6 +3,9 @@
   "description": "ROAM Customer App - Customer booking and service management platform",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": "22.x"
+  },
   "pkg": {
     "assets": [
       "dist/spa/*"

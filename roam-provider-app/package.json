@@ -3,6 +3,9 @@
   "description": "ROAM Provider App - Business management and provider onboarding platform",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": "22.x"
+  },
   "pkg": {
     "assets": [
       "dist/spa/*"
