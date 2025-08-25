@@ -30,51 +30,10 @@ export default defineConfig(({ mode }) => ({
   build: {
     outDir: "dist/spa",
     target: "esnext",
+    minify: "esbuild",
     rollupOptions: {
-      output: {
-        // Optimize chunk splitting
-        manualChunks: {
-          // Vendor chunks
-          'react-vendor': ['react', 'react-dom'],
-          'router-vendor': ['react-router-dom'],
-          'ui-vendor': ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-toast'],
-          'form-vendor': ['react-hook-form', '@hookform/resolvers'],
-          'stripe-vendor': ['@stripe/react-stripe-js', '@stripe/stripe-js'],
-          'supabase-vendor': ['@supabase/supabase-js'],
-          'utils-vendor': ['date-fns', 'clsx', 'tailwind-merge'],
-          'icons-vendor': ['lucide-react'],
-        },
-        // Optimize chunk naming
-        chunkFileNames: (chunkInfo) => {
-          const facadeModuleId = chunkInfo.facadeModuleId ? chunkInfo.facadeModuleId.split('/').pop() : 'chunk';
-          return `js/[name]-[hash].js`;
-        },
-        entryFileNames: 'js/[name]-[hash].js',
-        assetFileNames: (assetInfo) => {
-          const info = assetInfo.name.split('.');
-          const ext = info[info.length - 1];
-          if (/png|jpe?g|svg|gif|tiff|bmp|ico/i.test(ext)) {
-            return `images/[name]-[hash][extname]`;
-          }
-          if (/css/i.test(ext)) {
-            return `css/[name]-[hash][extname]`;
-          }
-          return `assets/[name]-[hash][extname]`;
-        },
-      },
+      external: [],
     },
-    // Enable source maps for debugging
-    sourcemap: mode === 'development',
-    // Optimize for production
-    minify: mode === 'production' ? 'terser' : false,
-    terserOptions: mode === 'production' ? {
-      compress: {
-        drop_console: true,
-        drop_debugger: true,
-      },
-    } : undefined,
-    // Optimize chunk size warnings
-    chunkSizeWarningLimit: 1000,
   },
   plugins: [react(), mode === "development" ? expressPlugin() : null].filter(Boolean),
   resolve: {

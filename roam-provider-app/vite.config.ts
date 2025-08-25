@@ -30,13 +30,9 @@ export default defineConfig(({ mode }) => ({
   build: {
     outDir: "dist/spa",
     target: "esnext",
+    minify: "esbuild",
     rollupOptions: {
-      output: {
-        manualChunks: {
-          vendor: ["react", "react-dom"],
-          stripe: ["@stripe/stripe-js"],
-        },
-      },
+      external: [],
     },
   },
   plugins: [react()],
