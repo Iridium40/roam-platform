@@ -1,12 +1,12 @@
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseUrl = import.meta.env.VITE_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_PUBLIC_SUPABASE_ANON_KEY;
 
 // Check for missing environment variables and provide helpful error messages
 const missingVars: string[] = [];
-if (!supabaseUrl) missingVars.push("VITE_SUPABASE_URL");
-if (!supabaseAnonKey) missingVars.push("VITE_SUPABASE_ANON_KEY");
+  if (!supabaseUrl) missingVars.push("VITE_PUBLIC_SUPABASE_URL");
+  if (!supabaseAnonKey) missingVars.push("VITE_PUBLIC_SUPABASE_ANON_KEY");
 
 if (missingVars.length > 0) {
   console.error(
@@ -16,13 +16,13 @@ if (missingVars.length > 0) {
   console.group("🔧 Setup Instructions:");
   missingVars.forEach((varName) => {
     const example =
-      varName === "VITE_SUPABASE_URL"
+      varName === "VITE_PUBLIC_SUPABASE_URL"
         ? "https://your-project.supabase.co"
         : "your-public-anon-key";
   });
   missingVars.forEach((varName) => {
     const example =
-      varName === "VITE_SUPABASE_URL"
+      varName === "VITE_PUBLIC_SUPABASE_URL"
         ? "https://your-project.supabase.co"
         : "your-public-anon-key";
   });
@@ -57,9 +57,9 @@ export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
 // Export missing variables for UI components
 export const getMissingSupabaseVars = () => {
   const missing: string[] = [];
-  if (!import.meta.env.VITE_SUPABASE_URL) missing.push("VITE_SUPABASE_URL");
-  if (!import.meta.env.VITE_SUPABASE_ANON_KEY)
-    missing.push("VITE_SUPABASE_ANON_KEY");
+  if (!import.meta.env.VITE_PUBLIC_SUPABASE_URL) missing.push("VITE_PUBLIC_SUPABASE_URL");
+  if (!import.meta.env.VITE_PUBLIC_SUPABASE_ANON_KEY)
+    missing.push("VITE_PUBLIC_SUPABASE_ANON_KEY");
   return missing;
 };
 

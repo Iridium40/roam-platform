@@ -117,6 +117,7 @@ export default function Index() {
   const [popularServices, setPopularServices] = useState<PopularService[]>([]);
   const [featuredBusinesses, setFeaturedBusinesses] = useState<FeaturedBusiness[]>([]);
   const [promotions, setPromotions] = useState<Promotion[]>([]);
+  const [loading, setLoading] = useState(false);
 
   // Category icon mapping function
   const getCategoryIcon = (category: string) => {
