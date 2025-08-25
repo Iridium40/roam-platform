@@ -72,7 +72,7 @@ const navigationSections: NavSection[] = [
     title: "Overview",
     items: [
       {
-        href: "/admin",
+        href: "/admin/dashboard",
         icon: <BarChart3 className="w-5 h-5" />,
         label: "Dashboard",
       },
@@ -399,7 +399,7 @@ export function AdminLayout({
   const isActive = (href: string) => {
     return (
       location.pathname === href ||
-      (href !== "/admin" && location.pathname.startsWith(href))
+      (href !== "/admin/dashboard" && location.pathname.startsWith(href))
     );
   };
 
