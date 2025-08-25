@@ -1,5 +1,11 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { Configuration, PlaidApi, PlaidEnvironments } from 'plaid';
+import {
+  Configuration,
+  PlaidApi,
+  PlaidEnvironments,
+  Products,
+  CountryCode,
+} from 'plaid';
 import { createClient } from "@supabase/supabase-js";
 
 // Initialize Plaid client
@@ -58,12 +64,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const linkTokenResponse = await plaidClient.linkTokenCreate({
           user: { client_user_id: userId },
           client_name: 'ROAM Platform',
-          products: ['auth'],
-          country_codes: ['US'],
+          products: [Products.Auth],
+          country_codes: [CountryCode.Us],
           language: 'en',
           account_filters: {
             depository: {
-              account_subtypes: ['checking', 'savings'],
+              account_subtypes: ['checking', 'savings'] as any,
             },
           },
           webhook: process.env.PLAID_WEBHOOK_URL,
@@ -186,7 +192,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const processorTokenResponse = await plaidClient.processorTokenCreate({
           access_token: accessToken,
           account_id: accountId,
-          processor: 'stripe',
+          processor: 'stripe' as any,
         });
 
         return res.status(200).json({
