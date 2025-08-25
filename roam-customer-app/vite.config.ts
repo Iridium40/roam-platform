@@ -29,6 +29,7 @@ export default defineConfig(({ mode }) => ({
   },
   build: {
     outDir: "dist/spa",
+    target: "esnext",
     rollupOptions: {
       output: {
         // Optimize chunk splitting

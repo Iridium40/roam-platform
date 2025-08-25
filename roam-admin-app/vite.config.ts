@@ -14,6 +14,10 @@ export default defineConfig(({ mode }) => ({
   },
   build: {
     outDir: "dist/spa",
+    target: "esnext",
+    rollupOptions: {
+      external: [],
+    },
   },
   plugins: [react(), mode === "development" ? expressPlugin() : null].filter(Boolean),
   resolve: {
