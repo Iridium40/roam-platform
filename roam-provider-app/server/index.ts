@@ -10,7 +10,7 @@ import {
 import { createLinkToken, exchangePublicToken, checkConnection } from "./routes/plaid";
 import { requireAuth, requireBusinessAccess, AuthenticatedRequest } from "./middleware/auth";
 import { validateRequest } from "./middleware/validation";
-import { schemas } from "@roam/shared";
+import { schemas } from "../shared";
 
 export function createServer() {
   const app = express();
