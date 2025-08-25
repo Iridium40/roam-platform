@@ -5,6 +5,7 @@ export * from './types/twilio';
 
 // Config
 export * from './config/environment';
+export * from './config/server-environment';
 
 // Services
 export * from './services/payment';

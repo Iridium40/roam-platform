@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
-// Environment variable schema for validation
-const EnvironmentSchema = z.object({
+// Server-side environment variable schema for validation
+const ServerEnvironmentSchema = z.object({
   // Node environment
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   
@@ -67,28 +67,28 @@ const EnvironmentSchema = z.object({
   PING_MESSAGE: z.string().optional(),
 });
 
-// Environment configuration type
-export type EnvironmentConfigType = z.infer<typeof EnvironmentSchema>;
+// Server-side environment configuration type
+export type ServerEnvironmentConfigType = z.infer<typeof ServerEnvironmentSchema>;
 
-// Centralized environment configuration class
-export class EnvironmentConfig {
-  private static instance: EnvironmentConfig | null = null;
-  private config: EnvironmentConfigType;
+// Server-side environment configuration class
+export class ServerEnvironmentConfig {
+  private static instance: ServerEnvironmentConfig | null = null;
+  private config: ServerEnvironmentConfigType;
 
   private constructor() {
     this.config = this.loadAndValidateConfig();
   }
 
-  public static getInstance(): EnvironmentConfig {
-    if (!EnvironmentConfig.instance) {
-      EnvironmentConfig.instance = new EnvironmentConfig();
+  public static getInstance(): ServerEnvironmentConfig {
+    if (!ServerEnvironmentConfig.instance) {
+      ServerEnvironmentConfig.instance = new ServerEnvironmentConfig();
     }
-    return EnvironmentConfig.instance;
+    return ServerEnvironmentConfig.instance;
   }
 
-  private loadAndValidateConfig(): EnvironmentConfigType {
+  private loadAndValidateConfig(): ServerEnvironmentConfigType {
     try {
-      // Load environment variables
+      // Load environment variables from process.env
       const envVars = {
         NODE_ENV: process.env.NODE_ENV,
         VITE_PUBLIC_SUPABASE_URL: process.env.VITE_PUBLIC_SUPABASE_URL,
@@ -129,7 +129,7 @@ export class EnvironmentConfig {
       };
 
       // Validate and parse environment variables
-      const validatedConfig = EnvironmentSchema.parse(envVars);
+      const validatedConfig = ServerEnvironmentSchema.parse(envVars);
       
       // Apply fallbacks for development
       if (validatedConfig.NODE_ENV === 'development') {
@@ -142,14 +142,14 @@ export class EnvironmentConfig {
       return validatedConfig;
     } catch (error) {
       if (error instanceof z.ZodError) {
-        console.error('❌ Environment validation failed:');
+        console.error('❌ Server environment validation failed:');
         error.errors.forEach((err: any) => {
           console.error(`  - ${err.path.join('.')}: ${err.message}`);
         });
         console.error('\n🔧 Please check your .env file and ensure all required variables are set.');
-        console.error('📋 See packages/shared/src/config/environment.ts for the complete list of required variables.');
+        console.error('📋 See packages/shared/src/config/server-environment.ts for the complete list of required variables.');
       }
-      throw new Error(`Environment configuration error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(`Server environment configuration error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
@@ -273,7 +273,7 @@ export class EnvironmentConfig {
   }
 
   // Get all configuration for debugging
-  public getAllConfig(): EnvironmentConfigType {
+  public getAllConfig(): ServerEnvironmentConfigType {
     return { ...this.config };
   }
 
@@ -304,13 +304,13 @@ export class EnvironmentConfig {
 }
 
 // Export singleton instance
-export const env = EnvironmentConfig.getInstance();
+export const serverEnv = ServerEnvironmentConfig.getInstance();
 
 // Export helper functions for backward compatibility
-export const getEnvironmentConfig = () => EnvironmentConfig.getInstance();
-export const validateEnvironment = () => {
+export const getServerEnvironmentConfig = () => ServerEnvironmentConfig.getInstance();
+export const validateServerEnvironment = () => {
   try {
-    EnvironmentConfig.getInstance();
+    ServerEnvironmentConfig.getInstance();
     return true;
   } catch {
     return false;

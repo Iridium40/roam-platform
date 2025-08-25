@@ -1,49 +1,69 @@
-// Centralized configuration management
+// Centralized configuration management using shared environment config
+import { env } from '@roam/shared';
+
+// Re-export the shared configuration for backward compatibility
 export const config = {
   api: {
-    baseUrl: import.meta.env.VITE_API_BASE_URL || '/api',
+    baseUrl: env.app.apiBaseUrl || '/api',
     timeout: 30000,
     retryAttempts: 3,
     retryDelay: 1000,
   },
   supabase: {
-    url: import.meta.env.VITE_PUBLIC_SUPABASE_URL,
-    anonKey: import.meta.env.VITE_PUBLIC_SUPABASE_ANON_KEY,
-    serviceRoleKey: import.meta.env.SUPABASE_SERVICE_ROLE_KEY,
+    url: env.supabase.url,
+    anonKey: env.supabase.anonKey,
+    serviceRoleKey: env.supabase.serviceRoleKey,
   },
   stripe: {
-    publishableKey: import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY,
-    secretKey: import.meta.env.STRIPE_SECRET_KEY,
-    webhookSecret: import.meta.env.STRIPE_WEBHOOK_SECRET,
+    publishableKey: env.stripe.publishableKey,
+    secretKey: env.stripe.secretKey,
+    webhookSecret: env.stripe.webhookSecret,
   },
   plaid: {
-    clientId: import.meta.env.PLAID_CLIENT_ID,
-    secret: import.meta.env.PLAID_SECRET,
-    env: import.meta.env.PLAID_ENV || 'sandbox',
+    clientId: env.plaid.clientId,
+    secret: env.plaid.secret,
+    env: env.plaid.env,
+    webhookUrl: env.plaid.webhookUrl,
   },
   twilio: {
-    accountSid: import.meta.env.VITE_TWILIO_ACCOUNT_SID,
-    authToken: import.meta.env.VITE_TWILIO_AUTH_TOKEN,
-    conversationsServiceSid: import.meta.env.VITE_TWILIO_CONVERSATIONS_SERVICE_SID,
+    accountSid: env.twilio.accountSid,
+    authToken: env.twilio.authToken,
+    conversationsServiceSid: env.twilio.conversationsServiceSid,
+    fromNumber: env.twilio.fromNumber,
   },
   email: {
-    resendApiKey: import.meta.env.RESEND_API_KEY,
+    resendApiKey: env.email.resendApiKey,
   },
   google: {
-    mapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
+    mapsApiKey: env.google.mapsApiKey,
+    clientId: env.google.clientId,
   },
   features: {
-    enableRealTime: import.meta.env.VITE_ENABLE_REAL_TIME === 'true',
-    enableAnalytics: import.meta.env.VITE_ENABLE_ANALYTICS === 'true',
-    enableDebugMode: import.meta.env.VITE_ENABLE_DEBUG_MODE === 'true',
-    enablePerformanceMonitoring: import.meta.env.VITE_ENABLE_PERFORMANCE_MONITORING === 'true',
+    enableRealTime: env.features.enableRealTime,
+    enableAnalytics: env.features.enableAnalytics,
+    enableDebugMode: env.features.enableDebugMode,
+    enablePerformanceMonitoring: env.features.enablePerformanceMonitoring,
   },
   app: {
     name: 'ROAM Partner Portal',
-    version: import.meta.env.VITE_APP_VERSION || '1.0.0',
-    environment: import.meta.env.MODE,
-    isDevelopment: import.meta.env.DEV,
-    isProduction: import.meta.env.PROD,
+    version: env.app.version,
+    environment: env.nodeEnv,
+    isDevelopment: env.isDevelopment(),
+    isProduction: env.isProduction(),
+    url: env.app.url,
+    frontendUrl: env.app.frontendUrl,
+  },
+  pushNotifications: {
+    vapidPublicKey: env.pushNotifications.vapidPublicKey,
+  },
+  cdn: {
+    baseUrl: env.cdn.baseUrl,
+  },
+  analytics: {
+    gaTrackingId: env.analytics.gaTrackingId,
+  },
+  sentry: {
+    dsn: env.sentry.dsn,
   },
   limits: {
     maxFileSize: 10 * 1024 * 1024, // 10MB
@@ -121,27 +141,21 @@ export const getEnvironmentConfig = () => {
 export const validateConfig = (): { isValid: boolean; errors: string[] } => {
   const errors: string[] = [];
   
-  // Required environment variables
-  const requiredVars = [
-    'VITE_PUBLIC_SUPABASE_URL',
-    'VITE_PUBLIC_SUPABASE_ANON_KEY',
-    'VITE_STRIPE_PUBLISHABLE_KEY',
-  ];
-  
-  requiredVars.forEach(varName => {
-    if (!import.meta.env[varName]) {
-      errors.push(`Missing required environment variable: ${varName}`);
-    }
-  });
-  
-  // Validate Supabase configuration
-  if (!config.supabase.url || !config.supabase.anonKey) {
+  // Validate using shared environment config
+  if (!env.validateSupabaseConfig()) {
     errors.push('Invalid Supabase configuration');
   }
   
-  // Validate Stripe configuration
-  if (!config.stripe.publishableKey) {
+  if (!env.validateStripeConfig()) {
     errors.push('Invalid Stripe configuration');
+  }
+  
+  if (!env.validateTwilioConfig()) {
+    errors.push('Invalid Twilio configuration');
+  }
+  
+  if (!env.validateEmailConfig()) {
+    errors.push('Invalid Email configuration');
   }
   
   // Validate API configuration
@@ -164,12 +178,14 @@ export const configUtils = {
   
   // Get environment-specific value
   getEnvValue: <T>(key: string, defaultValue: T): T => {
-    return (import.meta.env[key] as T) || defaultValue;
+    // Use shared environment config instead of direct access
+    const envConfig = env.getAllConfig();
+    return (envConfig as any)[key] || defaultValue;
   },
   
   // Check if running in specific environment
-  isEnvironment: (env: string): boolean => {
-    return config.app.environment === env;
+  isEnvironment: (envName: string): boolean => {
+    return config.app.environment === envName;
   },
   
   // Get API endpoint URL
@@ -191,7 +207,7 @@ export const configUtils = {
   
   // Get CDN URL for assets
   getCdnUrl: (path: string): string => {
-    const cdnBase = import.meta.env.VITE_CDN_BASE_URL;
+    const cdnBase = config.cdn.baseUrl;
     if (cdnBase) {
       return `${cdnBase}${path}`;
     }
@@ -205,7 +221,7 @@ export const configUtils = {
     }
     
     return {
-      trackingId: import.meta.env.VITE_GA_TRACKING_ID,
+      trackingId: config.analytics.gaTrackingId,
       debugMode: config.features.enableDebugMode,
     };
   },
@@ -214,7 +230,7 @@ export const configUtils = {
   getErrorReportingConfig: () => {
     return {
       enabled: config.features.enableDebugMode || config.app.isProduction,
-      dsn: import.meta.env.VITE_SENTRY_DSN,
+      dsn: config.sentry.dsn,
       environment: config.app.environment,
     };
   },
