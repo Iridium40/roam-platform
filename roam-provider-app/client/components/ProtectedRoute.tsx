@@ -42,7 +42,23 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   return <>{children}</>;
 };
 
-// For backward compatibility (if any other components use this)
+// Role-based redirect for provider app
 export const RoleBasedRedirect: React.FC = () => {
-  return <Navigate to="/customer/bookings" replace />;
+  const { provider } = useAuth();
+  
+  if (!provider) {
+    return <Navigate to="/sign-in" replace />;
+  }
+
+  // Redirect based on provider role
+  switch (provider.provider_role) {
+    case "owner":
+      return <Navigate to="/owner/dashboard" replace />;
+    case "dispatcher":
+      return <Navigate to="/dispatcher/dashboard" replace />;
+    case "provider":
+      return <Navigate to="/provider/dashboard" replace />;
+    default:
+      return <Navigate to="/provider/dashboard" replace />;
+  }
 };
