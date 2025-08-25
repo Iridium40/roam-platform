@@ -31,6 +31,7 @@ export type CustomerLocationType = "home" | "work" | "other";
 // Notification Types
 export type NotificationType = 'booking_update' | 'payment' | 'system' | 'marketing';
 export type NotificationStatus = 'sent' | 'delivered' | 'failed' | 'pending';
+export type MessageNotificationType = 'message' | 'mention' | 'system';
 
 export type Database = {
   public: {
@@ -761,7 +762,7 @@ export type Database = {
           is_read: boolean | null;
           read_at: string | null;
           created_at: string | null;
-          notification_type: string | null;
+          notification_type: MessageNotificationType;
         };
         Insert: {
           id?: string;
@@ -771,7 +772,7 @@ export type Database = {
           is_read?: boolean | null;
           read_at?: string | null;
           created_at?: string | null;
-          notification_type?: string | null;
+          notification_type?: MessageNotificationType;
         };
         Update: {
           id?: string;
@@ -781,7 +782,7 @@ export type Database = {
           is_read?: boolean | null;
           read_at?: string | null;
           created_at?: string | null;
-          notification_type?: string | null;
+          notification_type?: MessageNotificationType;
         };
       };
       // MFA sessions

@@ -71,7 +71,7 @@ export class SharedNotificationAPI implements NotificationAPI {
     }
   }
 
-  private async handleSendNotification(req: VercelRequest, res: VercelResponse, data: any): Promise<void> {
+  private async handleSendNotification(_req: VercelRequest, res: VercelResponse, data: any): Promise<void> {
     const { to, subject, message, template, type = 'all', channels, userId, userType, bookingId, priority = 'medium' } = data;
 
     if (!to || !message) {
@@ -103,23 +103,23 @@ export class SharedNotificationAPI implements NotificationAPI {
     res.status(success ? 200 : 207).json({
       success,
       results,
-      message: success ? 'Notifications sent successfully' : 'Some notifications failed'
+      message: success ? 'Notification sent successfully' : 'Some notifications failed'
     });
   }
 
-  private async handleSendEmail(req: VercelRequest, res: VercelResponse, data: any): Promise<void> {
-    const { to, subject, html, text } = data;
+  private async handleSendEmail(_req: VercelRequest, res: VercelResponse, data: any): Promise<void> {
+    const { to, subject, message, template } = data;
 
-    if (!to || !subject || !html) {
+    if (!to || !subject || !message) {
       res.status(400).json({
         success: false,
         error: 'Missing required fields',
-        message: 'to, subject, and html are required'
+        message: 'to, subject, and message are required'
       });
       return;
     }
 
-    const result = await this.notificationService.sendEmail(to, subject, html, text);
+    const result = await this.notificationService.sendEmail(to, subject, message, template);
 
     res.status(result.success ? 200 : 500).json({
       success: result.success,
@@ -128,7 +128,7 @@ export class SharedNotificationAPI implements NotificationAPI {
     });
   }
 
-  private async handleSendSMS(req: VercelRequest, res: VercelResponse, data: any): Promise<void> {
+  private async handleSendSMS(_req: VercelRequest, res: VercelResponse, data: any): Promise<void> {
     const { to, message } = data;
 
     if (!to || !message) {
@@ -149,7 +149,7 @@ export class SharedNotificationAPI implements NotificationAPI {
     });
   }
 
-  private async handleSendPush(req: VercelRequest, res: VercelResponse, data: any): Promise<void> {
+  private async handleSendPush(_req: VercelRequest, res: VercelResponse, data: any): Promise<void> {
     const { userId, title, body, data: pushData } = data;
 
     if (!userId || !title || !body) {
@@ -161,7 +161,7 @@ export class SharedNotificationAPI implements NotificationAPI {
       return;
     }
 
-    const result = await this.notificationService.sendPushNotification(userId, title, body, pushData);
+    const result = await this.notificationService.sendPush(userId, title, body, pushData);
 
     res.status(result.success ? 200 : 500).json({
       success: result.success,
@@ -170,41 +170,46 @@ export class SharedNotificationAPI implements NotificationAPI {
     });
   }
 
-  private async handleSendBookingNotification(req: VercelRequest, res: VercelResponse, data: any): Promise<void> {
-    const { bookingId, type, userId, userType } = data;
+  private async handleSendBookingNotification(_req: VercelRequest, res: VercelResponse, data: any): Promise<void> {
+    const { bookingId, type, userId } = data;
 
-    if (!bookingId || !type || !userId || !userType) {
+    if (!bookingId || !type || !userId) {
       res.status(400).json({
         success: false,
         error: 'Missing required fields',
-        message: 'bookingId, type, userId, and userType are required'
+        message: 'bookingId, type, and userId are required'
       });
       return;
     }
 
-    const results = await this.notificationService.sendBookingNotification(bookingId, type, userId, userType);
+    // Mock booking object for now
+    const booking = { id: bookingId };
+    const recipients = [userId];
+
+    const results = await this.notificationService.sendBookingNotification(booking, type, recipients);
+
     const success = results.every(result => result.success);
 
     res.status(success ? 200 : 207).json({
       success,
       results,
-      message: success ? 'Booking notifications sent successfully' : 'Some booking notifications failed'
+      message: success ? 'Booking notification sent successfully' : 'Some notifications failed'
     });
   }
 
-  private async handleSendWelcomeEmail(req: VercelRequest, res: VercelResponse, data: any): Promise<void> {
-    const { email, firstName, userType } = data;
+  private async handleSendWelcomeEmail(_req: VercelRequest, res: VercelResponse, data: any): Promise<void> {
+    const { email, firstName } = data;
 
-    if (!email || !firstName || !userType) {
+    if (!email || !firstName) {
       res.status(400).json({
         success: false,
         error: 'Missing required fields',
-        message: 'email, firstName, and userType are required'
+        message: 'email and firstName are required'
       });
       return;
     }
 
-    const result = await this.notificationService.sendWelcomeEmail(email, firstName, userType);
+    const result = await this.notificationService.sendWelcomeEmail(email, firstName);
 
     res.status(result.success ? 200 : 500).json({
       success: result.success,
@@ -213,7 +218,7 @@ export class SharedNotificationAPI implements NotificationAPI {
     });
   }
 
-  private async handleSendPasswordReset(req: VercelRequest, res: VercelResponse, data: any): Promise<void> {
+  private async handleSendPasswordReset(_req: VercelRequest, res: VercelResponse, data: any): Promise<void> {
     const { email, resetToken } = data;
 
     if (!email || !resetToken) {
@@ -234,7 +239,7 @@ export class SharedNotificationAPI implements NotificationAPI {
     });
   }
 
-  private async handleSendBookingStatusUpdate(req: VercelRequest, res: VercelResponse, data: any): Promise<void> {
+  private async handleSendBookingStatusUpdate(_req: VercelRequest, res: VercelResponse, data: any): Promise<void> {
     const { booking, newStatus, notifyCustomer = true, notifyProvider = true } = data;
 
     if (!booking || !newStatus) {

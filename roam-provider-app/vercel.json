@@ -24,6 +24,15 @@
       ]
     },
     {
+      "source": "/_vercel/insights/script.js",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/javascript"
+        }
+      ]
+    },
+    {
       "source": "/api/notifications/edge",
       "headers": [
         {

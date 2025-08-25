@@ -14,6 +14,8 @@ export * from './services/auth';
 export * from './services/auth-api';
 export * from './services/supabase-auth-service';
 export * from './services/mfa-service';
+export * from './services/notification-api';
+export * from './services/notification-service';
 
 // Utils
 export * from './utils/validation';
