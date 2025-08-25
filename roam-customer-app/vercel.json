@@ -1,9 +1,4 @@
 {
-  "functions": {
-    "api/notifications/edge.ts": {
-      "runtime": "edge"
-    }
-  },
   "headers": [
     {
       "source": "/(.*)",

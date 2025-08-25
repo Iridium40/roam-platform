@@ -295,17 +295,12 @@ export function createServer() {
   //   }
   // );
 
+  // Booking status update route - handled by Vercel API routes
   app.patch("/api/bookings/:bookingId/status", 
     requireAuth(['owner', 'dispatcher', 'provider', 'admin']),
     validateRequest(schemas.bookingStatusUpdate),
     async (req: AuthenticatedRequest, res) => {
-      try {
-        const statusHandler = await import("../api/bookings/status-update");
-        await statusHandler.default(req, res);
-      } catch (error) {
-        console.error("Error importing booking status update handler:", error);
-        res.status(500).json({ error: "Failed to load booking status update handler" });
-      }
+      res.status(501).json({ error: "Booking status update handled by Vercel API routes" });
     }
   );
 
