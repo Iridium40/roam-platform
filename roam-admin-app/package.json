@@ -1,5 +1,5 @@
 {
-  "name": "fusion-starter",
+  "name": "roam-admin-app",
   "private": true,
   "type": "module",
   "engines": {
@@ -24,7 +24,8 @@
     "typecheck": "tsc",
     "deploy": "./deploy.sh",
     "deploy:vercel": "vercel --prod",
-    "vercel:dev": "vercel dev"
+    "vercel:dev": "vercel dev",
+    "vercel-build": "npm run build"
   },
   "dependencies": {
     "@roam/shared": "file:../packages/shared",

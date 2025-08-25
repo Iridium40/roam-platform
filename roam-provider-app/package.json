@@ -40,7 +40,7 @@
     "performance:lighthouse": "npx lighthouse http://localhost:8080 --output=json --output-path=./lighthouse-report.json",
     "deploy": "vercel --prod",
     "deploy:preview": "vercel",
-    "vercel:build": "npm run build",
+    "vercel-build": "npm run build",
     "vercel:dev": "vercel dev",
     "env:pull": "vercel env pull",
     "env:add": "vercel env add"
@@ -104,7 +104,7 @@
     "@types/react-dom": "^18.3.0",
     "@vercel/analytics": "^1.5.0",
     "@vercel/speed-insights": "^1.2.0",
-    "@vitejs/plugin-react": "^4.3.4",
+    "@vitejs/plugin-react-swc": "^3.8.0",
     "@swc/core": "^1.11.24",
     "autoprefixer": "^10.4.21",
     "class-variance-authority": "^0.7.1",
