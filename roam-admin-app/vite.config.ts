@@ -14,6 +14,8 @@ export default defineConfig(({ mode }) => ({
   },
   build: {
     outDir: "dist/spa",
+    target: "esnext",
+    minify: "esbuild",
   },
   plugins: [react()],
   resolve: {
