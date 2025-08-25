@@ -33,25 +33,25 @@ class Logger {
 
   error(message: string, data?: any): void {
     if (this.shouldLog(LogLevel.ERROR)) {
-      logger.error(this.formatMessage('ERROR', message, data));
+      console.error(this.formatMessage('ERROR', message, data));
     }
   }
 
   warn(message: string, data?: any): void {
     if (this.shouldLog(LogLevel.WARN)) {
-      logger.warn(this.formatMessage('WARN', message, data));
+      console.warn(this.formatMessage('WARN', message, data));
     }
   }
 
   info(message: string, data?: any): void {
     if (this.shouldLog(LogLevel.INFO)) {
-      logger.info(this.formatMessage('INFO', message, data));
+      console.info(this.formatMessage('INFO', message, data));
     }
   }
 
   debug(message: string, data?: any): void {
     if (this.shouldLog(LogLevel.DEBUG)) {
-      logger.debug(this.formatMessage('DEBUG', message, data));
+      console.debug(this.formatMessage('DEBUG', message, data));
     }
   }
 
