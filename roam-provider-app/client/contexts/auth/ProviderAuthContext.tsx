@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { AuthAPI } from "@/lib/supabase/auth";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "@/hooks/use-toast";
-import type { AuthProvider } from "@/lib/database.types";
+import type { AuthProvider } from "@roam/shared";
 
 interface ProviderAuthContextType {
   provider: AuthProvider | null;

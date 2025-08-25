@@ -29,7 +29,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
-import type { CalendarConnection, CalendarType } from "@/lib/database.types";
+import type { CalendarConnection, CalendarType } from "@roam/shared";
 import { logger } from '@/utils/logger';
 
 interface CalendarIntegrationProps {

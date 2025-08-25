@@ -8,7 +8,7 @@ import { logger } from '@/utils/logger';
 
 import type {
   AuthCustomer,
-} from "../lib/database.types";
+} from "@roam/shared";
 
 interface AuthContextType {
   customer: AuthCustomer | null;

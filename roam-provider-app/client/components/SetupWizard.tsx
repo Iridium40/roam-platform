@@ -41,7 +41,7 @@ import type {
   BusinessSetupProgress,
   SubscriptionPlan,
   BusinessType,
-} from "@/lib/database.types";
+} from "@roam/shared";
 
 interface SetupWizardProps {
   businessId: string;

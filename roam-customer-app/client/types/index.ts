@@ -1,6 +1,6 @@
 // Common type definitions for the customer app
 
-import type { Database } from "../lib/database.types";
+import type { Database } from "@roam/shared";
 
 // Database table row types
 export type BusinessProfile = Database['public']['Tables']['business_profiles']['Row'];
@@ -58,6 +58,35 @@ export interface Promotion {
   terms_conditions?: string;
 }
 
+// Transformed promotion data structure used in the UI
+export interface TransformedPromotion {
+  id: string;
+  title: string;
+  description: string;
+  startDate: string;
+  endDate: string;
+  isActive: boolean;
+  createdAt: string;
+  businessId: string;
+  imageUrl: string;
+  promoCode: string;
+  savingsType: string;
+  savingsAmount: number;
+  savingsMaxAmount: number;
+  serviceId: string;
+  business?: {
+    id: string;
+    name: string;
+    logo: string;
+    type: string;
+  };
+  service?: {
+    id: string;
+    name: string;
+    minPrice: number;
+  };
+}
+
 // Component prop types
 export interface ServiceCardProps {
   service: FeaturedService;
@@ -83,6 +112,16 @@ export interface BookingWithDetails extends Booking {
   providers?: Provider;
   services?: Service;
   business_profiles?: BusinessProfile;
+  // Additional computed properties for UI
+  status?: string; // Alias for booking_status
+  date?: string; // Alias for booking_date
+  time?: string; // Alias for start_time
+  serviceName?: string; // Computed from services.name
+  provider?: Provider; // Alias for providers
+  service?: Service; // Alias for services
+  price?: string; // Alias for total_amount
+  duration?: string; // Service duration
+  booking_time?: string; // Alias for start_time
 }
 
 // Filter types

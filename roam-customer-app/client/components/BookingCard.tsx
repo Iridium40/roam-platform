@@ -63,7 +63,7 @@ import type {
   BookingStatus,
   PaymentStatus,
   DeliveryType,
-} from "@/lib/database.types";
+} from "@roam/shared";
 
 interface BookingCardProps {
   booking: Booking & {

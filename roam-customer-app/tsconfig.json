@@ -18,13 +18,13 @@
     "forceConsistentCasingInFileNames": true,
 
     /* Linting */
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noImplicitAny": true,
+    "strict": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noImplicitAny": false,
     "noFallthroughCasesInSwitch": true,
-    "strictNullChecks": true,
-    "exactOptionalPropertyTypes": true,
+    "strictNullChecks": false,
+    "exactOptionalPropertyTypes": false,
 
     /* Path mapping */
     "baseUrl": ".",

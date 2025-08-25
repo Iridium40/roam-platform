@@ -19,7 +19,7 @@ import {
   Crown,
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth/AuthProvider";
-import type { Provider, BusinessProfile } from "@/lib/database.types";
+import type { Provider, BusinessProfile } from "@roam/shared";
 
 interface DashboardHeaderProps {
   provider: Provider | null;

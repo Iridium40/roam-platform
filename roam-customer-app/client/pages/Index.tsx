@@ -59,6 +59,7 @@ import type {
   PopularService, 
   FeaturedBusiness, 
   Promotion, 
+  TransformedPromotion,
   ServiceFilters 
 } from "@/types/index";
 
@@ -112,11 +113,20 @@ export default function Index() {
   const { currentServiceSlide, currentPopularSlide, currentPromotionSlide, currentBusinessSlide } = carouselSlides;
   const { shareModalOpen, authModalOpen, authModalTab, mobileMenuOpen } = modals;
 
+  // State setters
+  const setSearchQuery = (value: string) => setFilters(prev => ({ ...prev, searchQuery: value }));
+  const setCurrentServiceSlide = (value: number) => setCarouselSlides(prev => ({ ...prev, currentServiceSlide: value }));
+  const setCurrentPopularSlide = (value: number) => setCarouselSlides(prev => ({ ...prev, currentPopularSlide: value }));
+  const setCurrentPromotionSlide = (value: number) => setCarouselSlides(prev => ({ ...prev, currentPromotionSlide: value }));
+  const setCurrentBusinessSlide = (value: number) => setCarouselSlides(prev => ({ ...prev, currentBusinessSlide: value }));
+  const setShareModalOpen = (value: boolean) => setModals(prev => ({ ...prev, shareModalOpen: value }));
+  const setAuthModalOpen = (value: boolean) => setModals(prev => ({ ...prev, authModalOpen: value }));
+
   // Database-driven state
   const [featuredServices, setFeaturedServices] = useState<FeaturedService[]>([]);
   const [popularServices, setPopularServices] = useState<PopularService[]>([]);
   const [featuredBusinesses, setFeaturedBusinesses] = useState<FeaturedBusiness[]>([]);
-  const [promotions, setPromotions] = useState<Promotion[]>([]);
+  const [promotions, setPromotions] = useState<TransformedPromotion[]>([]);
   const [loading, setLoading] = useState(false);
 
   // Category icon mapping function

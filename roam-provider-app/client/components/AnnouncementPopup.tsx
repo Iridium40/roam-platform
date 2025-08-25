@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { Announcement } from "@/lib/database.types";
+import { Announcement } from "@roam/shared";
 
 interface AnnouncementPopupProps {
   isCustomer?: boolean;

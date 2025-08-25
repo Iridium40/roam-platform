@@ -9,7 +9,7 @@ console.log('🔍 AuthContext - Supabase Key:', import.meta.env.VITE_PUBLIC_SUPA
 
 import type {
   AuthCustomer,
-} from "../lib/database.types";
+} from "@roam/shared";
 
 interface AuthContextType {
   customer: AuthCustomer | null;

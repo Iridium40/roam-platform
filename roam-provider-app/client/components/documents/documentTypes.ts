@@ -1,4 +1,4 @@
-import { BusinessDocumentType } from "@/lib/database.types";
+import { BusinessDocumentType } from "@roam/shared";
 
 export interface UploadedDocument {
   id: string;

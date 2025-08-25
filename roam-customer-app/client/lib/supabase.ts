@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import type { Database } from "./database.types";
+import type { Database } from "@roam/shared";
 import { logger } from '@/utils/logger';
 
 const supabaseUrl = import.meta.env.VITE_PUBLIC_SUPABASE_URL;

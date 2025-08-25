@@ -30,7 +30,7 @@ import { BusinessRegistrationForm } from "@/components/BusinessRegistrationForm"
 import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
-import type { BusinessRegistration, BusinessType } from "@/lib/database.types";
+import type { BusinessRegistration, BusinessType } from "@roam/shared";
 import { useProviderAuth } from "@/contexts/auth/ProviderAuthContext";
 
 export default function ProviderPortal() {

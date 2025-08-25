@@ -65,7 +65,7 @@ import type {
   BusinessLocation,
   ProviderRole,
   ProviderVerificationStatus,
-} from "@/lib/database.types";
+} from "@roam/shared";
 
 interface StaffManagerProps {
   businessId: string;

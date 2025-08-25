@@ -5,7 +5,7 @@ import { DashboardSidebar } from "./components/DashboardSidebar";
 import { DashboardContent } from "./components/DashboardContent";
 import { FullScreenLoader } from "@/components/ui/LoadingSpinner";
 import { ErrorState } from "@/components/ui/ErrorState";
-import type { Provider, BusinessProfile } from "@/lib/database.types";
+import type { Provider, BusinessProfile } from "@roam/shared";
 
 export default function ProviderDashboard() {
   const { provider, loading: authLoading } = useAuth();

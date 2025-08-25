@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import type { Database } from "../database.types";
+import type { Database } from "@roam/shared";
 
 const supabaseUrl = import.meta.env.VITE_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_PUBLIC_SUPABASE_ANON_KEY;
@@ -30,5 +30,5 @@ export const supabaseAdmin = createClient<Database>(
 );
 
 // Export types for convenience
-export type { Database } from "../database.types";
-export type { AuthCustomer, AuthProvider } from "../database.types";
+export type { Database } from "@roam/shared";
+export type { AuthCustomer, AuthProvider } from "@roam/shared";

@@ -42,7 +42,7 @@ import {
   Info,
   Trash2
 } from 'lucide-react';
-import type { ProviderRole, ProviderVerificationStatus } from '@/lib/database.types';
+import type { ProviderRole, ProviderVerificationStatus } from '@roam/shared';
 
 interface StaffMember {
   id: string;
