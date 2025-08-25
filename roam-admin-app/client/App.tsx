@@ -108,14 +108,6 @@ const App = () => (
 
           {/* Protected Admin Routes */}
           <Route
-            path="/admin"
-            element={
-              <ProtectedRoute>
-                <AdminDashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
             path="/admin/users"
             element={
               <ProtectedRoute>
@@ -292,6 +284,16 @@ const App = () => (
                     <AdminSettings />
                   </Suspense>
                 </ErrorBoundary>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Dashboard route - placed last to avoid matching other admin routes */}
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute>
+                <AdminDashboard />
               </ProtectedRoute>
             }
           />
