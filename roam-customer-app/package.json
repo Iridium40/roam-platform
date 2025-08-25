@@ -28,7 +28,8 @@
     "lint:check": "eslint client/**/*.{ts,tsx}",
     "refactor": "npm run cleanup-logs && npm run lint && npm run typecheck",
     "vercel-build": "npm run build",
-    "vercel-dev": "npm run dev"
+    "vercel-dev": "npm run dev",
+    "prebuild": "cd ../packages/shared && npm run build"
   },
   "dependencies": {
     "@roam/shared": "file:../packages/shared",

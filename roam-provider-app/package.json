@@ -42,6 +42,7 @@
     "deploy:preview": "vercel",
     "vercel-build": "npm run build",
     "vercel:dev": "vercel dev",
+    "prebuild": "cd ../packages/shared && npm run build"
     "env:pull": "vercel env pull",
     "env:add": "vercel env add"
   },

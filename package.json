@@ -23,7 +23,8 @@
     "dev:admin": "cd apps/roam-admin-app && npm run dev",
     "dev:provider": "cd apps/roam-provider-app && npm run dev",
     "dev:customer": "cd apps/roam-customer-app && npm run dev",
-    "preinstall": "npm install @rollup/rollup-linux-x64-gnu@4.13.0 --no-save"
+    "preinstall": "npm install @rollup/rollup-linux-x64-gnu@4.13.0 --no-save",
+    "prebuild": "cd packages/shared && npm run build"
   },
   "devDependencies": {
     "eslint": "^8.57.0",
