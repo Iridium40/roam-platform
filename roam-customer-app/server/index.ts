@@ -8,7 +8,7 @@ import {
 } from "./routes/edge-notifications";
 import { requireAuth, AuthenticatedRequest } from "./middleware/auth";
 import { validateRequest } from "./middleware/validation";
-import { schemas } from "@roam/shared";
+import { schemas } from "../shared";
 
 export function createServer() {
   const app = express();

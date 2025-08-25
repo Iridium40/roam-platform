@@ -98,12 +98,69 @@ export const schemas = {
   }),
 
   // Booking schemas
+  bookingDate: z.string().datetime('Invalid date format'),
+  startTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format (HH:MM)'),
+  deliveryType: z.enum(['pickup', 'delivery', 'on_site'] as const),
+  bookingStatus: z.enum(['pending', 'confirmed', 'in_progress', 'completed', 'cancelled', 'no_show'] as const),
+  createBooking: z.object({
+    serviceId: uuidSchema,
+    bookingDate: z.string().datetime('Invalid date format'),
+    startTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format (HH:MM)'),
+    guestName: z.string().min(1).max(100).optional(),
+    guestEmail: emailSchema.optional(),
+    guestPhone: phoneSchema.optional(),
+    deliveryType: z.enum(['pickup', 'delivery', 'on_site'] as const),
+    specialInstructions: z.string().max(500).optional(),
+  }),
+  updateBookingStatus: z.object({
+    bookingId: uuidSchema,
+    status: z.enum(['pending', 'confirmed', 'in_progress', 'completed', 'cancelled', 'no_show'] as const),
+    notifyCustomer: z.boolean().optional(),
+    notifyProvider: z.boolean().optional(),
+    notes: z.string().max(500).optional(),
+  }),
+  booking: z.object({
+    serviceId: uuidSchema,
+    bookingDate: z.string().datetime('Invalid date format'),
+    startTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format (HH:MM)'),
+    guestName: z.string().min(1).max(100).optional(),
+    guestEmail: emailSchema.optional(),
+    guestPhone: phoneSchema.optional(),
+    deliveryType: z.enum(['pickup', 'delivery', 'on_site'] as const),
+    specialInstructions: z.string().max(500).optional(),
+  }),
   bookingStatusUpdate: z.object({
     bookingId: uuidSchema,
     status: z.enum(['pending', 'confirmed', 'in_progress', 'completed', 'cancelled', 'no_show'] as const),
     notifyCustomer: z.boolean().optional(),
     notifyProvider: z.boolean().optional(),
     notes: z.string().max(500).optional(),
+  }),
+
+  // Payment schemas
+  amount: z.number().positive('Amount must be positive'),
+  currency: z.string().length(3, 'Currency must be 3 characters'),
+  paymentStatus: z.enum(['pending', 'paid', 'failed', 'refunded', 'partially_refunded'] as const),
+  createPaymentIntent: z.object({
+    amount: z.number().positive('Amount must be positive'),
+    currency: z.string().length(3, 'Currency must be 3 characters'),
+    bookingId: uuidSchema,
+    customerEmail: emailSchema,
+    customerName: z.string().min(1, 'Customer name is required'),
+    businessName: z.string().min(1, 'Business name is required'),
+    serviceName: z.string().min(1, 'Service name is required'),
+  }),
+
+  // Notification schemas
+  notificationType: z.enum(['booking_update', 'payment', 'system', 'marketing'] as const),
+  notificationChannels: z.array(z.enum(['email', 'sms', 'push', 'in_app'] as const)),
+  sendNotification: z.object({
+    userId: uuidSchema,
+    type: z.enum(['booking_update', 'payment', 'system', 'marketing'] as const),
+    title: z.string().min(1, 'Title is required').max(100),
+    message: z.string().min(1, 'Message is required').max(500),
+    data: z.any().optional(),
+    channels: z.array(z.enum(['email', 'sms', 'push', 'in_app'] as const)).optional(),
   }),
 
   // Common schemas
