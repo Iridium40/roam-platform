@@ -13,9 +13,9 @@ export interface Favorite {
     first_name: string;
     last_name: string;
     business_name: string;
-    image_url: string;
-    rating: number;
-    service_categories: string[];
+    image_url: string | null;
+    rating: number | null;
+    service_categories: string[] | null;
   };
 }
 
@@ -37,7 +37,7 @@ export const useFavorites = () => {
       setError(null);
 
       const { data, error: fetchError } = await supabase
-        .from("customer_favorites")
+        .from("customer_favorite_providers")
         .select(`
           id,
           customer_id,
@@ -76,7 +76,7 @@ export const useFavorites = () => {
 
     try {
       const { error: insertError } = await supabase
-        .from("customer_favorites")
+        .from("customer_favorite_providers")
         .insert({
           customer_id: customer.id,
           provider_id: providerId,
@@ -100,7 +100,7 @@ export const useFavorites = () => {
 
     try {
       const { error: deleteError } = await supabase
-        .from("customer_favorites")
+        .from("customer_favorite_providers")
         .delete()
         .eq("customer_id", customer.id)
         .eq("provider_id", providerId);

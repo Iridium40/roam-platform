@@ -151,8 +151,15 @@ const MFASetup: React.FC<MFASetupProps> = ({ onComplete, onCancel }) => {
     a.download = 'roam-mfa-backup-codes.txt';
     document.body.appendChild(a);
     a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    
+    // Use setTimeout to ensure the click event completes before removing
+    setTimeout(() => {
+      if (document.body.contains(a)) {
+        document.body.removeChild(a);
+      }
+      URL.revokeObjectURL(url);
+    }, 100);
+    
     toast.success('Backup codes downloaded');
   };
 

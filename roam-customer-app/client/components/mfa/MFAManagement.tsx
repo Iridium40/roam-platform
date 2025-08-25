@@ -172,8 +172,14 @@ const MFAManagement: React.FC<MFAManagementProps> = ({ userId }) => {
     a.download = `roam-mfa-backup-codes-${Date.now()}.txt`;
     document.body.appendChild(a);
     a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    
+    // Use setTimeout to ensure the click event completes before removing
+    setTimeout(() => {
+      if (document.body.contains(a)) {
+        document.body.removeChild(a);
+      }
+      URL.revokeObjectURL(url);
+    }, 100);
   };
 
   const getMethodIcon = (method: string) => {

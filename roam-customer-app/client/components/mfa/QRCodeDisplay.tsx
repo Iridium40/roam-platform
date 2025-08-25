@@ -37,7 +37,14 @@ const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
       link.download = `${issuer.toLowerCase().replace(/\s+/g, '-')}-mfa-qr-code.png`;
       document.body.appendChild(link);
       link.click();
-      document.body.removeChild(link);
+      
+      // Use setTimeout to ensure the click event completes before removing
+      setTimeout(() => {
+        if (document.body.contains(link)) {
+          document.body.removeChild(link);
+        }
+      }, 100);
+      
       toast.success('QR code downloaded');
     } catch (err) {
       toast.error('Failed to download QR code');
