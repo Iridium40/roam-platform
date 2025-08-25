@@ -13,9 +13,6 @@ export default defineConfig({
   },
   build: {
     outDir: "dist/spa",
-    rollupOptions: {
-      input: path.resolve(__dirname, "main.tsx"),
-    },
   },
   server: {
     port: 8080,
