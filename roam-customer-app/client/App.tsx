@@ -132,3 +132,5 @@ if (import.meta.hot) {
     container._reactRoot.render(<App />);
   }
 }
+
+export default App;

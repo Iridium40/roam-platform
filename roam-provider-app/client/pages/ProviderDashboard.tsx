@@ -131,7 +131,7 @@ export default function ProviderDashboard() {
   const user = provider; // Map provider to user for compatibility
   const { toast } = useToast();
   const [isAvailable, setIsAvailable] = useState(true);
-  const [provider, setProvider] = useState<Provider | null>(null);
+  const [providerData, setProviderData] = useState<Provider | null>(null);
   const [business, setBusiness] = useState<BusinessProfile | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [businessMetrics, setBusinessMetrics] = useState({
@@ -553,7 +553,7 @@ export default function ProviderDashboard() {
 
       if (providerError) throw providerError;
 
-      setProvider(providerData);
+              setProviderData(providerData);
 
       // Load business profile
       if (providerData.business_id) {

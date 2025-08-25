@@ -335,3 +335,5 @@ try {
   (rootElement as any)._reactRoot = newRoot;
   newRoot.render(<App />);
 }
+
+export default App;
