@@ -21,7 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 export default function SignIn() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { provider, userType, loading } = useAuth();
+  const { provider, userType, loading: authLoading } = useAuth();
   const isProvider = userType === "provider";
 
   const [loading, setLoading] = useState(false);
