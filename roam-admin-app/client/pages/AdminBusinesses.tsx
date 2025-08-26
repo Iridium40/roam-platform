@@ -1124,27 +1124,26 @@ export default function AdminBusinesses() {
 
   const fetchBusinessServiceCategories = async (businessId?: string) => {
     try {
-      console.log("Fetching business service categories from Supabase...");
+      console.log("Fetching business service categories via API...");
 
-      let query = supabase
-        .from("business_service_categories")
-        .select(
-          `
-          *,
-          service_categories (
-            id,
-            service_category_type,
-            description
-          )
-        `,
-        )
-        .order("created_at", { ascending: false });
-
-      if (businessId) {
-        query = query.eq("business_id", businessId);
+      if (!businessId) {
+        setBusinessServiceCategories([]);
+        return;
       }
 
-      const { data, error } = await query;
+      const response = await fetch(`/api/business-service-categories?businessId=${businessId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to fetch business service categories');
+      }
+
+      const { data } = await response.json();
 
       console.log("Business service categories query response:", {
         data,
@@ -1227,32 +1226,26 @@ export default function AdminBusinesses() {
 
   const fetchBusinessServiceSubcategories = async (businessId?: string) => {
     try {
-      console.log("Fetching business service subcategories from Supabase...");
+      console.log("Fetching business service subcategories via API...");
 
-      let query = supabase
-        .from("business_service_subcategories")
-        .select(
-          `
-          *,
-          service_categories (
-            id,
-            service_category_type,
-            description
-          ),
-          service_subcategories (
-            id,
-            service_subcategory_type,
-            description
-          )
-        `,
-        )
-        .order("created_at", { ascending: false });
-
-      if (businessId) {
-        query = query.eq("business_id", businessId);
+      if (!businessId) {
+        setBusinessServiceSubcategories([]);
+        return;
       }
 
-      const { data, error } = await query;
+      const response = await fetch(`/api/business-service-subcategories?businessId=${businessId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to fetch business service subcategories');
+      }
+
+      const { data } = await response.json();
 
       console.log("Business service subcategories query response:", {
         data,
@@ -1537,11 +1530,18 @@ export default function AdminBusinesses() {
         is_active: true,
       };
 
-      const { error } = await supabase
-        .from("business_service_subcategories")
-        .insert([subcategoryData]);
+      const response = await fetch('/api/business-service-subcategories', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ subcategoryData }),
+      });
 
-      if (error) throw error;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to add service subcategory');
+      }
 
       toast({
         title: "Success",
@@ -1594,12 +1594,18 @@ export default function AdminBusinesses() {
 
   const removeServiceSubcategory = async (subcategoryId: string) => {
     try {
-      const { error } = await supabase
-        .from("business_service_subcategories")
-        .delete()
-        .eq("id", subcategoryId);
+      const response = await fetch('/api/business-service-subcategories', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ subcategoryId }),
+      });
 
-      if (error) throw error;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to remove service subcategory');
+      }
 
       toast({
         title: "Success",
@@ -4248,72 +4254,51 @@ export default function AdminBusinesses() {
                   <div className="space-y-4">
                     {/* Add New Subcategory */}
                     <div className="space-y-3">
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <Label>Service Category</Label>
-                          <Select
-                            value={selectedServiceCategoryId}
-                            onValueChange={setSelectedServiceCategoryId}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select category first" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {availableServiceCategories.map((category) => (
-                                <SelectItem
-                                  key={category.id}
-                                  value={category.id}
-                                >
-                                  {formatServiceCategoryType(
-                                    category.service_category_type as ServiceCategoryType,
-                                  )}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
+                      {selectedServiceCategoryId ? (
                         <div>
                           <Label>Service Subcategory</Label>
-                          <Select
-                            value={selectedServiceSubcategoryId}
-                            onValueChange={setSelectedServiceSubcategoryId}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select subcategory" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {availableServiceSubcategories
-                                .filter(
-                                  (sub) =>
-                                    !selectedServiceCategoryId ||
-                                    sub.category_id ===
-                                      selectedServiceCategoryId,
-                                )
-                                .map((subcategory) => (
-                                  <SelectItem
-                                    key={subcategory.id}
-                                    value={subcategory.id}
-                                  >
-                                    {formatEnumDisplay(
-                                      subcategory.service_subcategory_type,
-                                    )}
-                                  </SelectItem>
-                                ))}
-                            </SelectContent>
-                          </Select>
+                          <div className="flex gap-3">
+                            <div className="flex-1">
+                              <Select
+                                value={selectedServiceSubcategoryId}
+                                onValueChange={setSelectedServiceSubcategoryId}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select subcategory" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {availableServiceSubcategories
+                                    .filter(
+                                      (sub) =>
+                                        sub.category_id === selectedServiceCategoryId,
+                                    )
+                                    .map((subcategory) => (
+                                      <SelectItem
+                                        key={subcategory.id}
+                                        value={subcategory.id}
+                                      >
+                                        {formatEnumDisplay(
+                                          subcategory.service_subcategory_type,
+                                        )}
+                                      </SelectItem>
+                                    ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <Button
+                              onClick={addServiceSubcategory}
+                              disabled={!selectedServiceSubcategoryId}
+                              className="bg-roam-blue hover:bg-blue-700"
+                            >
+                              Add Subcategory
+                            </Button>
+                          </div>
                         </div>
-                      </div>
-
-                      <Button
-                        onClick={addServiceSubcategory}
-                        disabled={
-                          !selectedServiceCategoryId ||
-                          !selectedServiceSubcategoryId
-                        }
-                        className="bg-roam-blue hover:bg-blue-700"
-                      >
-                        Add Subcategory
-                      </Button>
+                      ) : (
+                        <div className="text-center py-4 text-muted-foreground">
+                          <p>Please select a service category above to add subcategories</p>
+                        </div>
+                      )}
                     </div>
 
                     {/* Current Subcategories */}

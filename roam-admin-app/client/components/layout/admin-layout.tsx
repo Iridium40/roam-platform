@@ -72,7 +72,7 @@ const navigationSections: NavSection[] = [
     title: "Overview",
     items: [
       {
-        href: "/admin",
+        href: "/admin/dashboard",
         icon: <BarChart3 className="w-5 h-5" />,
         label: "Dashboard",
       },

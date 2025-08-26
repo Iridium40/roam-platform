@@ -108,6 +108,18 @@ const App = () => (
 
           {/* Protected Admin Routes */}
           <Route
+            path="/admin"
+            element={<Navigate to="/admin/dashboard" replace />}
+          />
+          <Route
+            path="/admin/dashboard"
+            element={
+              <ProtectedRoute>
+                <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/admin/users"
             element={
               <ProtectedRoute>
@@ -288,16 +300,6 @@ const App = () => (
             }
           />
 
-          {/* Dashboard route - placed last to avoid matching other admin routes */}
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute>
-                <AdminDashboard />
-              </ProtectedRoute>
-            }
-          />
-
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
@@ -305,37 +307,5 @@ const App = () => (
     </TooltipProvider>
   </QueryClientProvider>
 );
-
-// Prevent multiple root creation during development hot reloading
-const rootElement = document.getElementById("root")!;
-
-// Improved HMR handling
-if (import.meta.hot) {
-  import.meta.hot.dispose(() => {
-    // Clean up on hot reload
-    if ((rootElement as any)._reactRoot) {
-      (rootElement as any)._reactRoot.unmount();
-      delete (rootElement as any)._reactRoot;
-    }
-  });
-}
-
-let root = (rootElement as any)._reactRoot;
-
-if (!root) {
-  root = createRoot(rootElement);
-  (rootElement as any)._reactRoot = root;
-}
-
-// Wrap render in try-catch for HMR errors
-try {
-  root.render(<App />);
-} catch (error) {
-  console.error("App render error:", error);
-  // Fallback: create new root if render fails
-  const newRoot = createRoot(rootElement);
-  (rootElement as any)._reactRoot = newRoot;
-  newRoot.render(<App />);
-}
 
 export default App;

@@ -156,6 +156,7 @@
       "source": "/api/test/generate-phase2-token",
       "destination": "/api/test/generate-phase2-token.ts"
     },
+
     {
       "source": "/((?!api/).*)",
       "destination": "/index.html"

@@ -227,28 +227,40 @@ export default function AdminDashboard() {
             reviewsData.length
           : 4.8;
 
-      // Promotion usage stats
-      const { data: activePromotionsData } = await supabase
-        .from("promotions")
-        .select("id, usage_count")
-        .eq("is_active", true);
+      // Promotion usage stats (with error handling for missing table)
+      let totalActivePromotions = 0;
+      let totalUsage = 0;
+      let weeklyUsage = 0;
 
-      const { data: weeklyPromotionUsageData } = await supabase
-        .from("promotions")
-        .select("usage_count")
-        .gte("updated_at", weekStartTimestamp);
+      try {
+        const { data: activePromotionsData } = await supabase
+          .from("promotions")
+          .select("id, usage_count")
+          .eq("is_active", true);
 
-      const totalActivePromotions = activePromotionsData?.length || 0;
-      const totalUsage =
-        activePromotionsData?.reduce(
-          (sum, promo) => sum + (promo.usage_count || 0),
-          0,
-        ) || 0;
-      const weeklyUsage =
-        weeklyPromotionUsageData?.reduce(
-          (sum, promo) => sum + (promo.usage_count || 0),
-          0,
-        ) || 0;
+        const { data: weeklyPromotionUsageData } = await supabase
+          .from("promotions")
+          .select("usage_count")
+          .gte("updated_at", weekStartTimestamp);
+
+        totalActivePromotions = activePromotionsData?.length || 0;
+        totalUsage =
+          activePromotionsData?.reduce(
+            (sum, promo) => sum + (promo.usage_count || 0),
+            0,
+          ) || 0;
+        weeklyUsage =
+          weeklyPromotionUsageData?.reduce(
+            (sum, promo) => sum + (promo.usage_count || 0),
+            0,
+          ) || 0;
+      } catch (promotionError) {
+        console.warn("Promotions table not available, using default values:", promotionError);
+        // Use default values when promotions table is not available
+        totalActivePromotions = 0;
+        totalUsage = 0;
+        weeklyUsage = 0;
+      }
 
       // Top services by booking count (last 30 days)
       const thirtyDaysAgo = new Date();

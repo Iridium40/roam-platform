@@ -15,6 +15,7 @@ export * from './services/notification-api';
 export * from './services/notification-service';
 export * from './services/twilio-conversations';
 export * from './services/stripe-service';
+export * from './services/business-service-subcategories';
 
 // Utils
 export * from './utils/validation';
