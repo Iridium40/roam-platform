@@ -2,10 +2,28 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { AuthAPI } from "@/lib/supabase/auth";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "@/hooks/use-toast";
-import type { AuthProvider } from "@roam/shared";
+
+// Local provider type
+interface Provider {
+  id: string;
+  user_id: string;
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+  phone: string | null;
+  provider_role: 'owner' | 'dispatcher' | 'provider';
+  business_id: string | null;
+  is_active: boolean | null;
+  created_at: string | null;
+  updated_at: string | null;
+  image_url: string | null;
+  bio: string | null;
+  verification_status: string | null;
+  business_managed: boolean | null;
+}
 
 interface ProviderAuthContextType {
-  provider: AuthProvider | null;
+  provider: Provider | null;
   loading: boolean;
   signOut: () => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -30,7 +48,7 @@ interface ProviderAuthProviderProps {
 }
 
 export const ProviderAuthProvider: React.FC<ProviderAuthProviderProps> = ({ children }) => {
-  const [provider, setProvider] = useState<AuthProvider | null>(null);
+  const [provider, setProvider] = useState<Provider | null>(null);
   const [loading, setLoading] = useState(true);
 
   const clearStoredData = () => {
