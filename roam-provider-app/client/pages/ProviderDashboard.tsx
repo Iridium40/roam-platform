@@ -585,8 +585,7 @@ export default function ProviderDashboard() {
               name,
               description,
               duration_minutes,
-              min_price,
-              max_price
+              min_price
             ),
             providers (
               id,
