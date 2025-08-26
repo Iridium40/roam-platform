@@ -884,10 +884,9 @@ export default function ProviderDashboard() {
           timeoutId = setTimeout(() => controller.abort(), 5000); // Further reduced timeout to 5 seconds
 
           const response = await fetch(
-            `${supabaseUrl}/functions/v1/get-business-eligible-services?business_id=${businessId}`,
+            `/api/business-eligible-services?business_id=${businessId}`,
             {
               headers: {
-                'Authorization': `Bearer ${anonKey}`,
                 'Content-Type': 'application/json'
               },
               signal: controller.signal

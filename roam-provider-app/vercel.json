@@ -100,6 +100,10 @@
       "destination": "/api/stripe/create-connect-account.ts"
     },
     {
+      "source": "/api/business-eligible-services",
+      "destination": "/api/business-eligible-services.ts"
+    },
+    {
       "source": "/api/plaid/create-link-token",
       "destination": "/api/plaid/create-link-token.ts"
     },
