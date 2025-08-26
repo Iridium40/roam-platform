@@ -3299,9 +3299,15 @@ export default function ProviderDashboard() {
                           >
                             <SelectTrigger className="w-full sm:w-32 h-7 text-xs">
                               <SelectValue placeholder={
-                                booking.providers 
-                                  ? `${booking.providers.first_name} ${booking.providers.last_name}`
-                                  : "Unassigned"
+                                providerData.provider_role === "provider" 
+                                  ? (booking.providers 
+                                      ? `${booking.providers.first_name} ${booking.providers.last_name}`
+                                      : "Unassigned")
+                                  : !["pending", "confirmed"].includes(booking.booking_status)
+                                  ? `Locked (${booking.booking_status})`
+                                  : (booking.providers 
+                                      ? `${booking.providers.first_name} ${booking.providers.last_name}`
+                                      : "Unassigned")
                               } />
                             </SelectTrigger>
                             <SelectContent>
