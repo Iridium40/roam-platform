@@ -95,7 +95,7 @@ import {
 import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
-import { useAuth } from "@/contexts/auth/AuthProvider";
+import { useProviderAuth } from "@/contexts/auth/ProviderAuthContext";
 import { useToast } from "@/hooks/use-toast";
 import ConversationChat from "@/components/ConversationChat";
 import ConversationsList from "@/components/ConversationsList";
@@ -127,11 +127,7 @@ interface ServiceSubcategory {
 }
 
 export default function ProviderDashboard() {
-  const { provider: providerAuth, signOut } = useAuth();
-  const provider = providerAuth?.provider;
-  const isOwner = providerAuth?.isOwner || false;
-  const isDispatcher = providerAuth?.isDispatcher || false;
-  const isProvider = providerAuth?.isProvider || false;
+  const { provider, signOut, isOwner, isDispatcher, isProvider } = useProviderAuth();
   const user = provider; // Map provider to user for compatibility
   const userId = provider?.user_id; // Get the user ID from the provider record
   const { toast } = useToast();
@@ -549,12 +545,20 @@ export default function ProviderDashboard() {
       setLoading(true);
       setError("");
 
+      console.log("🔍 loadInitialData: user.id =", user.id);
+      console.log("🔍 loadInitialData: user.email =", user.email);
+      console.log("🔍 loadInitialData: user =", user);
+      console.log("🔍 loadInitialData: provider?.user_id =", provider?.user_id);
+
       // Load provider profile
       const { data: providerData, error: providerError } = await supabase
         .from("providers")
         .select("*")
-        .eq("user_id", user.id)
-        .single();
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      console.log("🔍 loadInitialData: providerData =", providerData);
+      console.log("🔍 loadInitialData: providerError =", providerError);
 
       if (providerError) throw providerError;
 

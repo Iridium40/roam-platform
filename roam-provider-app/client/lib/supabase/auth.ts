@@ -264,17 +264,57 @@ export class AuthAPI {
 
   // Provider Authentication
   static async getProviderByUserId(userId: string): Promise<AuthProvider | null> {
+    console.log("🔍 getProviderByUserId called with userId:", userId);
+    
     const { data: providers, error } = await supabase
       .from("providers")
       .select("id, user_id, business_id, location_id, first_name, last_name, email, provider_role, is_active")
-      .eq("user_id", userId)
-      .eq("is_active", true);
+      .eq("user_id", userId);
+
+    console.log("🔍 getProviderByUserId result:", { providers, error });
 
     if (error) {
+      console.error("🔍 getProviderByUserId error:", error);
       throw new Error(`Provider lookup failed: ${error.message}`);
     }
 
-    return providers.length > 0 ? providers[0] : null;
+    // If no provider record exists, create a basic one
+    if (providers.length === 0) {
+      console.log("🔍 No provider record found, creating basic provider record");
+      
+      // Get user data from auth
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        console.error("🔍 No user found in auth context");
+        return null;
+      }
+
+      // Create basic provider record
+      const { data: newProvider, error: createError } = await supabase
+        .from("providers")
+        .insert({
+          user_id: userId,
+          first_name: user.user_metadata?.first_name || user.user_metadata?.name?.split(' ')[0] || "Provider",
+          last_name: user.user_metadata?.last_name || user.user_metadata?.name?.split(' ').slice(1).join(' ') || "",
+          email: user.email,
+          provider_role: "provider",
+          is_active: true,
+        })
+        .select("id, user_id, business_id, location_id, first_name, last_name, email, provider_role, is_active")
+        .single();
+
+      if (createError) {
+        console.error("🔍 Error creating provider record:", createError);
+        return null;
+      }
+
+      console.log("🔍 Created basic provider record:", newProvider);
+      return newProvider;
+    }
+
+    // Return the first provider found, regardless of is_active status
+    return providers[0];
   }
 
   // Helper methods

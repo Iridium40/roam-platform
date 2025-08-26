@@ -50,7 +50,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import React, { useState, useEffect, useMemo } from "react";
-import { useAuth } from "@/contexts/auth/AuthProvider";
+import { useProviderAuth } from "@/contexts/auth/ProviderAuthContext";
 import { useFavorites } from "@/hooks/useFavorites";
 // Removed CustomerAuthModal import - not needed for provider app
 import GoogleOneTap from "@/components/GoogleOneTap";
@@ -58,7 +58,7 @@ import { Header } from "@/components/Header";
 import { supabase } from "@/lib/supabase";
 
 export default function Index() {
-  const { provider, isProvider, signOut } = useAuth();
+  const { provider, isProvider, signOut } = useProviderAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedDelivery, setSelectedDelivery] = useState("all");

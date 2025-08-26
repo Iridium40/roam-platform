@@ -116,16 +116,22 @@ export const ProviderAuthProvider: React.FC<ProviderAuthProviderProps> = ({ chil
         console.log("Auth state changed:", event, session?.user?.id);
         
         if (event === 'SIGNED_IN' && session?.user) {
+          console.log("SIGNED_IN event detected, fetching provider data...");
+          console.log("Session user ID:", session.user.id);
+          console.log("Session user email:", session.user.email);
           try {
             const providerData = await AuthAPI.getProviderByUserId(session.user.id);
+            console.log("Provider data fetched:", providerData);
             
             if (providerData) {
+              console.log("Setting provider data in context:", providerData.provider_role);
               setProvider(providerData);
               localStorage.setItem("roam_provider", JSON.stringify(providerData));
               localStorage.setItem("roam_access_token", session.access_token);
               localStorage.setItem("roam_user_type", "provider");
               apiClient.setAuthToken(session.access_token);
             } else {
+              console.log("No provider data found, clearing stored data");
               clearStoredData();
             }
           } catch (error) {
@@ -133,6 +139,7 @@ export const ProviderAuthProvider: React.FC<ProviderAuthProviderProps> = ({ chil
             clearStoredData();
           }
         } else if (event === 'SIGNED_OUT') {
+          console.log("SIGNED_OUT event detected");
           setProvider(null);
           clearStoredData();
           apiClient.clearAuthToken();
