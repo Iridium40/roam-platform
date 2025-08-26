@@ -612,9 +612,11 @@ export default function ProviderDashboard() {
             customer_locations (
               id,
               location_name,
-              address_line1,
+              street_address,
+              unit_number,
               city,
-              state
+              state,
+              zip_code
             )
           `);
 
@@ -7491,7 +7493,7 @@ export default function ProviderDashboard() {
                   </p>
                   <p className="text-sm text-gray-600">
                     {selectedBookingDetails.customer_locations 
-                      ? `${selectedBookingDetails.customer_locations.location_name || ""} ${selectedBookingDetails.customer_locations.address_line1 || ""}, ${selectedBookingDetails.customer_locations.city || ""}, ${selectedBookingDetails.customer_locations.state || ""}`
+                      ? `${selectedBookingDetails.customer_locations.location_name || ""} ${selectedBookingDetails.customer_locations.street_address || ""}${selectedBookingDetails.customer_locations.unit_number ? `, ${selectedBookingDetails.customer_locations.unit_number}` : ""}, ${selectedBookingDetails.customer_locations.city || ""}, ${selectedBookingDetails.customer_locations.state || ""} ${selectedBookingDetails.customer_locations.zip_code || ""}`
                       : selectedBookingDetails.business_locations
                       ? `${selectedBookingDetails.business_locations.location_name || ""} ${selectedBookingDetails.business_locations.address_line1 || ""}, ${selectedBookingDetails.business_locations.city || ""}, ${selectedBookingDetails.business_locations.state || ""}`
                       : "Location not specified"
