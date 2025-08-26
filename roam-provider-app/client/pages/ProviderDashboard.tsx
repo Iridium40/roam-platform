@@ -133,6 +133,7 @@ export default function ProviderDashboard() {
   const isDispatcher = providerAuth?.isDispatcher || false;
   const isProvider = providerAuth?.isProvider || false;
   const user = provider; // Map provider to user for compatibility
+  const userId = provider?.user_id; // Get the user ID from the provider record
   const { toast } = useToast();
   const [isAvailable, setIsAvailable] = useState(true);
   const [providerData, setProviderData] = useState<Provider | null>(null);
@@ -667,8 +668,24 @@ export default function ProviderDashboard() {
   const initializeProfileData = async () => {
     if (!user) return;
 
+    console.log('🔍 Debug: userId =', userId);
+    console.log('🔍 Debug: provider object =', provider);
+    console.log('🔍 Debug: provider?.user_id =', provider?.user_id);
+
     try {
       // Load real provider data from the database
+      console.log('🔍 Debug: Querying providers table with user_id =', userId, 'type:', typeof userId);
+      
+      // First, let's try a simple query to see if we can access the providers table
+      console.log('🔍 Debug: Testing basic providers query...');
+      const { data: testData, error: testError } = await supabase
+        .from('providers')
+        .select('*')
+        .limit(1);
+      
+      console.log('🔍 Debug: Basic query result:', testData, 'error:', testError);
+      
+      // Now try the actual query
       const { data: providerData, error } = await supabase
         .from('providers')
         .select(`
@@ -685,8 +702,10 @@ export default function ProviderDashboard() {
           background_check_status,
           cover_image_url
         `)
-        .eq('user_id', user.id)
-        .single();
+        .eq('user_id', userId)
+        .maybeSingle();
+      
+      console.log('🔍 Debug: Query result - data:', providerData, 'error:', error);
 
       if (error) {
         console.error(safeErrorLog('Error loading provider data', error, { userId: user?.id }));
