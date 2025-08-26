@@ -3238,14 +3238,23 @@ export default function ProviderDashboard() {
                               </span>
                             )}
                           </div>
-                          <Select
-                            value={booking.providers?.id || "unassigned"}
-                            disabled={
-                              providerData.provider_role === "provider" || 
-                              (providerData.provider_role !== "provider" && 
-                               !["pending", "confirmed"].includes(booking.booking_status))
-                            }
-                            onValueChange={async (value) => {
+                          
+                          {/* Display Provider Name */}
+                          <div className="flex items-center space-x-2">
+                            <div className="text-xs font-medium text-gray-900">
+                              {booking.providers 
+                                ? `${booking.providers.first_name} ${booking.providers.last_name}`
+                                : "Unassigned"
+                              }
+                            </div>
+                            <Select
+                              value={booking.providers?.id || "unassigned"}
+                              disabled={
+                                providerData.provider_role === "provider" || 
+                                (providerData.provider_role !== "provider" && 
+                                 !["pending", "confirmed"].includes(booking.booking_status))
+                              }
+                              onValueChange={async (value) => {
                               try {
                                 // Check if assignment is allowed based on booking status
                                 if (providerData.provider_role !== "provider" && 
@@ -3328,6 +3337,7 @@ export default function ProviderDashboard() {
                               )}
                             </SelectContent>
                           </Select>
+                          </div>
                         </div>
 
                         {/* Actions Row - Only for pending bookings */}
