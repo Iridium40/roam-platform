@@ -25,7 +25,7 @@ export type UserStatus = 'active' | 'inactive' | 'suspended' | 'pending_verifica
 export type ServiceStatus = 'active' | 'inactive' | 'draft';
 export type ServiceCategoryType = "beauty" | "fitness" | "therapy" | "healthcare";
 export type ServiceSubcategoryType = "hair_and_makeup" | "spray_tan" | "esthetician" | "massage_therapy" | "iv_therapy" | "physical_therapy" | "nurse_practitioner" | "physician" | "chiropractor" | "yoga_instructor" | "pilates_instructor" | "personal_trainer" | "injectables" | "health_coach";
-export type CustomerLocationType = "home" | "condo" | "hotel" | "other" | null;
+export type CustomerLocationType = "home" | "condo" | "hotel" | "oatather" | null;
 
 // Notification Types
 export type NotificationType = 'booking_update' | 'payment' | 'system' | 'marketing';
@@ -162,6 +162,15 @@ export type Database = {
           tip_status: TipStatus;
           tip_requested_at: string | null;
           tip_deadline: string | null;
+          booking_reference: string | null;
+          business_id: string;
+          decline_reason: string | null;
+          rescheduled_at: string | null;
+          rescheduled_by: string | null;
+          reschedule_reason: string | null;
+          original_booking_date: string | null;
+          original_start_time: string | null;
+          reschedule_count: number;
         };
         Insert: {
           id?: string;
@@ -197,6 +206,15 @@ export type Database = {
           tip_status?: TipStatus;
           tip_requested_at?: string | null;
           tip_deadline?: string | null;
+          booking_reference?: string | null;
+          business_id: string;
+          decline_reason?: string | null;
+          rescheduled_at?: string | null;
+          rescheduled_by?: string | null;
+          reschedule_reason?: string | null;
+          original_booking_date?: string | null;
+          original_start_time?: string | null;
+          reschedule_count?: number;
         };
         Update: {
           id?: string;
@@ -232,6 +250,15 @@ export type Database = {
           tip_status?: TipStatus;
           tip_requested_at?: string | null;
           tip_deadline?: string | null;
+          booking_reference?: string | null;
+          business_id?: string;
+          decline_reason?: string | null;
+          rescheduled_at?: string | null;
+          rescheduled_by?: string | null;
+          reschedule_reason?: string | null;
+          original_booking_date?: string | null;
+          original_start_time?: string | null;
+          reschedule_count?: number;
         };
       };
 
@@ -282,42 +309,42 @@ export type Database = {
       services: {
         Row: {
           id: string;
-          business_id: string;
+          subcategory_id: string;
           name: string;
           description: string | null;
-          category: ServiceCategoryType;
-          price: number;
-          duration: number;
-          is_active: boolean;
-          created_at: string;
-          updated_at: string;
-          status: ServiceStatus;
+          min_price: number;
+          duration_minutes: number;
+          image_url: string | null;
+          is_active: boolean | null;
+          created_at: string | null;
+          is_featured: boolean | null;
+          is_popular: boolean | null;
         };
         Insert: {
           id?: string;
-          business_id: string;
+          subcategory_id: string;
           name: string;
           description?: string | null;
-          category: ServiceCategoryType;
-          price: number;
-          duration: number;
-          is_active?: boolean;
-          created_at?: string;
-          updated_at?: string;
-          status?: ServiceStatus;
+          min_price: number;
+          duration_minutes: number;
+          image_url?: string | null;
+          is_active?: boolean | null;
+          created_at?: string | null;
+          is_featured?: boolean | null;
+          is_popular?: boolean | null;
         };
         Update: {
           id?: string;
-          business_id?: string;
+          subcategory_id?: string;
           name?: string;
           description?: string | null;
-          category?: ServiceCategoryType;
-          price?: number;
-          duration?: number;
-          is_active?: boolean;
-          created_at?: string;
-          updated_at?: string;
-          status?: ServiceStatus;
+          min_price?: number;
+          duration_minutes?: number;
+          image_url?: string | null;
+          is_active?: boolean | null;
+          created_at?: string | null;
+          is_featured?: boolean | null;
+          is_popular?: boolean | null;
         };
       };
 
@@ -988,6 +1015,42 @@ export type Database = {
           created_at?: string | null;
         };
       };
+      // Addons table
+      addons: {
+        Row: {
+          id: string;
+          name: string;
+          description: string | null;
+          category: string;
+          min_price: number;
+          image_url: string | null;
+          is_available: boolean | null;
+          created_at: string | null;
+          updated_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          description?: string | null;
+          category: string;
+          min_price: number;
+          image_url?: string | null;
+          is_available?: boolean | null;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          description?: string | null;
+          category?: string;
+          min_price?: number;
+          image_url?: string | null;
+          is_available?: boolean | null;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+      };
       // Provider addons
       provider_addons: {
         Row: {
@@ -1182,15 +1245,16 @@ export type Database = {
         Row: {
           id: string;
           business_id: string;
-          name: string;
-          address: string;
+          location_name: string;
+          address_line1: string;
+          address_line2: string | null;
           city: string;
           state: string;
-          zip_code: string;
+          postal_code: string;
           country: string;
-          latitude: number | null;
-          longitude: number | null;
+          mobile_service_radius: number | null;
           is_primary: boolean | null;
+          offers_mobile_services: boolean | null;
           is_active: boolean | null;
           created_at: string | null;
           updated_at: string | null;
@@ -1198,15 +1262,16 @@ export type Database = {
         Insert: {
           id?: string;
           business_id: string;
-          name: string;
-          address: string;
+          location_name: string;
+          address_line1: string;
+          address_line2?: string | null;
           city: string;
           state: string;
-          zip_code: string;
+          postal_code: string;
           country: string;
-          latitude?: number | null;
-          longitude?: number | null;
+          mobile_service_radius?: number | null;
           is_primary?: boolean | null;
+          offers_mobile_services?: boolean | null;
           is_active?: boolean | null;
           created_at?: string | null;
           updated_at?: string | null;
@@ -1214,15 +1279,16 @@ export type Database = {
         Update: {
           id?: string;
           business_id?: string;
-          name?: string;
-          address?: string;
+          location_name?: string;
+          address_line1?: string;
+          address_line2?: string | null;
           city?: string;
           state?: string;
-          zip_code?: string;
+          postal_code?: string;
           country?: string;
-          latitude?: number | null;
-          longitude?: number | null;
+          mobile_service_radius?: number | null;
           is_primary?: boolean | null;
+          offers_mobile_services?: boolean | null;
           is_active?: boolean | null;
           created_at?: string | null;
           updated_at?: string | null;
@@ -1234,43 +1300,28 @@ export type Database = {
           id: string;
           business_id: string;
           service_id: string;
-          price: number;
-          duration: number;
+          business_price: number;
           is_active: boolean | null;
-          is_featured: boolean | null;
-          is_popular: boolean | null;
           created_at: string | null;
-          updated_at: string | null;
-          description: string | null;
-          image_url: string | null;
+          delivery_type: DeliveryType | null;
         };
         Insert: {
           id?: string;
           business_id: string;
           service_id: string;
-          price: number;
-          duration: number;
+          business_price: number;
           is_active?: boolean | null;
-          is_featured?: boolean | null;
-          is_popular?: boolean | null;
           created_at?: string | null;
-          updated_at?: string | null;
-          description?: string | null;
-          image_url?: string | null;
+          delivery_type?: DeliveryType | null;
         };
         Update: {
           id?: string;
           business_id?: string;
           service_id?: string;
-          price?: number;
-          duration?: number;
+          business_price?: number;
           is_active?: boolean | null;
-          is_featured?: boolean | null;
-          is_popular?: boolean | null;
           created_at?: string | null;
-          updated_at?: string | null;
-          description?: string | null;
-          image_url?: string | null;
+          delivery_type?: DeliveryType | null;
         };
       };
       // Business addons
@@ -1279,7 +1330,7 @@ export type Database = {
           id: string;
           business_id: string;
           addon_id: string;
-          price: number;
+          business_price: number;
           is_active: boolean | null;
           created_at: string | null;
           updated_at: string | null;
@@ -1288,7 +1339,7 @@ export type Database = {
           id?: string;
           business_id: string;
           addon_id: string;
-          price: number;
+          business_price: number;
           is_active?: boolean | null;
           created_at?: string | null;
           updated_at?: string | null;
@@ -1297,7 +1348,7 @@ export type Database = {
           id?: string;
           business_id?: string;
           addon_id?: string;
-          price?: number;
+          business_price?: number;
           is_active?: boolean | null;
           created_at?: string | null;
           updated_at?: string | null;
