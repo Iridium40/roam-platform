@@ -29,7 +29,6 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useCustomerAuth } from "@/contexts/auth/CustomerAuthContext";
-import GoogleOneTap from "@/components/GoogleOneTap";
 // import InstagramFeed from "@/components/InstagramFeed";
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -335,18 +334,6 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-roam-light-blue/5 to-roam-yellow/10">
-      {/* Google One Tap - only show when not authenticated */}
-      {!isCustomer && import.meta.env.VITE_GOOGLE_CLIENT_ID && (
-        <GoogleOneTap
-          clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}
-          onSuccess={() => {
-            console.log("Google One Tap sign-in successful");
-          }}
-          onError={(error) => {
-            console.error("Google One Tap error:", error);
-          }}
-        />
-      )}
       {/* Header */}
       <header className="bg-white/80 backdrop-blur-md border-b border-border/50 sticky top-0 z-50">
         <div className="container mx-auto px-6 py-4">

@@ -1,9 +1,9 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { AuthAPI } from "@/lib/supabase/auth";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "@/hooks/use-toast";
 
-// Local provider type
+// Local provider type - Updated to fix auth loop v2
 interface Provider {
   id: string;
   user_id: string;
@@ -50,15 +50,42 @@ interface ProviderAuthProviderProps {
 export const ProviderAuthProvider: React.FC<ProviderAuthProviderProps> = ({ children }) => {
   const [provider, setProvider] = useState<Provider | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  const clearStoredData = () => {
+  const clearStoredData = useCallback(() => {
     localStorage.removeItem("roam_provider");
     localStorage.removeItem("roam_access_token");
     localStorage.removeItem("roam_user_type");
-  };
+  }, []);
+
+  const loadProviderData = useCallback(async (userId: string, accessToken: string) => {
+    try {
+      const providerData = await AuthAPI.getProviderByUserId(userId);
+      
+      if (providerData) {
+        console.log("Setting provider data in context:", providerData.provider_role);
+        setProvider(providerData);
+        localStorage.setItem("roam_provider", JSON.stringify(providerData));
+        localStorage.setItem("roam_access_token", accessToken);
+        localStorage.setItem("roam_user_type", "provider");
+        apiClient.setAuthToken(accessToken);
+        return true;
+      } else {
+        console.log("No provider data found, clearing stored data");
+        clearStoredData();
+        return false;
+      }
+    } catch (error) {
+      console.error("Error loading provider data:", error);
+      clearStoredData();
+      return false;
+    }
+  }, [clearStoredData]);
 
   useEffect(() => {
     const initializeAuth = async () => {
+      if (isInitialized) return;
+      
       try {
         // Try to restore session from localStorage first
         const storedProvider = localStorage.getItem("roam_provider");
@@ -73,6 +100,7 @@ export const ProviderAuthProvider: React.FC<ProviderAuthProviderProps> = ({ chil
           if (providerData.user_id) {
             setProvider(providerData);
             setLoading(false);
+            setIsInitialized(true);
             return;
           } else {
             clearStoredData();
@@ -83,17 +111,7 @@ export const ProviderAuthProvider: React.FC<ProviderAuthProviderProps> = ({ chil
         const { data: { session } } = await import("@/lib/supabase").then(m => m.supabase.auth.getSession());
         
         if (session?.user) {
-          const providerData = await AuthAPI.getProviderByUserId(session.user.id);
-          
-          if (providerData) {
-            setProvider(providerData);
-            localStorage.setItem("roam_provider", JSON.stringify(providerData));
-            localStorage.setItem("roam_access_token", session.access_token);
-            localStorage.setItem("roam_user_type", "provider");
-            apiClient.setAuthToken(session.access_token);
-          } else {
-            clearStoredData();
-          }
+          await loadProviderData(session.user.id, session.access_token);
         } else {
           clearStoredData();
         }
@@ -102,10 +120,15 @@ export const ProviderAuthProvider: React.FC<ProviderAuthProviderProps> = ({ chil
         clearStoredData();
       } finally {
         setLoading(false);
+        setIsInitialized(true);
       }
     };
 
     initializeAuth();
+  }, [isInitialized, clearStoredData, loadProviderData]);
+
+  useEffect(() => {
+    if (!isInitialized) return;
 
     // Set up auth state change listener
     let subscription: any;
@@ -116,27 +139,12 @@ export const ProviderAuthProvider: React.FC<ProviderAuthProviderProps> = ({ chil
         console.log("Auth state changed:", event, session?.user?.id);
         
         if (event === 'SIGNED_IN' && session?.user) {
-          console.log("SIGNED_IN event detected, fetching provider data...");
-          console.log("Session user ID:", session.user.id);
-          console.log("Session user email:", session.user.email);
-          try {
-            const providerData = await AuthAPI.getProviderByUserId(session.user.id);
-            console.log("Provider data fetched:", providerData);
-            
-            if (providerData) {
-              console.log("Setting provider data in context:", providerData.provider_role);
-              setProvider(providerData);
-              localStorage.setItem("roam_provider", JSON.stringify(providerData));
-              localStorage.setItem("roam_access_token", session.access_token);
-              localStorage.setItem("roam_user_type", "provider");
-              apiClient.setAuthToken(session.access_token);
-            } else {
-              console.log("No provider data found, clearing stored data");
-              clearStoredData();
-            }
-          } catch (error) {
-            console.error("Error loading provider data after sign in:", error);
-            clearStoredData();
+          // Only process if we don't already have this user loaded
+          if (provider?.user_id !== session.user.id) {
+            console.log("SIGNED_IN event detected, fetching provider data...");
+            console.log("Session user ID:", session.user.id);
+            console.log("Session user email:", session.user.email);
+            await loadProviderData(session.user.id, session.access_token);
           }
         } else if (event === 'SIGNED_OUT') {
           console.log("SIGNED_OUT event detected");
@@ -156,7 +164,7 @@ export const ProviderAuthProvider: React.FC<ProviderAuthProviderProps> = ({ chil
         subscription.unsubscribe();
       }
     };
-  }, []);
+  }, [isInitialized, provider?.user_id, clearStoredData, loadProviderData]);
 
   const signOut = async () => {
     setLoading(true);

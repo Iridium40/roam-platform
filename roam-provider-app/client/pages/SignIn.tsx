@@ -91,12 +91,31 @@ export default function SignIn() {
       });
       
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Sign in timeout')), 10000)
+        setTimeout(() => reject(new Error('Sign in request timed out. Please try again.')), 15000)
       );
       
       const { data, error } = await Promise.race([signInPromise, timeoutPromise]) as any;
 
-      if (error) throw error;
+      if (error) {
+        console.error("Supabase auth error:", error);
+        
+        // Provide user-friendly error messages
+        let errorMessage = "An error occurred during sign in.";
+        
+        if (error.message === "Invalid login credentials") {
+          errorMessage = "Invalid email or password. Please check your credentials and try again.";
+        } else if (error.message.includes("Email not confirmed")) {
+          errorMessage = "Please check your email and click the confirmation link before signing in.";
+        } else if (error.message.includes("Too many requests")) {
+          errorMessage = "Too many login attempts. Please wait a few minutes before trying again.";
+        } else if (error.message.includes("Network")) {
+          errorMessage = "Network error. Please check your connection and try again.";
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+        
+        throw new Error(errorMessage);
+      }
 
       if (data.user) {
         console.log("Sign in successful, user ID:", data.user.id);
@@ -108,15 +127,23 @@ export default function SignIn() {
           description: "You have been successfully signed in.",
         });
         
+        // Add a small delay to allow auth context to update
+        setTimeout(() => {
+          console.log("Auth context should have updated by now");
+        }, 1000);
+        
         // The auth context will handle the role-based redirection
         // The auth state change listener will trigger the useEffect above
         console.log("Waiting for auth context to update...");
+      } else {
+        throw new Error("Sign in failed - no user data returned");
       }
     } catch (error: any) {
       console.error("Sign in error:", error);
+      
       toast({
         title: "Sign In Failed",
-        description: error.message || "Invalid email or password",
+        description: error.message || "Unable to sign in. Please try again.",
         variant: "destructive",
       });
     } finally {
