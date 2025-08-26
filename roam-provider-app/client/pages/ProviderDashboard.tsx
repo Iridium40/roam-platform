@@ -575,60 +575,60 @@ export default function ProviderDashboard() {
         if (businessError) throw businessError;
         setBusiness(businessData);
 
-        // Load bookings
+        // Load bookings with all related data
         const { data: bookingsData, error: bookingsError } = await supabase
           .from("bookings")
           .select(`
             *,
-            services (*),
-            providers (*),
-            business_locations (*)
+            services (
+              id,
+              name,
+              description,
+              duration_minutes,
+              min_price,
+              max_price
+            ),
+            providers (
+              id,
+              first_name,
+              last_name,
+              email,
+              provider_role,
+              is_active
+            ),
+            customer_profiles (
+              id,
+              first_name,
+              last_name,
+              email,
+              phone
+            ),
+            business_locations (
+              id,
+              location_name,
+              address_line1,
+              city,
+              state
+            ),
+            customer_locations (
+              id,
+              location_name,
+              address_line1,
+              city,
+              state
+            )
           `)
           .eq("business_id", providerData.business_id)
-          .order("booking_date", { ascending: true });
+          .order("booking_date", { ascending: true })
+          .order("start_time", { ascending: true });
 
-        if (bookingsError) throw bookingsError;
+        if (bookingsError) {
+          console.error("Error loading bookings:", bookingsError);
+          throw bookingsError;
+        }
 
-        // Enhanced sample booking data for demonstration
-        const enhancedBookings = [
-          {
-            id: "1",
-            booking_date: "2025-08-19",
-            start_time: "12:00:00",
-            booking_status: "confirmed",
-            total_amount: 115,
-            services: { name: "Weight Loss" },
-            customer_profiles: {
-              first_name: "Alan",
-              last_name: "Smith",
-              email: "alan.smith@healthness.com"
-            },
-            assigned_provider: "Alan Smith",
-            reference_number: "BK250JRB001",
-            service_location: "customer_location",
-            duration: 60
-          },
-          {
-            id: "2",
-            booking_date: "2025-08-28",
-            start_time: "09:00:00",
-            booking_status: "pending",
-            total_amount: 138,
-            services: { name: "Hair Blowout" },
-            customer_profiles: {
-              first_name: "Alan",
-              last_name: "Smith",
-              email: "alan.smith@healthness.com"
-            },
-            assigned_provider: "unassigned",
-            reference_number: "BK250UJR001",
-            service_location: "home_office",
-            duration: 90
-          }
-        ];
-
-        // Use enhanced sample data if no real bookings exist
-        setBookings(bookingsData?.length ? bookingsData : enhancedBookings);
+        console.log("Loaded bookings:", bookingsData);
+        setBookings(bookingsData || []);
 
         // Load locations
         const { data: locationsData, error: locationsError } = await supabase
@@ -3182,7 +3182,7 @@ export default function ProviderDashboard() {
                             <div className="flex items-center space-x-2 text-xs text-gray-600">
                               <MapPin className="w-3 h-3" />
                               <span className="truncate">
-                                {booking.service_location === "customer_location" ? "Customer Location" : "Business Location"}
+                                {booking.customer_location_id ? "Customer Location" : "Business Location"}
                               </span>
                             </div>
                           </div>
@@ -3214,7 +3214,7 @@ export default function ProviderDashboard() {
                             <span className="text-xs font-medium text-gray-700">Provider:</span>
                           </div>
                           <Select
-                            value={booking.assigned_provider || "unassigned"}
+                            value={booking.providers?.id || "unassigned"}
                             onValueChange={(value) => {
                               toast({
                                 title: "Provider Assigned",
@@ -3223,14 +3223,19 @@ export default function ProviderDashboard() {
                             }}
                           >
                             <SelectTrigger className="w-full sm:w-32 h-7 text-xs">
-                              <SelectValue />
+                              <SelectValue placeholder={
+                                booking.providers 
+                                  ? `${booking.providers.first_name} ${booking.providers.last_name}`
+                                  : "Unassigned"
+                              } />
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="unassigned">Unassigned</SelectItem>
-                              <SelectItem value="Alan Smith">Alan Smith</SelectItem>
-                              <SelectItem value="Sarah Johnson">Sarah Johnson</SelectItem>
-                              <SelectItem value="Emily Rodriguez">Emily Rodriguez</SelectItem>
-                              <SelectItem value="Michael Chen">Michael Chen</SelectItem>
+                              {allProviders.map((provider) => (
+                                <SelectItem key={provider.id} value={provider.id}>
+                                  {provider.first_name} {provider.last_name}
+                                </SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                         </div>
@@ -7363,15 +7368,18 @@ export default function ProviderDashboard() {
                 <div className="flex items-center space-x-4">
                   <Avatar className="w-12 h-12">
                     <AvatarFallback className="bg-green-100 text-green-700">
-                      {selectedBookingDetails.assigned_provider?.charAt(0) || "U"}
+                      {selectedBookingDetails.providers?.first_name?.charAt(0) || "U"}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
                     <p className="font-medium text-gray-900">
-                      {selectedBookingDetails.assigned_provider || "Unassigned"}
+                      {selectedBookingDetails.providers 
+                        ? `${selectedBookingDetails.providers.first_name} ${selectedBookingDetails.providers.last_name}`
+                        : "Unassigned"
+                      }
                     </p>
                     <p className="text-sm text-gray-600">
-                      {selectedBookingDetails.assigned_provider ? "Service Provider" : "No provider assigned yet"}
+                      {selectedBookingDetails.providers ? "Service Provider" : "No provider assigned yet"}
                     </p>
                   </div>
                 </div>
@@ -7385,12 +7393,14 @@ export default function ProviderDashboard() {
                 </h4>
                 <div className="space-y-2">
                   <p className="font-medium text-gray-900">
-                    {selectedBookingDetails.service_location === "customer_location" ? "Customer Location" : "Business Location"}
+                    {selectedBookingDetails.customer_location_id ? "Customer Location" : "Business Location"}
                   </p>
                   <p className="text-sm text-gray-600">
-                    {selectedBookingDetails.service_location === "customer_location"
-                      ? "412 Main Street, Santa Rosa, FL 32459"
-                      : "123 Office Lane Long SW Unit A, Next Beach..."
+                    {selectedBookingDetails.customer_locations 
+                      ? `${selectedBookingDetails.customer_locations.location_name || ""} ${selectedBookingDetails.customer_locations.address_line1 || ""}, ${selectedBookingDetails.customer_locations.city || ""}, ${selectedBookingDetails.customer_locations.state || ""}`
+                      : selectedBookingDetails.business_locations
+                      ? `${selectedBookingDetails.business_locations.location_name || ""} ${selectedBookingDetails.business_locations.address_line1 || ""}, ${selectedBookingDetails.business_locations.city || ""}, ${selectedBookingDetails.business_locations.state || ""}`
+                      : "Location not specified"
                     }
                   </p>
                 </div>
