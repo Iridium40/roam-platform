@@ -108,8 +108,11 @@ export const ProviderAuthProvider: React.FC<ProviderAuthProviderProps> = ({ chil
     initializeAuth();
 
     // Set up auth state change listener
-    const { data: { subscription } } = await import("@/lib/supabase").then(m => 
-      m.supabase.auth.onAuthStateChange(async (event, session) => {
+    let subscription: any;
+    
+    const setupAuthListener = async () => {
+      const { supabase } = await import("@/lib/supabase");
+      const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
         console.log("Auth state changed:", event, session?.user?.id);
         
         if (event === 'SIGNED_IN' && session?.user) {
@@ -134,11 +137,17 @@ export const ProviderAuthProvider: React.FC<ProviderAuthProviderProps> = ({ chil
           clearStoredData();
           apiClient.clearAuthToken();
         }
-      })
-    );
+      });
+      
+      subscription = data.subscription;
+    };
+
+    setupAuthListener();
 
     return () => {
-      subscription.unsubscribe();
+      if (subscription) {
+        subscription.unsubscribe();
+      }
     };
   }, []);
 
