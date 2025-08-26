@@ -3,7 +3,7 @@ import { AuthAPI } from "@/lib/supabase/auth";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "@/hooks/use-toast";
 
-// Local provider type - Updated to fix auth loop v2
+// Provider type - v3 auth fix
 interface Provider {
   id: string;
   user_id: string;
@@ -50,7 +50,10 @@ interface ProviderAuthProviderProps {
 export const ProviderAuthProvider: React.FC<ProviderAuthProviderProps> = ({ children }) => {
   const [provider, setProvider] = useState<Provider | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isInitialized, setIsInitialized] = useState(false);
+  const [authInitialized, setAuthInitialized] = useState(false);
+  const authProcessingRef = useRef<Set<string>>(new Set());
+  const lastProcessedUserRef = useRef<string | null>(null);
+  const authValidationRef = useRef<boolean>(false);
 
   const clearStoredData = useCallback(() => {
     localStorage.removeItem("roam_provider");
@@ -58,123 +61,200 @@ export const ProviderAuthProvider: React.FC<ProviderAuthProviderProps> = ({ chil
     localStorage.removeItem("roam_user_type");
   }, []);
 
-  const loadProviderData = useCallback(async (userId: string, accessToken: string) => {
+  // Immediate auth state validation to prevent loops
+  const validateAuthState = useCallback(async (): Promise<boolean> => {
+    if (authValidationRef.current) return true;
+    
+    try {
+      const { supabase } = await import("@/lib/supabase");
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      if (error) {
+        console.log(" Auth validation failed:", error.message);
+        clearStoredData();
+        authValidationRef.current = true;
+        return false;
+      }
+      
+      if (!session?.user) {
+        console.log(" No active session found");
+        clearStoredData();
+        authValidationRef.current = true;
+        return false;
+      }
+      
+      console.log(" Auth state validated for user:", session.user.id);
+      authValidationRef.current = true;
+      return true;
+    } catch (error) {
+      console.error(" Auth validation error:", error);
+      clearStoredData();
+      authValidationRef.current = true;
+      return false;
+    }
+  }, [clearStoredData]);
+
+  const processUserAuth = useCallback(async (userId: string, accessToken: string): Promise<boolean> => {
+    // Validate auth state first
+    const isValidAuth = await validateAuthState();
+    if (!isValidAuth) {
+      console.log(" Auth validation failed, skipping user processing");
+      return false;
+    }
+
+    // Prevent duplicate processing with Set-based tracking
+    if (authProcessingRef.current.has(userId)) {
+      console.log(" Auth already processing for user:", userId);
+      return true;
+    }
+
+    // Skip if this is the same user we just processed
+    if (lastProcessedUserRef.current === userId) {
+      console.log(" Skipping - same user already processed:", userId);
+      return true;
+    }
+
+    authProcessingRef.current.add(userId);
+    console.log(" Processing auth for user:", userId);
+    
     try {
       const providerData = await AuthAPI.getProviderByUserId(userId);
       
       if (providerData) {
-        console.log("Setting provider data in context:", providerData.provider_role);
+        console.log(" Provider data loaded:", providerData.provider_role);
         setProvider(providerData);
+        lastProcessedUserRef.current = userId;
+        
         localStorage.setItem("roam_provider", JSON.stringify(providerData));
         localStorage.setItem("roam_access_token", accessToken);
         localStorage.setItem("roam_user_type", "provider");
         apiClient.setAuthToken(accessToken);
         return true;
       } else {
-        console.log("No provider data found, clearing stored data");
+        console.log(" No provider data found");
         clearStoredData();
+        lastProcessedUserRef.current = null;
         return false;
       }
     } catch (error) {
-      console.error("Error loading provider data:", error);
+      console.error(" Auth processing error:", error);
       clearStoredData();
+      lastProcessedUserRef.current = null;
       return false;
+    } finally {
+      authProcessingRef.current.delete(userId);
     }
-  }, [clearStoredData]);
+  }, [clearStoredData, validateAuthState]);
 
+  // Initial auth setup with immediate validation
   useEffect(() => {
-    const initializeAuth = async () => {
-      if (isInitialized) return;
-      
+    if (authInitialized) return;
+
+    const initAuth = async () => {
       try {
-        // Try to restore session from localStorage first
+        // Immediate auth state validation
+        const isValidAuth = await validateAuthState();
+        if (!isValidAuth) {
+          console.log(" Initial auth validation failed");
+          setLoading(false);
+          setAuthInitialized(true);
+          return;
+        }
+
+        // Check localStorage first
         const storedProvider = localStorage.getItem("roam_provider");
         const storedToken = localStorage.getItem("roam_access_token");
 
         if (storedProvider && storedToken) {
-          const providerData = JSON.parse(storedProvider);
-          
-          // Set auth token for API client
-          apiClient.setAuthToken(storedToken);
-          
-          if (providerData.user_id) {
-            setProvider(providerData);
-            setLoading(false);
-            setIsInitialized(true);
-            return;
-          } else {
+          try {
+            const providerData = JSON.parse(storedProvider);
+            if (providerData.user_id) {
+              setProvider(providerData);
+              lastProcessedUserRef.current = providerData.user_id;
+              apiClient.setAuthToken(storedToken);
+              console.log(" Restored from localStorage:", providerData.provider_role);
+              setLoading(false);
+              setAuthInitialized(true);
+              return;
+            }
+          } catch (e) {
+            console.log(" Invalid stored data, clearing");
             clearStoredData();
           }
         }
 
-        // Try to get current session from Supabase
+        // Check current session
         const { data: { session } } = await import("@/lib/supabase").then(m => m.supabase.auth.getSession());
         
         if (session?.user) {
-          await loadProviderData(session.user.id, session.access_token);
+          await processUserAuth(session.user.id, session.access_token);
         } else {
           clearStoredData();
         }
       } catch (error) {
-        console.error("Error during provider auth initialization:", error);
+        console.error(" Auth initialization error:", error);
         clearStoredData();
       } finally {
         setLoading(false);
-        setIsInitialized(true);
+        setAuthInitialized(true);
       }
     };
 
-    initializeAuth();
-  }, [isInitialized, clearStoredData, loadProviderData]);
+    initAuth();
+  }, [authInitialized, processUserAuth, clearStoredData, validateAuthState]);
 
+  // Auth state listener
   useEffect(() => {
-    if (!isInitialized) return;
+    if (!authInitialized) return;
 
-    // Set up auth state change listener
-    let subscription: any;
+    let authSubscription: any;
     
-    const setupAuthListener = async () => {
+    const setupListener = async () => {
       const { supabase } = await import("@/lib/supabase");
       const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
-        console.log("Auth state changed:", event, session?.user?.id);
+        console.log(" Auth event:", event, session?.user?.id);
         
         if (event === 'SIGNED_IN' && session?.user) {
-          // Only process if we don't already have this user loaded
-          if (provider?.user_id !== session.user.id) {
-            console.log("SIGNED_IN event detected, fetching provider data...");
-            console.log("Session user ID:", session.user.id);
-            console.log("Session user email:", session.user.email);
-            await loadProviderData(session.user.id, session.access_token);
+          // Only process if different from current user
+          if (lastProcessedUserRef.current !== session.user.id) {
+            console.log(" New sign-in detected");
+            await processUserAuth(session.user.id, session.access_token);
+          } else {
+            console.log(" Same user sign-in, skipping");
           }
         } else if (event === 'SIGNED_OUT') {
-          console.log("SIGNED_OUT event detected");
+          console.log(" Sign-out detected");
           setProvider(null);
+          lastProcessedUserRef.current = null;
+          authProcessingRef.current.clear();
           clearStoredData();
           apiClient.clearAuthToken();
         }
       });
       
-      subscription = data.subscription;
+      authSubscription = data.subscription;
     };
 
-    setupAuthListener();
+    setupListener();
 
     return () => {
-      if (subscription) {
-        subscription.unsubscribe();
+      if (authSubscription) {
+        authSubscription.unsubscribe();
       }
     };
-  }, [isInitialized, provider?.user_id, clearStoredData, loadProviderData]);
+  }, [authInitialized, processUserAuth, clearStoredData]);
 
   const signOut = async () => {
     setLoading(true);
     try {
       setProvider(null);
+      lastProcessedUserRef.current = null;
+      authProcessingRef.current.clear();
       clearStoredData();
       apiClient.clearAuthToken();
       await AuthAPI.signOut();
     } catch (error) {
-      console.error("Provider sign out error:", error);
+      console.error(" Sign out error:", error);
     } finally {
       setLoading(false);
     }
@@ -190,11 +270,10 @@ export const ProviderAuthProvider: React.FC<ProviderAuthProviderProps> = ({ chil
         setProvider(providerData);
         localStorage.setItem("roam_provider", JSON.stringify(providerData));
       } else {
-        // Provider no longer exists, sign out
         await signOut();
       }
     } catch (error) {
-      console.error("Error refreshing provider:", error);
+      console.error(" Refresh error:", error);
     }
   };
 
