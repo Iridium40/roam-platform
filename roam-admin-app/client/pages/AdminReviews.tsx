@@ -208,7 +208,12 @@ export default function AdminReviews() {
         await new Promise((resolve) => setTimeout(resolve, 1000 * retryCount));
       }
 
-      const { data, error } = await supabase
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Request timeout')), 30000); // 30 second timeout
+      });
+
+      const queryPromise = supabase
         .from("reviews")
         .select(
           `
@@ -241,7 +246,10 @@ export default function AdminReviews() {
           )
         `,
         )
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(100); // Add a limit to prevent overwhelming the query
+
+      const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
 
       if (error) {
         console.error("Error fetching reviews:", error.message, error);
@@ -290,13 +298,35 @@ export default function AdminReviews() {
   };
 
   useEffect(() => {
-    fetchAdminUser();
+    let isMounted = true;
+    
+    const loadData = async () => {
+      if (isMounted) {
+        await fetchAdminUser();
+      }
+    };
+    
+    loadData();
+    
+    return () => {
+      isMounted = false;
+    };
   }, [user]);
 
   useEffect(() => {
-    if (adminUser) {
-      fetchReviews();
-    }
+    let isMounted = true;
+    
+    const loadReviews = async () => {
+      if (adminUser && isMounted) {
+        await fetchReviews();
+      }
+    };
+    
+    loadReviews();
+    
+    return () => {
+      isMounted = false;
+    };
   }, [adminUser]);
 
   const reviewStats = {

@@ -251,22 +251,14 @@ export default function AdminPromotions() {
         console.error("Error code:", error.code);
         console.error("Error details:", error.details);
         console.error("Error hint:", error.hint);
-        
-        // Check if it's a table not found error
-        if (error.code === 'PGRST116' || error.message?.includes('relation "promotions" does not exist')) {
-          setError(
-            "Promotions table not found. The promotions feature is not yet implemented in the database schema."
-          );
-        } else {
-          const errorMessage =
-            error?.message ||
-            error?.details ||
-            error?.hint ||
-            "Unknown database error";
-          setError(
-            `Promotions Query Error: ${errorMessage}. You may need to create RLS policy: CREATE POLICY "Allow anon read access" ON public.promotions FOR SELECT USING (true);`,
-          );
-        }
+        const errorMessage =
+          error?.message ||
+          error?.details ||
+          error?.hint ||
+          "Unknown database error";
+        setError(
+          `Promotions Query Error: ${errorMessage}. You may need to create RLS policy: CREATE POLICY "Allow anon read access" ON public.promotions FOR SELECT USING (true);`,
+        );
         return;
       }
 
@@ -317,22 +309,14 @@ export default function AdminPromotions() {
         console.error("Error code:", error.code);
         console.error("Error details:", error.details);
         console.error("Error hint:", error.hint);
-        
-        // Check if it's a table not found error
-        if (error.code === 'PGRST116' || error.message?.includes('relation "promotion_usage" does not exist')) {
-          setError(
-            "Promotion usage table not found. The promotions feature is not yet implemented in the database schema."
-          );
-        } else {
-          const errorMessage =
-            error?.message ||
-            error?.details ||
-            error?.hint ||
-            "Unknown database error";
-          setError(
-            `Promotion Usage Query Error: ${errorMessage}. You may need to create RLS policy: CREATE POLICY "Allow anon read access" ON public.promotion_usage FOR SELECT USING (true);`,
-          );
-        }
+        const errorMessage =
+          error?.message ||
+          error?.details ||
+          error?.hint ||
+          "Unknown database error";
+        setError(
+          `Promotion Usage Query Error: ${errorMessage}. You may need to create RLS policy: CREATE POLICY "Allow anon read access" ON public.promotion_usage FOR SELECT USING (true);`,
+        );
         return;
       }
 

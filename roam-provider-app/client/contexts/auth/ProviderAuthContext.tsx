@@ -106,6 +106,40 @@ export const ProviderAuthProvider: React.FC<ProviderAuthProviderProps> = ({ chil
     };
 
     initializeAuth();
+
+    // Set up auth state change listener
+    const { data: { subscription } } = await import("@/lib/supabase").then(m => 
+      m.supabase.auth.onAuthStateChange(async (event, session) => {
+        console.log("Auth state changed:", event, session?.user?.id);
+        
+        if (event === 'SIGNED_IN' && session?.user) {
+          try {
+            const providerData = await AuthAPI.getProviderByUserId(session.user.id);
+            
+            if (providerData) {
+              setProvider(providerData);
+              localStorage.setItem("roam_provider", JSON.stringify(providerData));
+              localStorage.setItem("roam_access_token", session.access_token);
+              localStorage.setItem("roam_user_type", "provider");
+              apiClient.setAuthToken(session.access_token);
+            } else {
+              clearStoredData();
+            }
+          } catch (error) {
+            console.error("Error loading provider data after sign in:", error);
+            clearStoredData();
+          }
+        } else if (event === 'SIGNED_OUT') {
+          setProvider(null);
+          clearStoredData();
+          apiClient.clearAuthToken();
+        }
+      })
+    );
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signOut = async () => {

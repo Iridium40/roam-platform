@@ -32,6 +32,9 @@ export type NotificationType = 'booking_update' | 'payment' | 'system' | 'market
 export type NotificationStatus = 'sent' | 'delivered' | 'failed' | 'pending';
 export type MessageNotificationType = 'message' | 'mention' | 'system';
 
+// Promotion Types
+export type PromotionSavingsType = 'percentage' | 'fixed_amount';
+
 export type Database = {
   public: {
     Tables: {
@@ -858,56 +861,50 @@ export type Database = {
         Row: {
           id: string;
           title: string;
-          description: string;
-          discount_type: string;
-          discount_value: number;
-          valid_from: string;
-          valid_until: string;
+          description: string | null;
+          start_date: string | null;
+          end_date: string | null;
           is_active: boolean | null;
           created_at: string | null;
-          business_id: string;
-          service_id: string | null;
-          max_uses: number | null;
-          current_uses: number | null;
-          min_order_amount: number | null;
-          promo_code: string | null;
+          business_id: string | null;
           image_url: string | null;
+          promo_code: string;
+          savings_type: PromotionSavingsType | null;
+          savings_amount: number | null;
+          savings_max_amount: number | null;
+          service_id: string | null;
         };
         Insert: {
           id?: string;
           title: string;
-          description: string;
-          discount_type: string;
-          discount_value: number;
-          valid_from: string;
-          valid_until: string;
+          description?: string | null;
+          start_date?: string | null;
+          end_date?: string | null;
           is_active?: boolean | null;
           created_at?: string | null;
-          business_id: string;
-          service_id?: string | null;
-          max_uses?: number | null;
-          current_uses?: number | null;
-          min_order_amount?: number | null;
-          promo_code?: string | null;
+          business_id?: string | null;
           image_url?: string | null;
+          promo_code: string;
+          savings_type?: PromotionSavingsType | null;
+          savings_amount?: number | null;
+          savings_max_amount?: number | null;
+          service_id?: string | null;
         };
         Update: {
           id?: string;
           title?: string;
-          description?: string;
-          discount_type?: string;
-          discount_value?: number;
-          valid_from?: string;
-          valid_until?: string;
+          description?: string | null;
+          start_date?: string | null;
+          end_date?: string | null;
           is_active?: boolean | null;
           created_at?: string | null;
-          business_id?: string;
-          service_id?: string | null;
-          max_uses?: number | null;
-          current_uses?: number | null;
-          min_order_amount?: number | null;
-          promo_code?: string | null;
+          business_id?: string | null;
           image_url?: string | null;
+          promo_code?: string;
+          savings_type?: PromotionSavingsType | null;
+          savings_amount?: number | null;
+          savings_max_amount?: number | null;
+          service_id?: string | null;
         };
       };
       // Promotion usage
@@ -915,26 +912,32 @@ export type Database = {
         Row: {
           id: string;
           promotion_id: string;
-          customer_id: string;
           booking_id: string;
+          discount_applied: number;
+          original_amount: number;
+          final_amount: number;
+          created_at: string | null;
           used_at: string | null;
-          discount_amount: number | null;
         };
         Insert: {
           id?: string;
           promotion_id: string;
-          customer_id: string;
           booking_id: string;
+          discount_applied: number;
+          original_amount: number;
+          final_amount: number;
+          created_at?: string | null;
           used_at?: string | null;
-          discount_amount?: number | null;
         };
         Update: {
           id?: string;
           promotion_id?: string;
-          customer_id?: string;
           booking_id?: string;
+          discount_applied?: number;
+          original_amount?: number;
+          final_amount?: number;
+          created_at?: string | null;
           used_at?: string | null;
-          discount_amount?: number | null;
         };
       };
       // Reviews
@@ -942,53 +945,47 @@ export type Database = {
         Row: {
           id: string;
           booking_id: string;
-          customer_id: string;
-          provider_id: string | null;
-          business_id: string;
-          rating: number;
+          overall_rating: number;
+          service_rating: number | null;
+          communication_rating: number | null;
+          punctuality_rating: number | null;
           review_text: string | null;
-          is_verified: boolean | null;
-          created_at: string | null;
-          updated_at: string | null;
-          moderated: boolean | null;
+          is_approved: boolean | null;
+          is_featured: boolean | null;
           moderated_by: string | null;
           moderated_at: string | null;
           moderation_notes: string | null;
-          is_public: boolean | null;
+          created_at: string | null;
         };
         Insert: {
           id?: string;
           booking_id: string;
-          customer_id: string;
-          provider_id?: string | null;
-          business_id: string;
-          rating: number;
+          overall_rating: number;
+          service_rating?: number | null;
+          communication_rating?: number | null;
+          punctuality_rating?: number | null;
           review_text?: string | null;
-          is_verified?: boolean | null;
-          created_at?: string | null;
-          updated_at?: string | null;
-          moderated?: boolean | null;
+          is_approved?: boolean | null;
+          is_featured?: boolean | null;
           moderated_by?: string | null;
           moderated_at?: string | null;
           moderation_notes?: string | null;
-          is_public?: boolean | null;
+          created_at?: string | null;
         };
         Update: {
           id?: string;
           booking_id?: string;
-          customer_id?: string;
-          provider_id?: string | null;
-          business_id?: string;
-          rating?: number;
+          overall_rating?: number;
+          service_rating?: number | null;
+          communication_rating?: number | null;
+          punctuality_rating?: number | null;
           review_text?: string | null;
-          is_verified?: boolean | null;
-          created_at?: string | null;
-          updated_at?: string | null;
-          moderated?: boolean | null;
+          is_approved?: boolean | null;
+          is_featured?: boolean | null;
           moderated_by?: string | null;
           moderated_at?: string | null;
           moderation_notes?: string | null;
-          is_public?: boolean | null;
+          created_at?: string | null;
         };
       };
       // Provider addons
@@ -1720,3 +1717,5 @@ export type Provider = Database['public']['Tables']['providers']['Row'];
 export type Booking = Database['public']['Tables']['bookings']['Row'];
 export type BusinessProfile = Database['public']['Tables']['business_profiles']['Row'];
 export type CustomerProfile = Database['public']['Tables']['customer_profiles']['Row'];
+export type Promotion = Database['public']['Tables']['promotions']['Row'];
+export type PromotionUsage = Database['public']['Tables']['promotion_usage']['Row'];

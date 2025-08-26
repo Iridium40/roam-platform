@@ -23,6 +23,7 @@ declare global {
 import ProviderPortal from "./pages/ProviderPortal";
 import ProviderDashboard from "./pages/ProviderDashboard";
 import ProviderOnboardingFlow from "./pages/ProviderOnboardingFlow";
+import ProviderOnboardingPhase1 from "./pages/ProviderOnboardingPhase1";
 import LandingPage from "./pages/LandingPage";
 import ErrorBoundary from "./lib/errors/ErrorBoundary";
 import NotFound from "./pages/NotFound";
@@ -131,6 +132,26 @@ const App = () => (
               }
             />
 
+            {/* Alternative onboarding route (without hyphen) */}
+            <Route
+              path="/provider-onboarding-flow"
+              element={
+                <ErrorBoundary>
+                  <ProviderOnboardingFlow />
+                </ErrorBoundary>
+              }
+            />
+
+            {/* Phase 1 Route */}
+            <Route
+              path="/provider-onboarding/phase1"
+              element={
+                <ErrorBoundary>
+                  <ProviderOnboardingPhase1 />
+                </ErrorBoundary>
+              }
+            />
+
             {/* Phase 2 Entry Point - Token validation */}
             <Route
               path="/provider-onboarding/phase2"
@@ -144,6 +165,16 @@ const App = () => (
             {/* Phase 2 Steps */}
             <Route
               path="/provider-onboarding/phase2/:step"
+              element={
+                <ErrorBoundary>
+                  <ProviderOnboardingFlow />
+                </ErrorBoundary>
+              }
+            />
+
+            {/* Onboarding Complete */}
+            <Route
+              path="/provider-onboarding/complete"
               element={
                 <ErrorBoundary>
                   <ProviderOnboardingFlow />

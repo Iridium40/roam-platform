@@ -21,7 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 export default function SignIn() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { provider, userType } = useAuth();
+  const { provider, userType, loading } = useAuth();
   const isProvider = userType === "provider";
 
   const [loading, setLoading] = useState(false);
@@ -46,14 +46,29 @@ export default function SignIn() {
 
   // Redirect if already authenticated
   useEffect(() => {
-    if (provider && isProvider) {
+    if (provider && !loading) {
       toast({
         title: "Already Signed In",
         description: `Welcome back, ${provider.first_name}!`,
       });
-      navigate("/provider/dashboard");
+      
+      // Redirect based on provider role
+      switch (provider.provider_role) {
+        case "owner":
+          navigate("/owner/dashboard");
+          break;
+        case "dispatcher":
+          navigate("/dispatcher/dashboard");
+          break;
+        case "provider":
+          navigate("/provider/dashboard");
+          break;
+        default:
+          navigate("/provider/dashboard");
+          break;
+      }
     }
-  }, [provider, isProvider, navigate, toast]);
+  }, [provider, loading, navigate, toast]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,7 +87,9 @@ export default function SignIn() {
           title: "Welcome back!",
           description: "You have been successfully signed in.",
         });
-        navigate("/provider/dashboard");
+        
+        // The auth context will handle the role-based redirection
+        // The auth state change listener will trigger the useEffect above
       }
     } catch (error: any) {
       console.error("Sign in error:", error);

@@ -218,49 +218,33 @@ export default function AdminDashboard() {
       // Average rating (from reviews if available)
       const { data: reviewsData } = await supabase
         .from("reviews")
-        .select("rating")
-        .not("rating", "is", null);
+        .select("overall_rating")
+        .gte("overall_rating", 1);
 
       const avgRating =
         reviewsData?.length > 0
-          ? reviewsData.reduce((sum, review) => sum + review.rating, 0) /
+          ? reviewsData.reduce((sum, review) => sum + review.overall_rating, 0) /
             reviewsData.length
           : 4.8;
 
-      // Promotion usage stats (with error handling for missing table)
-      let totalActivePromotions = 0;
-      let totalUsage = 0;
-      let weeklyUsage = 0;
+      // Promotion usage stats
+      const { data: activePromotionsData } = await supabase
+        .from("promotions")
+        .select("id")
+        .eq("is_active", true);
 
-      try {
-        const { data: activePromotionsData } = await supabase
-          .from("promotions")
-          .select("id, usage_count")
-          .eq("is_active", true);
+      const { data: weeklyPromotionUsageData } = await supabase
+        .from("promotion_usage")
+        .select("discount_applied")
+        .gte("created_at", weekStartTimestamp);
 
-        const { data: weeklyPromotionUsageData } = await supabase
-          .from("promotions")
-          .select("usage_count")
-          .gte("updated_at", weekStartTimestamp);
-
-        totalActivePromotions = activePromotionsData?.length || 0;
-        totalUsage =
-          activePromotionsData?.reduce(
-            (sum, promo) => sum + (promo.usage_count || 0),
-            0,
-          ) || 0;
-        weeklyUsage =
-          weeklyPromotionUsageData?.reduce(
-            (sum, promo) => sum + (promo.usage_count || 0),
-            0,
-          ) || 0;
-      } catch (promotionError) {
-        console.warn("Promotions table not available, using default values:", promotionError);
-        // Use default values when promotions table is not available
-        totalActivePromotions = 0;
-        totalUsage = 0;
-        weeklyUsage = 0;
-      }
+      const totalActivePromotions = activePromotionsData?.length || 0;
+      const totalUsage = 0; // TODO: Calculate from promotion_usage table if needed
+      const weeklyUsage =
+        weeklyPromotionUsageData?.reduce(
+          (sum, usage) => sum + (usage.discount_applied || 0),
+          0,
+        ) || 0;
 
       // Top services by booking count (last 30 days)
       const thirtyDaysAgo = new Date();
@@ -293,7 +277,7 @@ export default function AdminDashboard() {
             name: service.name,
             booking_count: count || 0,
             service_subcategory_type:
-              service.service_subcategories?.service_subcategory_type,
+              service.service_subcategories?.[0]?.service_subcategory_type,
           };
         }),
       );
