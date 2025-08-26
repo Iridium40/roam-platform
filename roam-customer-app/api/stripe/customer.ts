@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { createStripePaymentService } from '@roam/shared';
+import Stripe from 'stripe';
 
 const stripeService = createStripePaymentService();
 

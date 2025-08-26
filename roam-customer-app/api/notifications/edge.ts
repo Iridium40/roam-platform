@@ -60,7 +60,7 @@ export default async function handler(request: VercelRequest, response: VercelRe
 
     } else if (request.method === 'PATCH') {
       // Handle marking notifications as read
-      const body = await request.json();
+      const body = await request.text().then(text => JSON.parse(text));
       const { notificationId, read, userId: patchUserId, markAllRead } = body;
 
       if (markAllRead && patchUserId) {
