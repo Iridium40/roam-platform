@@ -46,10 +46,20 @@ if (supabaseUrl) {
 }
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.error("Missing Supabase environment variables:");
-  console.error("VITE_PUBLIC_SUPABASE_URL:", supabaseUrl);
-  console.error("VITE_PUBLIC_SUPABASE_ANON_KEY:", supabaseAnonKey ? '***' + supabaseAnonKey.slice(-4) : 'undefined');
-  throw new Error("Missing Supabase environment variables");
+  const missingVars = [];
+  if (!supabaseUrl) missingVars.push('VITE_PUBLIC_SUPABASE_URL');
+  if (!supabaseAnonKey) missingVars.push('VITE_PUBLIC_SUPABASE_ANON_KEY');
+
+  console.error("❌ Missing Supabase environment variables:", missingVars.join(', '));
+  console.error("\n🔧 Quick Fix:");
+  console.error("1. For local development: Create .env file with:");
+  console.error("   VITE_PUBLIC_SUPABASE_URL=https://your-project.supabase.co");
+  console.error("   VITE_PUBLIC_SUPABASE_ANON_KEY=your-anon-key");
+  console.error("\n2. For production: Set environment variables in your deployment platform");
+  console.error("\n📋 Get credentials from: https://supabase.com/dashboard → Your Project → Settings → API");
+  console.error("\n📖 See ENVIRONMENT_SETUP_GUIDE.md for detailed instructions");
+
+  throw new Error(`Missing Supabase environment variables: ${missingVars.join(', ')}. See console for setup instructions.`);
 }
 
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
