@@ -53,7 +53,6 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useProviderAuth } from "@/contexts/auth/ProviderAuthContext";
 import { useFavorites } from "@/hooks/useFavorites";
 // Removed CustomerAuthModal import - not needed for provider app
-import GoogleOneTap from "@/components/GoogleOneTap";
 import { Header } from "@/components/Header";
 import { supabase } from "@/lib/supabase";
 

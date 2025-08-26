@@ -2,7 +2,6 @@ import "./global.css";
 
 import { Toaster } from "@/components/ui/toaster";
 import "@/utils/testUtils";
-import { createRoot } from "react-dom/client";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -20,11 +19,7 @@ import {
   CustomerSettings 
 } from "@/components/placeholders/PlaceholderPages";
 
-declare global {
-  interface HTMLElement {
-    _reactRoot?: ReturnType<typeof createRoot>;
-  }
-}
+
 
 // Lazy load pages for better performance
 const Index = lazy(() => import("./pages/Index"));
@@ -114,23 +109,5 @@ const App = () => (
     </TooltipProvider>
   </QueryClientProvider>
 );
-
-const container = document.getElementById("root")!;
-
-if (import.meta.hot) {
-  const root = createRoot(container);
-  root.render(<App />);
-  import.meta.hot.dispose(() => {
-    root.unmount();
-  });
-} else {
-  if (!container._reactRoot) {
-    const root = createRoot(container);
-    container._reactRoot = root;
-    root.render(<App />);
-  } else {
-    container._reactRoot.render(<App />);
-  }
-}
 
 export default App;
