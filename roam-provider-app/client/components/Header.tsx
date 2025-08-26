@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { EdgeNotificationCenter } from "@/components/EdgeNotificationCenter";
 import { CustomerAvatarDropdown } from "@/components/CustomerAvatarDropdown";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth/AuthProvider";
 import { useSystemConfig } from "@/hooks/useSystemConfig";
 
 export function Header() {

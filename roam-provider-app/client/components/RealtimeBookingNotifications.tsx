@@ -23,7 +23,7 @@ import {
 import useRealtimeBookings, {
   BookingUpdate,
 } from "@/hooks/useRealtimeBookings";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth/AuthProvider";
 import { cn } from "@/lib/utils";
 
 interface RealtimeBookingNotificationsProps {

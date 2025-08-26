@@ -27,7 +27,7 @@ import {
   Volume2,
   VolumeX,
 } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth/AuthProvider";
 import { supabase } from "@/lib/supabase";
 import type { CommunicationPreferences as CommunicationPreferencesType } from "@roam/shared";
 

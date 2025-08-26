@@ -27,7 +27,7 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth/AuthProvider";
 import { supabase } from "@/lib/supabase";
 import type { CalendarConnection, CalendarType } from "@roam/shared";
 

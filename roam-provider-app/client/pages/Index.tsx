@@ -50,7 +50,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import React, { useState, useEffect, useMemo } from "react";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth/AuthProvider";
 import { useFavorites } from "@/hooks/useFavorites";
 import { CustomerAuthModal } from "@/components/CustomerAuthModal";
 import GoogleOneTap from "@/components/GoogleOneTap";
