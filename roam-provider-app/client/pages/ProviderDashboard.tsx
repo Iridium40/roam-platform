@@ -550,11 +550,11 @@ export default function ProviderDashboard() {
       console.log("🔍 loadInitialData: user =", user);
       console.log("🔍 loadInitialData: provider?.user_id =", provider?.user_id);
 
-      // Load provider profile
+      // Load provider profile - use the auth user ID, not the provider ID
       const { data: providerData, error: providerError } = await supabase
         .from("providers")
         .select("*")
-        .eq("user_id", userId)
+        .eq("user_id", provider?.user_id)
         .maybeSingle();
 
       console.log("🔍 loadInitialData: providerData =", providerData);
@@ -801,16 +801,26 @@ export default function ProviderDashboard() {
         return;
       }
       // Get the provider's business_id
-      console.log('Fetching provider for user_id:', user.id);
+      console.log('Fetching provider for user_id:', provider?.user_id);
 
       const { data: providerData, error: providerError } = await supabase
         .from('providers')
         .select('business_id')
-        .eq('user_id', user.id)
-        .single();
+        .eq('user_id', provider?.user_id)
+        .maybeSingle();
 
-      if (providerError || !providerData?.business_id) {
+      if (providerError) {
         console.error(safeErrorLog('Error fetching provider data in initializeServicesData', providerError, { userId: user?.id }));
+        return;
+      }
+
+      if (!providerData || !providerData.business_id) {
+        console.error('No provider record found for user:', provider?.user_id);
+        toast({
+          title: "Provider Setup Required",
+          description: "Please complete your provider profile setup first",
+          variant: "destructive",
+        });
         return;
       }
 
@@ -1406,7 +1416,7 @@ export default function ProviderDashboard() {
       const { data: providerData, error: providerError } = await supabase
         .from('providers')
         .select('business_id')
-        .eq('user_id', user.id)
+        .eq('user_id', provider?.user_id)
         .single();
 
       if (providerError) {
@@ -1484,7 +1494,7 @@ export default function ProviderDashboard() {
       setServiceSpecializations(businessData.service_subcategories || []);
 
     } catch (error) {
-      console.error(safeErrorLog('Error initializing business settings', error, { userId: user?.id }));
+      console.error(safeErrorLog('Error initializing business settings', error, { userId: provider?.user_id }));
       toast({
         title: "Error",
         description: "Failed to load business data.",
@@ -1611,7 +1621,7 @@ export default function ProviderDashboard() {
       const { data: providerData, error: providerError } = await supabase
         .from('providers')
         .select('business_id')
-        .eq('user_id', user.id)
+        .eq('user_id', provider?.user_id)
         .single();
 
       if (providerError || !providerData?.business_id) {
@@ -1681,7 +1691,7 @@ export default function ProviderDashboard() {
       const { data: providerData, error: providerError } = await supabase
         .from('providers')
         .select('business_id')
-        .eq('user_id', user.id)
+        .eq('user_id', provider?.user_id)
         .single();
 
       if (providerError || !providerData?.business_id) {
@@ -2140,11 +2150,11 @@ export default function ProviderDashboard() {
       const { data: providerData, error: providerError } = await supabase
         .from('providers')
         .select('business_id')
-        .eq('user_id', user.id)
+        .eq('user_id', provider?.user_id)
         .single();
 
       if (providerError || !providerData?.business_id) {
-        console.error(safeErrorLog('Error fetching provider data for availability', providerError, { userId: user?.id }));
+        console.error(safeErrorLog('Error fetching provider data for availability', providerError, { userId: provider?.user_id }));
         return;
       }
 
@@ -4972,7 +4982,7 @@ export default function ProviderDashboard() {
                             const { data: providerData, error: providerError } = await supabase
                               .from('providers')
                               .select('business_id')
-                              .eq('user_id', user.id)
+                              .eq('user_id', provider?.user_id)
                               .single();
 
                             if (providerError || !providerData?.business_id) {
@@ -5223,11 +5233,15 @@ export default function ProviderDashboard() {
                     const { data: providerData, error: providerError } = await supabase
                       .from('providers')
                       .select('business_id')
-                      .eq('user_id', user.id)
-                      .single();
+                      .eq('user_id', provider?.user_id)
+                      .maybeSingle();
 
-                    if (providerError || !providerData?.business_id) {
-                      throw new Error('Failed to find business profile');
+                    if (providerError) {
+                      throw new Error(`Database error: ${providerError.message}`);
+                    }
+
+                    if (!providerData || !providerData.business_id) {
+                      throw new Error('No provider record found. Please complete your provider profile setup first.');
                     }
 
                     // Convert business hours format
@@ -5562,7 +5576,7 @@ export default function ProviderDashboard() {
                         image_url: profileData.profile_image_url || null,
                         cover_image_url: profileData.cover_image_url || null,
                       })
-                      .eq('user_id', user.id);
+                      .eq('user_id', provider?.user_id);
 
                     if (error) {
                       console.error('Error updating profile:', error);
