@@ -19,6 +19,27 @@ if (supabaseUrl) {
     console.log('Protocol:', url.protocol);
     console.log('Hostname:', url.hostname);
     console.log('Port:', url.port);
+    
+    // Test network connectivity to the hostname
+    console.log('Testing network connectivity...');
+    fetch(`${url.protocol}//${url.hostname}/rest/v1/`, {
+      method: 'HEAD',
+      mode: 'cors',
+      headers: {
+        'apikey': supabaseAnonKey || '',
+        'Authorization': `Bearer ${supabaseAnonKey || ''}`
+      }
+    }).then(response => {
+      console.log('✅ Network connectivity test successful:', response.status);
+    }).catch(error => {
+      console.error('❌ Network connectivity test failed:', error);
+      console.error('Error details:', {
+        name: error.name,
+        message: error.message,
+        type: error.constructor.name
+      });
+    });
+    
   } catch (error) {
     console.error('Invalid Supabase URL format:', error);
   }
@@ -31,15 +52,39 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error("Missing Supabase environment variables");
 }
 
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true
+  },
+  global: {
+    headers: {
+      'X-Client-Info': 'roam-provider-app'
+    }
+  }
+});
 
-// Test Supabase connection
+// Test Supabase connection with detailed error handling
 supabase.auth.getSession().then(({ data, error }) => {
   if (error) {
-    console.error('Supabase connection test failed:', error);
+    console.error('❌ Supabase connection test failed:', error);
+    console.error('Error details:', {
+      name: error.name,
+      message: error.message,
+      status: error.status,
+      statusText: error.statusText
+    });
   } else {
-    console.log('Supabase connection test successful');
+    console.log('✅ Supabase connection test successful');
+    console.log('Session data:', data.session ? 'Session exists' : 'No session');
   }
 }).catch(error => {
-  console.error('Supabase connection test error:', error);
+  console.error('❌ Supabase connection test error:', error);
+  console.error('Error details:', {
+    name: error.name,
+    message: error.message,
+    type: error.constructor.name,
+    stack: error.stack?.split('\n').slice(0, 3).join('\n')
+  });
 });
