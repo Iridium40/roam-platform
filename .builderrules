@@ -1,0 +1,29 @@
+ROAM Platform Overview
+Based on your codebase, I can see you have a well-structured monorepo for the ROAM Platform with three main applications:
+
+🏗️ Platform Architecture
+Core Applications
+ROAM Admin App - Platform administration and management
+ROAM Provider App - Provider onboarding, management, and service delivery
+ROAM Customer App - Customer booking and service discovery
+Shared Services Layer
+@roam/shared - Common types, utilities, validation schemas, and formatting
+@roam/auth-service - Centralized JWT authentication and RBAC
+@roam/notification-service - Email (Resend), SMS (Twilio), and push notifications
+@roam/payment-service - Stripe payments and Connect integration
+🛠️ Technology Stack
+Monorepo Management: Turbo
+Language: TypeScript with comprehensive type safety
+Database: Supabase
+Payments: Stripe with Connect for providers
+Communications: Twilio (SMS), Resend (Email)
+Deployment: Vercel with independent app deployment
+📊 Key Benefits
+40-60% code reduction through shared packages
+Type-safe development across all applications
+Independent deployment of apps and services
+Unified validation and formatting utilities
+Consistent API contracts between services
+The platform appears to be a marketplace connecting customers with service providers, with robust admin oversight capabilities. Each app can be developed and deployed independently while sharing core business logic and utilities.
+
+Vercel is used for deployments
