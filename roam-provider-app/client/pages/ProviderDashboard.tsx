@@ -3230,6 +3230,12 @@ export default function ProviderDashboard() {
                             <span className="text-xs font-medium text-gray-700">
                               {providerData.provider_role === "provider" ? "Assigned Provider:" : "Provider:"}
                             </span>
+                            {providerData.provider_role !== "provider" && 
+                             !["pending", "confirmed"].includes(booking.booking_status) && (
+                              <span className="text-xs text-gray-500">
+                                (Can't reassign - booking is {booking.booking_status})
+                              </span>
+                            )}
                           </div>
                           <Select
                             value={booking.providers?.id || "unassigned"}
@@ -3240,6 +3246,17 @@ export default function ProviderDashboard() {
                             }
                             onValueChange={async (value) => {
                               try {
+                                // Check if assignment is allowed based on booking status
+                                if (providerData.provider_role !== "provider" && 
+                                    !["pending", "confirmed"].includes(booking.booking_status)) {
+                                  toast({
+                                    title: "Assignment Not Allowed",
+                                    description: `Cannot reassign provider for ${booking.booking_status} bookings. Only pending or confirmed bookings can be reassigned.`,
+                                    variant: "destructive",
+                                  });
+                                  return;
+                                }
+
                                 // Update the booking with the new provider assignment
                                 const { error } = await supabase
                                   .from("bookings")
