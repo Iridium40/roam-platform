@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import { useConversations, ConversationMessage, Conversation } from '@/hooks/useConversations';
 import { useCustomerConversations } from '@/hooks/useCustomerConversations';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/auth/AuthProvider';
 import { formatDistanceToNow } from 'date-fns';
 
 interface ConversationChatProps {

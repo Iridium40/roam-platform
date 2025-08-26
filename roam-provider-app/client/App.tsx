@@ -164,27 +164,4 @@ const App = () => (
   </QueryClientProvider>
 );
 
-// Prevent multiple root creations during hot module reloading
-const container = document.getElementById("root")!;
-
-if (import.meta.hot) {
-  // In development with HMR, always create a new root to avoid stale closures
-  const root = createRoot(container);
-  root.render(<App />);
-
-  // Clean up on HMR update
-  import.meta.hot.dispose(() => {
-    root.unmount();
-  });
-} else {
-  // In production or when HMR is not available
-  if (!container._reactRoot) {
-    const root = createRoot(container);
-    container._reactRoot = root;
-    root.render(<App />);
-  } else {
-    container._reactRoot.render(<App />);
-  }
-}
-
 export default App;

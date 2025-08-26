@@ -4,7 +4,7 @@ import type {
   PaymentStatus, 
   UserRole, 
   BusinessType, 
-  ServiceCategory,
+  ServiceCategoryType,
   NotificationType 
 } from './database';
 
@@ -133,7 +133,7 @@ export interface Service {
   businessId: string;
   name: string;
   description: string | null;
-  category: ServiceCategory;
+  category: ServiceCategoryType;
   price: number;
   duration: number;
   isActive: boolean;
@@ -145,7 +145,7 @@ export interface Service {
 export interface CreateServiceRequest {
   name: string;
   description?: string;
-  category: ServiceCategory;
+  category: ServiceCategoryType;
   price: number;
   duration: number;
 }
@@ -338,7 +338,7 @@ export interface ApiEndpoints {
 
   // Service endpoints
   'GET /services': {
-    request: { businessId?: string; category?: ServiceCategory };
+    request: { businessId?: string; category?: ServiceCategoryType };
     response: ApiResponse<Service[]>;
   };
   'POST /services': {

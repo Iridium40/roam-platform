@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type { 
   BusinessType, 
-  ServiceCategory, 
+  ServiceCategoryType, 
   BookingStatus, 
   PaymentStatus,
   UserRole,
@@ -156,7 +156,7 @@ export function validateBusinessType(type: string): type is BusinessType {
   return businessTypeSchema.safeParse(type).success;
 }
 
-export function validateServiceCategory(category: string): category is ServiceCategory {
+export function validateServiceCategory(category: string): category is ServiceCategoryType {
   return serviceCategorySchema.safeParse(category).success;
 }
 
@@ -204,7 +204,7 @@ export function isBusinessType(value: any): value is BusinessType {
   return validateBusinessType(value);
 }
 
-export function isServiceCategory(value: any): value is ServiceCategory {
+export function isServiceCategory(value: any): value is ServiceCategoryType {
   return validateServiceCategory(value);
 }
 

@@ -7,26 +7,25 @@ export type Json =
   | Json[];
 
 // Business Types
-export type BusinessType = 'sole_proprietorship' | 'llc' | 'corporation' | 'partnership';
-export type VerificationStatus = 'pending' | 'verified' | 'rejected' | 'under_review';
+export type BusinessType = 'independent' | 'small_business' | 'franchise' | 'enterprise' | 'other';
+export type VerificationStatus = 'pending' | 'approved' | 'rejected' | 'suspended';
 export type SubscriptionStatus = 'active' | 'inactive' | 'cancelled' | 'past_due';
 
 // Booking Types
-export type BookingStatus = 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
+export type BookingStatus = 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show' | 'declined';
 export type PaymentStatus = 'pending' | 'paid' | 'failed' | 'refunded' | 'partially_refunded';
 export type TipStatus = 'pending' | 'requested' | 'paid' | 'declined';
-export type DeliveryType = 'pickup' | 'delivery' | 'on_site';
+export type DeliveryType = 'business_location' | 'customer_location' | 'virtual' | 'both_locations';
 
 // User Types
 export type UserRole = 'admin' | 'owner' | 'dispatcher' | 'provider' | 'customer';
 export type UserStatus = 'active' | 'inactive' | 'suspended' | 'pending_verification';
 
 // Service Types
-export type ServiceCategory = 'health' | 'fitness' | 'beauty' | 'wellness' | 'education' | 'other';
 export type ServiceStatus = 'active' | 'inactive' | 'draft';
-export type ServiceCategoryType = "cleaning" | "maintenance" | "repair" | "installation" | "inspection" | "other";
-export type ServiceSubcategoryType = "residential" | "commercial" | "industrial" | "emergency" | "scheduled" | "other";
-export type CustomerLocationType = "home" | "work" | "other";
+export type ServiceCategoryType = "beauty" | "fitness" | "therapy" | "healthcare";
+export type ServiceSubcategoryType = "hair_and_makeup" | "spray_tan" | "esthetician" | "massage_therapy" | "iv_therapy" | "physical_therapy" | "nurse_practitioner" | "physician" | "chiropractor" | "yoga_instructor" | "pilates_instructor" | "personal_trainer" | "injectables" | "health_coach";
+export type CustomerLocationType = "home" | "condo" | "hotel" | "other" | null;
 
 // Notification Types
 export type NotificationType = 'booking_update' | 'payment' | 'system' | 'marketing';
@@ -283,7 +282,7 @@ export type Database = {
           business_id: string;
           name: string;
           description: string | null;
-          category: ServiceCategory;
+          category: ServiceCategoryType;
           price: number;
           duration: number;
           is_active: boolean;
@@ -296,7 +295,7 @@ export type Database = {
           business_id: string;
           name: string;
           description?: string | null;
-          category: ServiceCategory;
+          category: ServiceCategoryType;
           price: number;
           duration: number;
           is_active?: boolean;
@@ -309,7 +308,7 @@ export type Database = {
           business_id?: string;
           name?: string;
           description?: string | null;
-          category?: ServiceCategory;
+          category?: ServiceCategoryType;
           price?: number;
           duration?: number;
           is_active?: boolean;

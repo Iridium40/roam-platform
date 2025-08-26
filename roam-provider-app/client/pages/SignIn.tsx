@@ -21,8 +21,8 @@ import { useToast } from "@/hooks/use-toast";
 export default function SignIn() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { customer, userType } = useAuth();
-  const isCustomer = userType === "customer";
+  const { provider, userType } = useAuth();
+  const isProvider = userType === "provider";
 
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -46,14 +46,14 @@ export default function SignIn() {
 
   // Redirect if already authenticated
   useEffect(() => {
-    if (customer && isCustomer) {
+    if (provider && isProvider) {
       toast({
         title: "Already Signed In",
-        description: `Welcome back, ${customer.first_name}!`,
+        description: `Welcome back, ${provider.first_name}!`,
       });
-      navigate("/customer/profile");
+      navigate("/provider/dashboard");
     }
-  }, [customer, isCustomer, navigate, toast]);
+  }, [provider, isProvider, navigate, toast]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,7 +72,7 @@ export default function SignIn() {
           title: "Welcome back!",
           description: "You have been successfully signed in.",
         });
-        navigate("/customer/profile");
+        navigate("/provider/dashboard");
       }
     } catch (error: any) {
       console.error("Sign in error:", error);
@@ -118,7 +118,7 @@ export default function SignIn() {
             first_name: signUpForm.firstName,
             last_name: signUpForm.lastName,
             phone: signUpForm.phone,
-            user_type: "customer",
+            user_type: "provider",
           },
         },
       });
@@ -149,7 +149,7 @@ export default function SignIn() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/customer/profile`,
+          redirectTo: `${window.location.origin}/provider/dashboard`,
         },
       });
 

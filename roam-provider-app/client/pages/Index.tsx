@@ -52,13 +52,13 @@ import { Link } from "react-router-dom";
 import React, { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/contexts/auth/AuthProvider";
 import { useFavorites } from "@/hooks/useFavorites";
-import { CustomerAuthModal } from "@/components/CustomerAuthModal";
+// Removed CustomerAuthModal import - not needed for provider app
 import GoogleOneTap from "@/components/GoogleOneTap";
 import { Header } from "@/components/Header";
 import { supabase } from "@/lib/supabase";
 
 export default function Index() {
-  const { customer, isCustomer, signOut } = useAuth();
+  const { provider, isProvider, signOut } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedDelivery, setSelectedDelivery] = useState("all");
@@ -183,7 +183,7 @@ export default function Index() {
   };
 
   const handleMyBookings = () => {
-    if (isCustomer) {
+    if (isProvider) {
       // Navigate to my bookings
       window.location.href = "/my-bookings";
     } else {
