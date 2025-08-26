@@ -41,10 +41,10 @@ serve(async (req) => {
 
     // Get business details and its subcategories
     const { data: business, error: businessError } = await supabaseAdmin
-      .from('businesses')
+      .from('business_profiles')
       .select(`
         id,
-        business_subcategories!inner(
+        business_service_subcategories!inner(
           subcategory_id,
           service_subcategories(id, service_subcategory_type)
         )
@@ -74,7 +74,7 @@ serve(async (req) => {
     }
 
     // Extract subcategory IDs
-    const subcategoryIds = business.business_subcategories?.map(
+    const subcategoryIds = business.business_service_subcategories?.map(
       (bs: any) => bs.subcategory_id
     ) || []
 
@@ -146,8 +146,8 @@ serve(async (req) => {
 
     // Get service-addon mappings
     const { data: serviceAddonMappings, error: mappingError } = await supabaseAdmin
-      .from('service_addon_compatibility')
-      .select('service_id, addon_id')
+      .from('service_addon_eligibility')
+      .select('service_id, addon_id, is_recommended')
 
     if (mappingError) {
       console.error('Error fetching service-addon mappings:', mappingError)

@@ -1051,6 +1051,60 @@ export type Database = {
           updated_at?: string | null;
         };
       };
+      // Service addons
+      service_addons: {
+        Row: {
+          id: string;
+          name: string;
+          description: string | null;
+          image_url: string | null;
+          is_active: boolean | null;
+          created_at: string | null;
+          updated_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          description?: string | null;
+          image_url?: string | null;
+          is_active?: boolean | null;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          description?: string | null;
+          image_url?: string | null;
+          is_active?: boolean | null;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+      };
+      // Service addon eligibility
+      service_addon_eligibility: {
+        Row: {
+          id: string;
+          service_id: string;
+          addon_id: string;
+          is_recommended: boolean | null;
+          created_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          service_id: string;
+          addon_id: string;
+          is_recommended?: boolean | null;
+          created_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          service_id?: string;
+          addon_id?: string;
+          is_recommended?: boolean | null;
+          created_at?: string | null;
+        };
+      };
       // Provider addons
       provider_addons: {
         Row: {
