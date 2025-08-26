@@ -2012,7 +2012,7 @@ export default function Index() {
                                   className="flex-1 bg-gradient-to-r from-roam-blue to-roam-light-blue hover:from-roam-blue/90 hover:to-roam-light-blue/90 text-white font-semibold py-3 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]"
                                 >
                                   <Link
-                                    to={`/business/${business.id}?tab=services`}
+                                    to={`/business/${business.id}?tab=services&book=true`}
                                   >
                                     <Calendar className="w-4 h-4 mr-2" />
                                     Book

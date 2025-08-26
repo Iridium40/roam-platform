@@ -25,6 +25,12 @@ import {
 const Index = lazy(() => import("./pages/Index"));
 const MyBookings = lazy(() => import("./pages/MyBookings"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const BookService = lazy(() => import("./pages/BookService"));
+const BusinessProfile = lazy(() => import("./pages/BusinessProfile"));
+const About = lazy(() => import("./pages/About"));
+const Contact = lazy(() => import("./pages/Contact"));
+const SignIn = lazy(() => import("./pages/SignIn"));
+const BecomeProvider = lazy(() => import("./pages/BecomeProvider"));
 
 // Loading component for Suspense fallback
 const PageLoader = () => (
@@ -52,6 +58,12 @@ const App = () => (
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/bookings" element={<MyBookings />} />
+                <Route path="/book-service/:serviceId" element={<BookService />} />
+                <Route path="/business/:businessId" element={<BusinessProfile />} />
+                <Route path="/about" element={<About />} />
+                <Route path="/contact" element={<Contact />} />
+                <Route path="/sign-in" element={<SignIn />} />
+                <Route path="/become-a-provider" element={<BecomeProvider />} />
                 <Route
                   path="/my-bookings"
                   element={
