@@ -3233,7 +3233,11 @@ export default function ProviderDashboard() {
                           </div>
                           <Select
                             value={booking.providers?.id || "unassigned"}
-                            disabled={providerData.provider_role === "provider"}
+                            disabled={
+                              providerData.provider_role === "provider" || 
+                              (providerData.provider_role !== "provider" && 
+                               !["pending", "confirmed"].includes(booking.booking_status))
+                            }
                             onValueChange={async (value) => {
                               try {
                                 // Update the booking with the new provider assignment
