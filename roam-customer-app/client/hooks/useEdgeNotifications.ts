@@ -61,35 +61,46 @@ export function useEdgeNotifications() {
 
       eventSource.onmessage = (event) => {
         try {
-          const notification: Notification = JSON.parse(event.data);
+          const data = JSON.parse(event.data);
           
           // Handle different notification types
-          switch (notification.type) {
+          switch (data.type) {
             case 'connected':
               logger.debug('SSE connection established');
               break;
               
+            case 'heartbeat':
+              // Heartbeat message to keep connection alive, no action needed
+              logger.debug('SSE heartbeat received');
+              break;
+              
             case 'booking_status_update':
-              handleBookingStatusUpdate(notification);
+              handleBookingStatusUpdate(data);
               break;
               
             case 'new_message':
-              handleNewMessage(notification);
+              handleNewMessage(data);
               break;
               
             case 'booking_reminder':
-              handleBookingReminder(notification);
+              handleBookingReminder(data);
+              break;
+              
+            case 'error':
+              logger.error('SSE error message:', data.message);
               break;
               
             default:
-              handleGenericNotification(notification);
+              // Treat as generic notification if it has a message
+              if (data.message) {
+                handleGenericNotification(data);
+                // Add to notifications list
+                setNotifications(prev => [data, ...prev.slice(0, 49)]); // Keep last 50
+              }
           }
-
-          // Add to notifications list
-          setNotifications(prev => [notification, ...prev.slice(0, 49)]); // Keep last 50
           
         } catch (error) {
-          logger.error('Error parsing notification:', error);
+          logger.error('Error parsing SSE message:', error);
         }
       };
 
@@ -103,16 +114,18 @@ export function useEdgeNotifications() {
           logger.debug('Make sure the dev server is running with the notifications route');
         }
 
-        // Attempt to reconnect after 5 seconds, but only if not in a continuous error loop
+        // Only attempt to reconnect if we're not already trying to reconnect
         if (reconnectTimeoutRef.current) {
           clearTimeout(reconnectTimeoutRef.current);
         }
 
+        // Attempt to reconnect after 10 seconds, but only if page is visible
         reconnectTimeoutRef.current = setTimeout(() => {
-          if (document.visibilityState === 'visible') {
+          if (document.visibilityState === 'visible' && currentUser?.id) {
+            logger.debug('Attempting to reconnect to SSE...');
             connect();
           }
-        }, 5000);
+        }, 10000);
       };
 
       eventSourceRef.current = eventSource;
@@ -127,7 +140,7 @@ export function useEdgeNotifications() {
         logger.debug('Notifications will work in production with Vercel Edge Functions.');
       }
     }
-  }, [currentUser?.id]);
+  }, [currentUser?.id, connect]);
 
   // Disconnect from SSE stream
   const disconnect = useCallback(() => {

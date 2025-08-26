@@ -1,30 +1,21 @@
-// Types
+// Auth
 export * from './types/auth';
-export * from './types/database';
-export * from './types/twilio';
-
-// Config
-export * from './config/environment';
-export * from './config/server-environment';
-
-// Services
-export * from './services/payment';
-export * from './services/stripe-service';
-export * from './services/stripe-api';
-export * from './services/auth';
+export * from './services/auth-service';
 export * from './services/auth-api';
 export * from './services/supabase-auth-service';
 export * from './services/mfa-service';
+export * from './contexts/UnifiedAuthContext';
+
+// Types
+export * from './types/database';
+export * from './types/twilio';
+
+// Services
 export * from './services/notification-api';
 export * from './services/notification-service';
 export * from './services/twilio-conversations';
+export * from './services/stripe-service';
 
 // Utils
 export * from './utils/validation';
 export * from './utils/formatting';
-
-// Re-export PaymentStatus to avoid conflicts
-export type { PaymentStatus } from './services/payment';
-
-// Components (to be added later)
-// export * from './components';

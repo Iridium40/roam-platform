@@ -16,7 +16,6 @@ export interface Favorite {
       business_name: string;
     };
     image_url: string | null;
-    rating: number | null;
     service_categories: string[] | null;
   };
 }
@@ -53,7 +52,6 @@ export const useFavorites = () => {
               business_name
             ),
             image_url,
-            rating,
             service_categories
           )
         `)

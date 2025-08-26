@@ -77,18 +77,18 @@ export class SupabaseAuthService extends BaseAuthService implements AuthService 
 
       // Create user profile based on user type
       const profileResult = await this.createUserProfile(authData.user.id, {
-        id: authData.user.id,
-        user_id: authData.user.id,
+        userId: authData.user.id,
         email: data.email,
-        first_name: data.firstName,
-        last_name: data.lastName,
-        phone: data.phone === undefined ? null : data.phone,
-        date_of_birth: data.dateOfBirth || null,
-        image_url: null,
-        is_active: true,
-        user_type: data.userType,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+        firstName: data.firstName,
+        lastName: data.lastName,
+        phone: data.phone || null,
+        dateOfBirth: data.dateOfBirth,
+        isActive: true,
+        isVerified: false,
+        userType: data.userType,
+        onboardingStep: 'profile_completion',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       });
 
       // Send welcome email (don't fail signup if email fails)

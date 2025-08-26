@@ -1,4 +1,4 @@
-export type Json =
+ export type Json =
   | string
   | number
   | boolean
@@ -1481,94 +1481,181 @@ export type Database = {
           updated_at?: string | null;
         };
       };
-      // Business setup progress
+      // Business Setup Progress
       business_setup_progress: {
         Row: {
           id: string;
-          business_id: string;
-          step: number;
-          is_completed: boolean | null;
-          completed_at: string | null;
+          business_id: string | null;
+          current_step: number | null;
+          total_steps: number | null;
+          business_profile_completed: boolean | null;
+          locations_completed: boolean | null;
+          services_pricing_completed: boolean | null;
+          staff_setup_completed: boolean | null;
+          integrations_completed: boolean | null;
+          stripe_connect_completed: boolean | null;
+          subscription_completed: boolean | null;
+          go_live_completed: boolean | null;
+          phase_1_completed: boolean | null;
+          phase_1_completed_at: string | null;
+          phase_2_completed: boolean | null;
+          phase_2_completed_at: string | null;
+          plaid_connected: boolean | null;
           created_at: string | null;
           updated_at: string | null;
         };
         Insert: {
           id?: string;
-          business_id: string;
-          step: number;
-          is_completed?: boolean | null;
-          completed_at?: string | null;
+          business_id?: string | null;
+          current_step?: number | null;
+          total_steps?: number | null;
+          business_profile_completed?: boolean | null;
+          locations_completed?: boolean | null;
+          services_pricing_completed?: boolean | null;
+          staff_setup_completed?: boolean | null;
+          integrations_completed?: boolean | null;
+          stripe_connect_completed?: boolean | null;
+          subscription_completed?: boolean | null;
+          go_live_completed?: boolean | null;
+          phase_1_completed?: boolean | null;
+          phase_1_completed_at?: string | null;
+          phase_2_completed?: boolean | null;
+          phase_2_completed_at?: string | null;
+          plaid_connected?: boolean | null;
           created_at?: string | null;
           updated_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          business_id?: string | null;
+          current_step?: number | null;
+          total_steps?: number | null;
+          business_profile_completed?: boolean | null;
+          locations_completed?: boolean | null;
+          services_pricing_completed?: boolean | null;
+          staff_setup_completed?: boolean | null;
+          integrations_completed?: boolean | null;
+          stripe_connect_completed?: boolean | null;
+          subscription_completed?: boolean | null;
+          go_live_completed?: boolean | null;
+          phase_1_completed?: boolean | null;
+          phase_1_completed_at?: string | null;
+          phase_2_completed?: boolean | null;
+          phase_2_completed_at?: string | null;
+          plaid_connected?: boolean | null;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+      };
+      // Application Approvals
+      application_approvals: {
+        Row: {
+          id: string;
+          business_id: string | null;
+          application_id: string | null;
+          approved_by: string | null;
+          approval_token: string | null;
+          token_expires_at: string | null;
+          approval_notes: string | null;
+          created_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          business_id?: string | null;
+          application_id?: string | null;
+          approved_by?: string | null;
+          approval_token?: string | null;
+          token_expires_at?: string | null;
+          approval_notes?: string | null;
+          created_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          business_id?: string | null;
+          application_id?: string | null;
+          approved_by?: string | null;
+          approval_token?: string | null;
+          token_expires_at?: string | null;
+          approval_notes?: string | null;
+          created_at?: string | null;
+        };
+      };
+      // Business Verifications
+      business_verifications: {
+        Row: {
+          id: string;
+          business_id: string;
+          submitted_at: string | null;
+          reviewed_at: string | null;
+          reviewed_by: string | null;
+          notes: string | null;
+          is_verified: boolean | null;
+        };
+        Insert: {
+          id?: string;
+          business_id: string;
+          submitted_at?: string | null;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          notes?: string | null;
+          is_verified?: boolean | null;
         };
         Update: {
           id?: string;
           business_id?: string;
-          step?: number;
-          is_completed?: boolean | null;
-          completed_at?: string | null;
-          created_at?: string | null;
-          updated_at?: string | null;
+          submitted_at?: string | null;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          notes?: string | null;
+          is_verified?: boolean | null;
         };
       };
-      // Service addons
-      service_addons: {
+      // Business Subscriptions
+      business_subscriptions: {
         Row: {
           id: string;
-          service_id: string;
-          name: string;
-          description: string | null;
-          price: number;
-          duration: number | null;
+          business_id: string;
+          device_type: string;
+          transaction_data: string | null;
+          start_date: string;
+          end_date: string | null;
           is_active: boolean | null;
           created_at: string | null;
           updated_at: string | null;
+          stripe_subscription_id: string | null;
+          stripe_customer_id: string | null;
+          stripe_price_id: string | null;
+          subscription_status: string | null;
         };
         Insert: {
           id?: string;
-          service_id: string;
-          name: string;
-          description?: string | null;
-          price: number;
-          duration?: number | null;
+          business_id: string;
+          device_type: string;
+          transaction_data?: string | null;
+          start_date: string;
+          end_date?: string | null;
           is_active?: boolean | null;
           created_at?: string | null;
           updated_at?: string | null;
+          stripe_subscription_id?: string | null;
+          stripe_customer_id?: string | null;
+          stripe_price_id?: string | null;
+          subscription_status?: string | null;
         };
         Update: {
           id?: string;
-          service_id?: string;
-          name?: string;
-          description?: string | null;
-          price?: number;
-          duration?: number | null;
+          business_id?: string;
+          device_type?: string;
+          transaction_data?: string | null;
+          start_date?: string;
+          end_date?: string | null;
           is_active?: boolean | null;
           created_at?: string | null;
           updated_at?: string | null;
-        };
-      };
-      // Service addon eligibility
-      service_addon_eligibility: {
-        Row: {
-          id: string;
-          addon_id: string;
-          service_id: string;
-          is_eligible: boolean | null;
-          created_at: string | null;
-        };
-        Insert: {
-          id?: string;
-          addon_id: string;
-          service_id: string;
-          is_eligible?: boolean | null;
-          created_at?: string | null;
-        };
-        Update: {
-          id?: string;
-          addon_id?: string;
-          service_id?: string;
-          is_eligible?: boolean | null;
-          created_at?: string | null;
+          stripe_subscription_id?: string | null;
+          stripe_customer_id?: string | null;
+          stripe_price_id?: string | null;
+          subscription_status?: string | null;
         };
       };
       // Providers table
@@ -1628,3 +1715,9 @@ export type Database = {
     };
   };
 };
+
+// Type exports for convenience
+export type Provider = Database['public']['Tables']['providers']['Row'];
+export type Booking = Database['public']['Tables']['bookings']['Row'];
+export type BusinessProfile = Database['public']['Tables']['business_profiles']['Row'];
+export type CustomerProfile = Database['public']['Tables']['customer_profiles']['Row'];

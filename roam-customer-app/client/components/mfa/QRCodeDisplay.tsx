@@ -40,9 +40,15 @@ const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
       
       // Use setTimeout to ensure the click event completes before removing
       setTimeout(() => {
-        if (document.body.contains(link)) {
-          document.body.removeChild(link);
+        try {
+          if (document.body.contains(link)) {
+            document.body.removeChild(link);
+          }
+        } catch (error) {
+          // Element might have been removed already, ignore the error
+          console.warn('Element already removed:', error);
         }
+        URL.revokeObjectURL(url);
       }, 100);
       
       toast.success('QR code downloaded');

@@ -121,7 +121,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           return res.status(400).json({ error: 'Customer ID is required' });
         }
 
-        const customer = await stripeService.getStripe().customers.retrieve(customerId);
+        const customerResponse = await stripeService.getStripe().customers.retrieve(customerId);
+        
+        // Check if customer is deleted
+        if (customerResponse.deleted) {
+          return res.status(404).json({
+            success: false,
+            error: 'Customer not found or has been deleted',
+          });
+        }
+        
+        // Type guard to ensure it's a Customer, not DeletedCustomer
+        const customer = customerResponse as Stripe.Customer;
         
         return res.status(200).json({
           success: true,

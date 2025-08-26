@@ -154,8 +154,13 @@ const MFASetup: React.FC<MFASetupProps> = ({ onComplete, onCancel }) => {
     
     // Use setTimeout to ensure the click event completes before removing
     setTimeout(() => {
-      if (document.body.contains(a)) {
-        document.body.removeChild(a);
+      try {
+        if (document.body.contains(a)) {
+          document.body.removeChild(a);
+        }
+      } catch (error) {
+        // Element might have been removed already, ignore the error
+        console.warn('Element already removed:', error);
       }
       URL.revokeObjectURL(url);
     }, 100);

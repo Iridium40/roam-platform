@@ -95,7 +95,7 @@ import {
 import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
-import { useProviderAuth } from "@/contexts/auth/ProviderAuthContext";
+import { useAuth } from "@/contexts/auth/AuthProvider";
 import { useToast } from "@/hooks/use-toast";
 import ConversationChat from "@/components/ConversationChat";
 import ConversationsList from "@/components/ConversationsList";
@@ -127,7 +127,11 @@ interface ServiceSubcategory {
 }
 
 export default function ProviderDashboard() {
-  const { provider, signOut, isOwner, isDispatcher, isProvider } = useProviderAuth();
+  const { provider: providerAuth, signOut } = useAuth();
+  const provider = providerAuth?.provider;
+  const isOwner = providerAuth?.isOwner || false;
+  const isDispatcher = providerAuth?.isDispatcher || false;
+  const isProvider = providerAuth?.isProvider || false;
   const user = provider; // Map provider to user for compatibility
   const { toast } = useToast();
   const [isAvailable, setIsAvailable] = useState(true);
@@ -142,7 +146,7 @@ export default function ProviderDashboard() {
 
   // Real-time booking updates for providers
   const { isConnected, refreshBookings } = useRealtimeBookings({
-    userId: user?.id,
+    userId: provider?.id,
     userType: "provider",
     onStatusChange: (bookingUpdate) => {
       // Update the specific booking in our local state
@@ -572,7 +576,6 @@ export default function ProviderDashboard() {
           .select(`
             *,
             services (*),
-            customer_profiles (*),
             providers (*),
             business_locations (*)
           `)

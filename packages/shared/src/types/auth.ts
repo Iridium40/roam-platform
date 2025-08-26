@@ -106,24 +106,31 @@ export interface MFABackupCodeRequest {
   backupCode: string;
 }
 
-// User profile types
+// Unified user profile for all apps
 export interface UserProfile {
-  id?: string;
-  userId: string;
+  id: string;
+  user_id: string;
   email: string;
-  firstName: string;
-  lastName: string;
-  phone?: string;
-  dateOfBirth?: string;
-  avatar?: string;
-  isActive: boolean;
-  isVerified: boolean;
-  userType: 'customer' | 'provider' | 'admin';
-  onboardingStep: OnboardingStep;
-  preferences?: UserPreferences;
-  metadata?: Record<string, any>;
-  createdAt: string;
-  updatedAt: string;
+  first_name: string | null;
+  last_name: string | null;
+  phone: string | null;
+  date_of_birth: string | null;
+  image_url: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  user_type: 'customer' | 'provider' | 'admin';
+  role?: 'owner' | 'dispatcher' | 'provider' | 'customer' | 'admin';
+  business_id?: string | null;
+  verification_status?: string | null;
+  // Customer-specific fields
+  customer_id?: string;
+  // Provider-specific fields
+  provider_id?: string;
+  business_managed?: boolean;
+  // Admin-specific fields
+  admin_id?: string;
+  permissions?: string[];
 }
 
 // User preferences
