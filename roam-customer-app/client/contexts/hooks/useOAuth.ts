@@ -119,12 +119,24 @@ export const useOAuth = () => {
                 email: data.session.user.email,
                 phone: userData.phone || null,
               },
-            ]);
+            ])
+            .select()
+            .single();
 
           if (createError) {
-            logger.error("Error creating customer profile from OAuth:", createError);
-            return { success: false, error: "Profile creation failed" };
+            // Check if it's a duplicate key error (409)
+            if (createError.code === "23505") {
+              logger.warn("Customer profile already exists for user:", data.session.user.id);
+              // Profile already exists, this is fine - continue
+            } else {
+              logger.error("Error creating customer profile from OAuth:", createError);
+              return { success: false, error: "Profile creation failed" };
+            }
           }
+        } else if (customerError) {
+          // Handle other errors
+          logger.error("Error checking customer profile:", customerError);
+          return { success: false, error: "Profile check failed" };
         }
 
         return { success: true, user: data.session.user };
