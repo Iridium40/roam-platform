@@ -575,8 +575,8 @@ export default function ProviderDashboard() {
         if (businessError) throw businessError;
         setBusiness(businessData);
 
-        // Load bookings with all related data
-        const { data: bookingsData, error: bookingsError } = await supabase
+        // Load bookings with all related data - filter based on provider role
+        let bookingsQuery = supabase
           .from("bookings")
           .select(`
             *,
@@ -617,8 +617,24 @@ export default function ProviderDashboard() {
               city,
               state
             )
-          `)
-          .eq("business_id", providerData.business_id)
+          `);
+
+        // Apply role-based filtering
+        console.log("Provider role:", providerData.provider_role);
+        console.log("Provider ID:", providerData.id);
+        console.log("Business ID:", providerData.business_id);
+        
+        if (providerData.provider_role === "provider") {
+          // Providers only see bookings assigned to them
+          console.log("Filtering bookings for provider:", providerData.id);
+          bookingsQuery = bookingsQuery.eq("provider_id", providerData.id);
+        } else {
+          // Owners and dispatchers see all bookings for the business
+          console.log("Filtering bookings for business:", providerData.business_id);
+          bookingsQuery = bookingsQuery.eq("business_id", providerData.business_id);
+        }
+
+        const { data: bookingsData, error: bookingsError } = await bookingsQuery
           .order("booking_date", { ascending: true })
           .order("start_time", { ascending: true });
 
@@ -3211,15 +3227,53 @@ export default function ProviderDashboard() {
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 bg-gray-50 p-2 rounded space-y-2 sm:space-y-0">
                           <div className="flex items-center space-x-2">
                             <Users className="w-3 h-3 text-gray-600" />
-                            <span className="text-xs font-medium text-gray-700">Provider:</span>
+                            <span className="text-xs font-medium text-gray-700">
+                              {providerData.provider_role === "provider" ? "Assigned Provider:" : "Provider:"}
+                            </span>
                           </div>
                           <Select
                             value={booking.providers?.id || "unassigned"}
-                            onValueChange={(value) => {
-                              toast({
-                                title: "Provider Assigned",
-                                description: `Booking assigned to ${value === "unassigned" ? "Unassigned" : value}`,
-                              });
+                            disabled={providerData.provider_role === "provider"}
+                            onValueChange={async (value) => {
+                              try {
+                                // Update the booking with the new provider assignment
+                                const { error } = await supabase
+                                  .from("bookings")
+                                  .update({ provider_id: value === "unassigned" ? null : value })
+                                  .eq("id", booking.id);
+
+                                if (error) {
+                                  throw error;
+                                }
+
+                                // Update local state
+                                setBookings(prev =>
+                                  prev.map(b =>
+                                    b.id === booking.id
+                                      ? {
+                                          ...b,
+                                          provider_id: value === "unassigned" ? null : value,
+                                          providers: value === "unassigned" ? null : 
+                                            allProviders.find(p => p.id === value) || b.providers
+                                        }
+                                      : b
+                                  )
+                                );
+
+                                toast({
+                                  title: "Provider Assigned",
+                                  description: `Booking assigned to ${value === "unassigned" ? "Unassigned" : 
+                                    allProviders.find(p => p.id === value)?.first_name + " " + 
+                                    allProviders.find(p => p.id === value)?.last_name || value}`,
+                                });
+                              } catch (error: any) {
+                                console.error("Error assigning provider:", error);
+                                toast({
+                                  title: "Error",
+                                  description: "Failed to assign provider. Please try again.",
+                                  variant: "destructive",
+                                });
+                              }
                             }}
                           >
                             <SelectTrigger className="w-full sm:w-32 h-7 text-xs">
@@ -3231,11 +3285,19 @@ export default function ProviderDashboard() {
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="unassigned">Unassigned</SelectItem>
-                              {allProviders.map((provider) => (
-                                <SelectItem key={provider.id} value={provider.id}>
-                                  {provider.first_name} {provider.last_name}
+                              {providerData.provider_role === "provider" ? (
+                                // Providers can only assign to themselves
+                                <SelectItem key={providerData.id} value={providerData.id}>
+                                  {providerData.first_name} {providerData.last_name}
                                 </SelectItem>
-                              ))}
+                              ) : (
+                                // Owners and dispatchers can assign to any provider in the business
+                                allProviders.map((provider) => (
+                                  <SelectItem key={provider.id} value={provider.id}>
+                                    {provider.first_name} {provider.last_name}
+                                  </SelectItem>
+                                ))
+                              )}
                             </SelectContent>
                           </Select>
                         </div>
@@ -3268,11 +3330,17 @@ export default function ProviderDashboard() {
                     <Calendar className="w-12 h-12 mx-auto mb-4 text-gray-400" />
                     <h3 className="text-lg font-semibold text-gray-900 mb-2">No bookings found</h3>
                     <p className="text-gray-600">
-                      {activeBookingTab === "today" 
-                        ? "No bookings scheduled for today"
-                        : activeBookingTab === "upcoming"
-                        ? "No upcoming bookings"
-                        : "No completed bookings"
+                      {providerData.provider_role === "provider" 
+                        ? (activeBookingTab === "today" 
+                            ? "No bookings assigned to you for today"
+                            : activeBookingTab === "upcoming"
+                            ? "No upcoming bookings assigned to you"
+                            : "No completed bookings assigned to you")
+                        : (activeBookingTab === "today" 
+                            ? "No bookings scheduled for today"
+                            : activeBookingTab === "upcoming"
+                            ? "No upcoming bookings"
+                            : "No completed bookings")
                       }
                     </p>
                   </Card>
