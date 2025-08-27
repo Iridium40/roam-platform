@@ -21,7 +21,7 @@ declare global {
 
 // Provider Portal Pages Only
 import ProviderPortal from "./pages/ProviderPortal";
-import ProviderDashboard from "./pages/ProviderDashboardNew";
+import ProviderDashboard from "./pages/ProviderDashboard";
 import ProviderOnboardingFlow from "./pages/ProviderOnboardingFlow";
 import ProviderOnboardingPhase1 from "./pages/ProviderOnboardingPhase1";
 import LandingPage from "./pages/LandingPage";
