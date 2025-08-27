@@ -26,11 +26,9 @@ import {
   Building,
   Star,
 } from "lucide-react";
-import { BusinessRegistrationForm } from "@/components/BusinessRegistrationForm";
 import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
-import type { BusinessRegistration, BusinessType } from "@roam/shared";
 import { useProviderAuth } from "@/contexts/auth/ProviderAuthContext";
 
 export default function ProviderPortal() {
@@ -56,44 +54,7 @@ export default function ProviderPortal() {
     password: "",
   });
 
-  const [signupData, setSignupData] = useState<
-    Partial<BusinessRegistration> & {
-      password: string;
-      confirmPassword: string;
-      agreedToTerms: boolean;
-      agreedToBackground: boolean;
-    }
-  >({
-    // Business Information
-    business_name: "",
-    business_type: "" as BusinessType,
-    contact_email: "",
-    phone: "",
-    website_url: "",
 
-    // Owner/Primary Contact
-    owner_first_name: "",
-    owner_last_name: "",
-    owner_email: "",
-    owner_phone: "",
-    owner_date_of_birth: new Date(),
-
-    // Business Address
-    business_address: {
-      address_line1: "",
-      address_line2: "",
-      city: "",
-      state: "",
-      postal_code: "",
-      country: "United States",
-    },
-
-    // Form fields
-    password: "",
-    confirmPassword: "",
-    agreedToTerms: false,
-    agreedToBackground: false,
-  });
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -139,190 +100,9 @@ export default function ProviderPortal() {
     }
   };
 
-  const handleSignup = async (
-    data: BusinessRegistration & {
-      password: string;
-      confirmPassword: string;
-      agreedToTerms: boolean;
-      agreedToBackground: boolean;
-    },
-  ) => {
-    setIsLoading(true);
-    setError("");
 
-    try {
-      // Validate passwords match
-      if (data.password !== data.confirmPassword) {
-        throw new Error("Passwords do not match");
-      }
 
-      if (!data.business_type) {
-        throw new Error("Please select a business type");
-      }
 
-      if (!data.business_name) {
-        throw new Error("Please enter a business name");
-      }
-
-      if (!data.owner_first_name || !data.owner_last_name) {
-        throw new Error("Please enter owner name");
-      }
-
-      if (!data.agreedToTerms || !data.agreedToBackground) {
-        throw new Error("Please agree to terms and background check");
-      }
-
-      // Create auth user
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: data.owner_email!,
-        password: data.password,
-      });
-
-      if (authError) {
-        throw new Error(authError.message);
-      }
-
-      if (!authData.user) {
-        throw new Error("Failed to create user account");
-      }
-
-      // First create a business profile for this provider
-      const { data: businessData, error: businessError } = await supabase
-        .from("business_profiles")
-        .insert({
-          business_name: data.business_name!,
-          business_type: data.business_type!,
-          contact_email: data.contact_email || data.owner_email,
-          phone: data.phone || data.owner_phone,
-          website_url: data.website_url,
-          verification_status: "pending",
-          is_active: false,
-          setup_step: 1,
-          setup_completed: false,
-        })
-        .select()
-        .single();
-
-      if (businessError || !businessData) {
-        // Clean up auth user if business creation fails
-        await supabase.auth.signOut();
-        throw new Error(
-          "Failed to create business profile: " +
-            (businessError?.message || "Unknown error"),
-        );
-      }
-
-      // Create a default location for the business with address
-      const { data: locationData, error: locationError } = await supabase
-        .from("business_locations")
-        .insert({
-          business_id: businessData.id,
-          location_name: "Main Location",
-          address_line1: data.business_address?.address_line1,
-          address_line2: data.business_address?.address_line2,
-          city: data.business_address?.city,
-          state: data.business_address?.state,
-          postal_code: data.business_address?.postal_code,
-          country: data.business_address?.country,
-          is_primary: true,
-          is_active: true,
-        })
-        .select()
-        .single();
-
-      if (locationError || !locationData) {
-        // Clean up auth user and business if location creation fails
-        await supabase.auth.signOut();
-        throw new Error(
-          "Failed to create business location: " +
-            (locationError?.message || "Unknown error"),
-        );
-      }
-
-      // Create provider record with owner role
-      const { error: providerError } = await supabase.from("providers").insert({
-        user_id: authData.user.id,
-        business_id: businessData.id,
-        location_id: locationData.id,
-        first_name: data.owner_first_name!,
-        last_name: data.owner_last_name!,
-        email: data.owner_email!,
-        phone: data.owner_phone!,
-        date_of_birth: data.owner_date_of_birth?.toISOString().split("T")[0],
-        provider_role: "owner",
-        verification_status: "pending",
-        background_check_status: "under_review",
-        is_active: false, // Inactive until verified by admin
-        business_managed: true, // Default to true
-      });
-
-      // Create setup progress tracking
-      await supabase.from("business_setup_progress").insert({
-        business_id: businessData.id,
-        current_step: 1,
-        total_steps: 8,
-        business_profile_completed: false,
-        locations_completed: false,
-        services_pricing_completed: false,
-        staff_setup_completed: false,
-        integrations_completed: false,
-        stripe_connect_completed: false,
-        subscription_completed: false,
-        go_live_completed: false,
-      });
-
-      if (providerError) {
-        // Clean up auth user if provider creation fails
-        await supabase.auth.signOut();
-        throw new Error(
-          "Failed to create provider profile: " + providerError.message,
-        );
-      }
-
-      // Success - redirect to new onboarding flow
-      navigate("/provider-onboarding-flow", {
-        state: {
-          message:
-            "Account created successfully! Let's complete your provider setup.",
-          businessType: data.business_type,
-          businessId: businessData.id,
-          businessName: data.business_name,
-        },
-      });
-    } catch (error) {
-      setError(
-        error instanceof Error
-          ? error.message
-          : "An error occurred during signup",
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const benefits = [
-    {
-      icon: DollarSign,
-      title: "You Control Your Earnings",
-      description:
-        "Keep everything you charge (minus payout transaction fee only)",
-    },
-    {
-      icon: Calendar,
-      title: "Flexible Schedule",
-      description: "Control when and where you work",
-    },
-    {
-      icon: Users,
-      title: "Quality Clients",
-      description: "Connect with verified customers",
-    },
-    {
-      icon: Shield,
-      title: "Full Support",
-      description: "Rescheduling and Cancellation 24/7 support",
-    },
-  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-accent/5 to-roam-light-blue/10">
@@ -491,7 +271,7 @@ export default function ProviderPortal() {
                       </form>
                     </TabsContent>
 
-                    {/* Enhanced Business Registration Form */}
+                    {/* New Provider Onboarding */}
                     <TabsContent value="signup">
                       <div className="space-y-4">
                         <div className="bg-roam-light-blue/10 border border-roam-light-blue/30 rounded-lg p-4">
@@ -512,16 +292,10 @@ export default function ProviderPortal() {
                             Start New Provider Application
                           </Button>
                         </div>
-
+                        
                         <div className="text-center text-sm text-foreground/60">
-                          <span>OR</span>
+                          <p>Already have an account? Switch to the Sign In tab above.</p>
                         </div>
-
-                        <BusinessRegistrationForm
-                          onSubmit={handleSignup}
-                          loading={isLoading}
-                          error={error}
-                        />
                       </div>
                     </TabsContent>
                   </Tabs>
