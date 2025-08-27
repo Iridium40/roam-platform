@@ -1983,44 +1983,99 @@ export default function ProviderDashboard() {
 
   // Staff Management Functions
   const loadStaffData = async () => {
-    if (!business?.id) {
-      // Add sample data for demonstration with proper UUID format
-      setStaffMembers([
-        {
-          id: "00000000-0000-0000-0000-000000000001", // Sample UUID for dispatcher
-          first_name: "Dispatcher",
-          last_name: "Roam",
-          email: "dispatcher@roamyourbestlife.com",
-          phone: "5044117011",
-          provider_role: "dispatcher",
-          location_id: "",
-          verification_status: "verified",
-          background_check_status: "approved",
-          business_managed: false,
-          is_active: true,
-          experience_years: 5,
-          image_url: null,
-          is_sample_data: true, // Flag to identify sample data
-        },
-        {
-          id: "00000000-0000-0000-0000-000000000002", // Sample UUID for provider
-          first_name: "Provider",
-          last_name: "Roam",
-          email: "provider@roamyourbestlife.com",
-          phone: "5044117012",
-          provider_role: "provider",
-          location_id: "",
-          verification_status: "verified",
-          background_check_status: "approved",
-          business_managed: true,
-          is_active: true,
-          experience_years: 7,
-          image_url: null,
-          is_sample_data: true, // Flag to identify sample data
+    console.log('🔍 loadStaffData called');
+    console.log('🔍 business?.id:', business?.id);
+    console.log('🔍 providerData?.business_id:', providerData?.business_id);
+    console.log('🔍 providerData:', providerData);
+    
+    // If we don't have providerData yet, try to load it first
+    if (!providerData && user?.id) {
+      console.log('🔍 No providerData available, loading it first...');
+      try {
+        const { data: providerDataFromDB, error } = await supabase
+          .from('providers')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
+        
+        if (!error && providerDataFromDB) {
+          console.log('🔍 Loaded providerData:', providerDataFromDB);
+          setProviderData(providerDataFromDB);
+          
+          // Use this data for staff loading
+          const businessId = business?.id || providerDataFromDB.business_id;
+          console.log('🔍 Using businessId from loaded data:', businessId);
+          
+          if (businessId) {
+            // Load staff data with the business ID
+            await loadStaffWithBusinessId(businessId);
+            return;
+          }
         }
-      ]);
+      } catch (error) {
+        console.error('🔍 Error loading provider data in loadStaffData:', error);
+      }
+    }
+    
+    // Check if we have a business ID from either business context or provider data
+    const businessId = business?.id || providerData?.business_id;
+    console.log('🔍 Using businessId:', businessId);
+    
+    if (!businessId) {
+      // If no business ID available, use the current provider data if available
+      if (providerData && providerData.id) {
+        console.log('🔍 Using providerData for staff members:', providerData);
+        setStaffMembers([providerData]);
+        setAllProviders([providerData]);
+      } else {
+        console.log('🔍 No providerData available, using sample data');
+        console.log('🔍 providerData value:', providerData);
+        // Only use sample data if no provider data is available
+        setStaffMembers([
+          {
+            id: "550e8400-e29b-41d4-a716-446655440001", // Sample UUID for dispatcher
+            first_name: "Dispatcher",
+            last_name: "Roam",
+            email: "dispatcher@roamyourbestlife.com",
+            phone: "5044117011",
+            provider_role: "dispatcher",
+            location_id: "",
+            verification_status: "verified",
+            background_check_status: "approved",
+            business_managed: false,
+            is_active: true,
+            experience_years: 5,
+            image_url: null,
+            is_sample_data: true, // Flag to identify sample data
+          },
+          {
+            id: "550e8400-e29b-41d4-a716-446655440002", // Sample UUID for provider
+            first_name: "Provider",
+            last_name: "Roam",
+            email: "provider@roamyourbestlife.com",
+            phone: "5044117012",
+            provider_role: "provider",
+            location_id: "",
+            verification_status: "verified",
+            background_check_status: "approved",
+            business_managed: true,
+            is_active: true,
+            experience_years: 7,
+            image_url: null,
+            is_sample_data: true, // Flag to identify sample data
+          }
+        ]);
+      }
       return;
     }
+    
+    // Load staff data with the business ID
+    await loadStaffWithBusinessId(businessId);
+  };
+
+  // Helper function to load staff data with a specific business ID
+  const loadStaffWithBusinessId = async (businessId: string) => {
+    console.log('🔍 loadStaffWithBusinessId called with businessId:', businessId);
 
     try {
       setStaffLoading(true);
@@ -2032,7 +2087,7 @@ export default function ProviderDashboard() {
           *,
           business_locations (*)
         `)
-        .eq("business_id", business.id);
+        .eq("business_id", businessId);
 
       if (staffError) throw staffError;
               setStaffMembers(staffData || []);
@@ -2176,26 +2231,20 @@ export default function ProviderDashboard() {
   const loadProviderAvailability = async () => {
     if (!user?.id) return;
 
-    // Skip if no business context (using sample data)
-    if (!business?.id) {
-      console.log('No business context, skipping provider availability loading');
+    // Get the provider's business_id from provider data
+    let businessId = business?.id;
+    
+    if (!businessId && providerData?.business_id) {
+      businessId = providerData.business_id;
+    }
+    
+    if (!businessId) {
+      console.log('No business context available, skipping provider availability loading');
       return;
     }
 
     try {
-      // Get the provider's business_id
-      const { data: providerData, error: providerError } = await supabase
-        .from('providers')
-        .select('business_id')
-        .eq('user_id', provider?.user_id)
-        .single();
-
-      if (providerError || !providerData?.business_id) {
-        console.error(safeErrorLog('Error fetching provider data for availability', providerError, { userId: provider?.user_id }));
-        return;
-      }
-
-      const businessId = providerData.business_id;
+      // Use the business ID we already determined above
 
       // Fetch provider availability data
       const { data: availabilityData, error: availabilityError } = await supabase
@@ -2309,12 +2358,16 @@ export default function ProviderDashboard() {
 
   // Availability Editing Functions
   const openAvailabilityEditor = (provider: any) => {
-    // Check if this is sample data
+    console.log('🔍 openAvailabilityEditor called with provider:', provider);
+    console.log('🔍 Provider ID:', provider.id);
+    console.log('🔍 Is sample data?', provider.is_sample_data);
+
+    // Prevent editing sample data
     if (provider.is_sample_data) {
       toast({
         title: "Demo Mode",
-        description: "This is demonstration data. Connect a real business to edit schedules.",
-        variant: "default",
+        description: "This is sample data. Please use real provider data to set availability.",
+        variant: "destructive",
       });
       return;
     }
@@ -2381,16 +2434,7 @@ export default function ProviderDashboard() {
   const saveProviderAvailability = async () => {
     if (!editingProviderId || !user?.id) return;
 
-    // Check if we're trying to save sample data
-    const provider = staffMembers.find(s => s.id === editingProviderId);
-    if (provider?.is_sample_data) {
-      toast({
-        title: "Demo Mode",
-        description: "Cannot save changes to demonstration data. Connect a real business to edit schedules.",
-        variant: "destructive",
-      });
-      return;
-    }
+
 
     // Additional safety check for proper UUID format
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -2404,25 +2448,15 @@ export default function ProviderDashboard() {
       return;
     }
 
-    // Ensure we have a business context
-    if (!business?.id) {
-      toast({
-        title: "Setup Required",
-        description: "Business setup is required before managing schedules.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     try {
-      // Get provider's business_id
+      // Get provider's business_id (if any)
       const { data: providerData, error: providerError } = await supabase
         .from('providers')
         .select('business_id')
         .eq('id', editingProviderId)
         .single();
 
-      if (providerError || !providerData?.business_id) {
+      if (providerError) {
         console.error(safeErrorLog('Error fetching provider business_id', providerError, { providerId: editingProviderId }));
         toast({
           title: "Error",
@@ -2432,7 +2466,17 @@ export default function ProviderDashboard() {
         return;
       }
 
-      const businessId = providerData.business_id;
+      // Use business ID from provider data or fall back to current business context
+      const businessId = providerData?.business_id || business?.id;
+      
+      if (!businessId) {
+        toast({
+          title: "Setup Required",
+          description: "Provider must be associated with a business to manage schedules.",
+          variant: "destructive",
+        });
+        return;
+      }
 
       // Delete existing availability for this provider
       const { error: deleteError } = await supabase
