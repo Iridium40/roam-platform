@@ -163,10 +163,8 @@ export default function ServicesTab({
   const openEditServiceModal = (service: any) => {
     setEditingService(service);
     setServiceForm({
-      business_price: service.price.toString(),
-      delivery_type: service.is_mobile && service.is_location ? 'both_locations'
-                   : service.is_mobile ? 'customer_location'
-                   : 'business_location'
+      business_price: (service.business_price || service.services?.min_price || 0).toString(),
+      delivery_type: service.delivery_type || 'business_location'
     });
     setShowEditServiceModal(true);
   };
@@ -177,10 +175,10 @@ export default function ServicesTab({
     try {
       const businessPrice = parseFloat(serviceForm.business_price);
 
-      if (isNaN(businessPrice) || businessPrice < editingService.base_price) {
+      if (isNaN(businessPrice) || businessPrice < (editingService.services?.min_price || 0)) {
         toast({
           title: "Invalid Price",
-          description: `Business price must be at least $${editingService.base_price} (service minimum).`,
+          description: `Business price must be at least $${editingService.services?.min_price || 0} (service minimum).`,
           variant: "destructive",
         });
         return;
@@ -193,13 +191,13 @@ export default function ServicesTab({
           delivery_type: serviceForm.delivery_type
         })
         .eq('business_id', business.id)
-        .eq('service_id', editingService.service_id);
+        .eq('service_id', editingService.service_id || editingService.services?.id);
 
       if (error) throw error;
 
       toast({
         title: "Service Updated",
-        description: `${editingService.name} has been updated successfully.`,
+        description: `${editingService.services?.name || 'Service'} has been updated successfully.`,
       });
 
       setShowEditServiceModal(false);
