@@ -106,24 +106,22 @@ export default function BusinessDocumentUploadForm({
         .from('provider-documents')
         .getPublicUrl(fileName);
 
-      // Create database record
-      const response = await fetch('/api/business/upload-documents', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          businessId,
-          documentType: document.documentType,
-          documentName: document.file.name,
-          fileUrl: urlData.publicUrl,
-          fileSizeBytes: document.file.size
-        }),
-      });
+      // Create database record directly with Supabase
+      const { data: dbData, error: dbError } = await supabase
+        .from('business_documents')
+        .insert({
+          business_id: businessId,
+          document_type: document.documentType,
+          document_name: document.file.name,
+          file_url: urlData.publicUrl,
+          file_size_bytes: document.file.size,
+          verification_status: 'pending'
+        })
+        .select()
+        .single();
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create document record');
+      if (dbError) {
+        throw new Error(`Database error: ${dbError.message}`);
       }
 
       // Update document status
