@@ -22,16 +22,16 @@ declare global {
 // Provider Portal Pages Only
 import ProviderPortal from "./pages/ProviderPortal";
 import ProviderDashboard from "./pages/ProviderDashboard";
-import ProviderOnboardingFlow from "./pages/ProviderOnboardingFlow";
-import ProviderOnboardingPhase1 from "./pages/ProviderOnboardingPhase1";
+import ProviderOnboardingFlow from "./pages/onboarding/ProviderOnboardingFlow";
+import ProviderOnboardingPhase1 from "./pages/onboarding/ProviderOnboardingPhase1";
 import LandingPage from "./pages/LandingPage";
 import Blog from "./pages/Blog";
 import ErrorBoundary from "./lib/errors/ErrorBoundary";
 import NotFound from "./pages/NotFound";
 import SignIn from "./pages/SignIn";
-import Phase2Entry from "./pages/Phase2Entry";
-import ImageUploadTest from "./pages/ImageUploadTest";
-import Phase2Test from "./pages/Phase2Test";
+import Phase2Entry from "./pages/onboarding/Phase2Entry";
+import ImageUploadTest from "./pages/testing/ImageUploadTest";
+import Phase2Test from "./pages/onboarding/Phase2Test";
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 
