@@ -28,10 +28,12 @@ import {
   Home,
   Car,
   Share2,
+  Shield,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import ShareModal from "@/components/ShareModal";
+import { DocumentUploadForm } from "@/components/DocumentUploadForm";
 
 interface BusinessSettingsTabProps {
   providerData: any;
@@ -72,6 +74,8 @@ export default function BusinessSettingsTab({
   const [showAddLocationModal, setShowAddLocationModal] = useState(false);
   const [editingLocation, setEditingLocation] = useState<any>(null);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [showDocumentUploadModal, setShowDocumentUploadModal] = useState(false);
+  const [showDocumentUpload, setShowDocumentUpload] = useState(false);
   const [locationForm, setLocationForm] = useState({
     location_name: "",
     address_line1: "",
@@ -395,6 +399,24 @@ export default function BusinessSettingsTab({
     setEditingLocation(null);
     resetLocationForm();
     setShowAddLocationModal(true);
+  };
+
+  // Handle document upload submission
+  const handleDocumentUpload = async (documents: any[]) => {
+    try {
+      toast({
+        title: "Documents Updated",
+        description: "Your business documents have been updated successfully.",
+      });
+      setShowDocumentUploadModal(false);
+    } catch (error) {
+      console.error('Error updating documents:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update documents. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   // Generate business share URL
@@ -741,6 +763,51 @@ export default function BusinessSettingsTab({
         </CardContent>
       </Card>
 
+      {/* Business Documents */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center">
+              <Shield className="w-5 h-5 mr-2" />
+              Business Documents
+            </div>
+            <Button 
+              onClick={() => setShowDocumentUploadModal(true)} 
+              size="sm"
+              variant="outline"
+            >
+              <Upload className="w-4 h-4 mr-2" />
+              Update Documents
+            </Button>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="text-center py-8">
+              <Shield className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Business Documents</h3>
+              <p className="text-gray-600 mb-4">
+                Upload and manage your business verification documents including licenses, 
+                insurance certificates, and professional credentials.
+              </p>
+              <div className="space-y-2 text-sm text-gray-500">
+                <p>• Professional licenses and certifications</p>
+                <p>• Business registration documents</p>
+                <p>• Liability insurance certificates</p>
+                <p>• Proof of address and identification</p>
+              </div>
+              <Button 
+                onClick={() => setShowDocumentUploadModal(true)}
+                className="mt-4"
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                Upload Documents
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Business Locations */}
       <Card>
         <CardHeader>
@@ -1017,6 +1084,32 @@ export default function BusinessSettingsTab({
         businessDescription={businessData.business_description || "Professional services you can trust"}
         pageUrl={getBusinessShareUrl()}
       />
+
+      {/* Document Upload Modal */}
+      {showDocumentUploadModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Update Business Documents</h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowDocumentUploadModal(false)}
+              >
+                ×
+              </Button>
+            </div>
+            
+            <DocumentUploadForm
+              onSubmit={handleDocumentUpload}
+              loading={false}
+              businessType={businessData.business_type}
+              userId={providerData?.user_id || ""}
+              businessId={business?.id || ""}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
