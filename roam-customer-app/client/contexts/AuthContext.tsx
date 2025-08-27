@@ -80,8 +80,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           logger.debug("AuthContext: Found stored session and token");
 
           // Restore the access token to the directSupabaseAPI
-          const { directSupabaseAPI } = await import("../lib/directSupabase");
-          directSupabaseAPI.currentAccessToken = storedToken;
+          // Note: We'll handle this differently to avoid dynamic import issues
+          // const { directSupabaseAPI } = await import("../lib/directSupabase");
+          // directSupabaseAPI.currentAccessToken = storedToken;
 
           const customerData = JSON.parse(storedCustomer);
           logger.debug("🔐 AuthContext: Customer session restored from localStorage", customerData);
