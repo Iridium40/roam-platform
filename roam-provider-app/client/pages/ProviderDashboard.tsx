@@ -3205,6 +3205,14 @@ export default function ProviderDashboard() {
                                 {booking.customer_location_id ? "Customer Location" : "Business Location"}
                               </span>
                             </div>
+                            <div className="text-xs text-gray-500 truncate">
+                              {booking.customer_locations 
+                                ? `${booking.customer_locations.location_name || ""} ${booking.customer_locations.street_address || ""}${booking.customer_locations.unit_number ? `, ${booking.customer_locations.unit_number}` : ""}, ${booking.customer_locations.city || ""}, ${booking.customer_locations.state || ""}`
+                                : booking.business_locations
+                                ? `${booking.business_locations.location_name || ""} ${booking.business_locations.address_line1 || ""}, ${booking.business_locations.city || ""}, ${booking.business_locations.state || ""}`
+                                : "Location not specified"
+                              }
+                            </div>
                           </div>
                           <div className="flex items-center space-x-1 flex-shrink-0">
                             <Button
