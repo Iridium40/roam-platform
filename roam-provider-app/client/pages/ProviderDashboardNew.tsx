@@ -91,6 +91,7 @@ import {
   ChevronDown,
   User,
   Menu,
+  BookOpen,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
@@ -666,6 +667,12 @@ export default function ProviderDashboard() {
             </div>
 
             <div className="flex items-center space-x-4">
+              <Button variant="ghost" size="sm" asChild>
+                <Link to="/blog">
+                  <BookOpen className="w-4 h-4" />
+                  <span className="hidden sm:inline ml-2">Blog</span>
+                </Link>
+              </Button>
               <Button variant="ghost" size="sm">
                 <Bell className="w-4 h-4" />
               </Button>

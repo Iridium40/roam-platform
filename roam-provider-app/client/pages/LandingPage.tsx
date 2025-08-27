@@ -375,6 +375,13 @@ export default function LandingPage() {
                 Reviews
               </a>
               <Link
+                to="/blog"
+                className="text-foreground/80 hover:text-roam-blue transition-colors flex items-center"
+              >
+                <BookOpen className="w-4 h-4 mr-1" />
+                Blog
+              </Link>
+              <Link
                 to="/provider-portal"
                 className="text-roam-blue hover:text-roam-blue/80 transition-colors font-medium"
               >
