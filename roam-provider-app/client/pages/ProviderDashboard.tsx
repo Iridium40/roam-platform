@@ -3170,7 +3170,7 @@ export default function ProviderDashboard() {
                                 <span>{booking.start_time || "12:00"}</span>
                                 <span className="flex items-center space-x-1">
                                   <Hash className="w-3 h-3" />
-                                  <span>{booking.reference_number || `BK${Math.random().toString(36).substr(2, 4).toUpperCase()}`}</span>
+                                  <span>{booking.booking_reference || `BK${Math.random().toString(36).substr(2, 4).toUpperCase()}`}</span>
                                 </span>
                               </div>
                             </div>
@@ -7433,7 +7433,7 @@ export default function ProviderDashboard() {
                   </div>
                   <div>
                     <span className="text-gray-600">Reference:</span>
-                    <span className="ml-2 font-mono text-xs">{selectedBookingDetails.reference_number || `BK${Math.random().toString(36).substr(2, 6).toUpperCase()}`}</span>
+                    <span className="ml-2 font-mono text-xs">{selectedBookingDetails.booking_reference || `BK${Math.random().toString(36).substr(2, 6).toUpperCase()}`}</span>
                   </div>
                 </div>
               </div>
