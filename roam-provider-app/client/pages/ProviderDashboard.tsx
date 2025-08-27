@@ -2035,9 +2035,13 @@ export default function ProviderDashboard() {
         .eq("business_id", business.id);
 
       if (staffError) throw staffError;
-      setStaffMembers(staffData || []);
+              setStaffMembers(staffData || []);
 
-      // Load available services for assignment
+        // Load all providers for assignment (only those with provider_role = "provider")
+        const availableProviders = staffData?.filter(provider => provider.provider_role === "provider") || [];
+        setAllProviders(availableProviders);
+
+        // Load available services for assignment
       const { data: servicesData, error: servicesError } = await supabase
         .from("services")
         .select("*")
