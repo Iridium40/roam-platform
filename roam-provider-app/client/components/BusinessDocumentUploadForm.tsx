@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 
 interface BusinessDocumentUploadFormProps {
   businessId: string;
+  existingDocuments?: any[];
   onUploadComplete?: () => void;
   onCancel?: () => void;
 }
@@ -44,12 +45,21 @@ const documentTypeLabels: Record<DocumentType, string> = {
 
 export default function BusinessDocumentUploadForm({
   businessId,
+  existingDocuments = [],
   onUploadComplete,
   onCancel
 }: BusinessDocumentUploadFormProps) {
   const { toast } = useToast();
   const [documents, setDocuments] = useState<Document[]>([]);
   const [uploading, setUploading] = useState(false);
+
+  const hasExistingDocument = (documentType: DocumentType) => {
+    return existingDocuments.some(doc => doc.document_type === documentType);
+  };
+
+  const getExistingDocument = (documentType: DocumentType) => {
+    return existingDocuments.find(doc => doc.document_type === documentType);
+  };
 
   const handleFileSelect = async (files: FileList, documentType: DocumentType) => {
     const newDocuments: Document[] = Array.from(files).map(file => ({
@@ -194,32 +204,75 @@ export default function BusinessDocumentUploadForm({
 
       {/* Document Type Upload Areas */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {Object.entries(documentTypeLabels).map(([type, label]) => (
-          <Card key={type} className="border-2 border-dashed border-gray-300 hover:border-gray-400 transition-colors">
-            <CardContent className="p-6">
-              <div className="text-center">
-                <FileText className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-                <h4 className="font-medium text-gray-900 mb-2">{label}</h4>
-                <p className="text-sm text-gray-500 mb-4">
-                  Upload your {label.toLowerCase()}
-                </p>
-                <input
-                  type="file"
-                  accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                  onChange={(e) => e.target.files && handleFileSelect(e.target.files, type as DocumentType)}
-                  className="hidden"
-                  id={`file-${type}`}
-                />
-                <label htmlFor={`file-${type}`}>
-                  <Button variant="outline" size="sm" className="cursor-pointer">
-                    <Upload className="w-4 h-4 mr-2" />
-                    Choose File
-                  </Button>
-                </label>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+        {Object.entries(documentTypeLabels).map(([type, label]) => {
+          const existingDoc = getExistingDocument(type as DocumentType);
+          const hasExisting = hasExistingDocument(type as DocumentType);
+          
+          return (
+            <Card 
+              key={type} 
+              className={`border-2 transition-colors ${
+                hasExisting 
+                  ? 'border-green-300 bg-green-50 hover:border-green-400' 
+                  : 'border-dashed border-gray-300 hover:border-gray-400'
+              }`}
+            >
+              <CardContent className="p-6">
+                <div className="text-center">
+                  <div className="relative">
+                    <FileText className={`w-8 h-8 mx-auto mb-2 ${
+                      hasExisting ? 'text-green-600' : 'text-gray-400'
+                    }`} />
+                    {hasExisting && (
+                      <div className="absolute -top-1 -right-1">
+                        <div className="w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
+                          <CheckCircle className="w-3 h-3 text-white" />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <h4 className="font-medium text-gray-900 mb-2">{label}</h4>
+                  {hasExisting ? (
+                    <div className="space-y-2 mb-4">
+                      <p className="text-sm text-green-600 font-medium">
+                        ✓ Document uploaded
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {existingDoc?.document_name}
+                      </p>
+                      <Badge variant="secondary" className="text-xs">
+                        {existingDoc?.verification_status || 'pending'}
+                      </Badge>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500 mb-4">
+                      Upload your {label.toLowerCase()}
+                    </p>
+                  )}
+                  <input
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                    onChange={(e) => e.target.files && handleFileSelect(e.target.files, type as DocumentType)}
+                    className="hidden"
+                    id={`file-${type}`}
+                  />
+                  <label htmlFor={`file-${type}`}>
+                    <Button 
+                      variant={hasExisting ? "outline" : "outline"} 
+                      size="sm" 
+                      className={`cursor-pointer ${
+                        hasExisting ? 'border-green-300 text-green-700 hover:bg-green-50' : ''
+                      }`}
+                    >
+                      <Upload className="w-4 h-4 mr-2" />
+                      {hasExisting ? 'Update File' : 'Choose File'}
+                    </Button>
+                  </label>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
       {/* Uploaded Documents List */}

@@ -1229,6 +1229,7 @@ export default function BusinessSettingsTab({
             
             <BusinessDocumentUploadForm
               businessId={business?.id || ""}
+              existingDocuments={businessDocuments}
               onUploadComplete={handleDocumentUpload}
               onCancel={() => setShowDocumentUploadModal(false)}
             />
