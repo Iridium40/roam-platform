@@ -23,6 +23,10 @@ import {
   Phone,
   Mail,
   Globe,
+  Plus,
+  Navigation,
+  Home,
+  Car,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
@@ -60,6 +64,25 @@ export default function BusinessSettingsTab({
   const [isEditing, setIsEditing] = useState(false);
   const [logoUploading, setLogoUploading] = useState(false);
   const [coverUploading, setCoverUploading] = useState(false);
+  
+  // Business Locations State
+  const [locations, setLocations] = useState<any[]>([]);
+  const [showAddLocationModal, setShowAddLocationModal] = useState(false);
+  const [editingLocation, setEditingLocation] = useState<any>(null);
+  const [locationForm, setLocationForm] = useState({
+    location_name: "",
+    address_line1: "",
+    address_line2: "",
+    city: "",
+    state: "",
+    postal_code: "",
+    country: "",
+    latitude: "",
+    longitude: "",
+    is_primary: false,
+    offers_mobile_services: false,
+    mobile_service_radius: 25,
+  });
 
   // Load business data
   const loadBusinessData = async () => {
@@ -186,8 +209,194 @@ export default function BusinessSettingsTab({
     }
   };
 
+  // Load business locations
+  const loadBusinessLocations = async () => {
+    if (!business?.id) return;
+
+    try {
+      const { data: locationsData, error } = await supabase
+        .from('business_locations')
+        .select('*')
+        .eq('business_id', business.id)
+        .eq('is_active', true)
+        .order('is_primary', { ascending: false })
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+      setLocations(locationsData || []);
+    } catch (error) {
+      console.error('Error loading business locations:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load business locations",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Add new location
+  const addLocation = async () => {
+    if (!business?.id) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('business_locations')
+        .insert({
+          business_id: business.id,
+          location_name: locationForm.location_name,
+          address_line1: locationForm.address_line1,
+          address_line2: locationForm.address_line2,
+          city: locationForm.city,
+          state: locationForm.state,
+          postal_code: locationForm.postal_code,
+          country: locationForm.country,
+          latitude: locationForm.latitude ? parseFloat(locationForm.latitude) : null,
+          longitude: locationForm.longitude ? parseFloat(locationForm.longitude) : null,
+          is_primary: locationForm.is_primary,
+          offers_mobile_services: locationForm.offers_mobile_services,
+          mobile_service_radius: locationForm.mobile_service_radius,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast({
+        title: "Location Added",
+        description: "Business location has been added successfully.",
+      });
+
+      setShowAddLocationModal(false);
+      resetLocationForm();
+      loadBusinessLocations();
+    } catch (error) {
+      console.error('Error adding location:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add location. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Update location
+  const updateLocation = async () => {
+    if (!editingLocation?.id) return;
+
+    try {
+      const { error } = await supabase
+        .from('business_locations')
+        .update({
+          location_name: locationForm.location_name,
+          address_line1: locationForm.address_line1,
+          address_line2: locationForm.address_line2,
+          city: locationForm.city,
+          state: locationForm.state,
+          postal_code: locationForm.postal_code,
+          country: locationForm.country,
+          latitude: locationForm.latitude ? parseFloat(locationForm.latitude) : null,
+          longitude: locationForm.longitude ? parseFloat(locationForm.longitude) : null,
+          is_primary: locationForm.is_primary,
+          offers_mobile_services: locationForm.offers_mobile_services,
+          mobile_service_radius: locationForm.mobile_service_radius,
+        })
+        .eq('id', editingLocation.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Location Updated",
+        description: "Business location has been updated successfully.",
+      });
+
+      setShowAddLocationModal(false);
+      setEditingLocation(null);
+      resetLocationForm();
+      loadBusinessLocations();
+    } catch (error) {
+      console.error('Error updating location:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update location. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Delete location
+  const deleteLocation = async (locationId: string) => {
+    try {
+      const { error } = await supabase
+        .from('business_locations')
+        .update({ is_active: false })
+        .eq('id', locationId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Location Deleted",
+        description: "Business location has been deleted successfully.",
+      });
+
+      loadBusinessLocations();
+    } catch (error) {
+      console.error('Error deleting location:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete location. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Reset location form
+  const resetLocationForm = () => {
+    setLocationForm({
+      location_name: "",
+      address_line1: "",
+      address_line2: "",
+      city: "",
+      state: "",
+      postal_code: "",
+      country: "",
+      latitude: "",
+      longitude: "",
+      is_primary: false,
+      offers_mobile_services: false,
+      mobile_service_radius: 25,
+    });
+  };
+
+  // Open edit location modal
+  const openEditLocationModal = (location: any) => {
+    setEditingLocation(location);
+    setLocationForm({
+      location_name: location.location_name || "",
+      address_line1: location.address_line1 || "",
+      address_line2: location.address_line2 || "",
+      city: location.city || "",
+      state: location.state || "",
+      postal_code: location.postal_code || "",
+      country: location.country || "",
+      latitude: location.latitude?.toString() || "",
+      longitude: location.longitude?.toString() || "",
+      is_primary: location.is_primary || false,
+      offers_mobile_services: location.offers_mobile_services || false,
+      mobile_service_radius: location.mobile_service_radius || 25,
+    });
+    setShowAddLocationModal(true);
+  };
+
+  // Open add location modal
+  const openAddLocationModal = () => {
+    setEditingLocation(null);
+    resetLocationForm();
+    setShowAddLocationModal(true);
+  };
+
   useEffect(() => {
     loadBusinessData();
+    loadBusinessLocations();
   }, [business]);
 
   // Show loading state
@@ -506,6 +715,274 @@ export default function BusinessSettingsTab({
           </div>
         </CardContent>
       </Card>
+
+      {/* Business Locations */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center">
+              <MapPin className="w-5 h-5 mr-2" />
+              Business Locations
+            </div>
+            <Button onClick={openAddLocationModal} size="sm">
+              <Plus className="w-4 h-4 mr-2" />
+              Add Location
+            </Button>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {locations.length === 0 ? (
+            <div className="text-center py-8">
+              <MapPin className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">No Locations Added</h3>
+              <p className="text-gray-600 mb-4">
+                Add your business locations to help customers find you and understand your service areas.
+              </p>
+              <Button onClick={openAddLocationModal}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Your First Location
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {locations.map((location) => (
+                <div key={location.id} className="border rounded-lg p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <h4 className="font-semibold text-gray-900">
+                          {location.location_name || "Unnamed Location"}
+                        </h4>
+                        {location.is_primary && (
+                          <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+                            Primary
+                          </span>
+                        )}
+                        {location.offers_mobile_services && (
+                          <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full flex items-center">
+                            <Car className="w-3 h-3 mr-1" />
+                            Mobile
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-sm text-gray-600 space-y-1">
+                        <p>{location.address_line1}</p>
+                        {location.address_line2 && <p>{location.address_line2}</p>}
+                        <p>
+                          {location.city}, {location.state} {location.postal_code}
+                        </p>
+                        <p>{location.country}</p>
+                        {location.offers_mobile_services && (
+                          <p className="text-xs text-gray-500">
+                            Service radius: {location.mobile_service_radius} miles
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2 ml-4">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openEditLocationModal(location)}
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => deleteLocation(location.id)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Add/Edit Location Modal */}
+      {showAddLocationModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">
+                {editingLocation ? "Edit Location" : "Add New Location"}
+              </h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setShowAddLocationModal(false);
+                  setEditingLocation(null);
+                  resetLocationForm();
+                }}
+              >
+                ×
+              </Button>
+            </div>
+            
+            <div className="space-y-4">
+              {/* Location Name */}
+              <div>
+                <Label htmlFor="location_name">Location Name</Label>
+                <Input
+                  id="location_name"
+                  value={locationForm.location_name}
+                  onChange={(e) => setLocationForm({...locationForm, location_name: e.target.value})}
+                  placeholder="e.g., Main Office, Downtown Branch"
+                />
+              </div>
+
+              {/* Address */}
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <Label htmlFor="address_line1">Address Line 1</Label>
+                  <Input
+                    id="address_line1"
+                    value={locationForm.address_line1}
+                    onChange={(e) => setLocationForm({...locationForm, address_line1: e.target.value})}
+                    placeholder="Street address"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="address_line2">Address Line 2 (Optional)</Label>
+                  <Input
+                    id="address_line2"
+                    value={locationForm.address_line2}
+                    onChange={(e) => setLocationForm({...locationForm, address_line2: e.target.value})}
+                    placeholder="Apartment, suite, etc."
+                  />
+                </div>
+              </div>
+
+              {/* City, State, Postal Code */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <Label htmlFor="city">City</Label>
+                  <Input
+                    id="city"
+                    value={locationForm.city}
+                    onChange={(e) => setLocationForm({...locationForm, city: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="state">State/Province</Label>
+                  <Input
+                    id="state"
+                    value={locationForm.state}
+                    onChange={(e) => setLocationForm({...locationForm, state: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="postal_code">Postal Code</Label>
+                  <Input
+                    id="postal_code"
+                    value={locationForm.postal_code}
+                    onChange={(e) => setLocationForm({...locationForm, postal_code: e.target.value})}
+                  />
+                </div>
+              </div>
+
+              {/* Country */}
+              <div>
+                <Label htmlFor="country">Country</Label>
+                <Input
+                  id="country"
+                  value={locationForm.country}
+                  onChange={(e) => setLocationForm({...locationForm, country: e.target.value})}
+                  placeholder="e.g., United States"
+                />
+              </div>
+
+              {/* Coordinates */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="latitude">Latitude (Optional)</Label>
+                  <Input
+                    id="latitude"
+                    type="number"
+                    step="any"
+                    value={locationForm.latitude}
+                    onChange={(e) => setLocationForm({...locationForm, latitude: e.target.value})}
+                    placeholder="e.g., 40.7128"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="longitude">Longitude (Optional)</Label>
+                  <Input
+                    id="longitude"
+                    type="number"
+                    step="any"
+                    value={locationForm.longitude}
+                    onChange={(e) => setLocationForm({...locationForm, longitude: e.target.value})}
+                    placeholder="e.g., -74.0060"
+                  />
+                </div>
+              </div>
+
+              {/* Location Settings */}
+              <div className="space-y-4">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="is_primary"
+                    checked={locationForm.is_primary}
+                    onChange={(e) => setLocationForm({...locationForm, is_primary: e.target.checked})}
+                    className="rounded"
+                  />
+                  <Label htmlFor="is_primary">Set as primary location</Label>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="offers_mobile_services"
+                    checked={locationForm.offers_mobile_services}
+                    onChange={(e) => setLocationForm({...locationForm, offers_mobile_services: e.target.checked})}
+                    className="rounded"
+                  />
+                  <Label htmlFor="offers_mobile_services">Offers mobile services</Label>
+                </div>
+
+                {locationForm.offers_mobile_services && (
+                  <div>
+                    <Label htmlFor="mobile_service_radius">Mobile Service Radius (miles)</Label>
+                    <Input
+                      id="mobile_service_radius"
+                      type="number"
+                      min="1"
+                      max="100"
+                      value={locationForm.mobile_service_radius}
+                      onChange={(e) => setLocationForm({...locationForm, mobile_service_radius: parseInt(e.target.value) || 25})}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end space-x-2 mt-6">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowAddLocationModal(false);
+                  setEditingLocation(null);
+                  resetLocationForm();
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={editingLocation ? updateLocation : addLocation}
+              >
+                {editingLocation ? "Update Location" : "Add Location"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
