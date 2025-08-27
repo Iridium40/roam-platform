@@ -27,9 +27,11 @@ import {
   Navigation,
   Home,
   Car,
+  Share2,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
+import ShareModal from "@/components/ShareModal";
 
 interface BusinessSettingsTabProps {
   providerData: any;
@@ -69,6 +71,7 @@ export default function BusinessSettingsTab({
   const [locations, setLocations] = useState<any[]>([]);
   const [showAddLocationModal, setShowAddLocationModal] = useState(false);
   const [editingLocation, setEditingLocation] = useState<any>(null);
+  const [showShareModal, setShowShareModal] = useState(false);
   const [locationForm, setLocationForm] = useState({
     location_name: "",
     address_line1: "",
@@ -394,6 +397,13 @@ export default function BusinessSettingsTab({
     setShowAddLocationModal(true);
   };
 
+  // Generate business share URL
+  const getBusinessShareUrl = () => {
+    if (!business?.id) return "";
+    // This would be the customer-facing URL for the business
+    return `${window.location.origin}/business/${business.id}`;
+  };
+
   useEffect(() => {
     loadBusinessData();
     loadBusinessLocations();
@@ -453,7 +463,18 @@ export default function BusinessSettingsTab({
       {/* Business Information */}
       <Card>
         <CardHeader>
-          <CardTitle>Business Information</CardTitle>
+          <CardTitle className="flex items-center justify-between">
+            <span>Business Information</span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowShareModal(true)}
+              className="flex items-center gap-2"
+            >
+              <Share2 className="w-4 h-4" />
+              Share Business
+            </Button>
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Cover Photo */}
@@ -983,6 +1004,15 @@ export default function BusinessSettingsTab({
           </div>
         </div>
       )}
+
+      {/* Share Modal */}
+      <ShareModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        businessName={businessData.business_name || "Your Business"}
+        businessDescription={businessData.business_description || "Professional services you can trust"}
+        pageUrl={getBusinessShareUrl()}
+      />
     </div>
   );
 }
