@@ -95,7 +95,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       case 'invoice.payment_succeeded': {
-        const invoice = event.data.object as Stripe.Invoice;
+        const invoice = event.data.object as Stripe.Invoice & { subscription?: string | { id: string } };
         const subscriptionId = typeof invoice.subscription === 'string' 
           ? invoice.subscription 
           : invoice.subscription?.id;
@@ -116,7 +116,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       case 'invoice.payment_failed': {
-        const invoice = event.data.object as Stripe.Invoice;
+        const invoice = event.data.object as Stripe.Invoice & { subscription?: string | { id: string } };
         const subscriptionId = typeof invoice.subscription === 'string' 
           ? invoice.subscription 
           : invoice.subscription?.id;

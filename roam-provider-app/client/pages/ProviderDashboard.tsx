@@ -884,7 +884,7 @@ export default function ProviderDashboard() {
           timeoutId = setTimeout(() => controller.abort(), 5000); // Further reduced timeout to 5 seconds
 
           const response = await fetch(
-            `/api/business-eligible-services?business_id=${businessId}`,
+            `http://localhost:3000/api/business-eligible-services?business_id=${businessId}`,
             {
               headers: {
                 'Content-Type': 'application/json'
