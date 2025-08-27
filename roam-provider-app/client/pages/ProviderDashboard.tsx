@@ -3217,31 +3217,30 @@ export default function ProviderDashboard() {
                                 : booking.guest_name || "Alan Smith"}
                             </p>
                             <div className="flex items-center space-x-2 text-xs text-gray-600">
-                              <MapPin className="w-3 h-3" />
-                              <span className="truncate">
-                                {booking.customer_location_id ? "Customer Location" : "Business Location"}
-                              </span>
-                            </div>
-                            <div className="flex items-center space-x-1">
-                              <div className="text-xs text-gray-500 truncate flex-1">
-                                {booking.customer_locations 
-                                  ? `${booking.customer_locations.location_name || ""} ${booking.customer_locations.street_address || ""}${booking.customer_locations.unit_number ? `, ${booking.customer_locations.unit_number}` : ""}, ${booking.customer_locations.city || ""}, ${booking.customer_locations.state || ""}`
-                                  : booking.business_locations
-                                  ? `${booking.business_locations.location_name || ""} ${booking.business_locations.address_line1 || ""}, ${booking.business_locations.city || ""}, ${booking.business_locations.state || ""}`
-                                  : "Location not specified"
-                                }
-                              </div>
-                              {getMapUrl(booking) && (
+                              {getMapUrl(booking) ? (
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  className="h-4 w-4 p-0 text-blue-600 hover:text-blue-800"
+                                  className="h-4 w-4 p-0 text-gray-600 hover:text-blue-600"
                                   onClick={() => window.open(getMapUrl(booking), '_blank')}
                                   title="Open in Maps"
                                 >
                                   <MapPin className="w-3 h-3" />
                                 </Button>
+                              ) : (
+                                <MapPin className="w-3 h-3" />
                               )}
+                              <span className="truncate">
+                                {booking.customer_location_id ? "Customer Location" : "Business Location"}
+                              </span>
+                            </div>
+                            <div className="text-xs text-gray-500 truncate">
+                              {booking.customer_locations 
+                                ? `${booking.customer_locations.location_name || ""} ${booking.customer_locations.street_address || ""}${booking.customer_locations.unit_number ? `, ${booking.customer_locations.unit_number}` : ""}, ${booking.customer_locations.city || ""}, ${booking.customer_locations.state || ""}`
+                                : booking.business_locations
+                                ? `${booking.business_locations.location_name || ""} ${booking.business_locations.address_line1 || ""}, ${booking.business_locations.city || ""}, ${booking.business_locations.state || ""}`
+                                : "Location not specified"
+                              }
                             </div>
                           </div>
                           <div className="flex items-center space-x-1 flex-shrink-0">
