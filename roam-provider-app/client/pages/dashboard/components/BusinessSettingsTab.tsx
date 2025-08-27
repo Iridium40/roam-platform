@@ -29,6 +29,7 @@ import {
   Car,
   Share2,
   Shield,
+  Eye,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
@@ -75,7 +76,8 @@ export default function BusinessSettingsTab({
   const [editingLocation, setEditingLocation] = useState<any>(null);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showDocumentUploadModal, setShowDocumentUploadModal] = useState(false);
-  const [showDocumentUpload, setShowDocumentUpload] = useState(false);
+  const [businessDocuments, setBusinessDocuments] = useState<any[]>([]);
+  const [documentsLoading, setDocumentsLoading] = useState(false);
   const [locationForm, setLocationForm] = useState({
     location_name: "",
     address_line1: "",
@@ -90,6 +92,41 @@ export default function BusinessSettingsTab({
     offers_mobile_services: false,
     mobile_service_radius: 25,
   });
+
+  // Load business documents
+  const loadBusinessDocuments = async () => {
+    if (!business?.id) return;
+
+    try {
+      setDocumentsLoading(true);
+      const { data, error } = await supabase
+        .from('business_documents')
+        .select('*')
+        .eq('business_id', business.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error loading business documents:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load business documents.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setBusinessDocuments(data || []);
+    } catch (error) {
+      console.error('Error loading business documents:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load business documents.",
+        variant: "destructive",
+      });
+    } finally {
+      setDocumentsLoading(false);
+    }
+  };
 
   // Load business data
   const loadBusinessData = async () => {
@@ -409,6 +446,8 @@ export default function BusinessSettingsTab({
         description: "Your business documents have been updated successfully.",
       });
       setShowDocumentUploadModal(false);
+      // Reload documents after upload
+      await loadBusinessDocuments();
     } catch (error) {
       console.error('Error updating documents:', error);
       toast({
@@ -417,6 +456,39 @@ export default function BusinessSettingsTab({
         variant: "destructive",
       });
     }
+  };
+
+  const handleViewDocument = (document: any) => {
+    window.open(document.file_url, '_blank');
+  };
+
+  const handleUpdateDocument = (document: any) => {
+    // For now, just open the upload modal
+    // In the future, this could pre-populate the form with existing document data
+    setShowDocumentUploadModal(true);
+  };
+
+  const getDocumentTypeLabel = (documentType: string) => {
+    const labels: { [key: string]: string } = {
+      professional_license: 'Professional License',
+      business_registration: 'Business Registration',
+      liability_insurance: 'Liability Insurance',
+      proof_of_address: 'Proof of Address',
+      identification: 'Identification',
+      certification: 'Certification',
+      other: 'Other'
+    };
+    return labels[documentType] || documentType;
+  };
+
+  const getStatusBadge = (status: string) => {
+    const statusConfig: { [key: string]: { color: string; label: string } } = {
+      pending: { color: 'bg-yellow-100 text-yellow-800', label: 'Pending' },
+      approved: { color: 'bg-green-100 text-green-800', label: 'Approved' },
+      rejected: { color: 'bg-red-100 text-red-800', label: 'Rejected' },
+      expired: { color: 'bg-gray-100 text-gray-800', label: 'Expired' }
+    };
+    return statusConfig[status] || { color: 'bg-gray-100 text-gray-800', label: 'Unknown' };
   };
 
   // Generate business share URL
@@ -433,6 +505,7 @@ export default function BusinessSettingsTab({
   useEffect(() => {
     loadBusinessData();
     loadBusinessLocations();
+    loadBusinessDocuments();
   }, [business]);
 
   // Show loading state
@@ -782,7 +855,12 @@ export default function BusinessSettingsTab({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
+          {documentsLoading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-roam-blue mx-auto"></div>
+              <p className="text-gray-600 mt-2">Loading documents...</p>
+            </div>
+          ) : businessDocuments.length === 0 ? (
             <div className="text-center py-8">
               <Shield className="w-16 h-16 mx-auto mb-4 text-gray-400" />
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Business Documents</h3>
@@ -804,7 +882,57 @@ export default function BusinessSettingsTab({
                 Upload Documents
               </Button>
             </div>
-          </div>
+          ) : (
+            <div className="space-y-4">
+              {businessDocuments.map((document) => (
+                <div key={document.id} className="border rounded-lg p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <h4 className="font-semibold text-gray-900">
+                          {document.document_name}
+                        </h4>
+                        <span className={`text-xs px-2 py-1 rounded-full ${getStatusBadge(document.verification_status).color}`}>
+                          {getStatusBadge(document.verification_status).label}
+                        </span>
+                      </div>
+                      <div className="text-sm text-gray-600 mb-2">
+                        <p><strong>Type:</strong> {getDocumentTypeLabel(document.document_type)}</p>
+                        {document.file_size_bytes && (
+                          <p><strong>Size:</strong> {(document.file_size_bytes / 1024 / 1024).toFixed(2)} MB</p>
+                        )}
+                        {document.expiry_date && (
+                          <p><strong>Expires:</strong> {new Date(document.expiry_date).toLocaleDateString()}</p>
+                        )}
+                        {document.rejection_reason && (
+                          <p className="text-red-600"><strong>Rejection Reason:</strong> {document.rejection_reason}</p>
+                        )}
+                        <p><strong>Uploaded:</strong> {new Date(document.created_at).toLocaleDateString()}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2 ml-4">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleViewDocument(document)}
+                      >
+                        <Eye className="w-4 h-4 mr-1" />
+                        View
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleUpdateDocument(document)}
+                      >
+                        <Edit className="w-4 h-4 mr-1" />
+                        Update
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 

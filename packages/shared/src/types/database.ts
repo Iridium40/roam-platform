@@ -35,6 +35,10 @@ export type MessageNotificationType = 'message' | 'mention' | 'system';
 // Promotion Types
 export type PromotionSavingsType = 'percentage' | 'fixed_amount';
 
+// Document Types
+export type BusinessDocumentType = 'professional_license' | 'business_registration' | 'liability_insurance' | 'proof_of_address' | 'identification' | 'certification' | 'other';
+export type BusinessDocumentStatus = 'pending' | 'approved' | 'rejected' | 'expired';
+
 export type Database = {
   public: {
     Tables: {
@@ -1445,42 +1449,45 @@ export type Database = {
       business_documents: {
         Row: {
           id: string;
-          business_id: string;
-          document_type: string;
+          document_type: BusinessDocumentType;
+          document_name: string;
           file_url: string;
-          file_name: string;
-          file_size: number | null;
-          is_verified: boolean | null;
-          verified_at: string | null;
+          file_size_bytes: number | null;
           verified_by: string | null;
+          verified_at: string | null;
+          rejection_reason: string | null;
+          expiry_date: string | null;
           created_at: string | null;
-          updated_at: string | null;
+          verification_status: BusinessDocumentStatus | null;
+          business_id: string;
         };
         Insert: {
           id?: string;
-          business_id: string;
-          document_type: string;
+          document_type: BusinessDocumentType;
+          document_name: string;
           file_url: string;
-          file_name: string;
-          file_size?: number | null;
-          is_verified?: boolean | null;
-          verified_at?: string | null;
+          file_size_bytes?: number | null;
           verified_by?: string | null;
+          verified_at?: string | null;
+          rejection_reason?: string | null;
+          expiry_date?: string | null;
           created_at?: string | null;
-          updated_at?: string | null;
+          verification_status?: BusinessDocumentStatus | null;
+          business_id: string;
         };
         Update: {
           id?: string;
-          business_id?: string;
-          document_type?: string;
+          document_type?: BusinessDocumentType;
+          document_name?: string;
           file_url?: string;
-          file_name?: string;
-          file_size?: number | null;
-          is_verified?: boolean | null;
-          verified_at?: string | null;
+          file_size_bytes?: number | null;
           verified_by?: string | null;
+          verified_at?: string | null;
+          rejection_reason?: string | null;
+          expiry_date?: string | null;
           created_at?: string | null;
-          updated_at?: string | null;
+          verification_status?: BusinessDocumentStatus | null;
+          business_id?: string;
         };
       };
       // Provider calendar connections
