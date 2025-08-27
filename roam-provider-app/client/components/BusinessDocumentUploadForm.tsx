@@ -85,7 +85,7 @@ export default function BusinessDocumentUploadForm({
       // Upload file to Supabase Storage
       const fileName = `${businessId}/${document.documentType}/${Date.now()}_${document.file.name}`;
       const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('business-documents')
+        .from('provider-documents')
         .upload(fileName, document.file);
 
       if (uploadError) {
@@ -94,7 +94,7 @@ export default function BusinessDocumentUploadForm({
 
       // Get public URL
       const { data: urlData } = supabase.storage
-        .from('business-documents')
+        .from('provider-documents')
         .getPublicUrl(fileName);
 
       // Create database record
