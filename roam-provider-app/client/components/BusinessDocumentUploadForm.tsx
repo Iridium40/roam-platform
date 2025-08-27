@@ -256,13 +256,18 @@ export default function BusinessDocumentUploadForm({
                     className="hidden"
                     id={`file-${type}`}
                   />
-                  <label htmlFor={`file-${type}`}>
+                  <label htmlFor={`file-${type}`} className="cursor-pointer">
                     <Button 
                       variant={hasExisting ? "outline" : "outline"} 
                       size="sm" 
-                      className={`cursor-pointer ${
+                      type="button"
+                      className={`${
                         hasExisting ? 'border-green-300 text-green-700 hover:bg-green-50' : ''
                       }`}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        document.getElementById(`file-${type}`)?.click();
+                      }}
                     >
                       <Upload className="w-4 h-4 mr-2" />
                       {hasExisting ? 'Update File' : 'Choose File'}
