@@ -36,8 +36,8 @@ export type MessageNotificationType = 'message' | 'mention' | 'system';
 export type PromotionSavingsType = 'percentage' | 'fixed_amount';
 
 // Document Types
-export type BusinessDocumentType = 'professional_license' | 'business_registration' | 'liability_insurance' | 'proof_of_address' | 'identification' | 'certification' | 'other';
-export type BusinessDocumentStatus = 'pending' | 'approved' | 'rejected' | 'expired';
+export type BusinessDocumentType = 'drivers_license' | 'proof_of_address' | 'liability_insurance' | 'professional_license' | 'professional_certificate' | 'business_license';
+export type BusinessDocumentStatus = 'pending' | 'verified' | 'rejected' | 'under_review';
 
 export type Database = {
   public: {

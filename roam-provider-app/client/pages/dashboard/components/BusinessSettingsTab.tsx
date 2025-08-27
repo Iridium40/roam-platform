@@ -34,7 +34,7 @@ import {
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import ShareModal from "@/components/ShareModal";
-import { DocumentUploadForm } from "@/components/DocumentUploadForm";
+import BusinessDocumentUploadForm from "@/components/BusinessDocumentUploadForm";
 
 interface BusinessSettingsTabProps {
   providerData: any;
@@ -439,7 +439,7 @@ export default function BusinessSettingsTab({
   };
 
   // Handle document upload submission
-  const handleDocumentUpload = async (documents: any[]) => {
+  const handleDocumentUpload = async () => {
     try {
       toast({
         title: "Documents Updated",
@@ -470,13 +470,12 @@ export default function BusinessSettingsTab({
 
   const getDocumentTypeLabel = (documentType: string) => {
     const labels: { [key: string]: string } = {
-      professional_license: 'Professional License',
-      business_registration: 'Business Registration',
-      liability_insurance: 'Liability Insurance',
+      drivers_license: 'Driver\'s License',
       proof_of_address: 'Proof of Address',
-      identification: 'Identification',
-      certification: 'Certification',
-      other: 'Other'
+      liability_insurance: 'Liability Insurance',
+      professional_license: 'Professional License',
+      professional_certificate: 'Professional Certificate',
+      business_license: 'Business License'
     };
     return labels[documentType] || documentType;
   };
@@ -484,9 +483,9 @@ export default function BusinessSettingsTab({
   const getStatusBadge = (status: string) => {
     const statusConfig: { [key: string]: { color: string; label: string } } = {
       pending: { color: 'bg-yellow-100 text-yellow-800', label: 'Pending' },
-      approved: { color: 'bg-green-100 text-green-800', label: 'Approved' },
+      verified: { color: 'bg-green-100 text-green-800', label: 'Verified' },
       rejected: { color: 'bg-red-100 text-red-800', label: 'Rejected' },
-      expired: { color: 'bg-gray-100 text-gray-800', label: 'Expired' }
+      under_review: { color: 'bg-blue-100 text-blue-800', label: 'Under Review' }
     };
     return statusConfig[status] || { color: 'bg-gray-100 text-gray-800', label: 'Unknown' };
   };
@@ -1228,12 +1227,10 @@ export default function BusinessSettingsTab({
               </Button>
             </div>
             
-            <DocumentUploadForm
-              onSubmit={handleDocumentUpload}
-              loading={false}
-              businessType={businessData.business_type}
-              userId={providerData?.user_id || ""}
+            <BusinessDocumentUploadForm
               businessId={business?.id || ""}
+              onUploadComplete={handleDocumentUpload}
+              onCancel={() => setShowDocumentUploadModal(false)}
             />
           </div>
         </div>
