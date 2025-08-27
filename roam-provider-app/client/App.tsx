@@ -25,6 +25,7 @@ import ProviderDashboard from "./pages/ProviderDashboard";
 import ProviderOnboardingFlow from "./pages/ProviderOnboardingFlow";
 import ProviderOnboardingPhase1 from "./pages/ProviderOnboardingPhase1";
 import LandingPage from "./pages/LandingPage";
+import Blog from "./pages/Blog";
 import ErrorBoundary from "./lib/errors/ErrorBoundary";
 import NotFound from "./pages/NotFound";
 import SignIn from "./pages/SignIn";
@@ -48,6 +49,9 @@ const App = () => (
             {/* Landing Page */}
             <Route path="/" element={<Navigate to="/landing" replace />} />
             <Route path="/landing" element={<LandingPage />} />
+
+            {/* Blog */}
+            <Route path="/blog" element={<Blog />} />
 
             {/* Provider Portal Authentication */}
             <Route path="/sign-in" element={<SignIn />} />
