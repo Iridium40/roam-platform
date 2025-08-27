@@ -2071,6 +2071,23 @@ export default function ProviderDashboard() {
     }
   };
 
+  // Function to generate map URL for navigation
+  const getMapUrl = (booking: any) => {
+    let address = "";
+    
+    if (booking.customer_locations) {
+      address = `${booking.customer_locations.location_name || ""} ${booking.customer_locations.street_address || ""}${booking.customer_locations.unit_number ? `, ${booking.customer_locations.unit_number}` : ""}, ${booking.customer_locations.city || ""}, ${booking.customer_locations.state || ""}`;
+    } else if (booking.business_locations) {
+      address = `${booking.business_locations.location_name || ""} ${booking.business_locations.address_line1 || ""}, ${booking.business_locations.city || ""}, ${booking.business_locations.state || ""}`;
+    }
+    
+    if (!address.trim()) return null;
+    
+    // Encode the address for URL
+    const encodedAddress = encodeURIComponent(address.trim());
+    return `https://maps.google.com/maps?q=${encodedAddress}`;
+  };
+
   const getFilteredStaff = () => {
     let filtered = staffMembers;
 
@@ -3205,13 +3222,26 @@ export default function ProviderDashboard() {
                                 {booking.customer_location_id ? "Customer Location" : "Business Location"}
                               </span>
                             </div>
-                            <div className="text-xs text-gray-500 truncate">
-                              {booking.customer_locations 
-                                ? `${booking.customer_locations.location_name || ""} ${booking.customer_locations.street_address || ""}${booking.customer_locations.unit_number ? `, ${booking.customer_locations.unit_number}` : ""}, ${booking.customer_locations.city || ""}, ${booking.customer_locations.state || ""}`
-                                : booking.business_locations
-                                ? `${booking.business_locations.location_name || ""} ${booking.business_locations.address_line1 || ""}, ${booking.business_locations.city || ""}, ${booking.business_locations.state || ""}`
-                                : "Location not specified"
-                              }
+                            <div className="flex items-center space-x-1">
+                              <div className="text-xs text-gray-500 truncate flex-1">
+                                {booking.customer_locations 
+                                  ? `${booking.customer_locations.location_name || ""} ${booking.customer_locations.street_address || ""}${booking.customer_locations.unit_number ? `, ${booking.customer_locations.unit_number}` : ""}, ${booking.customer_locations.city || ""}, ${booking.customer_locations.state || ""}`
+                                  : booking.business_locations
+                                  ? `${booking.business_locations.location_name || ""} ${booking.business_locations.address_line1 || ""}, ${booking.business_locations.city || ""}, ${booking.business_locations.state || ""}`
+                                  : "Location not specified"
+                                }
+                              </div>
+                              {getMapUrl(booking) && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-4 w-4 p-0 text-blue-600 hover:text-blue-800"
+                                  onClick={() => window.open(getMapUrl(booking), '_blank')}
+                                  title="Open in Maps"
+                                >
+                                  <MapPin className="w-3 h-3" />
+                                </Button>
+                              )}
                             </div>
                           </div>
                           <div className="flex items-center space-x-1 flex-shrink-0">
@@ -7539,7 +7569,18 @@ export default function ProviderDashboard() {
                     <Phone className="w-4 h-4" />
                     <span>Call</span>
                   </Button>
-                  <Button variant="outline" size="sm" className="flex items-center space-x-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="flex items-center space-x-2"
+                    onClick={() => {
+                      const mapUrl = getMapUrl(selectedBookingDetails);
+                      if (mapUrl) {
+                        window.open(mapUrl, '_blank');
+                      }
+                    }}
+                    disabled={!getMapUrl(selectedBookingDetails)}
+                  >
                     <MapPin className="w-4 h-4" />
                     <span>Navigate</span>
                   </Button>
