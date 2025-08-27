@@ -400,8 +400,12 @@ export default function BusinessSettingsTab({
   // Generate business share URL
   const getBusinessShareUrl = () => {
     if (!business?.id) return "";
-    // This would be the customer-facing URL for the business
-    return `${window.location.origin}/business/${business.id}`;
+    // This should point to the customer app where customers can view services and book
+    // In production, this would be the actual customer app domain
+    const customerAppUrl = import.meta.env.VITE_CUSTOMER_APP_URL || 
+      window.location.origin.replace('5179', '5174') || 
+      'http://localhost:5174';
+    return `${customerAppUrl}/business/${business.id}`;
   };
 
   useEffect(() => {

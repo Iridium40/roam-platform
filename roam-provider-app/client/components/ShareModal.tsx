@@ -42,7 +42,7 @@ export default function ShareModal({
   const [copied, setCopied] = useState(false);
   const [emailRecipient, setEmailRecipient] = useState("");
 
-  const shareText = `Check out ${businessName} on ROAM. Professional services you can trust!`;
+  const shareText = `Check out ${businessName} on ROAM. Book professional services directly!`;
   const shareTitle = `${businessName} - Professional Services`;
 
   const handleCopyLink = async () => {
@@ -82,7 +82,7 @@ export default function ShareModal({
 
   const shareViaEmail = () => {
     const subject = encodeURIComponent(shareTitle);
-    const body = encodeURIComponent(`${shareText}\n\n${businessDescription}\n\n${pageUrl}`);
+    const body = encodeURIComponent(`${shareText}\n\n${businessDescription}\n\nBook services at: ${pageUrl}`);
     const to = emailRecipient
       ? `&to=${encodeURIComponent(emailRecipient)}`
       : "";
@@ -90,7 +90,7 @@ export default function ShareModal({
   };
 
   const shareViaSMS = () => {
-    const text = encodeURIComponent(`${shareText} ${pageUrl}`);
+    const text = encodeURIComponent(`${shareText} Book at: ${pageUrl}`);
     window.open(`sms:?body=${text}`);
   };
 
@@ -247,7 +247,7 @@ export default function ShareModal({
                 <h3 className="font-semibold">Scan to Book</h3>
                 <p className="text-sm text-gray-600">
                   Customers can scan this QR code with their phone camera to
-                  instantly access {businessName}'s booking page.
+                  instantly access {businessName}'s services and book appointments.
                 </p>
               </div>
 
@@ -267,7 +267,7 @@ export default function ShareModal({
           <TabsContent value="social" className="space-y-4">
             <div className="space-y-3">
               <p className="text-sm text-gray-600 text-center">
-                Share {businessName} on social media
+                Share {businessName} with potential customers on social media
               </p>
 
               <div className="grid grid-cols-1 gap-3">
