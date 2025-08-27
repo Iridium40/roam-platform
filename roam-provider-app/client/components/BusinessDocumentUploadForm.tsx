@@ -82,8 +82,17 @@ export default function BusinessDocumentUploadForm({
     try {
       setUploading(true);
 
-      // Upload file to Supabase Storage
-      const fileName = `${businessId}/${document.documentType}/${Date.now()}_${document.file.name}`;
+      // Sanitize filename for storage
+      const sanitizeFileName = (filename: string) => {
+        return filename
+          .replace(/[^a-zA-Z0-9.-]/g, '_') // Replace special characters with underscores
+          .replace(/_+/g, '_') // Replace multiple underscores with single
+          .replace(/^_|_$/g, ''); // Remove leading/trailing underscores
+      };
+
+      const sanitizedFileName = sanitizeFileName(document.file.name);
+      const fileName = `${businessId}/${document.documentType}/${Date.now()}_${sanitizedFileName}`;
+      
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('provider-documents')
         .upload(fileName, document.file);
