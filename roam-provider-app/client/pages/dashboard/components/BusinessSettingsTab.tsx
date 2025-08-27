@@ -462,12 +462,6 @@ export default function BusinessSettingsTab({
     window.open(document.file_url, '_blank');
   };
 
-  const handleUpdateDocument = (document: any) => {
-    // For now, just open the upload modal
-    // In the future, this could pre-populate the form with existing document data
-    setShowDocumentUploadModal(true);
-  };
-
   const getDocumentTypeLabel = (documentType: string) => {
     const labels: { [key: string]: string } = {
       drivers_license: 'Driver\'s License',
@@ -917,14 +911,6 @@ export default function BusinessSettingsTab({
                       >
                         <Eye className="w-4 h-4 mr-1" />
                         View
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleUpdateDocument(document)}
-                      >
-                        <Edit className="w-4 h-4 mr-1" />
-                        Update
                       </Button>
                     </div>
                   </div>
