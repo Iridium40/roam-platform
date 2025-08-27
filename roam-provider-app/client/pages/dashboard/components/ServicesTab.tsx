@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -175,10 +176,10 @@ export default function ServicesTab({
     try {
       const businessPrice = parseFloat(serviceForm.business_price);
 
-      if (isNaN(businessPrice) || businessPrice < (editingService.services?.min_price || 0)) {
+      if (isNaN(businessPrice) || businessPrice < editingService.base_price) {
         toast({
           title: "Invalid Price",
-          description: `Business price must be at least $${editingService.services?.min_price || 0} (service minimum).`,
+          description: `Business price must be at least $${editingService.base_price} (service minimum).`,
           variant: "destructive",
         });
         return;
@@ -191,13 +192,13 @@ export default function ServicesTab({
           delivery_type: serviceForm.delivery_type
         })
         .eq('business_id', business.id)
-        .eq('service_id', editingService.service_id || editingService.services?.id);
+        .eq('service_id', editingService.service_id);
 
       if (error) throw error;
 
       toast({
         title: "Service Updated",
-        description: `${editingService.services?.name || 'Service'} has been updated successfully.`,
+        description: `${editingService.name} has been updated successfully.`,
       });
 
       setShowEditServiceModal(false);
@@ -523,6 +524,71 @@ export default function ServicesTab({
           </Card>
         </div>
       )}
+
+      {/* Edit Service Modal */}
+      <Dialog open={showEditServiceModal} onOpenChange={setShowEditServiceModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Service</DialogTitle>
+            <DialogDescription>
+              Update the pricing and delivery options for this service.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="business_price">Business Price ($)</Label>
+              <Input
+                id="business_price"
+                type="number"
+                min="0"
+                step="0.01"
+                value={serviceForm.business_price}
+                onChange={(e) => setServiceForm({...serviceForm, business_price: e.target.value})}
+                placeholder="Enter your price"
+              />
+              {editingService && (
+                <p className="text-xs text-gray-500 mt-1">
+                  Minimum price: ${editingService.services?.min_price || 0}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="delivery_type">Delivery Type</Label>
+              <Select
+                value={serviceForm.delivery_type}
+                onValueChange={(value) => setServiceForm({...serviceForm, delivery_type: value})}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="business_location">Business Location</SelectItem>
+                  <SelectItem value="customer_location">Customer Location</SelectItem>
+                  <SelectItem value="both_locations">Both Locations</SelectItem>
+                  <SelectItem value="virtual">Virtual</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end space-x-2 mt-6">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowEditServiceModal(false);
+                setEditingService(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button onClick={saveServiceEdits}>
+              Save Changes
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
