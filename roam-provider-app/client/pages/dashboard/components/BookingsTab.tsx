@@ -208,8 +208,7 @@ export default function BookingsTab({
       const { error } = await supabase
         .from('bookings')
         .update({ 
-          provider_id: providerId === 'unassigned' ? null : providerId,
-          updated_at: new Date().toISOString()
+          provider_id: providerId === 'unassigned' ? null : providerId
         })
         .eq('id', bookingId);
 
