@@ -831,8 +831,8 @@ export default function Index() {
       {/* Announcement Popup */}
       <AnnouncementPopup isCustomer={isCustomer} />
       {/* Google One Tap - only show when not authenticated */}
-      {/* Google One Tap - enabled for Google OAuth */}
-      {!isCustomer && import.meta.env.VITE_GOOGLE_CLIENT_ID && (
+      {/* Google One Tap - temporarily disabled due to OAuth configuration */}
+      {/* {!isCustomer && import.meta.env.VITE_GOOGLE_CLIENT_ID && (
         <Suspense fallback={null}>
           <GoogleOneTap
             clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}
@@ -844,7 +844,7 @@ export default function Index() {
             }}
           />
         </Suspense>
-      )}
+      )} */}
       <Header />
 
       {/* Hero Section with Search */}
