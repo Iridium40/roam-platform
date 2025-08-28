@@ -50,9 +50,9 @@ export const useBookingsData = (currentUser: any) => {
               last_name,
               email,
               phone,
-              image,
-              rating,
-              business_id
+              image_url,
+              business_id,
+              average_rating
             ),
             services (
               id,
@@ -97,8 +97,8 @@ export const useBookingsData = (currentUser: any) => {
             lastName: booking.providers?.last_name,
             email: booking.providers?.email,
             phone: booking.providers?.phone,
-            image: booking.providers?.image,
-            rating: booking.providers?.rating,
+            image: booking.providers?.image_url, // Use image_url from database
+            rating: booking.providers?.average_rating || 0, // Use average_rating from providers table
           },
           providers: booking.providers,
           customer_profiles: booking.customer_profiles,

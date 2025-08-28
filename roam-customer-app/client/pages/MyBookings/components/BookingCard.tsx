@@ -217,59 +217,8 @@ export const BookingCard: React.FC<BookingCardProps> = ({
             <p className="text-sm font-medium">{deliveryLabel}</p>
             <div className="flex items-start gap-2">
               <p className="text-sm text-foreground/60 flex-1">
-                {booking.location}
+                Location TBD
               </p>
-              {booking.delivery_type === "business_location" &&
-                booking.location !== "Location TBD" && (
-                  <button
-                    onClick={() => {
-                      const address = booking.location;
-
-                      // Detect platform and open appropriate maps app
-                      const isIOS = /iPad|iPhone|iPod/.test(
-                        navigator.userAgent,
-                      );
-                      const isMobile =
-                        /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-                          navigator.userAgent,
-                        );
-
-                      let mapsUrl;
-
-                      // Use GPS coordinates if available, otherwise use address
-                      if (
-                        booking.location_details &&
-                        booking.location_details.coordinates?.latitude
-                      ) {
-                        const { latitude, longitude } =
-                          booking.location_details.coordinates;
-                        if (isIOS) {
-                          mapsUrl = `maps://maps.google.com/maps?daddr=${latitude},${longitude}&amp;ll=`;
-                        } else if (isMobile) {
-                          mapsUrl = `geo:${latitude},${longitude}?q=${encodeURIComponent(address)}`;
-                        } else {
-                          mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`;
-                        }
-                      } else {
-                        // Fallback to address-based navigation when no coordinates
-                        const encodedAddress = encodeURIComponent(address);
-                        if (isIOS) {
-                          mapsUrl = `maps://maps.google.com/maps?daddr=${encodedAddress}`;
-                        } else if (isMobile) {
-                          mapsUrl = `geo:0,0?q=${encodedAddress}`;
-                        } else {
-                          mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodedAddress}`;
-                        }
-                      }
-
-                      window.open(mapsUrl, "_blank");
-                    }}
-                    className="text-roam-blue hover:text-roam-blue/80 transition-colors"
-                    title="Get directions"
-                  >
-                    <Map className="w-4 h-4" />
-                  </button>
-                )}
             </div>
           </div>
         </div>
@@ -304,7 +253,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({
               </span>
               <RealtimeStatusUpdate
                 bookingId={booking.id}
-                currentStatus={booking.status}
+                currentStatus={booking.booking_status}
                 onStatusChange={(newStatus) => {
                   // Booking status changed
                 }}
@@ -316,11 +265,11 @@ export const BookingCard: React.FC<BookingCardProps> = ({
               <div className="flex items-center gap-2">
                 <Star className="w-4 h-4 text-roam-warning fill-current" />
                 <span className="text-sm font-medium">
-                  {booking.providers?.rating} stars
+                  {booking.providers?.average_rating || "No rating"} stars
                 </span>
               </div>
               <span className="text-lg font-semibold text-roam-blue">
-                {booking.price}
+                ${booking.total_amount}
               </span>
             </div>
 
@@ -360,10 +309,10 @@ export const BookingCard: React.FC<BookingCardProps> = ({
           </div>
         )}
 
-        {booking.notes && (
+        {booking.admin_notes && (
           <div className="bg-accent/20 rounded-lg p-3 mb-4">
             <p className="text-sm text-foreground/80">
-              <strong>Notes:</strong> {booking.notes}
+              <strong>Notes:</strong> {booking.admin_notes}
             </p>
           </div>
         )}
