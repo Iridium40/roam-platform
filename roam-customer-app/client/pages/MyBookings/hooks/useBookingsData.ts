@@ -62,11 +62,7 @@ export const useBookingsData = (currentUser: any) => {
               duration,
               service_subcategories (
                 id,
-                name,
-                service_categories (
-                  id,
-                  name
-                )
+                name
               )
             ),
             customer_profiles (
