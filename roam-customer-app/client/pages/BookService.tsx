@@ -384,6 +384,19 @@ export default function BookService() {
             <h1 className="text-3xl font-bold text-foreground mb-4">
               Book {service.name}
             </h1>
+            
+            {/* Promotion Applied Section */}
+            {promotion && (
+              <div className="mb-4">
+                <div className="inline-flex items-center px-4 py-2 bg-green-50 border border-green-200 rounded-lg text-green-800">
+                  <Tag className="w-4 h-4 mr-2" />
+                  <span className="text-sm font-medium">
+                    Promotion Applied! Code: {promotion.code || 'HYD1234'} - {promotion.savingsType === 'percentage' ? `${promotion.savingsAmount}% off` : `$${promotion.savingsAmount} off`}
+                  </span>
+                </div>
+              </div>
+            )}
+            
             <p className="text-foreground/60 mb-4">
               {service.description}
             </p>
