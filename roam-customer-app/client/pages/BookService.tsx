@@ -156,7 +156,7 @@ export default function BookService() {
             image_url
           )
         `)
-        .eq('service_category_id', serviceId);
+        .eq('category_id', serviceId);
 
       if (error) throw error;
       
