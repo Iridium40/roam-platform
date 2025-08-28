@@ -232,11 +232,11 @@ export default function ProviderDashboard() {
       // Redirect will be handled by the auth context
     } catch (error) {
       console.error("Error signing out:", error);
-      toast({
-        title: "Error",
+        toast({
+          title: "Error",
         description: "Failed to sign out. Please try again.",
-        variant: "destructive",
-      });
+          variant: "destructive",
+        });
     }
   };
 
@@ -336,44 +336,44 @@ export default function ProviderDashboard() {
         console.log('🔍 No providerData available, using sample data');
         console.log('🔍 providerData value:', providerData);
         // Only use sample data if no provider data is available
-        setStaffMembers([
-          {
+      setStaffMembers([
+        {
             id: "550e8400-e29b-41d4-a716-446655440001", // Sample UUID for dispatcher
-            first_name: "Dispatcher",
-            last_name: "Roam",
-            email: "dispatcher@roamyourbestlife.com",
-            phone: "5044117011",
-            provider_role: "dispatcher",
-            location_id: "",
-            verification_status: "verified",
-            background_check_status: "approved",
-            business_managed: false,
-            is_active: true,
-            experience_years: 5,
-            image_url: null,
-            is_sample_data: true, // Flag to identify sample data
-          },
-          {
+          first_name: "Dispatcher",
+          last_name: "Roam",
+          email: "dispatcher@roamyourbestlife.com",
+          phone: "5044117011",
+          provider_role: "dispatcher",
+          location_id: "",
+          verification_status: "verified",
+          background_check_status: "approved",
+          business_managed: false,
+          is_active: true,
+          experience_years: 5,
+          image_url: null,
+          is_sample_data: true, // Flag to identify sample data
+        },
+        {
             id: "550e8400-e29b-41d4-a716-446655440002", // Sample UUID for provider
-            first_name: "Provider",
-            last_name: "Roam",
-            email: "provider@roamyourbestlife.com",
-            phone: "5044117012",
-            provider_role: "provider",
-            location_id: "",
-            verification_status: "verified",
-            background_check_status: "approved",
-            business_managed: true,
-            is_active: true,
-            experience_years: 7,
-            image_url: null,
-            is_sample_data: true, // Flag to identify sample data
-          }
-        ]);
+          first_name: "Provider",
+          last_name: "Roam",
+          email: "provider@roamyourbestlife.com",
+          phone: "5044117012",
+          provider_role: "provider",
+          location_id: "",
+          verification_status: "verified",
+          background_check_status: "approved",
+          business_managed: true,
+          is_active: true,
+          experience_years: 7,
+          image_url: null,
+          is_sample_data: true, // Flag to identify sample data
+        }
+      ]);
       }
       return;
     }
-    
+
     // Load staff data with the business ID
     await loadStaffWithBusinessId(businessId);
   };
@@ -549,15 +549,15 @@ export default function ProviderDashboard() {
           
           // For now, let's not redirect and just show the error
           setError(`Provider profile not found for user ID: ${userId}. Please check the database.`);
-          return;
-        }
-        
+        return;
+      }
+
         setProviderData(providerData);
 
         // Load business profile if provider has one
         if (providerData.business_id) {
-          const { data: businessData, error: businessError } = await supabase
-            .from('business_profiles')
+      const { data: businessData, error: businessError } = await supabase
+        .from('business_profiles')
             .select('*')
             .eq('id', providerData.business_id)
             .maybeSingle();
@@ -613,100 +613,100 @@ export default function ProviderDashboard() {
       <nav className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-6">
-              <div className="flex items-center space-x-3">
-                <img
-                  src="https://cdn.builder.io/api/v1/image/assets%2Fa42b6f9ec53e4654a92af75aad56d14f%2F38446bf6c22b453fa45caf63b0513e21?format=webp&width=800"
-                  alt="ROAM"
-                  className="h-8 w-auto"
-                />
-                <span className="text-lg font-semibold text-gray-900">Partner Management</span>
-              </div>
-              
-              {/* Desktop Navigation */}
-              <div className="hidden lg:flex items-center space-x-8">
-                <button
-                  onClick={() => setActiveTab("dashboard")}
-                  className={`text-sm font-medium px-3 py-2 rounded-lg ${activeTab === "dashboard" ? "bg-gray-100 text-gray-900" : "text-gray-600 hover:text-gray-900"}`}
-                >
-                  Dashboard
-                </button>
-                <button
-                  onClick={() => setActiveTab("bookings")}
-                  className={`text-sm font-medium px-3 py-2 rounded-lg ${activeTab === "bookings" ? "bg-gray-100 text-gray-900" : "text-gray-600 hover:text-gray-900"}`}
-                >
-                  Bookings
-                </button>
-                <button
-                  onClick={() => setActiveTab("messages")}
-                  className={`text-sm font-medium px-3 py-2 rounded-lg ${activeTab === "messages" ? "bg-gray-100 text-gray-900" : "text-gray-600 hover:text-gray-900"}`}
-                >
-                  Messages
-                </button>
-                <button
-                  onClick={() => setActiveTab("services")}
-                  className={`text-sm font-medium px-3 py-2 rounded-lg ${activeTab === "services" ? "bg-gray-100 text-gray-900" : "text-gray-600 hover:text-gray-900"}`}
-                >
-                  Services
-                </button>
-                {businessSettings.business_type !== "Independent" && (
-                  <button
-                    onClick={() => setActiveTab("staff")}
-                    className={`text-sm font-medium px-3 py-2 rounded-lg ${activeTab === "staff" ? "bg-gray-100 text-gray-900" : "text-gray-600 hover:text-gray-900"}`}
-                  >
-                    Staff
-                  </button>
-                )}
-                <button
-                  onClick={() => setActiveTab("financials")}
-                  className={`text-sm font-medium px-3 py-2 rounded-lg ${activeTab === "financials" ? "bg-gray-100 text-gray-900" : "text-gray-600 hover:text-gray-900"}`}
-                >
-                  Financials
-                </button>
-              </div>
+          <div className="flex items-center space-x-6">
+            <div className="flex items-center space-x-3">
+              <img
+                src="https://cdn.builder.io/api/v1/image/assets%2Fa42b6f9ec53e4654a92af75aad56d14f%2F38446bf6c22b453fa45caf63b0513e21?format=webp&width=800"
+                alt="ROAM"
+                className="h-8 w-auto"
+              />
+              <span className="text-lg font-semibold text-gray-900">Partner Management</span>
             </div>
+            
+            {/* Desktop Navigation */}
+            <div className="hidden lg:flex items-center space-x-8">
+              <button
+                onClick={() => setActiveTab("dashboard")}
+                className={`text-sm font-medium px-3 py-2 rounded-lg ${activeTab === "dashboard" ? "bg-gray-100 text-gray-900" : "text-gray-600 hover:text-gray-900"}`}
+              >
+                Dashboard
+              </button>
+              <button
+                onClick={() => setActiveTab("bookings")}
+                className={`text-sm font-medium px-3 py-2 rounded-lg ${activeTab === "bookings" ? "bg-gray-100 text-gray-900" : "text-gray-600 hover:text-gray-900"}`}
+              >
+                Bookings
+              </button>
+              <button
+                onClick={() => setActiveTab("messages")}
+                className={`text-sm font-medium px-3 py-2 rounded-lg ${activeTab === "messages" ? "bg-gray-100 text-gray-900" : "text-gray-600 hover:text-gray-900"}`}
+              >
+                Messages
+              </button>
+              <button
+                onClick={() => setActiveTab("services")}
+                className={`text-sm font-medium px-3 py-2 rounded-lg ${activeTab === "services" ? "bg-gray-100 text-gray-900" : "text-gray-600 hover:text-gray-900"}`}
+              >
+                Services
+              </button>
+              {businessSettings.business_type !== "Independent" && (
+                <button
+                  onClick={() => setActiveTab("staff")}
+                  className={`text-sm font-medium px-3 py-2 rounded-lg ${activeTab === "staff" ? "bg-gray-100 text-gray-900" : "text-gray-600 hover:text-gray-900"}`}
+                >
+                  Staff
+                </button>
+              )}
+              <button
+                onClick={() => setActiveTab("financials")}
+                className={`text-sm font-medium px-3 py-2 rounded-lg ${activeTab === "financials" ? "bg-gray-100 text-gray-900" : "text-gray-600 hover:text-gray-900"}`}
+              >
+                Financials
+              </button>
+            </div>
+          </div>
 
-            <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-4">
               <Button variant="ghost" size="sm" asChild>
                 <Link to="/blog">
                   <BookOpen className="w-4 h-4" />
                   <span className="hidden sm:inline ml-2">Blog</span>
                 </Link>
               </Button>
-              <Button variant="ghost" size="sm">
-                <Bell className="w-4 h-4" />
-              </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="flex items-center space-x-2">
-                    <Settings className="w-4 h-4" />
-                    <span className="hidden sm:inline">Settings</span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => setActiveTab("profile")}>
-                    <User className="w-4 h-4 mr-2" />
-                    Profile
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setActiveTab("business-settings")}>
-                    <Building className="w-4 h-4 mr-2" />
-                    Business Settings
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleSignOut}>
-                    <LogOut className="w-4 h-4 mr-2" />
-                    Sign out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowMobileMenu(!showMobileMenu)}
-                className="lg:hidden"
-              >
-                <Menu className="w-4 h-4" />
-              </Button>
+            <Button variant="ghost" size="sm">
+              <Bell className="w-4 h-4" />
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="flex items-center space-x-2">
+                  <Settings className="w-4 h-4" />
+                  <span className="hidden sm:inline">Settings</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setActiveTab("profile")}>
+                  <User className="w-4 h-4 mr-2" />
+                  Profile
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setActiveTab("business-settings")}>
+                  <Building className="w-4 h-4 mr-2" />
+                  Business Settings
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleSignOut}>
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Sign out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowMobileMenu(!showMobileMenu)}
+              className="lg:hidden"
+            >
+              <Menu className="w-4 h-4" />
+            </Button>
             </div>
           </div>
         </div>

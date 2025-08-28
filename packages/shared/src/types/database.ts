@@ -28,7 +28,7 @@ export type ServiceSubcategoryType = "hair_and_makeup" | "spray_tan" | "esthetic
 export type CustomerLocationType = "home" | "condo" | "hotel" | "oatasse popther" | null;
 
 // Notification Types
-export type NotificationType = 'booking_update' | 'payment' | 'system' | 'marketing';
+export type NotificationType = 'booking_status_update' | 'new_message' | 'booking_reminder' | 'system_alert' | 'payment_received';
 export type NotificationStatus = 'sent' | 'delivered' | 'failed' | 'pending';
 export type MessageNotificationType = 'message' | 'mention' | 'system';
 
@@ -39,9 +39,11 @@ export type PromotionSavingsType = 'percentage' | 'fixed_amount';
 export type BusinessDocumentType = 'drivers_license' | 'proof_of_address' | 'liability_insurance' | 'professional_license' | 'professional_certificate' | 'business_license';
 export type BusinessDocumentStatus = 'pending' | 'verified' | 'rejected' | 'under_review';
 
-// Announcement Types
-export type AnnouncementAudience = 'all' | 'customer' | 'provider' | 'business' | 'staff';
-export type AnnouncementType = 'general' | 'promotional' | 'maintenance' | 'feature' | 'alert' | 'news' | 'update';
+  // Announcement Types
+  export type AnnouncementAudience = 'all' | 'customer' | 'provider' | 'business' | 'staff';
+  export type AnnouncementType = 'general' | 'promotional' | 'maintenance' | 'feature' | 'alert' | 'news' | 'update';
+
+
 
 export type Database = {
   public: {
@@ -396,6 +398,31 @@ export type Database = {
           delivered_at?: string | null;
           created_at?: string;
           status?: NotificationStatus;
+        };
+      };
+
+      // User preferences table
+      user_preferences: {
+        Row: {
+          id: string;
+          user_id: string;
+          notification_preferences: Json | null;
+          created_at: string | null;
+          updated_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          notification_preferences?: Json | null;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          notification_preferences?: Json | null;
+          created_at?: string | null;
+          updated_at?: string | null;
         };
       };
 
@@ -1204,41 +1231,41 @@ export type Database = {
         };
       };
       // Announcements
-      announcements: {
-        Row: {
-          id: string;
-          title: string;
-          content: string;
-          is_active: boolean | null;
-          created_at: string | null;
-          start_date: string | null;
-          end_date: string | null;
-          announcement_audience: AnnouncementAudience | null;
-          announcement_type: AnnouncementType | null;
-        };
-        Insert: {
-          id?: string;
-          title: string;
-          content: string;
-          is_active?: boolean | null;
-          created_at?: string | null;
-          start_date?: string | null;
-          end_date?: string | null;
-          announcement_audience?: AnnouncementAudience | null;
-          announcement_type?: AnnouncementType | null;
-        };
-        Update: {
-          id?: string;
-          title?: string;
-          content?: string;
-          is_active?: boolean | null;
-          created_at?: string | null;
-          start_date?: string | null;
-          end_date?: string | null;
-          announcement_audience?: AnnouncementAudience | null;
-          announcement_type?: AnnouncementType | null;
-        };
+          announcements: {
+      Row: {
+        id: string;
+        title: string;
+        content: string;
+        is_active: boolean | null;
+        created_at: string | null;
+        start_date: string | null;
+        end_date: string | null;
+        announcement_audience: AnnouncementAudience | null;
+        announcement_type: AnnouncementType | null;
       };
+      Insert: {
+        id?: string;
+        title: string;
+        content: string;
+        is_active?: boolean | null;
+        created_at?: string | null;
+        start_date?: string | null;
+        end_date?: string | null;
+        announcement_audience?: AnnouncementAudience | null;
+        announcement_type?: AnnouncementType | null;
+      };
+      Update: {
+        id?: string;
+        title?: string;
+        content?: string;
+        is_active?: boolean | null;
+        created_at?: string | null;
+        start_date?: string | null;
+        end_date?: string | null;
+        announcement_audience?: AnnouncementAudience | null;
+        announcement_type?: AnnouncementType | null;
+      };
+         };
       // Customers table
       customers: {
         Row: {
