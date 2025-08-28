@@ -64,12 +64,12 @@ export const useBookingsData = (currentUser: any) => {
 
         console.log("Found", simpleData.length, "bookings, now fetching related data...");
 
-        // Now get the related data for each booking
+        // Use the working SQL query structure with Supabase client
         const { data, error } = await supabase
           .from("bookings")
           .select(`
             *,
-            providers (
+            providers!left (
               id,
               first_name,
               last_name,
@@ -79,14 +79,14 @@ export const useBookingsData = (currentUser: any) => {
               business_id,
               average_rating
             ),
-            services (
+            services!left (
               id,
               name,
               description,
               min_price,
               duration_minutes
             ),
-            customer_profiles (
+            customer_profiles!left (
               id,
               first_name,
               last_name,
