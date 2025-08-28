@@ -602,7 +602,7 @@ export default function MyBookings() {
           <div className="max-w-4xl mx-auto">
             {/* Back to Home Button */}
             <div className="mb-6">
-              <Link to="/home">
+              <Link to="/">
                 <Button
                   variant="ghost"
                   className="flex items-center gap-2 text-foreground/70 hover:text-foreground hover:bg-accent/50 px-3 py-2 rounded-lg transition-colors"
