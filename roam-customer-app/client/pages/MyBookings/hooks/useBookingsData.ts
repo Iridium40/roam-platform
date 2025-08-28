@@ -64,63 +64,66 @@ export const useBookingsData = (currentUser: any) => {
 
         console.log("Found", simpleData.length, "bookings, now fetching related data...");
 
-        // Use the working SQL query structure with Supabase client
-        const { data, error } = await supabase
-          .from("bookings")
-          .select(`
-            *,
-            providers!left (
-              id,
-              first_name,
-              last_name,
-              email,
-              phone,
-              image_url,
-              business_id,
-              average_rating
-            ),
-            services!left (
-              id,
-              name,
-              description,
-              min_price,
-              duration_minutes
-            ),
-            customer_profiles!left (
-              id,
-              first_name,
-              last_name,
-              email,
-              phone
-            )
-          `)
-          .eq("customer_id", currentUser.id)
-          .order("booking_date", { ascending: false });
+        // Use the Edge Function to get bookings with all related data
+        const edgeFunctionUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/get-customer-bookings`;
+        const response = await fetch(`${edgeFunctionUrl}?customerId=${currentUser.id}&limit=50&page=0`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+          },
+        });
 
-        console.log("Supabase response:", { data, error });
+        console.log("Edge Function response status:", response.status);
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("Edge Function error:", errorText);
+          throw new Error(`Edge Function failed: ${response.status} ${errorText}`);
+        }
+
+        const { data, error } = await response.json();
+
+        console.log("Edge Function response:", { data, error });
 
         if (error) {
-          throw error;
+          throw new Error(error);
         }
 
         // Transform the data to match the expected format
+        // Edge Function returns flat structure with prefixed columns
         const transformedBookings: BookingWithDetails[] = (data || []).map((booking) => ({
           ...booking,
-          service_name: booking.services?.name || "Service",
-          service: booking.services?.name || "Service",
+          service_name: booking.service_name || "Service",
+          service: booking.service_name || "Service",
           serviceId: booking.service_id,
           provider: {
-            id: booking.providers?.id,
-            name: `${booking.providers?.first_name || ""} ${booking.providers?.last_name || ""}`.trim(),
-            firstName: booking.providers?.first_name,
-            lastName: booking.providers?.last_name,
-            email: booking.providers?.email,
-            phone: booking.providers?.phone,
-            image: booking.providers?.image_url,
-            rating: booking.providers?.average_rating || 0,
+            id: booking.provider_id,
+            name: `${booking.provider_first_name || ""} ${booking.provider_last_name || ""}`.trim(),
+            firstName: booking.provider_first_name,
+            lastName: booking.provider_last_name,
+            email: booking.provider_email,
+            phone: booking.provider_phone,
+            image: booking.provider_image_url,
+            rating: booking.provider_average_rating || 0,
           },
-          providers: booking.providers,
-          customer_profiles: booking.customer_profiles,
+          providers: {
+            id: booking.provider_id,
+            first_name: booking.provider_first_name,
+            last_name: booking.provider_last_name,
+            email: booking.provider_email,
+            phone: booking.provider_phone,
+            image_url: booking.provider_image_url,
+            business_id: booking.provider_business_id,
+            average_rating: booking.provider_average_rating,
+          },
+          customer_profiles: {
+            id: booking.customer_id,
+            first_name: booking.customer_first_name,
+            last_name: booking.customer_last_name,
+            email: booking.customer_email,
+            phone: booking.customer_phone,
+          },
           date: booking.booking_date,
           time: booking.start_time,
           status: booking.booking_status,
@@ -128,7 +131,7 @@ export const useBookingsData = (currentUser: any) => {
           location: "Location TBD", // Simplified since location data isn't in bookings table
           locationDetails: null,
           price: booking.total_amount ? `$${booking.total_amount}` : "Price TBD",
-          duration: booking.services?.duration_minutes ? `${booking.services.duration_minutes} min` : "60 min",
+          duration: booking.service_duration ? `${booking.service_duration} min` : "60 min",
           notes: booking.admin_notes,
           bookingReference: booking.booking_reference,
           reschedule_count: booking.reschedule_count || 0,
