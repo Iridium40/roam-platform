@@ -146,31 +146,43 @@ export default function BookService() {
     if (!serviceId) return;
     
     try {
-      const { data, error } = await supabase
+      // First, get the business IDs that offer this service category
+      const { data: categoryData, error: categoryError } = await supabase
         .from('business_service_categories')
-        .select(`
-          business_profiles!inner (
-            id,
-            business_name,
-            business_description,
-            image_url
-          )
-        `)
-        .eq('category_id', serviceId);
+        .select('business_id')
+        .eq('category_id', serviceId)
+        .eq('is_active', true);
 
-      if (error) throw error;
+      if (categoryError) throw categoryError;
+      
+      if (!categoryData || categoryData.length === 0) {
+        setBusinesses([]);
+        return;
+      }
+
+      // Extract business IDs
+      const businessIds = categoryData.map(item => item.business_id);
+
+      // Then, get the business details
+      const { data: businessData, error: businessError } = await supabase
+        .from('business_profiles')
+        .select('id, business_name, business_description, image_url')
+        .in('id', businessIds)
+        .eq('is_active', true);
+
+      if (businessError) throw businessError;
       
       // Transform data to match Business interface
-      const businessData = data?.map(item => ({
-        id: item.business_profiles.id,
-        business_name: item.business_profiles.business_name,
-        description: item.business_profiles.business_description || '',
-        image_url: item.business_profiles.image_url,
+      const transformedBusinesses = businessData?.map(business => ({
+        id: business.id,
+        business_name: business.business_name,
+        description: business.business_description || '',
+        image_url: business.image_url,
         rating: 4.5, // Mock data - would come from reviews table
         review_count: 25, // Mock data
       })) || [];
       
-      setBusinesses(businessData);
+      setBusinesses(transformedBusinesses);
     } catch (error) {
       console.error('Error loading businesses:', error);
     }
