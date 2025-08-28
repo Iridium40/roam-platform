@@ -8,21 +8,21 @@ const EnvironmentSchema = z.object({
   // Supabase configuration
   VITE_PUBLIC_SUPABASE_URL: z.string().url('Invalid Supabase URL'),
   VITE_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1, 'Supabase anon key is required'),
-  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1, 'Supabase service role key is required'),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().optional(), // Server-side only
   
   // Stripe configuration
   VITE_STRIPE_PUBLISHABLE_KEY: z.string().min(1, 'Stripe publishable key is required'),
-  STRIPE_SECRET_KEY: z.string().min(1, 'Stripe secret key is required'),
+  STRIPE_SECRET_KEY: z.string().optional(), // Server-side only
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
   
   // Twilio configuration
-  VITE_TWILIO_ACCOUNT_SID: z.string().min(1, 'Twilio account SID is required'),
-  VITE_TWILIO_AUTH_TOKEN: z.string().min(1, 'Twilio auth token is required'),
-  VITE_TWILIO_CONVERSATIONS_SERVICE_SID: z.string().min(1, 'Twilio conversations service SID is required'),
+  VITE_TWILIO_ACCOUNT_SID: z.string().optional(), // Optional for browser
+  VITE_TWILIO_AUTH_TOKEN: z.string().optional(), // Optional for browser
+  VITE_TWILIO_CONVERSATIONS_SERVICE_SID: z.string().optional(), // Optional for browser
   TWILIO_FROM_NUMBER: z.string().optional(),
   
   // Email configuration (Resend)
-  RESEND_API_KEY: z.string().min(1, 'Resend API key is required'),
+  RESEND_API_KEY: z.string().optional(), // Server-side only
   
   // Plaid configuration
   PLAID_CLIENT_ID: z.string().optional(),
@@ -47,7 +47,7 @@ const EnvironmentSchema = z.object({
   VITE_ENABLE_PERFORMANCE_MONITORING: z.string().transform((val: string) => val === 'true').default('false'),
   
   // JWT configuration
-  JWT_SECRET: z.string().min(1, 'JWT secret is required'),
+  JWT_SECRET: z.string().optional(), // Server-side only
   
   // Push notifications
   VITE_VAPID_PUBLIC_KEY: z.string().optional(),
