@@ -29,12 +29,10 @@ export class ConversationsService {
             conversation_type,
             bookings (
               id,
-              service_name,
+              service_id,
               booking_date,
-              status,
-              business_profiles (
-                business_name
-              ),
+              booking_status,
+              business_id,
               providers (
                 first_name,
                 last_name
@@ -62,10 +60,10 @@ export class ConversationsService {
         conversation_type: item.conversation_metadata.conversation_type,
         booking: item.conversation_metadata.bookings ? {
           id: item.conversation_metadata.bookings.id,
-          service_name: item.conversation_metadata.bookings.service_name,
+          service_name: `Service ${item.conversation_metadata.bookings.service_id}`, // Placeholder - would need to join with services table
           booking_date: item.conversation_metadata.bookings.booking_date,
-          status: item.conversation_metadata.bookings.status,
-          business_profiles: item.conversation_metadata.bookings.business_profiles,
+          status: item.conversation_metadata.bookings.booking_status,
+          business_profiles: undefined, // Would need to join with business_profiles table
           providers: item.conversation_metadata.bookings.providers,
         } : undefined,
       })) || [];
