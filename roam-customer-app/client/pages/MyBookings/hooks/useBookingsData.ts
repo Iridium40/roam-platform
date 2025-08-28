@@ -40,11 +40,12 @@ export const useBookingsData = (currentUser: any) => {
         setLoading(true);
         setError(null);
 
+        // Use simple Supabase query with basic joins
         const { data, error } = await supabase
           .from("bookings")
           .select(`
             *,
-            providers (
+            providers!inner (
               id,
               first_name,
               last_name,
@@ -54,14 +55,14 @@ export const useBookingsData = (currentUser: any) => {
               business_id,
               average_rating
             ),
-            services (
+            services!inner (
               id,
               name,
               description,
-              price,
-              duration
+              min_price,
+              duration_minutes
             ),
-            customer_profiles (
+            customer_profiles!inner (
               id,
               first_name,
               last_name,
@@ -101,7 +102,7 @@ export const useBookingsData = (currentUser: any) => {
           location: "Location TBD", // Simplified since location data isn't in bookings table
           locationDetails: null,
           price: booking.total_amount ? `$${booking.total_amount}` : "Price TBD",
-          duration: booking.services?.duration || "60",
+          duration: booking.services?.duration_minutes ? `${booking.services.duration_minutes} min` : "60 min",
           notes: booking.admin_notes,
           bookingReference: booking.booking_reference,
           reschedule_count: booking.reschedule_count || 0,
