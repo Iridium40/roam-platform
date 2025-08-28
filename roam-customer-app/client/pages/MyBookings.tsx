@@ -33,6 +33,10 @@ export default function MyBookings() {
   const { customer, loading: authLoading } = useAuth();
   const currentUser = customer;
 
+  // Debug logging
+  console.log("MyBookings - Auth state:", { customer, authLoading });
+  console.log("MyBookings - Current user:", currentUser);
+
   // State for modals
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [selectedBookingForCancel, setSelectedBookingForCancel] =
