@@ -146,22 +146,36 @@ export default function BookService() {
     if (!serviceId) return;
     
     try {
-      // First, get the business IDs that offer this service category
-      const { data: categoryData, error: categoryError } = await supabase
-        .from('business_service_categories')
+      // Get the service details first to understand what we're looking for
+      const { data: serviceData, error: serviceError } = await supabase
+        .from('services')
+        .select('id, name, subcategory_id')
+        .eq('id', serviceId)
+        .single();
+
+      if (serviceError) throw serviceError;
+      
+      if (!serviceData) {
+        setBusinesses([]);
+        return;
+      }
+
+      // Get business IDs that offer this specific service
+      const { data: businessServiceData, error: businessServiceError } = await supabase
+        .from('business_services')
         .select('business_id')
-        .eq('category_id', serviceId)
+        .eq('service_id', serviceId)
         .eq('is_active', true);
 
-      if (categoryError) throw categoryError;
+      if (businessServiceError) throw businessServiceError;
       
-      if (!categoryData || categoryData.length === 0) {
+      if (!businessServiceData || businessServiceData.length === 0) {
         setBusinesses([]);
         return;
       }
 
       // Extract business IDs
-      const businessIds = categoryData.map(item => item.business_id);
+      const businessIds = businessServiceData.map(item => item.business_id);
 
       // Then, get the business details
       const { data: businessData, error: businessError } = await supabase
