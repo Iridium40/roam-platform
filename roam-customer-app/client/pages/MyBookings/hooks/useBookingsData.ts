@@ -42,7 +42,29 @@ export const useBookingsData = (currentUser: any) => {
 
         console.log("Fetching bookings for customer:", currentUser.id);
         
-        // Use simple Supabase query with regular joins (not inner joins)
+        // First, try a simple query to just get bookings without joins
+        console.log("Trying simple bookings query first...");
+        const { data: simpleData, error: simpleError } = await supabase
+          .from("bookings")
+          .select("*")
+          .eq("customer_id", currentUser.id)
+          .order("booking_date", { ascending: false });
+
+        console.log("Simple bookings query result:", { simpleData, simpleError });
+
+        if (simpleError) {
+          throw simpleError;
+        }
+
+        if (!simpleData || simpleData.length === 0) {
+          console.log("No bookings found for customer:", currentUser.id);
+          setBookings([]);
+          return;
+        }
+
+        console.log("Found", simpleData.length, "bookings, now fetching related data...");
+
+        // Now get the related data for each booking
         const { data, error } = await supabase
           .from("bookings")
           .select(`
