@@ -152,7 +152,7 @@ export default function BookService() {
           business_profiles!inner (
             id,
             business_name,
-            description,
+            business_description,
             image_url
           )
         `)
@@ -164,7 +164,7 @@ export default function BookService() {
       const businessData = data?.map(item => ({
         id: item.business_profiles.id,
         business_name: item.business_profiles.business_name,
-        description: item.business_profiles.description,
+        description: item.business_profiles.business_description || '',
         image_url: item.business_profiles.image_url,
         rating: 4.5, // Mock data - would come from reviews table
         review_count: 25, // Mock data
