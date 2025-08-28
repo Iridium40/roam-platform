@@ -16,7 +16,6 @@ export interface Favorite {
       business_name: string;
     };
     image_url: string | null;
-    service_categories: string[] | null;
   };
 }
 
@@ -51,8 +50,7 @@ export const useFavorites = () => {
             business_profiles (
               business_name
             ),
-            image_url,
-            service_categories
+            image_url
           )
         `)
         .eq("customer_id", customer.id)
