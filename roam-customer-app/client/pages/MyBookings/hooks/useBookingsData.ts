@@ -59,11 +59,7 @@ export const useBookingsData = (currentUser: any) => {
               name,
               description,
               price,
-              duration,
-              service_subcategories (
-                id,
-                name
-              )
+              duration
             ),
             customer_profiles (
               id,
@@ -93,20 +89,20 @@ export const useBookingsData = (currentUser: any) => {
             lastName: booking.providers?.last_name,
             email: booking.providers?.email,
             phone: booking.providers?.phone,
-            image: booking.providers?.image_url, // Use image_url from database
-            rating: booking.providers?.average_rating || 0, // Use average_rating from providers table
+            image: booking.providers?.image_url,
+            rating: booking.providers?.average_rating || 0,
           },
           providers: booking.providers,
           customer_profiles: booking.customer_profiles,
           date: booking.booking_date,
-          time: booking.booking_time,
+          time: booking.start_time,
           status: booking.booking_status,
           deliveryType: booking.delivery_type,
-          location: booking.location || "Location TBD",
-          locationDetails: booking.location_details,
-          price: booking.price ? `$${booking.price}` : "Price TBD",
-          duration: booking.duration || "60",
-          notes: booking.notes,
+          location: "Location TBD", // Simplified since location data isn't in bookings table
+          locationDetails: null,
+          price: booking.total_amount ? `$${booking.total_amount}` : "Price TBD",
+          duration: booking.services?.duration || "60",
+          notes: booking.admin_notes,
           bookingReference: booking.booking_reference,
           reschedule_count: booking.reschedule_count || 0,
           original_booking_date: booking.original_booking_date,
