@@ -11,7 +11,7 @@ interface AnnouncementPopupProps {
 }
 
 export function AnnouncementPopup({ 
-  appType = 'provider', 
+  appType = 'admin', 
   autoShow = true 
 }: AnnouncementPopupProps) {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
@@ -42,7 +42,7 @@ export function AnnouncementPopup({
           audiences = ['all', 'staff', 'business'];
           break;
         default:
-          audiences = ['all', 'provider', 'business'];
+          audiences = ['all', 'staff', 'business'];
       }
 
       const { data, error } = await supabase

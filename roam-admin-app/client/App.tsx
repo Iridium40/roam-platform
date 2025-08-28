@@ -59,6 +59,7 @@ import { handleAuthError } from "@/lib/auth-error-handler";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { PageLoader } from "@/components/ui/LoadingSpinner";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
+import AnnouncementPopup from "@/components/AnnouncementPopup";
 import NotFound from "./pages/NotFound";
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -304,6 +305,7 @@ const App = () => (
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
+      <AnnouncementPopup appType="admin" />
     </TooltipProvider>
   </QueryClientProvider>
 );

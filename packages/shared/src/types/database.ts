@@ -39,6 +39,10 @@ export type PromotionSavingsType = 'percentage' | 'fixed_amount';
 export type BusinessDocumentType = 'drivers_license' | 'proof_of_address' | 'liability_insurance' | 'professional_license' | 'professional_certificate' | 'business_license';
 export type BusinessDocumentStatus = 'pending' | 'verified' | 'rejected' | 'under_review';
 
+// Announcement Types
+export type AnnouncementAudience = 'all' | 'customer' | 'provider' | 'business' | 'staff';
+export type AnnouncementType = 'general' | 'promotional' | 'maintenance' | 'feature' | 'alert' | 'news' | 'update';
+
 export type Database = {
   public: {
     Tables: {
@@ -1209,8 +1213,8 @@ export type Database = {
           created_at: string | null;
           start_date: string | null;
           end_date: string | null;
-          announcement_audience: string | null;
-          announcement_type: string | null;
+          announcement_audience: AnnouncementAudience | null;
+          announcement_type: AnnouncementType | null;
         };
         Insert: {
           id?: string;
@@ -1220,8 +1224,8 @@ export type Database = {
           created_at?: string | null;
           start_date?: string | null;
           end_date?: string | null;
-          announcement_audience?: string | null;
-          announcement_type?: string | null;
+          announcement_audience?: AnnouncementAudience | null;
+          announcement_type?: AnnouncementType | null;
         };
         Update: {
           id?: string;
@@ -1231,8 +1235,8 @@ export type Database = {
           created_at?: string | null;
           start_date?: string | null;
           end_date?: string | null;
-          announcement_audience?: string | null;
-          announcement_type?: string | null;
+          announcement_audience?: AnnouncementAudience | null;
+          announcement_type?: AnnouncementType | null;
         };
       };
       // Customers table

@@ -11,6 +11,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/auth/AuthProvider";
 import { ProtectedRoute, RoleBasedRedirect } from "@/components/ProtectedRoute";
 import SystemBrandingInitializer from "@/components/SystemBrandingInitializer";
+import AnnouncementPopup from "@/components/AnnouncementPopup";
 
 // Type declaration for React root container
 declare global {
@@ -195,6 +196,7 @@ const App = () => (
       </BrowserRouter>
       <Analytics />
       <SpeedInsights />
+      <AnnouncementPopup appType="provider" />
     </TooltipProvider>
   </QueryClientProvider>
 );

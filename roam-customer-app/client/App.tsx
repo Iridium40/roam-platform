@@ -11,6 +11,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { Suspense, lazy } from "react";
 import { Loader2 } from "lucide-react";
 import { PageErrorBoundary } from "@/components/ErrorBoundary";
+import AnnouncementPopup from "@/components/AnnouncementPopup";
 import { 
   CustomerFavorites, 
   CustomerLocations, 
@@ -118,6 +119,7 @@ const App = () => (
           </AuthProvider>
         </PageErrorBoundary>
       </BrowserRouter>
+      <AnnouncementPopup appType="customer" />
     </TooltipProvider>
   </QueryClientProvider>
 );
