@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
+import BankAccountManager from "@/components/BankAccountManager";
 
 interface FinancialsTabProps {
   providerData: any;
@@ -398,6 +399,22 @@ export default function FinancialsTab({
               </div>
             ))}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Bank Account Management */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <CreditCard className="w-5 h-5" />
+            <span>Bank Account Management</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <BankAccountManager 
+            userId={providerData?.user_id} 
+            businessId={business?.id || providerData?.business_id} 
+          />
         </CardContent>
       </Card>
     </div>

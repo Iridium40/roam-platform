@@ -27,10 +27,14 @@ export type ServiceCategoryType = "beauty" | "fitness" | "therapy" | "healthcare
 export type ServiceSubcategoryType = "hair_and_makeup" | "spray_tan" | "esthetician" | "massage_therapy" | "iv_therapy" | "physical_therapy" | "nurse_practitioner" | "physician" | "chiropractor" | "yoga_instructor" | "pilates_instructor" | "personal_trainer" | "injectables" | "health_coach";
 export type CustomerLocationType = "home" | "condo" | "hotel" | "oatasse popther" | null;
 
-// Notification Types
-export type NotificationType = 'booking_status_update' | 'new_message' | 'booking_reminder' | 'system_alert' | 'payment_received';
-export type NotificationStatus = 'sent' | 'delivered' | 'failed' | 'pending';
-export type MessageNotificationType = 'message' | 'mention' | 'system';
+  // Notification Types
+  export type NotificationType = 'booking_status_update' | 'new_message' | 'booking_reminder' | 'system_alert' | 'payment_received';
+  export type NotificationStatus = 'sent' | 'delivered' | 'failed' | 'pending';
+  export type MessageNotificationType = 'message' | 'mention' | 'system';
+
+  // Transaction Types
+  export type TransactionType = 'payment' | 'payout' | 'refund' | 'fee' | 'adjustment';
+  export type Status = 'pending' | 'completed' | 'failed' | 'cancelled' | 'processing';
 
 // Promotion Types
 export type PromotionSavingsType = 'percentage' | 'fixed_amount';
@@ -425,6 +429,222 @@ export type Database = {
           updated_at?: string | null;
         };
       };
+
+      // Provider bank accounts table
+      provider_bank_accounts: {
+        Row: {
+          id: string;
+          user_id: string;
+          business_id: string | null;
+          plaid_access_token: string;
+          plaid_item_id: string;
+          account_data: Json;
+          institution_data: Json | null;
+          webhook_status: string | null;
+          webhook_error: Json | null;
+          last_webhook_at: string | null;
+          connected_at: string | null;
+          created_at: string | null;
+          updated_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          business_id?: string | null;
+          plaid_access_token: string;
+          plaid_item_id: string;
+          account_data: Json;
+          institution_data?: Json | null;
+          webhook_status?: string | null;
+          webhook_error?: Json | null;
+          last_webhook_at?: string | null;
+          connected_at?: string | null;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          business_id?: string | null;
+          plaid_access_token?: string;
+          plaid_item_id?: string;
+          account_data?: Json;
+          institution_data?: Json | null;
+          webhook_status?: string | null;
+          webhook_error?: Json | null;
+          last_webhook_at?: string | null;
+          connected_at?: string | null;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+      };
+
+
+
+             // Financial transactions table
+       financial_transactions: {
+         Row: {
+           id: string;
+           booking_id: string;
+           amount: number;
+           currency: string | null;
+           stripe_transaction_id: string | null;
+           payment_method: string | null;
+           description: string | null;
+           metadata: Json | null;
+           created_at: string | null;
+           processed_at: string | null;
+           transaction_type: TransactionType | null;
+           status: Status | null;
+         };
+         Insert: {
+           id?: string;
+           booking_id: string;
+           amount: number;
+           currency?: string | null;
+           stripe_transaction_id?: string | null;
+           payment_method?: string | null;
+           description?: string | null;
+           metadata?: Json | null;
+           created_at?: string | null;
+           processed_at?: string | null;
+           transaction_type?: TransactionType | null;
+           status?: Status | null;
+         };
+         Update: {
+           id?: string;
+           booking_id?: string;
+           amount?: number;
+           currency?: string | null;
+           stripe_transaction_id?: string | null;
+           payment_method?: string | null;
+           description?: string | null;
+           metadata?: Json | null;
+           created_at?: string | null;
+           processed_at?: string | null;
+           transaction_type?: TransactionType | null;
+           status?: Status | null;
+         };
+       };
+
+       // Plaid bank connections table
+       plaid_bank_connections: {
+         Row: {
+           id: string;
+           user_id: string | null;
+           business_id: string | null;
+           plaid_access_token: string | null;
+           plaid_item_id: string | null;
+           plaid_account_id: string | null;
+           institution_id: string | null;
+           institution_name: string | null;
+           account_name: string | null;
+           account_mask: string | null;
+           account_type: string | null;
+           account_subtype: string | null;
+           verification_status: string | null;
+           routing_numbers: string[] | null;
+           account_number_mask: string | null;
+           connected_at: string | null;
+           is_active: boolean | null;
+           created_at: string | null;
+           updated_at: string | null;
+         };
+         Insert: {
+           id?: string;
+           user_id?: string | null;
+           business_id?: string | null;
+           plaid_access_token?: string | null;
+           plaid_item_id?: string | null;
+           plaid_account_id?: string | null;
+           institution_id?: string | null;
+           institution_name?: string | null;
+           account_name?: string | null;
+           account_mask?: string | null;
+           account_type?: string | null;
+           account_subtype?: string | null;
+           verification_status?: string | null;
+           routing_numbers?: string[] | null;
+           account_number_mask?: string | null;
+           connected_at?: string | null;
+           is_active?: boolean | null;
+           created_at?: string | null;
+           updated_at?: string | null;
+         };
+         Update: {
+           id?: string;
+           user_id?: string | null;
+           business_id?: string | null;
+           plaid_access_token?: string | null;
+           plaid_item_id?: string | null;
+           plaid_account_id?: string | null;
+           institution_id?: string | null;
+           institution_name?: string | null;
+           account_name?: string | null;
+           account_mask?: string | null;
+           account_type?: string | null;
+           account_subtype?: string | null;
+           verification_status?: string | null;
+           routing_numbers?: string[] | null;
+           account_number_mask?: string | null;
+           connected_at?: string | null;
+           is_active?: boolean | null;
+           created_at?: string | null;
+           updated_at?: string | null;
+         };
+       };
+
+       // Manual bank accounts table
+       manual_bank_accounts: {
+         Row: {
+           id: string;
+           user_id: string;
+           business_id: string | null;
+           account_name: string;
+           account_type: string;
+           account_number: string;
+           routing_number: string;
+           bank_name: string;
+           is_verified: boolean;
+           is_default: boolean;
+           stripe_account_id: string | null;
+           verification_status: string;
+           created_at: string | null;
+           updated_at: string | null;
+         };
+         Insert: {
+           id?: string;
+           user_id: string;
+           business_id?: string | null;
+           account_name: string;
+           account_type: string;
+           account_number: string;
+           routing_number: string;
+           bank_name: string;
+           is_verified?: boolean;
+           is_default?: boolean;
+           stripe_account_id?: string | null;
+           verification_status?: string;
+           created_at?: string | null;
+           updated_at?: string | null;
+         };
+         Update: {
+           id?: string;
+           user_id?: string;
+           business_id?: string | null;
+           account_name?: string;
+           account_type?: string;
+           account_number?: string;
+           routing_number?: string;
+           bank_name?: string;
+           is_verified?: boolean;
+           is_default?: boolean;
+           stripe_account_id?: string | null;
+           verification_status?: string;
+           created_at?: string | null;
+           updated_at?: string | null;
+         };
+       };
 
       // Twilio conversations metadata
       conversation_metadata: {
