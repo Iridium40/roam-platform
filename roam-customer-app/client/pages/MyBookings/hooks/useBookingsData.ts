@@ -65,11 +65,11 @@ export const useBookingsData = (currentUser: any) => {
         console.log("Found", simpleData.length, "bookings, now fetching related data...");
 
         // Use the Edge Function to get bookings with all related data
-        const edgeFunctionUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/get-customer-bookings`;
+        const edgeFunctionUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-customer-bookings`;
         const response = await fetch(`${edgeFunctionUrl}?customerId=${currentUser.id}&limit=50&page=0`, {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
             'Content-Type': 'application/json',
           },
         });
