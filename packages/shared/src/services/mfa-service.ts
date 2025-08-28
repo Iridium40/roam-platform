@@ -18,8 +18,17 @@ import { authenticator } from 'otplib';
 // QR code generation for TOTP setup
 import QRCode from 'qrcode';
 
-// Crypto for generating backup codes
-import { randomBytes } from 'crypto';
+// Browser-compatible crypto for generating backup codes
+const getRandomBytes = (length: number): Uint8Array => {
+  if (typeof window !== 'undefined' && window.crypto) {
+    // Browser environment - use Web Crypto API
+    return window.crypto.getRandomValues(new Uint8Array(length));
+  } else {
+    // Node.js environment - use crypto module
+    const crypto = require('crypto');
+    return crypto.randomBytes(length);
+  }
+};
 
 export interface MFAServiceInterface {
   // MFA Setup
@@ -854,7 +863,12 @@ export class MFAService implements MFAServiceInterface {
   private generateBackupCodes(): string[] {
     const codes: string[] = [];
     for (let i = 0; i < 10; i++) {
-      codes.push(randomBytes(4).toString('hex').toUpperCase());
+      const randomBytes = getRandomBytes(4);
+      const hexString = Array.from(randomBytes)
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('')
+        .toUpperCase();
+      codes.push(hexString);
     }
     return codes;
   }
