@@ -1,7 +1,10 @@
 import "./global.css";
 
 import { Toaster } from "@/components/ui/toaster";
-import "@/utils/testUtils";
+// Import testUtils only in development
+if (import.meta.env.DEV) {
+  import("@/utils/testUtils");
+}
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
