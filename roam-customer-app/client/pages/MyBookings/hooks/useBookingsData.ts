@@ -40,12 +40,14 @@ export const useBookingsData = (currentUser: any) => {
         setLoading(true);
         setError(null);
 
-        // Use simple Supabase query with basic joins
+        console.log("Fetching bookings for customer:", currentUser.id);
+        
+        // Use simple Supabase query with regular joins (not inner joins)
         const { data, error } = await supabase
           .from("bookings")
           .select(`
             *,
-            providers!inner (
+            providers (
               id,
               first_name,
               last_name,
@@ -55,14 +57,14 @@ export const useBookingsData = (currentUser: any) => {
               business_id,
               average_rating
             ),
-            services!inner (
+            services (
               id,
               name,
               description,
               min_price,
               duration_minutes
             ),
-            customer_profiles!inner (
+            customer_profiles (
               id,
               first_name,
               last_name,
@@ -72,6 +74,8 @@ export const useBookingsData = (currentUser: any) => {
           `)
           .eq("customer_id", currentUser.id)
           .order("booking_date", { ascending: false });
+
+        console.log("Supabase response:", { data, error });
 
         if (error) {
           throw error;
@@ -111,6 +115,8 @@ export const useBookingsData = (currentUser: any) => {
           reschedule_reason: booking.reschedule_reason,
         }));
 
+        console.log("Transformed bookings:", transformedBookings);
+        console.log("Number of bookings found:", transformedBookings.length);
         setBookings(transformedBookings);
       } catch (err: any) {
         console.error("Error fetching bookings:", err);
