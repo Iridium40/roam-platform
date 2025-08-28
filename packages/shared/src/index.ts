@@ -9,7 +9,12 @@ export * from './contexts/UnifiedAuthContext';
 // Types
 export * from './types/database';
 export * from './types/twilio';
-export * from './types/conversations';
+export type { 
+  Conversation,
+  CreateConversationParams,
+  SendMessageParams,
+  AddParticipantParams
+} from './types/conversations';
 
 // Services
 export * from './services/notification-api';

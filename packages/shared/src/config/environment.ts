@@ -90,7 +90,7 @@ export class EnvironmentConfig {
     try {
       // Load environment variables - support both Node.js and browser environments
       const isBrowser = typeof window !== 'undefined';
-      const envSource = isBrowser ? (import.meta.env as any) : process.env;
+      const envSource = isBrowser ? (import.meta as any).env : process.env;
       
       const envVars = {
         NODE_ENV: envSource.NODE_ENV || 'development',

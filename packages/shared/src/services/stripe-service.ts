@@ -26,7 +26,7 @@ export class StripePaymentService extends BasePaymentService {
   constructor(config?: Partial<PaymentConfig>) {
     const stripeConfig: PaymentConfig = {
       provider: 'stripe',
-      secretKey: config?.secretKey || env.stripe.secretKey,
+      secretKey: config?.secretKey || env.stripe.secretKey || '',
       publishableKey: config?.publishableKey || env.stripe.publishableKey,
       webhookSecret: config?.webhookSecret || env.stripe.webhookSecret,
       apiVersion: '2024-06-20',

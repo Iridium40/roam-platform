@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useToast } from '@/hooks/use-toast';
 import { ConversationsService } from '../services/conversations';
 import { 
   Conversation, 
@@ -18,7 +17,6 @@ export interface UseConversationsOptions {
 
 export const useConversations = (options: UseConversationsOptions) => {
   const { userId, userType, onError } = options;
-  const { toast } = useToast();
   
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [currentConversation, setCurrentConversation] = useState<string | null>(null);
@@ -60,16 +58,11 @@ export const useConversations = (options: UseConversationsOptions) => {
       const errorMessage = error.message || 'Failed to load conversations';
       setError(errorMessage);
       onError?.(errorMessage);
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
     } finally {
       setLoading(false);
       requestInProgress.current = false;
     }
-  }, [userId, userType, loading, toast, onError]);
+  }, [userId, userType, loading, onError]);
 
   // Load messages for a specific conversation
   const loadMessages = useCallback(async (conversationId: string) => {
@@ -119,29 +112,24 @@ export const useConversations = (options: UseConversationsOptions) => {
     }
   }, [onError]);
 
-  // Send a message
-  const sendMessage = useCallback(async (conversationId: string, content: string) => {
-    if (!conversationId || !content.trim() || !userId) return;
+  // Send a message to a conversation
+  const sendMessage = useCallback(async (conversationId: string, message: string) => {
+    if (!conversationId || !message.trim() || sending) return;
 
     try {
       setSending(true);
       setError(null);
       
-      console.log('📤 Sending message:', { conversationId, content });
+      console.log('📤 Sending message to conversation:', conversationId);
       
       const params: SendMessageParams = {
         conversationId,
-        content,
+        content: message,
         authorId: userId,
-        authorType: userType
+        authorType: userType,
       };
       
       await ConversationsService.sendMessage(params);
-      
-      toast({
-        title: "Message sent",
-        description: "Your message has been sent successfully",
-      });
       
       // Reload messages
       await loadMessages(conversationId);
@@ -150,15 +138,10 @@ export const useConversations = (options: UseConversationsOptions) => {
       const errorMessage = error.message || 'Failed to send message';
       setError(errorMessage);
       onError?.(errorMessage);
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
     } finally {
       setSending(false);
     }
-  }, [userId, userType, loadMessages, toast, onError]);
+  }, [userId, userType, loadMessages, onError]);
 
   // Create a new conversation
   const createConversation = useCallback(async (params: CreateConversationParams) => {
@@ -170,11 +153,6 @@ export const useConversations = (options: UseConversationsOptions) => {
       
       const conversationId = await ConversationsService.createConversation(params);
       
-      toast({
-        title: "Conversation created",
-        description: "A new conversation has been created for this booking",
-      });
-      
       // Reload conversations
       await loadConversations();
       
@@ -184,16 +162,11 @@ export const useConversations = (options: UseConversationsOptions) => {
       const errorMessage = error.message || 'Failed to create conversation';
       setError(errorMessage);
       onError?.(errorMessage);
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
       throw error;
     } finally {
       setLoading(false);
     }
-  }, [loadConversations, toast, onError]);
+  }, [loadConversations, onError]);
 
   // Add participant to conversation
   const addParticipant = useCallback(async (params: AddParticipantParams) => {
@@ -205,11 +178,6 @@ export const useConversations = (options: UseConversationsOptions) => {
       
       const participantId = await ConversationsService.addParticipant(params);
       
-      toast({
-        title: "Participant added",
-        description: "The participant has been added to the conversation",
-      });
-      
       // Reload participants
       await loadParticipants(params.conversationId);
       
@@ -219,65 +187,46 @@ export const useConversations = (options: UseConversationsOptions) => {
       const errorMessage = error.message || 'Failed to add participant';
       setError(errorMessage);
       onError?.(errorMessage);
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
       throw error;
     } finally {
       setLoading(false);
     }
-  }, [loadParticipants, toast, onError]);
+  }, [loadParticipants, onError]);
 
   // Mark conversation as read
   const markAsRead = useCallback(async (conversationId: string) => {
     console.log('✅ markAsRead called with:', conversationId);
     
     try {
-      setLoading(true);
       setError(null);
       
       await ConversationsService.markAsRead(conversationId, userId);
       
-      toast({
-        title: "Marked as read",
-        description: "The conversation has been marked as read",
-      });
+      // Update local state to mark as read
+      setConversations(prev => 
+        prev.map(conv => 
+          conv.id === conversationId 
+            ? { ...conv, last_read_at: new Date().toISOString() }
+            : conv
+        )
+      );
     } catch (error: any) {
-      console.error('Error marking as read:', error);
-      const errorMessage = error.message || 'Failed to mark as read';
+      console.error('Error marking conversation as read:', error);
+      const errorMessage = error.message || 'Failed to mark conversation as read';
       setError(errorMessage);
       onError?.(errorMessage);
-    } finally {
-      setLoading(false);
     }
-  }, [userId, toast, onError]);
+  }, [onError]);
 
-  // Set active conversation
-  const setActiveConversation = useCallback((conversationId: string | null) => {
-    setCurrentConversation(conversationId);
-    if (conversationId) {
-      loadMessages(conversationId);
-      loadParticipants(conversationId);
-    } else {
-      setMessages([]);
-      setParticipants([]);
-    }
-  }, [loadMessages, loadParticipants]);
-
-  // Load conversations when user changes
+  // Load initial data
   useEffect(() => {
     if (userId) {
       loadConversations();
-    } else {
-      setConversations([]);
-      setMessages([]);
-      setParticipants([]);
     }
   }, [userId, loadConversations]);
 
   return {
+    // State
     conversations,
     currentConversation,
     messages,
@@ -285,15 +234,19 @@ export const useConversations = (options: UseConversationsOptions) => {
     loading,
     sending,
     error,
-    createConversation,
+    
+    // Actions
     loadConversations,
     loadMessages,
-    sendMessage,
     loadParticipants,
+    sendMessage,
+    createConversation,
     addParticipant,
     markAsRead,
-    setActiveConversation,
+    setCurrentConversation,
+    
+    // Utilities
     getUserIdentity,
-    getUserType
+    getUserType,
   };
 };

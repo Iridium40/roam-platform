@@ -1,4 +1,13 @@
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
+
+// Create Supabase client for shared package
+const isBrowser = typeof window !== 'undefined';
+const envSource = isBrowser ? (import.meta as any).env : process.env;
+
+const supabaseUrl = envSource.VITE_PUBLIC_SUPABASE_URL || envSource.SUPABASE_URL || 'https://vssomyuyhicaxsgiaupo.supabase.co';
+const supabaseAnonKey = envSource.VITE_PUBLIC_SUPABASE_ANON_KEY || envSource.SUPABASE_ANON_KEY || '';
+
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 import { 
   Conversation, 
   ConversationMessage, 
@@ -49,7 +58,7 @@ export class ConversationsService {
       }
 
       // Transform the data to match our Conversation interface
-      const transformedConversations = participantData?.map(item => ({
+      const transformedConversations = participantData?.map((item: any) => ({
         id: item.conversation_metadata.id,
         booking_id: item.conversation_metadata.booking_id,
         twilio_conversation_sid: item.conversation_metadata.twilio_conversation_sid,

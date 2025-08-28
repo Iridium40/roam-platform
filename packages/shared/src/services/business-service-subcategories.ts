@@ -1,9 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
-import { env } from '../config/environment';
 
 // Use environment configuration with browser compatibility
 const isBrowser = typeof window !== 'undefined';
-const envSource = isBrowser ? (import.meta.env as any) : process.env;
+const envSource = isBrowser ? (import.meta as any).env : process.env;
 
 const supabaseUrl = envSource.VITE_PUBLIC_SUPABASE_URL || envSource.SUPABASE_URL || 'https://vssomyuyhicaxsgiaupo.supabase.co';
 const supabaseServiceRoleKey = envSource.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndobmtveHdnb2xia21wbmN6eXdwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NTU1MjQ3OSwiZXhwIjoyMDcxMTI4NDc5fQ.9o48A-HxMvvn54GUTbtAIxEsklkIjPtuLtG-63T2t-o';
