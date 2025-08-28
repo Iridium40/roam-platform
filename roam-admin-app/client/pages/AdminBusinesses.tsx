@@ -1466,7 +1466,9 @@ export default function AdminBusinesses() {
     await fetchBusinessServiceSubcategories(business.id);
   };
 
-  const addServiceCategory = async () => {
+
+
+  const addServiceCategoryAndSubcategory = async () => {
     if (!selectedBusinessForServices || !selectedServiceCategoryId) {
       toast({
         title: "Error",
@@ -1477,7 +1479,8 @@ export default function AdminBusinesses() {
     }
 
     try {
-      const { error } = await supabase
+      // Add the service category first
+      const { error: categoryError } = await supabase
         .from("business_service_categories")
         .insert([
           {
@@ -1487,72 +1490,44 @@ export default function AdminBusinesses() {
           },
         ]);
 
-      if (error) throw error;
+      if (categoryError) throw categoryError;
 
-      toast({
-        title: "Success",
-        description: "Service category added successfully",
-      });
+      // If a subcategory is selected, add it as well
+      if (selectedServiceSubcategoryId) {
+        const subcategoryData: any = {
+          business_id: selectedBusinessForServices.id,
+          category_id: selectedServiceCategoryId,
+          subcategory_id: selectedServiceSubcategoryId,
+          is_active: true,
+        };
 
-      setSelectedServiceCategoryId("");
-      await fetchBusinessServiceCategories(selectedBusinessForServices.id);
-    } catch (error: any) {
-      console.error("Error adding service category:", error);
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error occurred";
-      toast({
-        title: "Error",
-        description: `Failed to add service category: ${errorMessage}`,
-        variant: "destructive",
-      });
-    }
-  };
+        const response = await fetch('/api/business-service-subcategories', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ subcategoryData }),
+        });
 
-  const addServiceSubcategory = async () => {
-    if (
-      !selectedBusinessForServices ||
-      !selectedServiceSubcategoryId ||
-      !selectedServiceCategoryId
-    ) {
-      toast({
-        title: "Error",
-        description: "Please select both service category and subcategory",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      const subcategoryData: any = {
-        business_id: selectedBusinessForServices.id,
-        category_id: selectedServiceCategoryId,
-        subcategory_id: selectedServiceSubcategoryId,
-        is_active: true,
-      };
-
-      const response = await fetch('/api/business-service-subcategories', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ subcategoryData }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to add service subcategory');
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to add service subcategory');
+        }
       }
 
       toast({
         title: "Success",
-        description: "Service subcategory added successfully",
+        description: selectedServiceSubcategoryId 
+          ? "Service category and subcategory added successfully"
+          : "Service category added successfully",
       });
 
       setSelectedServiceSubcategoryId("");
       setSelectedServiceCategoryId("");
+      await fetchBusinessServiceCategories(selectedBusinessForServices.id);
       await fetchBusinessServiceSubcategories(selectedBusinessForServices.id);
     } catch (error: any) {
-      console.error("Error adding service subcategory:", error);
+      console.error("Error adding service category and subcategory:", error);
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error occurred";
       toast({
@@ -4166,34 +4141,72 @@ export default function AdminBusinesses() {
                 </ROAMCardHeader>
                 <ROAMCardContent>
                   <div className="space-y-4">
-                    {/* Add New Category */}
-                    <div className="flex gap-3">
-                      <div className="flex-1">
-                        <Select
-                          value={selectedServiceCategoryId}
-                          onValueChange={setSelectedServiceCategoryId}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a service category" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {availableServiceCategories.map((category) => (
-                              <SelectItem key={category.id} value={category.id}>
-                                {formatServiceCategoryType(
-                                  category.service_category_type as ServiceCategoryType,
-                                )}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                    {/* Add New Category and Subcategory */}
+                    <div className="space-y-3">
+                      <div className="flex gap-3">
+                        <div className="flex-1">
+                          <Label>Service Category</Label>
+                          <Select
+                            value={selectedServiceCategoryId}
+                            onValueChange={setSelectedServiceCategoryId}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a service category" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {availableServiceCategories.map((category) => (
+                                <SelectItem key={category.id} value={category.id}>
+                                  {formatServiceCategoryType(
+                                    category.service_category_type as ServiceCategoryType,
+                                  )}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
-                      <Button
-                        onClick={addServiceCategory}
-                        disabled={!selectedServiceCategoryId}
-                        className="bg-roam-blue hover:bg-blue-700"
-                      >
-                        Add Category
-                      </Button>
+                      
+                      {selectedServiceCategoryId && (
+                        <div className="flex gap-3">
+                          <div className="flex-1">
+                            <Label>Service Subcategory (Optional)</Label>
+                            <Select
+                              value={selectedServiceSubcategoryId}
+                              onValueChange={setSelectedServiceSubcategoryId}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select subcategory (optional)" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {availableServiceSubcategories
+                                  .filter(
+                                    (sub) =>
+                                      sub.category_id === selectedServiceCategoryId,
+                                  )
+                                  .map((subcategory) => (
+                                    <SelectItem
+                                      key={subcategory.id}
+                                      value={subcategory.id}
+                                    >
+                                      {formatEnumDisplay(
+                                        subcategory.service_subcategory_type,
+                                      )}
+                                    </SelectItem>
+                                  ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="flex items-end">
+                            <Button
+                              onClick={addServiceCategoryAndSubcategory}
+                              disabled={!selectedServiceCategoryId}
+                              className="bg-roam-blue hover:bg-blue-700"
+                            >
+                              Add Category & Subcategory
+                            </Button>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* Current Categories */}
@@ -4245,126 +4258,7 @@ export default function AdminBusinesses() {
                 </ROAMCardContent>
               </ROAMCard>
 
-              {/* Service Subcategories Section */}
-              <ROAMCard>
-                <ROAMCardHeader>
-                  <ROAMCardTitle>Service Subcategories</ROAMCardTitle>
-                </ROAMCardHeader>
-                <ROAMCardContent>
-                  <div className="space-y-4">
-                    {/* Add New Subcategory */}
-                    <div className="space-y-3">
-                      {selectedServiceCategoryId ? (
-                        <div>
-                          <Label>Service Subcategory</Label>
-                          <div className="flex gap-3">
-                            <div className="flex-1">
-                              <Select
-                                value={selectedServiceSubcategoryId}
-                                onValueChange={setSelectedServiceSubcategoryId}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select subcategory" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {availableServiceSubcategories
-                                    .filter(
-                                      (sub) =>
-                                        sub.category_id === selectedServiceCategoryId,
-                                    )
-                                    .map((subcategory) => (
-                                      <SelectItem
-                                        key={subcategory.id}
-                                        value={subcategory.id}
-                                      >
-                                        {formatEnumDisplay(
-                                          subcategory.service_subcategory_type,
-                                        )}
-                                      </SelectItem>
-                                    ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <Button
-                              onClick={addServiceSubcategory}
-                              disabled={!selectedServiceSubcategoryId}
-                              className="bg-roam-blue hover:bg-blue-700"
-                            >
-                              Add Subcategory
-                            </Button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="text-center py-4 text-muted-foreground">
-                          <p>Please select a service category above to add subcategories</p>
-                        </div>
-                      )}
-                    </div>
 
-                    {/* Current Subcategories */}
-                    <div className="space-y-2">
-                      {businessServiceSubcategories.length === 0 ? (
-                        <p className="text-muted-foreground text-center py-4">
-                          No service subcategories assigned
-                        </p>
-                      ) : (
-                        businessServiceSubcategories.map((subcategory) => (
-                          <div
-                            key={subcategory.id}
-                            className="p-4 border rounded-lg space-y-2"
-                          >
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <ROAMBadge variant="outline">
-                                  {subcategory.service_categories
-                                    ?.service_category_type
-                                    ? formatServiceCategoryType(
-                                        subcategory.service_categories
-                                          .service_category_type as ServiceCategoryType,
-                                      )
-                                    : "Unknown Category"}
-                                </ROAMBadge>
-                                <ROAMBadge
-                                  variant={
-                                    subcategory.is_active
-                                      ? "success"
-                                      : "secondary"
-                                  }
-                                >
-                                  {subcategory.service_subcategories
-                                    ?.service_subcategory_type
-                                    ? formatEnumDisplay(
-                                        subcategory.service_subcategories
-                                          .service_subcategory_type,
-                                      )
-                                    : "Unknown Subcategory"}
-                                </ROAMBadge>
-                              </div>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() =>
-                                  removeServiceSubcategory(subcategory.id)
-                                }
-                                className="text-red-600 hover:text-red-700"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </div>
-
-                            <div className="text-sm text-muted-foreground">
-                              <span className="font-medium">Added:</span>{" "}
-                              {new Date(
-                                subcategory.created_at,
-                              ).toLocaleDateString()}
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                </ROAMCardContent>
-              </ROAMCard>
 
               {/* Action Buttons */}
               <div className="flex justify-end gap-3 pt-4">
