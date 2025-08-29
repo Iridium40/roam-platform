@@ -517,6 +517,112 @@ export default function ServicesTab({
         </div>
       )}
 
+      {/* Add Service Modal */}
+      <Dialog open={showAddServiceModal} onOpenChange={setShowAddServiceModal}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>Add Service to Your Business</DialogTitle>
+            <DialogDescription>
+              Choose from available services to add to your business offerings.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Search and Filter */}
+            <div className="flex gap-4">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Input
+                  placeholder="Search available services..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <Select value={selectedCategoryFilter} onValueChange={setSelectedCategoryFilter}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="Category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  <SelectItem value="beauty">Beauty</SelectItem>
+                  <SelectItem value="fitness">Fitness</SelectItem>
+                  <SelectItem value="therapy">Therapy</SelectItem>
+                  <SelectItem value="healthcare">Healthcare</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Available Services Grid */}
+            <div className="overflow-y-auto max-h-96">
+              {loading ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                  <p className="mt-2 text-gray-500">Loading services...</p>
+                </div>
+              ) : eligibleServices.length === 0 ? (
+                <div className="text-center py-8">
+                  <Tag className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No Available Services</h3>
+                  <p className="text-gray-500">All available services have already been added to your business.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {eligibleServices.map((service) => (
+                    <Card key={service.id} className="cursor-pointer hover:shadow-md transition-shadow">
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex-1">
+                            <h4 className="font-semibold text-gray-900">{service.name}</h4>
+                            <p className="text-sm text-gray-600 line-clamp-2">{service.description}</p>
+                          </div>
+                          <Button
+                            size="sm"
+                            onClick={() => addServiceToBusiness(service)}
+                            className="ml-2"
+                          >
+                            <Plus className="w-4 h-4 mr-1" />
+                            Add
+                          </Button>
+                        </div>
+
+                        <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-center text-gray-500">
+                            <DollarSign className="w-4 h-4 mr-1" />
+                            <span>From ${service.min_price}</span>
+                          </div>
+                          <div className="flex items-center text-gray-500">
+                            <Clock className="w-4 h-4 mr-1" />
+                            <span>{service.duration_minutes} min</span>
+                          </div>
+                        </div>
+
+                        {service.service_subcategories && (
+                          <div className="mt-2">
+                            <Badge variant="outline" className="text-xs">
+                              {service.service_subcategories.service_categories?.service_category_type}
+                            </Badge>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end space-x-2 mt-6">
+            <Button
+              variant="outline"
+              onClick={() => setShowAddServiceModal(false)}
+            >
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Edit Service Modal */}
       <Dialog open={showEditServiceModal} onOpenChange={setShowEditServiceModal}>
         <DialogContent className="max-w-md">
