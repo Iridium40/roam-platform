@@ -309,7 +309,7 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
   };
 
   const sendInvite = async () => {
-    if (!inviteEmail || !inviteRole || !inviteLocation) return;
+    if (!inviteEmail || !inviteRole) return;
 
     try {
       // Get current user info for the invitation
