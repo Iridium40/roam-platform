@@ -137,9 +137,13 @@ export default function AdminContactSubmissions() {
   const fetchSubmissions = async () => {
     try {
       setLoading(true);
-      
+
+      // Use admin client with service role for elevated permissions
+      const adminSupabase = createAdminSupabaseClient();
+      console.log("Using admin Supabase client for contact submissions");
+
       // First try a simple query without joins to test basic connectivity
-      const { data, error } = await supabase
+      const { data, error } = await adminSupabase
         .from("contact_submissions")
         .select("*")
         .order("created_at", { ascending: false });
