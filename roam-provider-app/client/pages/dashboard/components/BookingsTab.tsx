@@ -72,6 +72,30 @@ export default function BookingsTab({
     });
   }, [bookings, searchQuery, selectedStatusFilter]);
 
+  const [presentBookings, futureBookings, pastBookings] = useMemo(() => {
+    const present: any[] = [];
+    const future: any[] = [];
+    const past: any[] = [];
+    const presentSet = new Set(['pending','confirmed','in_progress']);
+    const futureSet = new Set(['pending','confirmed']);
+    const pastSet = new Set(['completed','cancelled','declined','no_show']);
+    const todayStr = new Date().toLocaleDateString('en-CA');
+
+    filteredBookings.forEach((b: any) => {
+      const status = b.booking_status;
+      const dateStr: string = b.booking_date || '';
+      if (pastSet.has(status)) {
+        past.push(b);
+      } else if (dateStr > todayStr && futureSet.has(status)) {
+        future.push(b);
+      } else if (dateStr <= todayStr && presentSet.has(status)) {
+        present.push(b);
+      }
+    });
+
+    return [present, future, past];
+  }, [filteredBookings]);
+
   const getStatusBadge = (status: string) => {
     const configs = {
       pending: { label: "Pending", className: "bg-orange-100 text-orange-800 border-orange-300" },
@@ -294,184 +318,537 @@ export default function BookingsTab({
       </div>
 
       {/* Bookings List */}
-      <div className="space-y-4">
+      <div className="space-y-8">
         {filteredBookings.length === 0 ? (
           <Card className="p-8">
             <div className="text-center">
               <Calendar className="w-12 h-12 mx-auto mb-4 text-gray-400" />
               <h3 className="text-lg font-semibold text-gray-900 mb-2">No Bookings Found</h3>
               <p className="text-gray-600">
-                {searchQuery || selectedStatusFilter !== "all" 
+                {searchQuery || selectedStatusFilter !== "all"
                   ? "Try adjusting your search or filter criteria."
                   : "No bookings have been created yet."}
               </p>
             </div>
           </Card>
         ) : (
-          filteredBookings.map((booking) => (
-            <Card key={booking.id} className="overflow-hidden">
-              {/* Service and Booking Overview */}
-              <div className="p-4 border-b bg-gray-50">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <Calendar className="w-5 h-5 text-blue-600" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900">
-                        {booking.services?.name || "Service"}
-                      </h3>
-                      <div className="flex items-center space-x-4 text-sm text-gray-600">
-                        <span>{new Date(booking.booking_date).toLocaleDateString()}</span>
-                        <span>{formatDisplayTime(booking.start_time)}</span>
-                        <span className="flex items-center space-x-1">
-                          <Hash className="w-3 h-3" />
-                          <span>{booking.booking_reference || `BK${Math.random().toString(36).substr(2, 4).toUpperCase()}`}</span>
-                        </span>
+          <>
+            {presentBookings.length > 0 && (
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 mb-2">Present</h2>
+                <div className="space-y-4">
+                  {presentBookings.map((booking) => (
+                    <Card key={booking.id} className="overflow-hidden">
+                      {/* Service and Booking Overview */}
+                      <div className="p-4 border-b bg-gray-50">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                              <Calendar className="w-5 h-5 text-blue-600" />
+                            </div>
+                            <div>
+                              <h3 className="font-semibold text-gray-900">
+                                {booking.services?.name || "Service"}
+                              </h3>
+                              <div className="flex items-center space-x-4 text-sm text-gray-600">
+                                <span>{new Date(booking.booking_date).toLocaleDateString()}</span>
+                                <span>{formatDisplayTime(booking.start_time)}</span>
+                                <span className="flex items-center space-x-1">
+                                  <Hash className="w-3 h-3" />
+                                  <span>{booking.booking_reference || `BK${Math.random().toString(36).substr(2, 4).toUpperCase()}`}</span>
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between sm:justify-end space-x-2 sm:space-x-3 flex-shrink-0">
+                            <BookingStatusIndicator status={booking.booking_status} size="sm" showProgress={false} />
+                            <div className="text-right">
+                              <p className="text-base sm:text-lg font-bold text-gray-900">
+                                ${booking.total_amount || "115"}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between sm:justify-end space-x-2 sm:space-x-3 flex-shrink-0">
-                    <BookingStatusIndicator status={booking.booking_status} size="sm" showProgress={false} />
-                    <div className="text-right">
-                      <p className="text-base sm:text-lg font-bold text-gray-900">
-                        ${booking.total_amount || "115"}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
 
-              {/* Customer and Location Details */}
-              <div className="p-4">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 space-y-2 sm:space-y-0">
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-900 text-sm truncate">
-                      Customer: {booking.customer_profiles?.first_name && booking.customer_profiles?.last_name
-                        ? `${booking.customer_profiles.first_name} ${booking.customer_profiles.last_name}`
-                        : booking.guest_name || "Alan Smith"}
-                    </p>
-                    <div className="flex items-center space-x-2 text-xs text-gray-600">
-                      <MapPin className="w-3 h-3" />
-                      <span className="truncate">
-                        {booking.customer_location_id ? "Customer Location" : "Business Location"}
-                      </span>
-                    </div>
-                    <div className="text-xs text-gray-500 truncate">
-                      {booking.customer_locations 
-                        ? `${booking.customer_locations.location_name || ""} ${booking.customer_locations.street_address || ""}${booking.customer_locations.unit_number ? `, ${booking.customer_locations.unit_number}` : ""}, ${booking.customer_locations.city || ""}, ${booking.customer_locations.state || ""}`
-                        : booking.business_locations
-                        ? `${booking.business_locations.location_name || ""} ${booking.business_locations.address_line1 || ""}, ${booking.business_locations.city || ""}, ${booking.business_locations.state || ""}`
-                        : "Location not specified"
-                      }
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-1 flex-shrink-0">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-6 sm:h-7 px-2 text-xs text-blue-600 border-blue-200 hover:bg-blue-50 whitespace-nowrap"
-                      onClick={() => onOpenBookingDetails(booking)}
-                    >
-                      <span className="hidden sm:inline">More Details</span>
-                      <span className="sm:hidden">Details</span>
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 w-6 sm:h-7 sm:w-7 p-0 text-blue-600"
-                      onClick={() => onOpenMessageFromBooking(booking.id, booking.customer_profiles?.id || booking.guest_name)}
-                    >
-                      <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4" />
-                    </Button>
-                  </div>
-                </div>
+                      {/* Customer and Location Details */}
+                      <div className="p-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 space-y-2 sm:space-y-0">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-gray-900 text-sm truncate">
+                              Customer: {booking.customer_profiles?.first_name && booking.customer_profiles?.last_name
+                                ? `${booking.customer_profiles.first_name} ${booking.customer_profiles.last_name}`
+                                : booking.guest_name || "Alan Smith"}
+                            </p>
+                            <div className="flex items-center space-x-2 text-xs text-gray-600">
+                              <MapPin className="w-3 h-3" />
+                              <span className="truncate">
+                                {booking.customer_location_id ? "Customer Location" : "Business Location"}
+                              </span>
+                            </div>
+                            <div className="text-xs text-gray-500 truncate">
+                              {booking.customer_locations
+                                ? `${booking.customer_locations.location_name || ""} ${booking.customer_locations.street_address || ""}${booking.customer_locations.unit_number ? `, ${booking.customer_locations.unit_number}` : ""}, ${booking.customer_locations.city || ""}, ${booking.customer_locations.state || ""}`
+                                : booking.business_locations
+                                ? `${booking.business_locations.location_name || ""} ${booking.business_locations.address_line1 || ""}, ${booking.business_locations.city || ""}, ${booking.business_locations.state || ""}`
+                                : "Location not specified"
+                              }
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-1 flex-shrink-0">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-6 sm:h-7 px-2 text-xs text-blue-600 border-blue-200 hover:bg-blue-50 whitespace-nowrap"
+                              onClick={() => onOpenBookingDetails(booking)}
+                            >
+                              <span className="hidden sm:inline">More Details</span>
+                              <span className="sm:hidden">Details</span>
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 sm:h-7 sm:w-7 p-0 text-blue-600"
+                              onClick={() => onOpenMessageFromBooking(booking.id, booking.customer_profiles?.id || booking.guest_name)}
+                            >
+                              <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4" />
+                            </Button>
+                          </div>
+                        </div>
 
-                {/* Provider Assignment Row */}
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 bg-gray-50 p-2 rounded space-y-2 sm:space-y-0">
-                  <div className="flex items-center space-x-2">
-                    <Users className="w-3 h-3 text-gray-600" />
-                    <span className="text-xs font-medium text-gray-700">
-                      {providerData.provider_role === "provider" ? "Assigned Provider:" : "Provider:"}
-                    </span>
-                    {providerData.provider_role !== "provider" && 
-                     !["pending", "confirmed"].includes(booking.booking_status) && (
-                      <span className="text-xs text-gray-500">
-                        (Can't reassign - booking is {booking.booking_status})
-                      </span>
-                    )}
-                  </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <div className="text-xs font-medium text-gray-900">
-                      {booking.providers 
-                        ? `${booking.providers.first_name} ${booking.providers.last_name}`
-                        : "Unassigned"
-                      }
-                    </div>
-                    <Select
-                      value={booking.providers?.id || "unassigned"}
-                      disabled={
-                        providerData.provider_role === "provider" || 
-                        (providerData.provider_role !== "provider" && 
-                         !["pending", "confirmed"].includes(booking.booking_status))
-                      }
-                      onValueChange={(value) => handleAssignProvider(booking.id, value)}
-                    >
-                      <SelectTrigger className="w-full sm:w-32 h-7 text-xs">
-                        <SelectValue placeholder={
-                          providerData.provider_role === "provider" 
-                            ? (booking.providers 
+                        {/* Provider Assignment Row */}
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 bg-gray-50 p-2 rounded space-y-2 sm:space-y-0">
+                          <div className="flex items-center space-x-2">
+                            <Users className="w-3 h-3 text-gray-600" />
+                            <span className="text-xs font-medium text-gray-700">
+                              {providerData.provider_role === "provider" ? "Assigned Provider:" : "Provider:"}
+                            </span>
+                            {providerData.provider_role !== "provider" &&
+                             !["pending", "confirmed"].includes(booking.booking_status) && (
+                              <span className="text-xs text-gray-500">
+                                (Can't reassign - booking is {booking.booking_status})
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex items-center space-x-2">
+                            <div className="text-xs font-medium text-gray-900">
+                              {booking.providers
                                 ? `${booking.providers.first_name} ${booking.providers.last_name}`
-                                : "Unassigned")
-                            : !["pending", "confirmed"].includes(booking.booking_status)
-                            ? `Locked (${booking.booking_status})`
-                            : (booking.providers 
-                                ? `${booking.providers.first_name} ${booking.providers.last_name}`
-                                : "Unassigned")
-                        } />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="unassigned">Unassigned</SelectItem>
-                        {providerData.provider_role === "provider" ? (
-                          <SelectItem key={providerData.id} value={providerData.id}>
-                            {providerData.first_name} {providerData.last_name}
-                          </SelectItem>
-                        ) : (
-                          allProviders.map((provider) => (
-                            <SelectItem key={provider.id} value={provider.id}>
-                              {provider.first_name} {provider.last_name}
-                            </SelectItem>
-                          ))
+                                : "Unassigned"
+                              }
+                            </div>
+                            <Select
+                              value={booking.providers?.id || "unassigned"}
+                              disabled={
+                                providerData.provider_role === "provider" ||
+                                (providerData.provider_role !== "provider" &&
+                                 !["pending", "confirmed"].includes(booking.booking_status))
+                              }
+                              onValueChange={(value) => handleAssignProvider(booking.id, value)}
+                            >
+                              <SelectTrigger className="w-full sm:w-32 h-7 text-xs">
+                                <SelectValue placeholder={
+                                  providerData.provider_role === "provider"
+                                    ? (booking.providers
+                                        ? `${booking.providers.first_name} ${booking.providers.last_name}`
+                                        : "Unassigned")
+                                    : !["pending", "confirmed"].includes(booking.booking_status)
+                                    ? `Locked (${booking.booking_status})`
+                                    : (booking.providers
+                                        ? `${booking.providers.first_name} ${booking.providers.last_name}`
+                                        : "Unassigned")
+                                } />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="unassigned">Unassigned</SelectItem>
+                                {providerData.provider_role === "provider" ? (
+                                  <SelectItem key={providerData.id} value={providerData.id}>
+                                    {providerData.first_name} {providerData.last_name}
+                                  </SelectItem>
+                                ) : (
+                                  allProviders.map((provider) => (
+                                    <SelectItem key={provider.id} value={provider.id}>
+                                      {provider.first_name} {provider.last_name}
+                                    </SelectItem>
+                                  ))
+                                )}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+
+                        {/* Actions Row - Only for pending bookings */}
+                        {booking.booking_status === "pending" && (
+                          <div className="flex items-center justify-center space-x-2 pt-2 border-t">
+                            <Button
+                              size="sm"
+                              onClick={() => handleAcceptBooking(booking.id)}
+                              className="bg-blue-600 hover:bg-blue-700 text-white px-3 sm:px-4 py-1 text-xs h-6 sm:h-7 flex-1 sm:flex-none"
+                            >
+                              Accept
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleDeclineBooking(booking.id)}
+                              className="border-red-300 text-red-600 hover:bg-red-50 px-3 sm:px-4 py-1 text-xs h-6 sm:h-7 flex-1 sm:flex-none"
+                            >
+                              Decline
+                            </Button>
+                          </div>
                         )}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                      </div>
+                    </Card>
+                  ))}
                 </div>
-
-                {/* Actions Row - Only for pending bookings */}
-                {booking.booking_status === "pending" && (
-                  <div className="flex items-center justify-center space-x-2 pt-2 border-t">
-                    <Button
-                      size="sm"
-                      onClick={() => handleAcceptBooking(booking.id)}
-                      className="bg-blue-600 hover:bg-blue-700 text-white px-3 sm:px-4 py-1 text-xs h-6 sm:h-7 flex-1 sm:flex-none"
-                    >
-                      Accept
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleDeclineBooking(booking.id)}
-                      className="border-red-300 text-red-600 hover:bg-red-50 px-3 sm:px-4 py-1 text-xs h-6 sm:h-7 flex-1 sm:flex-none"
-                    >
-                      Decline
-                    </Button>
-                  </div>
-                )}
               </div>
-            </Card>
-          ))
+            )}
+
+            {futureBookings.length > 0 && (
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 mb-2">Future</h2>
+                <div className="space-y-4">
+                  {futureBookings.map((booking) => (
+                    <Card key={booking.id} className="overflow-hidden">
+                      {/* Service and Booking Overview */}
+                      <div className="p-4 border-b bg-gray-50">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                              <Calendar className="w-5 h-5 text-blue-600" />
+                            </div>
+                            <div>
+                              <h3 className="font-semibold text-gray-900">
+                                {booking.services?.name || "Service"}
+                              </h3>
+                              <div className="flex items-center space-x-4 text-sm text-gray-600">
+                                <span>{new Date(booking.booking_date).toLocaleDateString()}</span>
+                                <span>{formatDisplayTime(booking.start_time)}</span>
+                                <span className="flex items-center space-x-1">
+                                  <Hash className="w-3 h-3" />
+                                  <span>{booking.booking_reference || `BK${Math.random().toString(36).substr(2, 4).toUpperCase()}`}</span>
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between sm:justify-end space-x-2 sm:space-x-3 flex-shrink-0">
+                            <BookingStatusIndicator status={booking.booking_status} size="sm" showProgress={false} />
+                            <div className="text-right">
+                              <p className="text-base sm:text-lg font-bold text-gray-900">
+                                ${booking.total_amount || "115"}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Customer and Location Details */}
+                      <div className="p-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 space-y-2 sm:space-y-0">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-gray-900 text-sm truncate">
+                              Customer: {booking.customer_profiles?.first_name && booking.customer_profiles?.last_name
+                                ? `${booking.customer_profiles.first_name} ${booking.customer_profiles.last_name}`
+                                : booking.guest_name || "Alan Smith"}
+                            </p>
+                            <div className="flex items-center space-x-2 text-xs text-gray-600">
+                              <MapPin className="w-3 h-3" />
+                              <span className="truncate">
+                                {booking.customer_location_id ? "Customer Location" : "Business Location"}
+                              </span>
+                            </div>
+                            <div className="text-xs text-gray-500 truncate">
+                              {booking.customer_locations
+                                ? `${booking.customer_locations.location_name || ""} ${booking.customer_locations.street_address || ""}${booking.customer_locations.unit_number ? `, ${booking.customer_locations.unit_number}` : ""}, ${booking.customer_locations.city || ""}, ${booking.customer_locations.state || ""}`
+                                : booking.business_locations
+                                ? `${booking.business_locations.location_name || ""} ${booking.business_locations.address_line1 || ""}, ${booking.business_locations.city || ""}, ${booking.business_locations.state || ""}`
+                                : "Location not specified"
+                              }
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-1 flex-shrink-0">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-6 sm:h-7 px-2 text-xs text-blue-600 border-blue-200 hover:bg-blue-50 whitespace-nowrap"
+                              onClick={() => onOpenBookingDetails(booking)}
+                            >
+                              <span className="hidden sm:inline">More Details</span>
+                              <span className="sm:hidden">Details</span>
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 sm:h-7 sm:w-7 p-0 text-blue-600"
+                              onClick={() => onOpenMessageFromBooking(booking.id, booking.customer_profiles?.id || booking.guest_name)}
+                            >
+                              <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4" />
+                            </Button>
+                          </div>
+                        </div>
+
+                        {/* Provider Assignment Row */}
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 bg-gray-50 p-2 rounded space-y-2 sm:space-y-0">
+                          <div className="flex items-center space-x-2">
+                            <Users className="w-3 h-3 text-gray-600" />
+                            <span className="text-xs font-medium text-gray-700">
+                              {providerData.provider_role === "provider" ? "Assigned Provider:" : "Provider:"}
+                            </span>
+                            {providerData.provider_role !== "provider" &&
+                             !["pending", "confirmed"].includes(booking.booking_status) && (
+                              <span className="text-xs text-gray-500">
+                                (Can't reassign - booking is {booking.booking_status})
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex items-center space-x-2">
+                            <div className="text-xs font-medium text-gray-900">
+                              {booking.providers
+                                ? `${booking.providers.first_name} ${booking.providers.last_name}`
+                                : "Unassigned"
+                              }
+                            </div>
+                            <Select
+                              value={booking.providers?.id || "unassigned"}
+                              disabled={
+                                providerData.provider_role === "provider" ||
+                                (providerData.provider_role !== "provider" &&
+                                 !["pending", "confirmed"].includes(booking.booking_status))
+                              }
+                              onValueChange={(value) => handleAssignProvider(booking.id, value)}
+                            >
+                              <SelectTrigger className="w-full sm:w-32 h-7 text-xs">
+                                <SelectValue placeholder={
+                                  providerData.provider_role === "provider"
+                                    ? (booking.providers
+                                        ? `${booking.providers.first_name} ${booking.providers.last_name}`
+                                        : "Unassigned")
+                                    : !["pending", "confirmed"].includes(booking.booking_status)
+                                    ? `Locked (${booking.booking_status})`
+                                    : (booking.providers
+                                        ? `${booking.providers.first_name} ${booking.providers.last_name}`
+                                        : "Unassigned")
+                                } />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="unassigned">Unassigned</SelectItem>
+                                {providerData.provider_role === "provider" ? (
+                                  <SelectItem key={providerData.id} value={providerData.id}>
+                                    {providerData.first_name} {providerData.last_name}
+                                  </SelectItem>
+                                ) : (
+                                  allProviders.map((provider) => (
+                                    <SelectItem key={provider.id} value={provider.id}>
+                                      {provider.first_name} {provider.last_name}
+                                    </SelectItem>
+                                  ))
+                                )}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+
+                        {/* Actions Row - Only for pending bookings */}
+                        {booking.booking_status === "pending" && (
+                          <div className="flex items-center justify-center space-x-2 pt-2 border-t">
+                            <Button
+                              size="sm"
+                              onClick={() => handleAcceptBooking(booking.id)}
+                              className="bg-blue-600 hover:bg-blue-700 text-white px-3 sm:px-4 py-1 text-xs h-6 sm:h-7 flex-1 sm:flex-none"
+                            >
+                              Accept
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleDeclineBooking(booking.id)}
+                              className="border-red-300 text-red-600 hover:bg-red-50 px-3 sm:px-4 py-1 text-xs h-6 sm:h-7 flex-1 sm:flex-none"
+                            >
+                              Decline
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {pastBookings.length > 0 && (
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 mb-2">Past</h2>
+                <div className="space-y-4">
+                  {pastBookings.map((booking) => (
+                    <Card key={booking.id} className="overflow-hidden">
+                      {/* Service and Booking Overview */}
+                      <div className="p-4 border-b bg-gray-50">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                              <Calendar className="w-5 h-5 text-blue-600" />
+                            </div>
+                            <div>
+                              <h3 className="font-semibold text-gray-900">
+                                {booking.services?.name || "Service"}
+                              </h3>
+                              <div className="flex items-center space-x-4 text-sm text-gray-600">
+                                <span>{new Date(booking.booking_date).toLocaleDateString()}</span>
+                                <span>{formatDisplayTime(booking.start_time)}</span>
+                                <span className="flex items-center space-x-1">
+                                  <Hash className="w-3 h-3" />
+                                  <span>{booking.booking_reference || `BK${Math.random().toString(36).substr(2, 4).toUpperCase()}`}</span>
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between sm:justify-end space-x-2 sm:space-x-3 flex-shrink-0">
+                            <BookingStatusIndicator status={booking.booking_status} size="sm" showProgress={false} />
+                            <div className="text-right">
+                              <p className="text-base sm:text-lg font-bold text-gray-900">
+                                ${booking.total_amount || "115"}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Customer and Location Details */}
+                      <div className="p-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 space-y-2 sm:space-y-0">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-gray-900 text-sm truncate">
+                              Customer: {booking.customer_profiles?.first_name && booking.customer_profiles?.last_name
+                                ? `${booking.customer_profiles.first_name} ${booking.customer_profiles.last_name}`
+                                : booking.guest_name || "Alan Smith"}
+                            </p>
+                            <div className="flex items-center space-x-2 text-xs text-gray-600">
+                              <MapPin className="w-3 h-3" />
+                              <span className="truncate">
+                                {booking.customer_location_id ? "Customer Location" : "Business Location"}
+                              </span>
+                            </div>
+                            <div className="text-xs text-gray-500 truncate">
+                              {booking.customer_locations
+                                ? `${booking.customer_locations.location_name || ""} ${booking.customer_locations.street_address || ""}${booking.customer_locations.unit_number ? `, ${booking.customer_locations.unit_number}` : ""}, ${booking.customer_locations.city || ""}, ${booking.customer_locations.state || ""}`
+                                : booking.business_locations
+                                ? `${booking.business_locations.location_name || ""} ${booking.business_locations.address_line1 || ""}, ${booking.business_locations.city || ""}, ${booking.business_locations.state || ""}`
+                                : "Location not specified"
+                              }
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-1 flex-shrink-0">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-6 sm:h-7 px-2 text-xs text-blue-600 border-blue-200 hover:bg-blue-50 whitespace-nowrap"
+                              onClick={() => onOpenBookingDetails(booking)}
+                            >
+                              <span className="hidden sm:inline">More Details</span>
+                              <span className="sm:hidden">Details</span>
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 sm:h-7 sm:w-7 p-0 text-blue-600"
+                              onClick={() => onOpenMessageFromBooking(booking.id, booking.customer_profiles?.id || booking.guest_name)}
+                            >
+                              <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4" />
+                            </Button>
+                          </div>
+                        </div>
+
+                        {/* Provider Assignment Row */}
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 bg-gray-50 p-2 rounded space-y-2 sm:space-y-0">
+                          <div className="flex items-center space-x-2">
+                            <Users className="w-3 h-3 text-gray-600" />
+                            <span className="text-xs font-medium text-gray-700">
+                              {providerData.provider_role === "provider" ? "Assigned Provider:" : "Provider:"}
+                            </span>
+                            {providerData.provider_role !== "provider" &&
+                             !["pending", "confirmed"].includes(booking.booking_status) && (
+                              <span className="text-xs text-gray-500">
+                                (Can't reassign - booking is {booking.booking_status})
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex items-center space-x-2">
+                            <div className="text-xs font-medium text-gray-900">
+                              {booking.providers
+                                ? `${booking.providers.first_name} ${booking.providers.last_name}`
+                                : "Unassigned"
+                              }
+                            </div>
+                            <Select
+                              value={booking.providers?.id || "unassigned"}
+                              disabled={
+                                providerData.provider_role === "provider" ||
+                                (providerData.provider_role !== "provider" &&
+                                 !["pending", "confirmed"].includes(booking.booking_status))
+                              }
+                              onValueChange={(value) => handleAssignProvider(booking.id, value)}
+                            >
+                              <SelectTrigger className="w-full sm:w-32 h-7 text-xs">
+                                <SelectValue placeholder={
+                                  providerData.provider_role === "provider"
+                                    ? (booking.providers
+                                        ? `${booking.providers.first_name} ${booking.providers.last_name}`
+                                        : "Unassigned")
+                                    : !["pending", "confirmed"].includes(booking.booking_status)
+                                    ? `Locked (${booking.booking_status})`
+                                    : (booking.providers
+                                        ? `${booking.providers.first_name} ${booking.providers.last_name}`
+                                        : "Unassigned")
+                                } />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="unassigned">Unassigned</SelectItem>
+                                {providerData.provider_role === "provider" ? (
+                                  <SelectItem key={providerData.id} value={providerData.id}>
+                                    {providerData.first_name} {providerData.last_name}
+                                  </SelectItem>
+                                ) : (
+                                  allProviders.map((provider) => (
+                                    <SelectItem key={provider.id} value={provider.id}>
+                                      {provider.first_name} {provider.last_name}
+                                    </SelectItem>
+                                  ))
+                                )}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+
+                        {/* Actions Row - Only for pending bookings */}
+                        {booking.booking_status === "pending" && (
+                          <div className="flex items-center justify-center space-x-2 pt-2 border-t">
+                            <Button
+                              size="sm"
+                              onClick={() => handleAcceptBooking(booking.id)}
+                              className="bg-blue-600 hover:bg-blue-700 text-white px-3 sm:px-4 py-1 text-xs h-6 sm:h-7 flex-1 sm:flex-none"
+                            >
+                              Accept
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleDeclineBooking(booking.id)}
+                              className="border-red-300 text-red-600 hover:bg-red-50 px-3 sm:px-4 py-1 text-xs h-6 sm:h-7 flex-1 sm:flex-none"
+                            >
+                              Decline
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
