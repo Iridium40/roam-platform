@@ -72,6 +72,7 @@ const AdminVerification = lazy(() => import("./pages/AdminVerification"));
 const AdminProviders = lazy(() => import("./pages/AdminProviders"));
 const AdminServices = lazy(() => import("./pages/AdminServices"));
 const AdminBookings = lazy(() => import("./pages/AdminBookings"));
+const AdminContactSubmissions = lazy(() => import("./pages/AdminContactSubmissions"));
 const AdminPromotions = lazy(() => import("./pages/AdminPromotions"));
 const AdminReviews = lazy(() => import("./pages/AdminReviews"));
 const AdminAnnouncements = lazy(() => import("./pages/AdminAnnouncements"));
