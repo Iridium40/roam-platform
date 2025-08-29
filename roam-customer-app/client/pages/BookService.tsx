@@ -517,38 +517,82 @@ export default function BookService() {
             {currentStep === 'datetime' && (
               <div>
                 <h2 className="text-2xl font-semibold mb-6 flex items-center">
-                  <Calendar className="w-6 h-6 mr-2" />
+                  <CalendarIcon className="w-6 h-6 mr-2" />
                   Select Date & Time
                 </h2>
-                <div className="grid md:grid-cols-2 gap-6">
+                <div className="grid lg:grid-cols-2 gap-8">
+                  {/* Enhanced Calendar Selector */}
                   <div>
-                    <label className="block text-sm font-medium mb-2">Date</label>
-                    <input
-                      type="date"
-                      value={selectedDate}
-                      onChange={(e) => setSelectedDate(e.target.value)}
-                      min={new Date().toISOString().split('T')[0]}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-roam-blue focus:border-transparent"
-                    />
+                    <label className="block text-sm font-medium mb-3">Choose your preferred date</label>
+                    <div className="space-y-3">
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "w-full justify-start text-left font-normal h-12",
+                              !selectedDate && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {selectedDate ? format(selectedDate, "PPP") : "Pick a date"}
+                            <ChevronDown className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={selectedDate}
+                            onSelect={setSelectedDate}
+                            disabled={(date) => date < new Date() || date < new Date("1900-01-01")}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      {selectedDate && (
+                        <div className="text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
+                          <CalendarIcon className="w-4 h-4 inline mr-2" />
+                          You selected: {format(selectedDate, "EEEE, MMMM do, yyyy")}
+                        </div>
+                      )}
+                    </div>
                   </div>
+
+                  {/* Enhanced Time Selector */}
                   <div>
-                    <label className="block text-sm font-medium mb-2">Time</label>
-                    <select
-                      value={selectedTime}
-                      onChange={(e) => setSelectedTime(e.target.value)}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-roam-blue focus:border-transparent"
-                    >
-                      <option value="">Select a time</option>
-                      <option value="09:00">9:00 AM</option>
-                      <option value="10:00">10:00 AM</option>
-                      <option value="11:00">11:00 AM</option>
-                      <option value="12:00">12:00 PM</option>
-                      <option value="13:00">1:00 PM</option>
-                      <option value="14:00">2:00 PM</option>
-                      <option value="15:00">3:00 PM</option>
-                      <option value="16:00">4:00 PM</option>
-                      <option value="17:00">5:00 PM</option>
-                    </select>
+                    <label className="block text-sm font-medium mb-3">Choose your preferred time</label>
+                    <div className="space-y-4">
+                      {Object.entries(groupedTimeSlots).map(([period, slots]) => (
+                        <div key={period}>
+                          <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center">
+                            <Clock className="w-4 h-4 mr-1" />
+                            {period}
+                          </h4>
+                          <div className="grid grid-cols-2 gap-2">
+                            {slots.map((slot) => (
+                              <Button
+                                key={slot.value}
+                                variant={selectedTime === slot.value ? "default" : "outline"}
+                                size="sm"
+                                className={cn(
+                                  "justify-center text-sm",
+                                  selectedTime === slot.value && "bg-roam-blue hover:bg-roam-blue/90"
+                                )}
+                                onClick={() => setSelectedTime(slot.value)}
+                              >
+                                {slot.label}
+                              </Button>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                      {selectedTime && (
+                        <div className="text-sm text-gray-600 bg-green-50 p-3 rounded-lg mt-4">
+                          <Clock className="w-4 h-4 inline mr-2" />
+                          You selected: {timeSlots.find(slot => slot.value === selectedTime)?.label}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
