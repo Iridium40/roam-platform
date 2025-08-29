@@ -171,6 +171,15 @@ export default function BusinessSettingsTab({
       const { data: { session } } = await supabase.auth.getSession();
       const accessToken = session?.access_token || localStorage.getItem('roam_access_token');
 
+      console.log('Service eligibility auth debug:', {
+        hasSession: !!session,
+        hasSessionToken: !!session?.access_token,
+        hasStoredToken: !!localStorage.getItem('roam_access_token'),
+        tokenSource: session?.access_token ? 'session' : 'localStorage',
+        tokenLength: accessToken?.length,
+        businessId: business.id
+      });
+
       if (!accessToken) {
         throw new Error('Authentication required. Please sign in again.');
       }
