@@ -346,7 +346,23 @@ export default function BookService() {
       }
 
       console.log('🏪 Fetching business services with pricing...');
-      // Get business services with pricing information
+
+      // First, try a simple query to see if business_services table exists
+      console.log('🔍 Testing business_services table access...');
+      const { data: testBusinessServices, error: testError } = await supabase
+        .from('business_services')
+        .select('business_id, service_id, service_price, is_active')
+        .eq('service_id', serviceId)
+        .limit(5);
+
+      console.log('🔍 Test query result:', { testBusinessServices, testError });
+
+      if (testError) {
+        console.log('❌ business_services table query failed, using fallback approach');
+        throw new Error(`business_services query failed: ${testError.message}`);
+      }
+
+      // If test query works, try the full query
       const { data: businessServiceData, error: businessServiceError } = await supabase
         .from('business_services')
         .select(`
