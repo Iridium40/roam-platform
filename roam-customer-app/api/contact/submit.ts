@@ -68,7 +68,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         subject: submissionData.subject,
         message: submissionData.message,
         full_name: submissionData.name,
-        Category: submissionData.category,
+        category: submissionData.category,
         status: "received",
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
