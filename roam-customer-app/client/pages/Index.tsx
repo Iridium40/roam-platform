@@ -1297,20 +1297,32 @@ export default function Index() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={prevServiceSlide}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      console.log('Prev button clicked!');
+                      prevServiceSlide();
+                    }}
                     disabled={currentServiceSlide === 0}
-                    className="absolute left-4 top-1/2 -translate-y-1/2 z-10 bg-white/90 border-roam-blue text-roam-blue hover:bg-roam-blue hover:text-white shadow-lg disabled:opacity-50"
+                    className="absolute left-4 top-1/2 -translate-y-1/2 z-50 bg-white border-2 border-roam-blue text-roam-blue hover:bg-roam-blue hover:text-white shadow-xl disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    style={{ pointerEvents: 'auto' }}
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={nextServiceSlide}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      console.log('Next button clicked!');
+                      nextServiceSlide();
+                    }}
                     disabled={
                       currentServiceSlide >= servicePages.length - 1
                     }
-                    className="absolute right-4 top-1/2 -translate-y-1/2 z-10 bg-white/90 border-roam-blue text-roam-blue hover:bg-roam-blue hover:text-white shadow-lg disabled:opacity-50"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 z-50 bg-white border-2 border-roam-blue text-roam-blue hover:bg-roam-blue hover:text-white shadow-xl disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    style={{ pointerEvents: 'auto' }}
                   >
                     <ChevronRight className="w-4 h-4" />
                   </Button>
