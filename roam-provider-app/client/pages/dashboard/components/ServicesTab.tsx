@@ -592,7 +592,7 @@ export default function ServicesTab({
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
                   <p className="mt-2 text-gray-500">Loading services...</p>
                 </div>
-              ) : eligibleServices.length === 0 ? (
+              ) : filteredEligibleServices.length === 0 ? (
                 <div className="text-center py-8">
                   <Tag className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                   <h3 className="text-lg font-medium text-gray-900 mb-2">No Available Services</h3>
@@ -600,7 +600,7 @@ export default function ServicesTab({
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {eligibleServices.map((service) => (
+                  {filteredEligibleServices.map((service) => (
                     <Card key={service.id} className="cursor-pointer hover:shadow-md transition-shadow">
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between mb-3">
