@@ -773,16 +773,22 @@ export default function Index() {
     return pages;
   }, [filteredPopularServices]);
 
-  const nextPopularSlide = () => {
+  const nextPopularSlide = useCallback(() => {
     const maxPage = Math.max(0, popularPages.length - 1);
-    console.log('Next popular slide clicked. Current:', currentPopularSlide, 'Max:', maxPage, 'Pages:', popularPages.length);
-    setCurrentPopularSlide((prev) => Math.min(prev + 1, maxPage));
-  };
+    const newPage = Math.min(currentPopularSlide + 1, maxPage);
+    console.log('🔄 Next popular slide clicked');
+    console.log('📊 Popular state:', { currentPopularSlide, maxPage, newPage, servicesCount: filteredPopularServices.length, pagesCount: popularPages.length });
+    console.log('📋 Popular pages:', popularPages.map((page, i) => ({ pageIndex: i, servicesInPage: page.length })));
+    setCurrentPopularSlide(newPage);
+  }, [currentPopularSlide, popularPages, filteredPopularServices.length]);
 
-  const prevPopularSlide = () => {
-    console.log('Prev popular slide clicked. Current:', currentPopularSlide);
-    setCurrentPopularSlide((prev) => Math.max(prev - 1, 0));
-  };
+  const prevPopularSlide = useCallback(() => {
+    const newPage = Math.max(currentPopularSlide - 1, 0);
+    console.log('🔄 Prev popular slide clicked');
+    console.log('📊 Popular state:', { currentPopularSlide, newPage, servicesCount: filteredPopularServices.length, pagesCount: popularPages.length });
+    console.log('📋 Popular pages:', popularPages.map((page, i) => ({ pageIndex: i, servicesInPage: page.length })));
+    setCurrentPopularSlide(newPage);
+  }, [currentPopularSlide, popularPages, filteredPopularServices.length]);
 
   // Old promotions pagination logic (kept for existing database promotions if needed)
   const promotionPages = useMemo(() => {
