@@ -155,25 +155,55 @@ export default function BusinessSettingsTab({
 
   // Load service eligibility data
   const loadServiceEligibility = async () => {
-    if (!business?.id) return;
+    if (!business?.id) {
+      console.warn('loadServiceEligibility: No business ID available');
+      return;
+    }
 
     try {
       setEligibilityLoading(true);
       setEligibilityError(null);
 
-      const response = await fetch(`/api/business/service-eligibility?business_id=${business.id}`);
+      console.log('Loading service eligibility for business:', business.id);
 
-      // Read the response body once
-      const responseData = await response.json();
+      const response = await fetch(`/api/business/service-eligibility?business_id=${business.id}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
 
+      // Check if response is ok before trying to parse JSON
       if (!response.ok) {
-        throw new Error(responseData.error || 'Failed to load service eligibility');
+        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+
+        // Try to parse error response if it's JSON
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch (parseError) {
+          // If we can't parse the error response, use the status text
+          console.warn('Could not parse error response:', parseError);
+        }
+
+        throw new Error(errorMessage);
       }
 
+      // Parse the successful response
+      const responseData = await response.json();
+
+      if (!responseData) {
+        throw new Error('No data received from server');
+      }
+
+      console.log('Service eligibility loaded successfully:', responseData);
       setServiceEligibility(responseData);
+
     } catch (error) {
       console.error('Error loading service eligibility:', error);
-      setEligibilityError(error instanceof Error ? error.message : 'Failed to load service eligibility');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load service eligibility';
+      setEligibilityError(errorMessage);
+
       toast({
         title: "Error",
         description: "Failed to load service eligibility data.",
