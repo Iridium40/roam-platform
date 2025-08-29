@@ -181,8 +181,14 @@ export function createServer() {
     }
   );
 
+  // Business service eligibility route
+  app.get("/api/business/service-eligibility",
+    requireAuth(['owner', 'dispatcher', 'admin']),
+    getServiceEligibility
+  );
+
   // Business profile routes with auth and business access
-  app.get("/api/business/profile/:businessId", 
+  app.get("/api/business/profile/:businessId",
     requireAuth(['owner', 'dispatcher', 'admin']),
     requireBusinessAccess('businessId'),
     async (req: AuthenticatedRequest, res) => {
