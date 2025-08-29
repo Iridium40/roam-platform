@@ -39,6 +39,7 @@ interface Business {
   business_name: string;
   description: string;
   image_url?: string;
+  logo_url?: string;
   rating: number;
   review_count: number;
   delivery_types?: string[];
