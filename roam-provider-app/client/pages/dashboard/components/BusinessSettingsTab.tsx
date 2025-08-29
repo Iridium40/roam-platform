@@ -1074,18 +1074,13 @@ export default function BusinessSettingsTab({
 
               {/* Categories and Subcategories */}
               <div className="space-y-4">
-                {(
-                  serviceEligibility.approved_categories.length > 0
-                    ? serviceEligibility.approved_categories
-                    : Object.entries(serviceEligibility.subcategories_by_category || {}).map(([categoryId, subcats]: [string, any[]]) => ({
-                        id: categoryId,
-                        service_categories: subcats?.[0]?.service_categories || null
-                      }))
-                ).map((categoryItem) => {
-                  const category = categoryItem.service_categories;
+                {Object.entries(serviceEligibility.subcategories_by_category || {}).map(([categoryId, subcats]: [string, any[]]) => {
+                  const category = subcats?.[0]?.service_categories;
+                  const categoryItem = { id: categoryId, service_categories: category } as any;
+                  // category derived above
                   if (!category) return null;
 
-                  const subcategoriesForThisCategory = serviceEligibility.subcategories_by_category[category.id] || [];
+                  const subcategoriesForThisCategory = subcats || [];
 
                   return (
                     <div key={categoryItem.id} className="border border-gray-200 rounded-lg overflow-hidden">
@@ -1094,7 +1089,7 @@ export default function BusinessSettingsTab({
                         <div className="flex items-center justify-between">
                           <div>
                             <h4 className="font-semibold text-gray-900 text-lg">
-                              {category.service_category_type}
+                              {category?.description || category?.service_category_type}
                             </h4>
                             {category.description && (
                               <p className="text-sm text-gray-600 mt-1">{category.description}</p>
@@ -1128,7 +1123,7 @@ export default function BusinessSettingsTab({
                                   <div className="flex items-start justify-between">
                                     <div className="flex-1">
                                       <h6 className="font-medium text-gray-900 text-sm">
-                                        {subcategory.service_subcategory_type}
+                                        {subcategory.description || subcategory.service_subcategory_type}
                                       </h6>
                                       {subcategory.description && (
                                         <p className="text-xs text-gray-600 mt-1 line-clamp-2">
