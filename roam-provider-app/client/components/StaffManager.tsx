@@ -60,6 +60,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth/AuthProvider";
 import { supabase } from "@/lib/supabase";
+import { useToast } from "@/hooks/use-toast";
 import type {
   Provider,
   BusinessLocation,
@@ -132,6 +133,7 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
   locations,
 }) => {
   const { user, isOwner, isDispatcher } = useAuth();
+  const { toast } = useToast();
   const [staff, setStaff] = useState<StaffMemberWithStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -338,7 +340,11 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
       }
 
       // Show success message
-      alert(`Invitation sent successfully to ${inviteEmail}!`);
+      toast({
+        title: "Invitation Sent!",
+        description: `Staff invitation has been sent to ${inviteEmail}`,
+        variant: "default",
+      });
 
       // Reset form
       setInviteEmail("");
@@ -349,7 +355,11 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
       await fetchStaff();
     } catch (error) {
       console.error("Error sending invite:", error);
-      alert(`Failed to send invitation: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      toast({
+        title: "Failed to Send Invitation",
+        description: error instanceof Error ? error.message : 'Unknown error occurred',
+        variant: "destructive",
+      });
     }
   };
 
