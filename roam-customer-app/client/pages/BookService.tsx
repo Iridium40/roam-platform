@@ -208,7 +208,7 @@ export default function BookService() {
         if (businessId) {
           const { data: businessData, error: businessError } = await supabase
             .from('business_profiles')
-            .select('id, business_name, business_description, image_url, logo_url')
+            .select('id, business_name, business_description, image_url, logo_url, business_type')
             .eq('id', businessId)
             .single();
 
@@ -219,6 +219,7 @@ export default function BookService() {
               description: businessData.business_description || businessData.description,
               image_url: businessData.image_url,
               logo_url: businessData.logo_url,
+              business_type: businessData.business_type,
               rating: 4.5, // Mock data
               review_count: 25, // Mock data
             };
