@@ -832,7 +832,7 @@ export default function BookService() {
         });
       }
     } catch (error) {
-      console.error('❌ Error during Stripe checkout initiation:', error);
+      console.error('❌ Error during Payment Intent creation:', error);
 
       // Provide more detailed error information
       let errorMessage = "An unexpected error occurred. Please try again.";
