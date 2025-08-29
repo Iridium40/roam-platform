@@ -714,7 +714,9 @@ export default function BookService() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Date & Time:</span>
-                      <span className="font-medium">{selectedDate} at {selectedTime}</span>
+                      <span className="font-medium">
+                        {selectedDate ? format(selectedDate, "PPP") : "Not selected"} at {timeSlots.find(slot => slot.value === selectedTime)?.label || selectedTime}
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Business:</span>
