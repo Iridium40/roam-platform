@@ -301,7 +301,7 @@ export default function AdminContactSubmissions() {
   };
 
   // Get status badge variant
-  const getStatusBadgeVariant = (status: SubmissionStatus) => {
+  const getStatusBadgeVariant = (status: SubmissionStatus | undefined | null) => {
     switch (status) {
       case "received": return "secondary";
       case "in_progress": return "warning";
