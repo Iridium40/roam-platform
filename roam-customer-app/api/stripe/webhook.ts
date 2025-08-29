@@ -31,6 +31,55 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.log('Processing webhook event:', event.type);
 
     switch (event.type) {
+      case 'checkout.session.completed': {
+        const session = event.data.object;
+        const metadata = session.metadata;
+
+        if (metadata && metadata.customer_id) {
+          // Extract booking details from metadata
+          const bookingData = {
+            customer_id: metadata.customer_id,
+            service_id: metadata.service_id,
+            business_id: metadata.business_id,
+            provider_id: metadata.provider_id,
+            booking_date: metadata.booking_date,
+            start_time: metadata.start_time,
+            delivery_type: metadata.delivery_type,
+            special_instructions: metadata.special_instructions || '',
+            promotion_id: metadata.promotion_id || null,
+            guest_phone: metadata.guest_phone || '',
+            total_amount: parseFloat(metadata.total_amount),
+            service_price: parseFloat(metadata.service_price),
+            service_fee: parseFloat(metadata.service_fee),
+            discount_applied: parseFloat(metadata.discount_applied),
+            stripe_session_id: session.id,
+            stripe_payment_intent_id: session.payment_intent,
+            payment_status: 'paid',
+            booking_status: 'confirmed',
+            paid_at: new Date().toISOString()
+          };
+
+          // Create booking in database
+          const { data: booking, error: bookingError } = await supabase
+            .from('bookings')
+            .insert([bookingData])
+            .select()
+            .single();
+
+          if (bookingError) {
+            console.error('Error creating booking:', bookingError);
+          } else {
+            console.log('✅ Booking created successfully:', booking.id);
+
+            // Update customer Stripe profile with payment method if saved
+            if (session.customer && session.setup_intent) {
+              await updateCustomerPaymentMethods(session.customer, session.setup_intent);
+            }
+          }
+        }
+        break;
+      }
+
       case 'payment_intent.succeeded': {
         const paymentIntent = event.data.object;
         const bookingId = paymentIntent.metadata?.bookingId;
