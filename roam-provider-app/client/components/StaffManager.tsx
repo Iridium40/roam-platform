@@ -58,7 +58,7 @@ import {
   Settings,
   Send,
 } from "lucide-react";
-import { useAuth } from "@/contexts/auth/AuthProvider";
+import { useProviderAuth } from "@/contexts/auth/ProviderAuthContext";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import type {
@@ -132,7 +132,7 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
   businessId,
   locations,
 }) => {
-  const { user, isOwner, isDispatcher } = useAuth();
+  const { provider: user, isOwner, isDispatcher } = useProviderAuth();
   const { toast } = useToast();
   const [staff, setStaff] = useState<StaffMemberWithStats[]>([]);
   const [loading, setLoading] = useState(true);
