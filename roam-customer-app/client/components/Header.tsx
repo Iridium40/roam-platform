@@ -133,12 +133,12 @@ export function Header() {
               >
                 Services
               </a>
-              <a
-                href="#how-it-works"
+              <Link
+                to="/how-it-works"
                 className="text-foreground/70 hover:text-roam-blue transition-colors"
               >
                 How it Works
-              </a>
+              </Link>
               <Link
                 to="/about"
                 className="text-foreground/70 hover:text-roam-blue transition-colors"
