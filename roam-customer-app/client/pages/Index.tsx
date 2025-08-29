@@ -1311,92 +1311,94 @@ export default function Index() {
                     transform: `translateX(-${currentServiceSlide * 100}%)`,
                   }}
                 >
-                  {servicePages[currentServiceSlide]?.map((service, serviceIndex) => (
+                  {servicePages.map((page, pageIndex) => (
                     <div
-                      key={`service-${service.id}`}
-                      className="w-full flex-none px-4"
+                      key={`page-${pageIndex}`}
+                      className="w-full flex-none grid grid-cols-1 md:grid-cols-2 gap-6 px-4"
                     >
-                      <Card
-                        key={service.id}
-                        className="hover:shadow-xl transition-all duration-300 cursor-pointer border-border/50 hover:border-roam-light-blue/50 overflow-hidden w-full"
-                      >
-                        <div className="relative h-64">
-                          <img
-                            src={service.image}
-                            alt={service.title}
-                            className="w-full h-full object-cover"
-                          />
-                          <div className="absolute top-4 left-4">
-                            <Badge
-                              className={`${getCategoryColor(service.category)} text-white border-0`}
-                              icon={getCategoryIcon(service.category)}
-                            >
-                              {service.category}
-                            </Badge>
-                          </div>
-                          <div className="absolute top-4 right-4 flex gap-2">
-                            <FavoriteButton
-                              type="service"
-                              itemId={service.id}
-                              size="sm"
-                              variant="ghost"
-                              className="bg-white/90 hover:bg-white"
+                      {page.map((service, serviceIndex) => (
+                        <Card
+                          key={service.id}
+                          className="hover:shadow-xl transition-all duration-300 cursor-pointer border-border/50 hover:border-roam-light-blue/50 overflow-hidden w-full"
+                        >
+                          <div className="relative h-64">
+                            <img
+                              src={service.image}
+                              alt={service.title}
+                              className="w-full h-full object-cover"
                             />
-                            <Badge
-                              variant="secondary"
-                              className="bg-white/90 text-gray-800"
-                            >
-                              <Star className="w-3 h-3 mr-1 text-roam-warning fill-current" />
-                              {service.rating}
-                            </Badge>
-                          </div>
-                        </div>
-                        <CardContent className="p-6">
-                          <h3 className="text-xl font-semibold mb-2">
-                            {service.title}
-                          </h3>
-                          <div className="mb-4">
-                            <p className="text-foreground/70">
-                              {getDisplayDescription(
-                                service.description,
-                                service.id,
-                              )}
-                            </p>
-                            {service.description.length > 200 && (
-                              <button
-                                onClick={() => toggleDescription(service.id)}
-                                className="md:hidden text-roam-blue text-sm font-medium hover:underline mt-1"
+                            <div className="absolute top-4 left-4">
+                              <Badge
+                                className={`${getCategoryColor(service.category)} text-white border-0`}
+                                icon={getCategoryIcon(service.category)}
                               >
-                                {expandedDescriptions.has(service.id)
-                                  ? "Show less"
-                                  : "Read more"}
-                              </button>
-                            )}
-                          </div>
-                          <div className="flex items-center justify-between mb-4">
-                            <div className="flex items-center gap-2">
-                              <span className="text-2xl font-bold text-roam-blue">
-                                Starting at {service.price}
-                              </span>
+                                {service.category}
+                              </Badge>
                             </div>
-                            <Badge
-                              variant="outline"
-                              className="border-roam-blue text-roam-blue"
-                            >
-                              {service.duration}
-                            </Badge>
+                            <div className="absolute top-4 right-4 flex gap-2">
+                              <FavoriteButton
+                                type="service"
+                                itemId={service.id}
+                                size="sm"
+                                variant="ghost"
+                                className="bg-white/90 hover:bg-white"
+                              />
+                              <Badge
+                                variant="secondary"
+                                className="bg-white/90 text-gray-800"
+                              >
+                                <Star className="w-3 h-3 mr-1 text-roam-warning fill-current" />
+                                {service.rating}
+                              </Badge>
+                            </div>
                           </div>
-                          <Button
-                            asChild
-                            className="w-full bg-roam-blue hover:bg-roam-blue/90"
-                          >
-                            <Link to={`/book-service/${service.id}`}>
-                              <Calendar className="w-4 h-4 mr-2" />
-                              Book This Service
-                            </Link>
-                          </Button>
-                        </CardContent>
-                      </Card>
+                          <CardContent className="p-6">
+                            <h3 className="text-xl font-semibold mb-2">
+                              {service.title}
+                            </h3>
+                            <div className="mb-4">
+                              <p className="text-foreground/70">
+                                {getDisplayDescription(
+                                  service.description,
+                                  service.id,
+                                )}
+                              </p>
+                              {service.description.length > 200 && (
+                                <button
+                                  onClick={() => toggleDescription(service.id)}
+                                  className="md:hidden text-roam-blue text-sm font-medium hover:underline mt-1"
+                                >
+                                  {expandedDescriptions.has(service.id)
+                                    ? "Show less"
+                                    : "Read more"}
+                                </button>
+                              )}
+                            </div>
+                            <div className="flex items-center justify-between mb-4">
+                              <div className="flex items-center gap-2">
+                                <span className="text-2xl font-bold text-roam-blue">
+                                  Starting at {service.price}
+                                </span>
+                              </div>
+                              <Badge
+                                variant="outline"
+                                className="border-roam-blue text-roam-blue"
+                              >
+                                {service.duration}
+                              </Badge>
+                            </div>
+                            <Button
+                              asChild
+                              className="w-full bg-roam-blue hover:bg-roam-blue/90"
+                            >
+                              <Link to={`/book-service/${service.id}`}>
+                                <Calendar className="w-4 h-4 mr-2" />
+                                Book This Service
+                              </Link>
+                            </Button>
+                          </CardContent>
+                        </Card>
+                      ))}
                     </div>
                   ))}
                 </div>
