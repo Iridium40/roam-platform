@@ -69,10 +69,43 @@ export default function BookService() {
   const [promotion, setPromotion] = useState<Promotion | null>(null);
   
   // Booking data
-  const [selectedDate, setSelectedDate] = useState<string>('');
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedTime, setSelectedTime] = useState<string>('');
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
   const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null);
+
+  // Time slots data
+  const timeSlots = [
+    { value: '09:00', label: '9:00 AM', period: 'Morning' },
+    { value: '09:30', label: '9:30 AM', period: 'Morning' },
+    { value: '10:00', label: '10:00 AM', period: 'Morning' },
+    { value: '10:30', label: '10:30 AM', period: 'Morning' },
+    { value: '11:00', label: '11:00 AM', period: 'Morning' },
+    { value: '11:30', label: '11:30 AM', period: 'Morning' },
+    { value: '12:00', label: '12:00 PM', period: 'Afternoon' },
+    { value: '12:30', label: '12:30 PM', period: 'Afternoon' },
+    { value: '13:00', label: '1:00 PM', period: 'Afternoon' },
+    { value: '13:30', label: '1:30 PM', period: 'Afternoon' },
+    { value: '14:00', label: '2:00 PM', period: 'Afternoon' },
+    { value: '14:30', label: '2:30 PM', period: 'Afternoon' },
+    { value: '15:00', label: '3:00 PM', period: 'Afternoon' },
+    { value: '15:30', label: '3:30 PM', period: 'Afternoon' },
+    { value: '16:00', label: '4:00 PM', period: 'Afternoon' },
+    { value: '16:30', label: '4:30 PM', period: 'Afternoon' },
+    { value: '17:00', label: '5:00 PM', period: 'Evening' },
+    { value: '17:30', label: '5:30 PM', period: 'Evening' },
+    { value: '18:00', label: '6:00 PM', period: 'Evening' },
+    { value: '18:30', label: '6:30 PM', period: 'Evening' },
+  ];
+
+  // Group time slots by period
+  const groupedTimeSlots = timeSlots.reduce((acc, slot) => {
+    if (!acc[slot.period]) {
+      acc[slot.period] = [];
+    }
+    acc[slot.period].push(slot);
+    return acc;
+  }, {} as Record<string, typeof timeSlots>);
 
   // Load service details and promotion if applicable
   useEffect(() => {
