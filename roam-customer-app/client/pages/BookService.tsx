@@ -829,8 +829,24 @@ export default function BookService() {
                   </div>
                 </div>
 
-                <div className="grid gap-6">
-                  {filteredAndSortedBusinesses.map((business) => (
+                {filteredAndSortedBusinesses.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Building className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-gray-600 mb-2">No businesses available</h3>
+                    <p className="text-gray-500 mb-4">
+                      No businesses offer this service at your selected date and time.
+                    </p>
+                    <Button
+                      variant="outline"
+                      onClick={() => setCurrentStep('datetime')}
+                      className="mr-2"
+                    >
+                      Change Date/Time
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="grid gap-6">
+                    {filteredAndSortedBusinesses.map((business) => (
                     <Card
                       key={business.id}
                       className={`cursor-pointer transition-all hover:shadow-lg ${
@@ -976,8 +992,9 @@ export default function BookService() {
                         )}
                       </CardContent>
                     </Card>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
