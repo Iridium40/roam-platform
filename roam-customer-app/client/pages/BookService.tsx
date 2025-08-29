@@ -373,7 +373,40 @@ export default function BookService() {
       setFilteredAndSortedBusinesses(sortedBusinesses);
 
     } catch (error) {
-      console.error('Error loading businesses:', error);
+      console.error('Error loading businesses - Full error object:', error);
+      console.error('Error type:', typeof error);
+      console.error('Error keys:', Object.keys(error || {}));
+
+      let errorMessage = "Unknown error occurred";
+      if (error) {
+        if (typeof error === "string") {
+          errorMessage = error;
+        } else if (error.message) {
+          errorMessage = error.message;
+        } else if (error.error_description) {
+          errorMessage = error.error_description;
+        } else if (error.details) {
+          errorMessage = error.details;
+        } else if (error.hint) {
+          errorMessage = error.hint;
+        } else if (error.code) {
+          errorMessage = `Database error (${error.code})`;
+        } else {
+          try {
+            errorMessage = JSON.stringify(error);
+          } catch {
+            errorMessage = "Unable to parse error details";
+          }
+        }
+      }
+
+      console.error('Parsed error message:', errorMessage);
+
+      toast({
+        title: "Error loading businesses",
+        description: errorMessage,
+        variant: "destructive",
+      });
     }
   };
 
