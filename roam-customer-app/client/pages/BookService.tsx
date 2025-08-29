@@ -792,6 +792,38 @@ export default function BookService() {
                   <Building className="w-6 h-6 mr-2" />
                   Select Business
                 </h2>
+
+                {/* Sorting Controls */}
+                <div className="mb-6 flex flex-wrap items-center gap-4 p-4 bg-gray-50 rounded-lg">
+                  <span className="text-sm font-medium text-gray-700">Sort by:</span>
+
+                  <div className="flex items-center gap-2">
+                    <Select value={sortBy} onValueChange={(value: 'price' | 'rating' | 'delivery_type') => setSortBy(value)}>
+                      <SelectTrigger className="w-40">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="price">Price</SelectItem>
+                        <SelectItem value="rating">Rating</SelectItem>
+                        <SelectItem value="delivery_type">Delivery Type</SelectItem>
+                      </SelectContent>
+                    </Select>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                      className="px-3"
+                    >
+                      {sortOrder === 'asc' ? '↑' : '↓'}
+                    </Button>
+                  </div>
+
+                  <div className="text-sm text-gray-600">
+                    {filteredAndSortedBusinesses.length} business{filteredAndSortedBusinesses.length !== 1 ? 'es' : ''} available
+                  </div>
+                </div>
+
                 <div className="grid gap-6">
                   {businesses.map((business) => (
                     <Card
