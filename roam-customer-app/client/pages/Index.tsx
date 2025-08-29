@@ -814,16 +814,20 @@ export default function Index() {
     setCurrentPromotionSlide(newPage);
   }, [currentPromotionSlide, promotionPages.length, promotionalDeals.length]);
 
-  const nextBusinessSlide = () => {
+  const nextBusinessSlide = useCallback(() => {
     const maxPage = Math.max(0, businessPages.length - 1);
-    console.log('Next business slide clicked. Current:', currentBusinessSlide, 'Max:', maxPage, 'Pages:', businessPages.length);
-    setCurrentBusinessSlide((prev) => Math.min(prev + 1, maxPage));
-  };
+    const newPage = Math.min(currentBusinessSlide + 1, maxPage);
+    console.log('🔄 Next business slide clicked');
+    console.log('📊 Business state:', { currentBusinessSlide, maxPage, newPage, businessesCount: filteredBusinesses.length, pagesCount: businessPages.length });
+    setCurrentBusinessSlide(newPage);
+  }, [currentBusinessSlide, businessPages.length, filteredBusinesses.length]);
 
-  const prevBusinessSlide = () => {
-    console.log('Prev business slide clicked. Current:', currentBusinessSlide);
-    setCurrentBusinessSlide((prev) => Math.max(prev - 1, 0));
-  };
+  const prevBusinessSlide = useCallback(() => {
+    const newPage = Math.max(currentBusinessSlide - 1, 0);
+    console.log('🔄 Prev business slide clicked');
+    console.log('📊 Business state:', { currentBusinessSlide, newPage, businessesCount: filteredBusinesses.length, pagesCount: businessPages.length });
+    setCurrentBusinessSlide(newPage);
+  }, [currentBusinessSlide, businessPages.length, filteredBusinesses.length]);
 
   const filteredBusinesses = featuredBusinesses.filter((business) => {
     const matchesSearch =
