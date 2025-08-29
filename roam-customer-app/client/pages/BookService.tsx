@@ -754,27 +754,72 @@ export default function BookService() {
     return basePrice + serviceFee;
   };
 
-  const handleCheckout = () => {
-    // This would integrate with Stripe or payment processor
-    const basePrice = calculateDiscountedPrice();
-    const serviceFee = calculateServiceFee();
-    const totalPrice = calculateTotalWithFees();
-    const discountApplied = promotion ? (service?.min_price || 0) - basePrice : 0;
+  const handleCheckout = async () => {
+    // Ensure all necessary data is available
+    if (!service || !selectedBusiness || !selectedProvider || !selectedDate || !selectedTime || !customer) {
+      toast({
+        title: "Missing Information",
+        description: "Please complete all booking steps before proceeding.",
+        variant: "destructive",
+      });
+      return;
+    }
 
-    console.log('💳 Checkout Details:', {
-      basePrice: basePrice.toFixed(2),
-      serviceFee: serviceFee.toFixed(2),
-      totalPrice: totalPrice.toFixed(2),
-      platformFeePercentage,
-      discountApplied: discountApplied.toFixed(2)
-    });
+    // Prepare booking details for checkout
+    const bookingDetails = {
+      serviceId: service.id,
+      businessId: selectedBusiness.id,
+      providerId: selectedProvider.id,
+      bookingDate: selectedDate.toISOString().split('T')[0], // Format as YYYY-MM-DD
+      startTime: selectedTime,
+      guestName: `${customer.first_name} ${customer.last_name}`,
+      guestEmail: customer.email,
+      guestPhone: customer.phone || '',
+      deliveryType: selectedDeliveryType, // Assuming this is set correctly
+      specialInstructions: '', // Placeholder for now
+      customerId: customer.id,
+      promotionId: promotion?.id || null,
+      platformFeePercentage: platformFeePercentage,
+      servicePrice: selectedBusiness.service_price || service.min_price,
+      discountApplied: promotion ? (service?.min_price || 0) - calculateDiscountedPrice() : 0,
+      serviceFee: calculateServiceFee(),
+      totalAmount: calculateTotalWithFees(),
+    };
 
-    toast({
-      title: "Booking Confirmed!",
-      description: promotion
-        ? `Your booking has been created with ${promotion.promoCode} applied ($${discountApplied.toFixed(2)} saved!) - Total: $${totalPrice.toFixed(2)}`
-        : `Your booking has been successfully created - Total: $${totalPrice.toFixed(2)}`,
-    });
+    console.log('💳 Initiating Stripe Checkout with:', bookingDetails);
+
+    try {
+      // Call backend to create Stripe checkout session
+      const response = await fetch('/api/stripe/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(bookingDetails),
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.url) {
+        console.log('✅ Stripe checkout session created:', result.url);
+        // Redirect user to Stripe checkout page
+        window.location.href = result.url;
+      } else {
+        console.error('❌ Failed to create Stripe checkout session:', result.error || result);
+        toast({
+          title: "Checkout Failed",
+          description: result.error || "Could not initiate payment. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('❌ Error during Stripe checkout initiation:', error);
+      toast({
+        title: "Checkout Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   if (loading) {
