@@ -46,6 +46,7 @@ import {
   ShieldCheck,
   Briefcase,
   Wrench,
+  MessageSquare,
 } from "lucide-react";
 
 interface NavItem {
