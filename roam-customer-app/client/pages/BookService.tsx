@@ -289,15 +289,27 @@ export default function BookService() {
 
   // Load businesses that offer this service with pricing and availability validation
   const loadBusinesses = async () => {
-    if (!serviceId || !selectedDate || !selectedTime) return;
+    console.log('🏢 loadBusinesses called with:', {
+      serviceId,
+      selectedDate,
+      selectedTime: selectedTime
+    });
+
+    if (!serviceId || !selectedDate || !selectedTime) {
+      console.log('❌ Missing required data for loadBusinesses');
+      return;
+    }
 
     try {
+      console.log('📋 Fetching service details...');
       // Get the service details first
       const { data: serviceData, error: serviceError } = await supabase
         .from('services')
         .select('id, name, subcategory_id')
         .eq('id', serviceId)
         .single();
+
+      console.log('📋 Service query result:', { serviceData, serviceError });
 
       if (serviceError) throw serviceError;
 
