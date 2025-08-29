@@ -818,32 +818,16 @@ export default function BookService() {
       const result = await response.json();
       console.log('📦 Response data:', result);
 
-      if (result.sessionId) {
-        console.log('✅ Stripe checkout session created:', result.sessionId);
-
-        // Use approved Stripe pattern: redirectToCheckout
-        const getStripe = (await import('../utils/get-stripejs')).default;
-        const stripe = await getStripe();
-
-        if (!stripe) {
-          throw new Error('Stripe failed to load');
-        }
-
-        const { error } = await stripe.redirectToCheckout({ sessionId: result.sessionId });
-
-        if (error) {
-          console.error('❌ Stripe redirect error:', error);
-          toast({
-            title: "Checkout Failed",
-            description: error.message || "Could not redirect to payment. Please try again.",
-            variant: "destructive",
-          });
-        }
+      if (result.clientSecret) {
+        console.log('✅ Payment Intent created successfully');
+        setClientSecret(result.clientSecret);
+        setPaymentBreakdown(result.breakdown);
+        setCurrentStep('checkout');
       } else {
-        console.error('❌ Failed to create Stripe checkout session:', result.error || result);
+        console.error('❌ Failed to create Payment Intent:', result.error || result);
         toast({
-          title: "Checkout Failed",
-          description: result.error || "Could not initiate payment. Please try again.",
+          title: "Payment Setup Failed",
+          description: result.error || "Could not initialize payment. Please try again.",
           variant: "destructive",
         });
       }
