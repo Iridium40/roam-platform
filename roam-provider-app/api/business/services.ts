@@ -19,11 +19,14 @@ const supabaseAdmin = createClient(
   }
 );
 
-// GET /api/business/services - Get all business services for a business
+// GET /api/business/services - Get all business services for a business (paginated and optimized)
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const businessId = searchParams.get('business_id');
+    const page = Math.max(parseInt(searchParams.get('page') || '1', 10), 1);
+    const limit = Math.min(Math.max(parseInt(searchParams.get('limit') || '25', 10), 1), 100);
+    const status = searchParams.get('status'); // 'active' | 'inactive' | null
 
     if (!businessId) {
       return NextResponse.json(
@@ -32,12 +35,38 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get business services with service details
-    const { data: businessServices, error: servicesError } = await supabaseAdmin
+    // Base query for business services (no heavy joins)
+    let baseQuery = supabaseAdmin
       .from('business_services')
-      .select(`
-        *,
-        services:service_id (
+      .select('id, business_id, service_id, business_price, is_active, delivery_type, created_at', { count: 'exact' })
+      .eq('business_id', businessId);
+
+    if (status === 'active') baseQuery = baseQuery.eq('is_active', true);
+    if (status === 'inactive') baseQuery = baseQuery.eq('is_active', false);
+
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
+    const { data: bsRows, error: bsError, count: totalCount } = await baseQuery
+      .order('created_at', { ascending: false })
+      .range(from, to);
+
+    if (bsError) {
+      console.error('Error fetching business services:', bsError);
+      return NextResponse.json(
+        { error: 'Failed to fetch business services', details: bsError.message },
+        { status: 500, headers: corsHeaders }
+      );
+    }
+
+    const serviceIds = Array.from(new Set((bsRows || []).map((r: any) => r.service_id))).filter(Boolean);
+
+    // Fetch service details separately to avoid deep join overhead
+    let serviceDetailsMap: Record<string, any> = {};
+    if (serviceIds.length > 0) {
+      const { data: serviceDetails, error: svcError } = await supabaseAdmin
+        .from('services')
+        .select(`
           id,
           name,
           description,
@@ -50,33 +79,42 @@ export async function GET(request: NextRequest) {
               service_category_type
             )
           )
-        )
-      `)
-      .eq('business_id', businessId)
-      .order('created_at', { ascending: false });
+        `)
+        .in('id', serviceIds);
 
-    if (servicesError) {
-      console.error('Error fetching business services:', servicesError);
-      return NextResponse.json(
-        { error: 'Failed to fetch business services', details: servicesError.message },
-        { status: 500, headers: corsHeaders }
-      );
+      if (svcError) {
+        console.error('Error fetching service details:', svcError);
+      } else {
+        serviceDetailsMap = Object.fromEntries((serviceDetails || []).map((s: any) => [s.id, s]));
+      }
     }
 
-    // Calculate service statistics
+    const services = (bsRows || []).map((row: any) => ({
+      ...row,
+      services: serviceDetailsMap[row.service_id] || null
+    }));
+
+    // Stats (fast counts)
+    const activeCountPromise = supabaseAdmin
+      .from('business_services')
+      .select('id', { count: 'exact', head: true })
+      .eq('business_id', businessId)
+      .eq('is_active', true);
+
+    const [{ count: activeCount }] = await Promise.all([activeCountPromise]);
+
     const stats = {
-      total_services: businessServices?.length || 0,
-      active_services: businessServices?.filter(s => s.is_active).length || 0,
-      total_revenue: 0, // Would come from bookings data
-      avg_price: businessServices?.length > 0 
-        ? businessServices.reduce((sum, s) => sum + s.business_price, 0) / businessServices.length 
-        : 0
+      total_services: totalCount || 0,
+      active_services: activeCount || 0,
+      total_revenue: 0,
+      avg_price: services.length > 0 ? services.reduce((sum: number, s: any) => sum + (s.business_price || 0), 0) / services.length : 0
     };
 
     return NextResponse.json({
       business_id: businessId,
-      services: businessServices || [],
-      stats
+      services,
+      stats,
+      pagination: { page, limit, total: totalCount || 0 }
     }, { headers: corsHeaders });
 
   } catch (error) {
