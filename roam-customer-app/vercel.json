@@ -153,6 +153,10 @@
       "destination": "/api/bookings/create.ts"
     },
     {
+      "source": "/api/notifications",
+      "destination": "/api/notifications/index.ts"
+    },
+    {
       "source": "/api/admin/delete-test-user",
       "destination": "/api/admin/delete-test-user.ts"
     },
