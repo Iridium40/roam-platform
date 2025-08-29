@@ -33,6 +33,7 @@ import SignIn from "./pages/SignIn";
 import Phase2Entry from "./pages/onboarding/Phase2Entry";
 import ImageUploadTest from "./pages/testing/ImageUploadTest";
 import Phase2Test from "./pages/onboarding/Phase2Test";
+import StaffOnboarding from "./pages/StaffOnboarding";
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 
