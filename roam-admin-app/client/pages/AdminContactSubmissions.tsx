@@ -136,11 +136,25 @@ export default function AdminContactSubmissions() {
         details: error?.details,
         hint: error?.hint,
         code: error?.code,
-        stack: error?.stack
+        stack: error?.stack,
+        supabaseUrl: import.meta.env.VITE_PUBLIC_SUPABASE_URL,
+        hasAnonKey: !!import.meta.env.VITE_PUBLIC_SUPABASE_ANON_KEY
       });
+
+      // Test basic Supabase connection
+      try {
+        console.log("Testing basic Supabase connection...");
+        const { data: testData, error: testError } = await supabase
+          .from("contact_submissions")
+          .select("count", { count: "exact", head: true });
+        console.log("Basic connection test:", { testData, testError });
+      } catch (testErr) {
+        console.error("Basic connection test failed:", testErr);
+      }
+
       toast({
         title: "Error",
-        description: `Failed to fetch contact submissions: ${error?.message || error}`,
+        description: `Failed to fetch contact submissions: ${error?.message || JSON.stringify(error)}`,
         variant: "destructive",
       });
     } finally {
