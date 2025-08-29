@@ -83,8 +83,28 @@ export default function ServicesTab({
       if (businessServicesError) throw businessServicesError;
       setBusinessServices(currentBusinessServices || []);
 
-      // Load eligible services (placeholder - implement when edge function is ready)
-      setEligibleServices([]);
+      // Load eligible services (services not already assigned to this business)
+      const { data: allServices, error: servicesError } = await supabase
+        .from('services')
+        .select(`
+          *,
+          service_subcategories(
+            service_subcategory_type,
+            service_categories(service_category_type)
+          )
+        `)
+        .eq('is_active', true);
+
+      if (servicesError) {
+        console.error('Error loading all services:', servicesError);
+      } else {
+        // Filter out services already assigned to this business
+        const assignedServiceIds = (currentBusinessServices || []).map(bs => bs.service_id);
+        const available = (allServices || []).filter(service =>
+          !assignedServiceIds.includes(service.id)
+        );
+        setEligibleServices(available);
+      }
 
     } catch (error) {
       console.error('Error loading services data:', error);
