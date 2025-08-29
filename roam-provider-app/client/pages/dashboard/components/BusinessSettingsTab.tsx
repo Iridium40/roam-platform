@@ -1078,7 +1078,8 @@ export default function BusinessSettingsTab({
                   const category = subcats?.[0]?.service_categories;
                   const categoryItem = { id: categoryId, service_categories: category } as any;
                   // category derived above
-                  if (!category) return null;
+                  const approvedCategory = serviceEligibility.approved_categories.find((c: any) => c?.service_categories?.id === categoryId)?.service_categories;
+                  const displayCategory = category || approvedCategory || null;
 
                   const subcategoriesForThisCategory = subcats || [];
 
@@ -1089,10 +1090,10 @@ export default function BusinessSettingsTab({
                         <div className="flex items-center justify-between">
                           <div>
                             <h4 className="font-semibold text-gray-900 text-lg">
-                              {category?.description || category?.service_category_type}
+                              {displayCategory?.description || displayCategory?.service_category_type || `Category ${categoryId}`}
                             </h4>
-                            {category.description && (
-                              <p className="text-sm text-gray-600 mt-1">{category.description}</p>
+                            {displayCategory?.description && (
+                              <p className="text-sm text-gray-600 mt-1">{displayCategory.description}</p>
                             )}
                           </div>
                           <div className="flex items-center space-x-2">
