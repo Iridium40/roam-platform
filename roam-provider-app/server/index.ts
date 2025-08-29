@@ -187,6 +187,22 @@ export function createServer() {
     getServiceEligibility
   );
 
+  // Business tax info routes (Stripe Tax / 1099)
+  app.get("/api/business/tax-info",
+    requireAuth(['owner', 'dispatcher', 'admin']),
+    async (req, res) => {
+      const { getBusinessTaxInfo } = await import('./routes/tax-info');
+      return getBusinessTaxInfo(req, res);
+    }
+  );
+  app.put("/api/business/tax-info",
+    requireAuth(['owner', 'dispatcher', 'admin']),
+    async (req, res) => {
+      const { upsertBusinessTaxInfo } = await import('./routes/tax-info');
+      return upsertBusinessTaxInfo(req, res);
+    }
+  );
+
   // Business profile routes with auth and business access
   app.get("/api/business/profile/:businessId",
     requireAuth(['owner', 'dispatcher', 'admin']),
