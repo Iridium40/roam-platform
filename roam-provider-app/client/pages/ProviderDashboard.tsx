@@ -114,7 +114,6 @@ import {
   BookingsTab,
   MessagesTab,
   ServicesTab,
-  StaffTab,
   FinancialsTab,
   ProfileTab,
   BusinessSettingsTab,
