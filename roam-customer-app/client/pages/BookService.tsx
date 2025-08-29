@@ -277,6 +277,14 @@ export default function BookService() {
     loadServiceAndPromotion();
   }, [serviceId, promotionId, businessId, toast]);
 
+  // Re-sort businesses when sorting options change
+  useEffect(() => {
+    if (allBusinesses.length > 0) {
+      const sorted = sortAndFilterBusinesses(allBusinesses, sortBy, sortOrder);
+      setFilteredAndSortedBusinesses(sorted);
+    }
+  }, [sortBy, sortOrder, allBusinesses]);
+
   // Load businesses that offer this service with pricing and availability validation
   const loadBusinesses = async () => {
     if (!serviceId || !selectedDate || !selectedTime) return;
