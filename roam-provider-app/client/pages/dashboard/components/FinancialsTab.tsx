@@ -442,13 +442,14 @@ function TaxInformationSection({ businessId }: { businessId: string }) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [legalEntityType, setLegalEntityType] = useState<'individual'|'sole_proprietorship'|'company'|'non_profit'|'government'>('company');
-  const [legalName, setLegalName] = useState('');
-  const [taxIdType, setTaxIdType] = useState<'ein'|'ssn'>('ein');
-  const [taxIdFull, setTaxIdFull] = useState('');
+  const [businessEntityType, setBusinessEntityType] = useState<'sole_proprietorship'|'partnership'|'llc'|'corporation'|'non_profit'>('sole_proprietorship');
+  const [legalBusinessName, setLegalBusinessName] = useState('');
+  const [taxIdType, setTaxIdType] = useState<'EIN'|'SSN'>('EIN');
+  const [taxId, setTaxId] = useState('');
   const [address, setAddress] = useState({ line1: '', line2: '', city: '', state: '', postal_code: '', country: 'US' });
-  const [w9Signed, setW9Signed] = useState(false);
-  const [existingLast4, setExistingLast4] = useState<string | null>(null);
+  const [contact, setContact] = useState({ name: '', email: '', phone: '' });
+  const [w9Status, setW9Status] = useState<'not_collected'|'requested'|'received'|'invalid'|'expired'>('not_collected');
+  const [taxSetupCompleted, setTaxSetupCompleted] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -459,19 +460,20 @@ function TaxInformationSection({ businessId }: { businessId: string }) {
           const json = await res.json();
           const t = json.tax_info;
           if (t) {
-            setLegalEntityType(t.legal_entity_type || 'company');
-            setLegalName(t.legal_name || '');
-            setTaxIdType(t.tax_id_type || 'ein');
-            setExistingLast4(t.tax_id_last4 || null);
+            setBusinessEntityType(t.business_entity_type || 'sole_proprietorship');
+            setLegalBusinessName(t.legal_business_name || '');
+            setTaxIdType(t.tax_id_type || 'EIN');
             setAddress({
-              line1: t.address_line1 || '',
-              line2: t.address_line2 || '',
-              city: t.city || '',
-              state: t.state || '',
-              postal_code: t.postal_code || '',
-              country: t.country || 'US',
+              line1: t.tax_address_line1 || '',
+              line2: t.tax_address_line2 || '',
+              city: t.tax_city || '',
+              state: t.tax_state || '',
+              postal_code: t.tax_postal_code || '',
+              country: t.tax_country || 'US',
             });
-            setW9Signed(!!t.w9_signed);
+            setContact({ name: t.tax_contact_name || '', email: t.tax_contact_email || '', phone: t.tax_contact_phone || '' });
+            setW9Status(t.w9_status || 'not_collected');
+            setTaxSetupCompleted(!!t.tax_setup_completed);
           }
         }
       } catch (e) {
@@ -488,21 +490,27 @@ function TaxInformationSection({ businessId }: { businessId: string }) {
       setSaving(true);
       const payload = {
         business_id: businessId,
-        legal_entity_type: legalEntityType,
-        legal_name: legalName,
+        legal_business_name: legalBusinessName,
+        tax_id: taxId, // stored per provided schema
         tax_id_type: taxIdType,
-        tax_id_full: taxIdFull || undefined,
-        address,
-        w9_signed: w9Signed,
+        tax_address_line1: address.line1,
+        tax_address_line2: address.line2,
+        tax_city: address.city,
+        tax_state: address.state,
+        tax_postal_code: address.postal_code,
+        tax_country: address.country,
+        business_entity_type: businessEntityType,
+        tax_contact_name: contact.name,
+        tax_contact_email: contact.email,
+        tax_contact_phone: contact.phone,
+        w9_status: w9Status,
+        tax_setup_completed: taxSetupCompleted,
       };
       const res = await fetch('/api/business/tax-info', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.error || 'Failed to save tax info');
       }
-      const json = await res.json();
-      setExistingLast4(json?.tax_info?.tax_id_last4 || existingLast4);
-      setTaxIdFull('');
       toast({ title: 'Saved', description: 'Tax information updated.' });
     } catch (e:any) {
       toast({ title: 'Error', description: e.message || 'Failed to save tax info', variant: 'destructive' });
@@ -515,21 +523,21 @@ function TaxInformationSection({ businessId }: { businessId: string }) {
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="text-sm font-medium">Legal Entity Type</label>
-          <Select value={legalEntityType} onValueChange={(v:any)=>setLegalEntityType(v)}>
+          <label className="text-sm font-medium">Business Entity Type</label>
+          <Select value={businessEntityType} onValueChange={(v:any)=>setBusinessEntityType(v)}>
             <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="individual">Individual</SelectItem>
               <SelectItem value="sole_proprietorship">Sole Proprietorship</SelectItem>
-              <SelectItem value="company">Company</SelectItem>
+              <SelectItem value="partnership">Partnership</SelectItem>
+              <SelectItem value="llc">LLC</SelectItem>
+              <SelectItem value="corporation">Corporation</SelectItem>
               <SelectItem value="non_profit">Non-profit</SelectItem>
-              <SelectItem value="government">Government</SelectItem>
             </SelectContent>
           </Select>
         </div>
         <div>
-          <label className="text-sm font-medium">Legal Name</label>
-          <Input value={legalName} onChange={(e)=>setLegalName(e.target.value)} placeholder="As shown on tax return" className="mt-1" />
+          <label className="text-sm font-medium">Legal Business Name</label>
+          <Input value={legalBusinessName} onChange={(e)=>setLegalBusinessName(e.target.value)} placeholder="As shown on tax return" className="mt-1" />
         </div>
       </div>
 
@@ -539,15 +547,15 @@ function TaxInformationSection({ businessId }: { businessId: string }) {
           <Select value={taxIdType} onValueChange={(v:any)=>setTaxIdType(v)}>
             <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="ein">EIN</SelectItem>
-              <SelectItem value="ssn">SSN (last 4)</SelectItem>
+              <SelectItem value="EIN">EIN</SelectItem>
+              <SelectItem value="SSN">SSN</SelectItem>
             </SelectContent>
           </Select>
         </div>
         <div className="md:col-span-2">
-          <label className="text-sm font-medium">{taxIdType === 'ein' ? 'EIN' : 'SSN'} {existingLast4 ? '(stored: ••••' + existingLast4 + ')' : ''}</label>
-          <Input value={taxIdFull} onChange={(e)=>setTaxIdFull(e.target.value)} placeholder={taxIdType==='ein'?'XX-XXXXXXX':'XXX-XX-XXXX'} className="mt-1" />
-          <p className="text-xs text-gray-500 mt-1">We only store the last 4 digits. Full value is sent to Stripe when required.</p>
+          <label className="text-sm font-medium">{taxIdType}</label>
+          <Input value={taxId} onChange={(e)=>setTaxId(e.target.value)} placeholder={taxIdType==='EIN'?'XX-XXXXXXX':'XXX-XX-XXXX'} className="mt-1" />
+          <p className="text-xs text-gray-500 mt-1">Stored as provided per compliance policy.</p>
         </div>
       </div>
 
@@ -565,7 +573,7 @@ function TaxInformationSection({ businessId }: { businessId: string }) {
           <Input value={address.city} onChange={(e)=>setAddress(a=>({...a,city:e.target.value}))} className="mt-1" />
         </div>
         <div>
-          <label className="text-sm font-medium">State/Province</label>
+          <label className="text-sm font-medium">State</label>
           <Input value={address.state} onChange={(e)=>setAddress(a=>({...a,state:e.target.value}))} className="mt-1" />
         </div>
         <div>
@@ -578,14 +586,38 @@ function TaxInformationSection({ businessId }: { businessId: string }) {
         </div>
       </div>
 
-      <div className="flex items-center justify-between">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
-          <p className="text-sm text-gray-700">W-9 Certification</p>
-          <p className="text-xs text-gray-500">Confirm that the above information is accurate for 1099 reporting.</p>
+          <label className="text-sm font-medium">Contact Name</label>
+          <Input value={contact.name} onChange={(e)=>setContact(c=>({...c,name:e.target.value}))} className="mt-1" />
         </div>
-        <div className="flex items-center gap-2">
-          <Switch checked={w9Signed} onCheckedChange={setW9Signed} />
-          <span className="text-sm">I certify</span>
+        <div>
+          <label className="text-sm font-medium">Contact Email</label>
+          <Input value={contact.email} onChange={(e)=>setContact(c=>({...c,email:e.target.value}))} className="mt-1" />
+        </div>
+        <div>
+          <label className="text-sm font-medium">Contact Phone</label>
+          <Input value={contact.phone} onChange={(e)=>setContact(c=>({...c,phone:e.target.value}))} className="mt-1" />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="text-sm font-medium">W-9 Status</label>
+          <Select value={w9Status} onValueChange={(v:any)=>setW9Status(v)}>
+            <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="not_collected">Not Collected</SelectItem>
+              <SelectItem value="requested">Requested</SelectItem>
+              <SelectItem value="received">Received</SelectItem>
+              <SelectItem value="invalid">Invalid</SelectItem>
+              <SelectItem value="expired">Expired</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex items-center gap-3">
+          <label className="text-sm font-medium">Tax Setup Completed</label>
+          <Switch checked={taxSetupCompleted} onCheckedChange={setTaxSetupCompleted} />
         </div>
       </div>
 
