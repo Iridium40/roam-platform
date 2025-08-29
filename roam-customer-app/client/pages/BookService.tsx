@@ -1,6 +1,6 @@
 import { useParams, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Calendar as CalendarIcon, Clock, Building, User, CreditCard, Tag, ChevronDown, Info, ExternalLink, MapPin, Star } from "lucide-react";
+import { ArrowLeft, Calendar as CalendarIcon, Clock, Building, User, CreditCard, Tag, ChevronDown, Info, ExternalLink, MapPin, Star, Smartphone, Video, Truck } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
