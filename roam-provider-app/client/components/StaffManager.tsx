@@ -656,7 +656,7 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
               </Select>
               <Button
                 onClick={sendInvite}
-                disabled={!inviteEmail || !inviteRole || !inviteLocation}
+                disabled={!inviteEmail || !inviteRole}
                 className="bg-roam-blue hover:bg-roam-blue/90"
               >
                 <Send className="w-4 h-4 mr-2" />
