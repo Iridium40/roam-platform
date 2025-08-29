@@ -756,14 +756,24 @@ export default function BookService() {
 
   const handleCheckout = () => {
     // This would integrate with Stripe or payment processor
-    const finalPrice = calculateDiscountedPrice();
-    const discountApplied = promotion ? (service?.min_price || 0) - finalPrice : 0;
-    
+    const basePrice = calculateDiscountedPrice();
+    const serviceFee = calculateServiceFee();
+    const totalPrice = calculateTotalWithFees();
+    const discountApplied = promotion ? (service?.min_price || 0) - basePrice : 0;
+
+    console.log('💳 Checkout Details:', {
+      basePrice: basePrice.toFixed(2),
+      serviceFee: serviceFee.toFixed(2),
+      totalPrice: totalPrice.toFixed(2),
+      platformFeePercentage,
+      discountApplied: discountApplied.toFixed(2)
+    });
+
     toast({
       title: "Booking Confirmed!",
-      description: promotion 
-        ? `Your booking has been created with ${promotion.promoCode} applied ($${discountApplied.toFixed(2)} saved!)`
-        : "Your booking has been successfully created",
+      description: promotion
+        ? `Your booking has been created with ${promotion.promoCode} applied ($${discountApplied.toFixed(2)} saved!) - Total: $${totalPrice.toFixed(2)}`
+        : `Your booking has been successfully created - Total: $${totalPrice.toFixed(2)}`,
     });
   };
 
