@@ -123,6 +123,11 @@ const navigationSections: NavSection[] = [
         label: "Bookings",
       },
       {
+        href: "/admin/contact-submissions",
+        icon: <MessageSquare className="w-5 h-5" />,
+        label: "Contact Submissions",
+      },
+      {
         href: "/admin/promotions",
         icon: <Gift className="w-5 h-5" />,
         label: "Promotions",
