@@ -761,6 +761,28 @@ export default function BookService() {
                               {business.description || "Professional service provider dedicated to delivering excellent results."}
                             </p>
 
+                            {/* Delivery Types */}
+                            <div className="mb-3">
+                              <h4 className="text-xs font-medium text-gray-700 mb-2 uppercase tracking-wide">
+                                Service Delivery Options
+                              </h4>
+                              <div className="flex flex-wrap gap-2">
+                                {getDeliveryTypes(business).map((deliveryType) => {
+                                  const Icon = getDeliveryTypeIcon(deliveryType);
+                                  return (
+                                    <Badge
+                                      key={deliveryType}
+                                      variant="outline"
+                                      className="text-xs bg-roam-blue/5 border-roam-blue/20 text-roam-blue hover:bg-roam-blue/10"
+                                    >
+                                      <Icon className="w-3 h-3 mr-1" />
+                                      {getDeliveryTypeLabel(deliveryType)}
+                                    </Badge>
+                                  );
+                                })}
+                              </div>
+                            </div>
+
                             {/* Business Highlights */}
                             <div className="flex flex-wrap gap-2">
                               <Badge variant="secondary" className="text-xs">
