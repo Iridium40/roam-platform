@@ -198,8 +198,10 @@ export default function AdminContactSubmissions() {
 
       if (newStatus === "responded" || newStatus === "closed") {
         updates.responded_at = new Date().toISOString();
-        // You would get the current admin user ID here
-        // updates.responded_by = currentAdminUserId;
+        // Set the current admin user as the responder
+        if (user?.id) {
+          updates.responded_by = user.id;
+        }
       }
 
       const { error } = await supabase
