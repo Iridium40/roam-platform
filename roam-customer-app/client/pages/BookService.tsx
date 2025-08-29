@@ -806,7 +806,7 @@ export default function BookService() {
       });
 
       console.log('📡 Response status:', response.status);
-      console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()));
+      console.log('���� Response headers:', Object.fromEntries(response.headers.entries()));
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -819,8 +819,8 @@ export default function BookService() {
 
       if (result.success && result.url) {
         console.log('✅ Stripe checkout session created:', result.url);
-        // Redirect user to Stripe checkout page
-        window.location.href = result.url;
+        // Redirect user to Stripe checkout page at top level (parent window)
+        window.top.location.href = result.url;
       } else {
         console.error('❌ Failed to create Stripe checkout session:', result.error || result);
         toast({
