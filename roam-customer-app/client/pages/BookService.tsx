@@ -794,6 +794,9 @@ export default function BookService() {
 
     try {
       // Call backend to create Stripe checkout session
+      console.log('🌐 Making API call to:', '/api/stripe/create-checkout-session');
+      console.log('🌐 Current location:', window.location.href);
+
       const response = await fetch('/api/stripe/create-checkout-session', {
         method: 'POST',
         headers: {
@@ -802,9 +805,19 @@ export default function BookService() {
         body: JSON.stringify(bookingDetails),
       });
 
-      const result = await response.json();
+      console.log('📡 Response status:', response.status);
+      console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()));
 
-      if (response.ok && result.url) {
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ HTTP Error:', response.status, errorText);
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log('📦 Response data:', result);
+
+      if (result.success && result.url) {
         console.log('✅ Stripe checkout session created:', result.url);
         // Redirect user to Stripe checkout page
         window.location.href = result.url;
@@ -818,9 +831,18 @@ export default function BookService() {
       }
     } catch (error) {
       console.error('❌ Error during Stripe checkout initiation:', error);
+
+      // Provide more detailed error information
+      let errorMessage = "An unexpected error occurred. Please try again.";
+      if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+        errorMessage = "Network error: Could not connect to payment service. Please check your connection and try again.";
+      } else if (error instanceof Error) {
+        errorMessage = `Error: ${error.message}`;
+      }
+
       toast({
         title: "Checkout Error",
-        description: "An unexpected error occurred. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     }
