@@ -821,7 +821,7 @@ export default function BookService() {
         console.log('✅ Stripe checkout session created:', result.sessionId);
 
         // Use approved Stripe pattern: redirectToCheckout
-        const { getStripe } = await import('../utils/get-stripejs');
+        const getStripe = (await import('../utils/get-stripejs')).default;
         const stripe = await getStripe();
 
         if (!stripe) {
