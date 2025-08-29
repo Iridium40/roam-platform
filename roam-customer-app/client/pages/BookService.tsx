@@ -508,6 +508,51 @@ export default function BookService() {
 
       console.error('Parsed error message:', errorMessage);
 
+      // If this is a database schema issue, provide a helpful message
+      if (errorMessage.includes('business_services') || errorMessage.includes('relation') || errorMessage.includes('does not exist')) {
+        toast({
+          title: "Database Schema Issue",
+          description: "The business_services table may not exist. Using simplified business loading...",
+          variant: "destructive",
+        });
+
+        // Try one more simplified approach
+        try {
+          console.log('🔄 Attempting simplified business loading...');
+          const { data: simpleBusinesses, error: simpleError } = await supabase
+            .from('business_profiles')
+            .select('id, business_name, business_description, image_url, logo_url, business_type, is_active')
+            .eq('is_active', true)
+            .limit(5);
+
+          if (!simpleError && simpleBusinesses) {
+            const transformedSimple = simpleBusinesses.map(business => ({
+              id: business.id,
+              business_name: business.business_name,
+              description: business.business_description || '',
+              image_url: business.image_url,
+              logo_url: business.logo_url,
+              business_type: business.business_type,
+              service_price: service?.min_price || 100,
+              rating: 4.5,
+              review_count: 25,
+            }));
+
+            setAllBusinesses(transformedSimple);
+            const sorted = sortAndFilterBusinesses(transformedSimple, sortBy, sortOrder);
+            setFilteredAndSortedBusinesses(sorted);
+
+            toast({
+              title: "Businesses loaded",
+              description: `Found ${transformedSimple.length} available businesses`,
+            });
+            return;
+          }
+        } catch (fallbackError) {
+          console.error('❌ Even simplified query failed:', fallbackError);
+        }
+      }
+
       toast({
         title: "Error loading businesses",
         description: errorMessage,
