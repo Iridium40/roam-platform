@@ -702,19 +702,26 @@ export default function BookService() {
                       <CardContent className="p-6">
                         <div className="flex items-start space-x-4">
                           {/* Enhanced Business Logo */}
-                          <div className="w-20 h-20 bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm">
-                            {business.image_url ? (
+                          <div className="w-20 h-20 bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm overflow-hidden">
+                            {(business.logo_url || business.image_url) ? (
                               <img
-                                src={business.image_url}
+                                src={business.logo_url || business.image_url}
                                 alt={`${business.business_name} logo`}
                                 className="w-full h-full object-cover rounded-xl"
                                 onError={(e) => {
                                   const target = e.target as HTMLImageElement;
                                   target.style.display = 'none';
+                                  // Show fallback icon when image fails
+                                  const parent = target.parentElement;
+                                  if (parent && !parent.querySelector('.fallback-icon')) {
+                                    const fallback = document.createElement('div');
+                                    fallback.className = 'fallback-icon flex items-center justify-center w-full h-full';
+                                    fallback.innerHTML = '<svg class="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>';
+                                    parent.appendChild(fallback);
+                                  }
                                 }}
                               />
-                            ) : null}
-                            {(!business.image_url || false) && (
+                            ) : (
                               <Building className="w-10 h-10 text-gray-400" />
                             )}
                           </div>
