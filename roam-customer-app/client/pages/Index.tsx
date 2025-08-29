@@ -799,16 +799,20 @@ export default function Index() {
     return pages;
   }, [promotionalDeals]);
 
-  const nextPromotionSlide = () => {
+  const nextPromotionSlide = useCallback(() => {
     const maxSlide = Math.max(0, promotionPages.length - 1);
-    console.log('Next promotion slide clicked. Current:', currentPromotionSlide, 'Max:', maxSlide, 'Pages:', promotionPages.length);
-    setCurrentPromotionSlide((prev) => Math.min(prev + 1, maxSlide));
-  };
+    const newPage = Math.min(currentPromotionSlide + 1, maxSlide);
+    console.log('🔄 Next promotion slide clicked');
+    console.log('📊 Promotion state:', { currentPromotionSlide, maxSlide, newPage, promotionsCount: promotionalDeals.length, pagesCount: promotionPages.length });
+    setCurrentPromotionSlide(newPage);
+  }, [currentPromotionSlide, promotionPages.length, promotionalDeals.length]);
 
-  const prevPromotionSlide = () => {
-    console.log('Prev promotion slide clicked. Current:', currentPromotionSlide);
-    setCurrentPromotionSlide((prev) => Math.max(prev - 1, 0));
-  };
+  const prevPromotionSlide = useCallback(() => {
+    const newPage = Math.max(currentPromotionSlide - 1, 0);
+    console.log('🔄 Prev promotion slide clicked');
+    console.log('📊 Promotion state:', { currentPromotionSlide, newPage, promotionsCount: promotionalDeals.length, pagesCount: promotionPages.length });
+    setCurrentPromotionSlide(newPage);
+  }, [currentPromotionSlide, promotionPages.length, promotionalDeals.length]);
 
   const nextBusinessSlide = () => {
     const maxPage = Math.max(0, businessPages.length - 1);
