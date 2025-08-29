@@ -584,36 +584,33 @@ export default function BookService() {
                     </div>
                   </div>
 
-                  {/* Enhanced Time Selector */}
+                  {/* Compact Time Selector */}
                   <div>
                     <label className="block text-sm font-medium mb-3">Choose your preferred time</label>
-                    <div className="space-y-4">
-                      {Object.entries(groupedTimeSlots).map(([period, slots]) => (
-                        <div key={period}>
-                          <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center">
-                            <Clock className="w-4 h-4 mr-1" />
-                            {period}
-                          </h4>
-                          <div className="grid grid-cols-2 gap-2">
-                            {slots.map((slot) => (
-                              <Button
-                                key={slot.value}
-                                variant={selectedTime === slot.value ? "default" : "outline"}
-                                size="sm"
-                                className={cn(
-                                  "justify-center text-sm",
-                                  selectedTime === slot.value && "bg-roam-blue hover:bg-roam-blue/90"
-                                )}
-                                onClick={() => setSelectedTime(slot.value)}
-                              >
-                                {slot.label}
-                              </Button>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
+                    <div className="space-y-3">
+                      <Select value={selectedTime} onValueChange={setSelectedTime}>
+                        <SelectTrigger className="w-full h-12">
+                          <Clock className="mr-2 h-4 w-4" />
+                          <SelectValue placeholder="Select a time slot" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Object.entries(groupedTimeSlots).map(([period, slots]) => (
+                            <SelectGroup key={period}>
+                              <SelectLabel className="flex items-center">
+                                <Clock className="w-4 h-4 mr-1" />
+                                {period}
+                              </SelectLabel>
+                              {slots.map((slot) => (
+                                <SelectItem key={slot.value} value={slot.value}>
+                                  {slot.label}
+                                </SelectItem>
+                              ))}
+                            </SelectGroup>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       {selectedTime && (
-                        <div className="text-sm text-gray-600 bg-green-50 p-3 rounded-lg mt-4">
+                        <div className="text-sm text-gray-600 bg-green-50 p-3 rounded-lg">
                           <Clock className="w-4 h-4 inline mr-2" />
                           You selected: {timeSlots.find(slot => slot.value === selectedTime)?.label}
                         </div>
