@@ -19,6 +19,9 @@ import { ProviderSignupForm } from "@/components/ProviderSignupForm";
 import { BusinessInfoForm } from "@/components/BusinessInfoForm";
 import { DocumentUploadForm } from "@/components/DocumentUploadForm";
 import { ApplicationReviewPage } from "@/components/ApplicationReviewPage";
+
+// Import utilities
+import { postJson } from "@/lib/api-utils";
 import { useAuth } from "@/contexts/auth/AuthProvider";
 
 type Phase1Step = "signup" | "business_info" | "documents" | "review" | "submitted";
@@ -129,58 +132,10 @@ export default function ProviderOnboardingPhase1() {
 
       console.log("Starting signup process for:", signupData.email);
 
-      // Create user account
-      const response = await fetch("/api/auth/signup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(signupData),
-      });
+      // Create user account using the safe API utility
+      const response = await postJson("/api/auth/signup", signupData);
 
-      console.log("Signup response status:", response.status, response.statusText);
-      console.log("Response headers:", Object.fromEntries(response.headers));
-
-      // Read response as text first to avoid body stream issues
-      let responseText;
-      let result;
-
-      try {
-        responseText = await response.text();
-        console.log("Raw response length:", responseText?.length || 0);
-
-        // Parse the response text as JSON if not empty
-        if (responseText && responseText.trim()) {
-          result = JSON.parse(responseText);
-          console.log("Parsed response:", result);
-        } else {
-          throw new Error("Empty response from server");
-        }
-      } catch (error) {
-        console.error("Response processing failed:", error);
-        console.error("Response status:", response.status);
-
-        // If it's a JSON parsing error, show the raw text
-        if (error.name === "SyntaxError") {
-          console.error("Raw response that failed to parse:", responseText);
-        }
-
-        // Handle based on response status
-        if (!response.ok) {
-          if (response.status === 409) {
-            console.log(
-              "💡 Developer tip: To delete test users, call: DELETE /api/admin/delete-test-user with { email: 'test@example.com' }",
-            );
-            throw new Error(
-              "An account with this email already exists. Please use a different email or try logging in.",
-            );
-          }
-          throw new Error(`Server error (${response.status}): ${response.statusText}`);
-        }
-
-        throw new Error("Failed to process server response");
-      }
-
-      // Check if response was successful
-      if (!response.ok) {
+      if (!response.success) {
         // Handle specific error cases
         if (response.status === 409) {
           console.log(
@@ -190,9 +145,10 @@ export default function ProviderOnboardingPhase1() {
             "An account with this email already exists. Please use a different email or try logging in.",
           );
         }
-        throw new Error(result?.error || "Failed to create account");
+        throw new Error(response.error || "Failed to create account");
       }
 
+      const result = response.data;
       console.log("Signup successful:", { userId: result?.user?.id, email: result?.user?.email });
 
       // Validate result structure
