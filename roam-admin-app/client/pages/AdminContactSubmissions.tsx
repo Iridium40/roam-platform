@@ -118,7 +118,11 @@ export default function AdminContactSubmissions() {
         .from("contact_submissions")
         .select(`
           *,
-          admin_user:responded_by(first_name, last_name)
+          admin_user:auth.users!responded_by(
+            id,
+            email,
+            raw_user_meta_data
+          )
         `)
         .order("created_at", { ascending: false });
 
