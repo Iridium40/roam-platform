@@ -82,7 +82,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Get location information (if specified)
     let locationName = 'No specific location';
-    if (decodedToken.locationId) {
+    if (decodedToken.locationId && decodedToken.locationId.trim() !== '') {
       const { data: location } = await supabase
         .from('business_locations')
         .select('location_name')
