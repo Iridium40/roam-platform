@@ -402,6 +402,22 @@ export default function FinancialsTab({
         </CardContent>
       </Card>
 
+      {/* Stripe Tax / 1099 Information */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <span className="flex items-center space-x-2">
+              <Receipt className="w-5 h-5" />
+              <span>Tax Information (1099 / Stripe Tax)</span>
+            </span>
+            <Badge variant="outline">Required for payouts & 1099s</Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <TaxInformationSection businessId={business?.id || providerData?.business_id} />
+        </CardContent>
+      </Card>
+
       {/* Bank Account Management */}
       <Card>
         <CardHeader>
@@ -411,12 +427,170 @@ export default function FinancialsTab({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <BankAccountManager 
-            userId={providerData?.user_id} 
-            businessId={business?.id || providerData?.business_id} 
+          <BankAccountManager
+            userId={providerData?.user_id}
+            businessId={business?.id || providerData?.business_id}
           />
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+function TaxInformationSection({ businessId }: { businessId: string }) {
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [legalEntityType, setLegalEntityType] = useState<'individual'|'sole_proprietorship'|'company'|'non_profit'|'government'>('company');
+  const [legalName, setLegalName] = useState('');
+  const [taxIdType, setTaxIdType] = useState<'ein'|'ssn'>('ein');
+  const [taxIdFull, setTaxIdFull] = useState('');
+  const [address, setAddress] = useState({ line1: '', line2: '', city: '', state: '', postal_code: '', country: 'US' });
+  const [w9Signed, setW9Signed] = useState(false);
+  const [existingLast4, setExistingLast4] = useState<string | null>(null);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        setLoading(true);
+        const res = await fetch(`/api/business/tax-info?business_id=${businessId}`);
+        if (res.ok) {
+          const json = await res.json();
+          const t = json.tax_info;
+          if (t) {
+            setLegalEntityType(t.legal_entity_type || 'company');
+            setLegalName(t.legal_name || '');
+            setTaxIdType(t.tax_id_type || 'ein');
+            setExistingLast4(t.tax_id_last4 || null);
+            setAddress({
+              line1: t.address_line1 || '',
+              line2: t.address_line2 || '',
+              city: t.city || '',
+              state: t.state || '',
+              postal_code: t.postal_code || '',
+              country: t.country || 'US',
+            });
+            setW9Signed(!!t.w9_signed);
+          }
+        }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (businessId) load();
+  }, [businessId]);
+
+  const save = async () => {
+    try {
+      setSaving(true);
+      const payload = {
+        business_id: businessId,
+        legal_entity_type: legalEntityType,
+        legal_name: legalName,
+        tax_id_type: taxIdType,
+        tax_id_full: taxIdFull || undefined,
+        address,
+        w9_signed: w9Signed,
+      };
+      const res = await fetch('/api/business/tax-info', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Failed to save tax info');
+      }
+      const json = await res.json();
+      setExistingLast4(json?.tax_info?.tax_id_last4 || existingLast4);
+      setTaxIdFull('');
+      toast({ title: 'Saved', description: 'Tax information updated.' });
+    } catch (e:any) {
+      toast({ title: 'Error', description: e.message || 'Failed to save tax info', variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="text-sm font-medium">Legal Entity Type</label>
+          <Select value={legalEntityType} onValueChange={(v:any)=>setLegalEntityType(v)}>
+            <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="individual">Individual</SelectItem>
+              <SelectItem value="sole_proprietorship">Sole Proprietorship</SelectItem>
+              <SelectItem value="company">Company</SelectItem>
+              <SelectItem value="non_profit">Non-profit</SelectItem>
+              <SelectItem value="government">Government</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <label className="text-sm font-medium">Legal Name</label>
+          <Input value={legalName} onChange={(e)=>setLegalName(e.target.value)} placeholder="As shown on tax return" className="mt-1" />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <label className="text-sm font-medium">Tax ID Type</label>
+          <Select value={taxIdType} onValueChange={(v:any)=>setTaxIdType(v)}>
+            <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ein">EIN</SelectItem>
+              <SelectItem value="ssn">SSN (last 4)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="md:col-span-2">
+          <label className="text-sm font-medium">{taxIdType === 'ein' ? 'EIN' : 'SSN'} {existingLast4 ? '(stored: ••••' + existingLast4 + ')' : ''}</label>
+          <Input value={taxIdFull} onChange={(e)=>setTaxIdFull(e.target.value)} placeholder={taxIdType==='ein'?'XX-XXXXXXX':'XXX-XX-XXXX'} className="mt-1" />
+          <p className="text-xs text-gray-500 mt-1">We only store the last 4 digits. Full value is sent to Stripe when required.</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="text-sm font-medium">Address Line 1</label>
+          <Input value={address.line1} onChange={(e)=>setAddress(a=>({...a,line1:e.target.value}))} className="mt-1" />
+        </div>
+        <div>
+          <label className="text-sm font-medium">Address Line 2</label>
+          <Input value={address.line2} onChange={(e)=>setAddress(a=>({...a,line2:e.target.value}))} className="mt-1" />
+        </div>
+        <div>
+          <label className="text-sm font-medium">City</label>
+          <Input value={address.city} onChange={(e)=>setAddress(a=>({...a,city:e.target.value}))} className="mt-1" />
+        </div>
+        <div>
+          <label className="text-sm font-medium">State/Province</label>
+          <Input value={address.state} onChange={(e)=>setAddress(a=>({...a,state:e.target.value}))} className="mt-1" />
+        </div>
+        <div>
+          <label className="text-sm font-medium">Postal Code</label>
+          <Input value={address.postal_code} onChange={(e)=>setAddress(a=>({...a,postal_code:e.target.value}))} className="mt-1" />
+        </div>
+        <div>
+          <label className="text-sm font-medium">Country</label>
+          <Input value={address.country} onChange={(e)=>setAddress(a=>({...a,country:e.target.value}))} className="mt-1" />
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm text-gray-700">W-9 Certification</p>
+          <p className="text-xs text-gray-500">Confirm that the above information is accurate for 1099 reporting.</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Switch checked={w9Signed} onCheckedChange={setW9Signed} />
+          <span className="text-sm">I certify</span>
+        </div>
+      </div>
+
+      <div className="flex justify-end">
+        <Button onClick={save} disabled={saving || loading}>{saving ? 'Saving...' : 'Save Tax Info'}</Button>
+      </div>
     </div>
   );
 }
