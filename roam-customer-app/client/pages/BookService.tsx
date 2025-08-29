@@ -278,18 +278,19 @@ export default function BookService() {
       // Then, get the business details
       const { data: businessData, error: businessError } = await supabase
         .from('business_profiles')
-        .select('id, business_name, business_description, image_url')
+        .select('id, business_name, business_description, image_url, logo_url')
         .in('id', businessIds)
         .eq('is_active', true);
 
       if (businessError) throw businessError;
-      
+
       // Transform data to match Business interface
       const transformedBusinesses = businessData?.map(business => ({
         id: business.id,
         business_name: business.business_name,
         description: business.business_description || '',
         image_url: business.image_url,
+        logo_url: business.logo_url,
         rating: 4.5, // Mock data - would come from reviews table
         review_count: 25, // Mock data
       })) || [];
