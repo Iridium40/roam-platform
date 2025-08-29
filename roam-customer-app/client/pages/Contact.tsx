@@ -43,14 +43,25 @@ export default function Contact() {
     setIsSubmitting(true);
 
     try {
-      // Simulate form submission
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+      const response = await fetch('/api/contact/submit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to submit contact form');
+      }
+
       toast({
         title: "Message Sent Successfully!",
-        description: "We'll get back to you within 24 hours.",
+        description: result.message || "We'll get back to you within 24 hours.",
       });
-      
+
       // Reset form
       setFormData({
         name: "",
@@ -59,10 +70,11 @@ export default function Contact() {
         message: "",
         category: "general"
       });
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Contact form submission error:', error);
       toast({
         title: "Error",
-        description: "Failed to send message. Please try again.",
+        description: error.message || "Failed to send message. Please try again.",
         variant: "destructive"
       });
     } finally {
