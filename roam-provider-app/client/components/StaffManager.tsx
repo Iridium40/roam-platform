@@ -143,7 +143,7 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
   const [activeTab, setActiveTab] = useState("all");
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<ProviderRole>("provider");
-  const [inviteLocation, setInviteLocation] = useState("");
+  const [inviteLocation, setInviteLocation] = useState("no-location");
 
   const [newStaff, setNewStaff] = useState<NewStaffMember>({
     first_name: "",
@@ -328,7 +328,7 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
           businessId: businessId,
           email: inviteEmail,
           role: inviteRole,
-          locationId: inviteLocation,
+          locationId: inviteLocation === "no-location" ? null : inviteLocation,
           invitedBy: invitedBy || 'ROAM Team',
         }),
       });
@@ -349,7 +349,7 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
       // Reset form
       setInviteEmail("");
       setInviteRole("provider");
-      setInviteLocation("");
+      setInviteLocation("no-location");
 
       // Refresh staff list
       await fetchStaff();
