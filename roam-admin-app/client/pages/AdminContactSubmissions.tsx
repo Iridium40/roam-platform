@@ -615,7 +615,7 @@ export default function AdminContactSubmissions() {
                   <div>
                     <Label className="text-sm font-medium">Responded</Label>
                     <p className="text-sm text-muted-foreground">
-                      {format(new Date(selectedSubmission.responded_at), "MMM dd, yyyy 'at' hh:mm a")}
+                      {safeFormatDate(selectedSubmission.responded_at, "MMM dd, yyyy 'at' hh:mm a")}
                       {selectedSubmission.admin_user && (
                         <span className="block text-xs text-muted-foreground/70 mt-1">
                           by {selectedSubmission.admin_user.raw_user_meta_data?.first_name && selectedSubmission.admin_user.raw_user_meta_data?.last_name
