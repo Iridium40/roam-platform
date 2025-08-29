@@ -340,4 +340,67 @@ export class EmailService {
       text: `Congratulations ${firstName}! You've completed ROAM onboarding. Access your dashboard: ${dashboardLink}`,
     });
   }
+
+  static async sendStaffInvitationEmail(
+    to: string,
+    businessName: string,
+    role: string,
+    invitedBy: string,
+    onboardingLink: string,
+  ): Promise<boolean> {
+    const roleDisplayName = role === 'provider' ? 'Service Provider' :
+                           role === 'dispatcher' ? 'Dispatcher' : 'Team Member';
+
+    const content = `
+      <h1 style="color: ${this.brandColor};">🎉 You're Invited to Join ${businessName} on ROAM!</h1>
+      <p>Hello!</p>
+
+      <p>${invitedBy} has invited you to join <strong>${businessName}</strong> as a <strong>${roleDisplayName}</strong> on the ROAM platform.</p>
+
+      <div class="highlight">
+        <h3>What is ROAM?</h3>
+        <p>ROAM is a platform that connects service providers with customers, making it easy to manage bookings, payments, and customer relationships.</p>
+      </div>
+
+      <h3>Your Role: ${roleDisplayName}</h3>
+      <p>As a ${roleDisplayName}, you'll be able to:</p>
+      <ul>
+        ${role === 'provider' ? `
+        <li><strong>Manage Your Schedule</strong> - Set your availability and working hours</li>
+        <li><strong>Accept Bookings</strong> - Receive and manage customer appointments</li>
+        <li><strong>Track Earnings</strong> - Monitor your income and payment history</li>
+        <li><strong>Communicate with Customers</strong> - Chat directly through the platform</li>
+        ` : role === 'dispatcher' ? `
+        <li><strong>Manage Team Bookings</strong> - Coordinate appointments for all providers</li>
+        <li><strong>Assign Providers</strong> - Match customers with the right team members</li>
+        <li><strong>Monitor Operations</strong> - Keep track of business performance</li>
+        <li><strong>Handle Customer Communications</strong> - Manage customer inquiries</li>
+        ` : `
+        <li><strong>Access Team Dashboard</strong> - View business operations</li>
+        <li><strong>Collaborate with Team</strong> - Work together efficiently</li>
+        <li><strong>Manage Assignments</strong> - Handle your specific responsibilities</li>
+        `}
+      </ul>
+
+      <p>To get started, simply click the link below to create your account and complete the onboarding process:</p>
+      <a href="${onboardingLink}" class="button">Accept Invitation & Get Started →</a>
+
+      <p style="font-size: 14px; color: #6b7280;">
+        <strong>Security Note:</strong> This invitation link is unique to you and expires in 7 days.
+      </p>
+
+      <p>If you have any questions about this invitation or need help getting started, please don't hesitate to contact our support team.</p>
+
+      <p>We're excited to welcome you to the ROAM community!</p>
+
+      <p>Best regards,<br>The ROAM Team</p>
+    `;
+
+    return this.sendEmail({
+      to,
+      subject: `🎉 You're Invited to Join ${businessName} on ROAM`,
+      html: this.getEmailTemplate(content),
+      text: `You've been invited by ${invitedBy} to join ${businessName} as a ${roleDisplayName} on ROAM. Complete your onboarding: ${onboardingLink}`,
+    });
+  }
 }
