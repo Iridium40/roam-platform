@@ -305,11 +305,24 @@ export default function BookService() {
     console.log('🏢 loadBusinesses called with:', {
       serviceId,
       selectedDate,
-      selectedTime: selectedTime
+      selectedTime: selectedTime,
+      selectedDateType: typeof selectedDate,
+      selectedDateValid: selectedDate instanceof Date,
+      selectedTimeType: typeof selectedTime
     });
 
-    if (!serviceId || !selectedDate || !selectedTime) {
-      console.log('❌ Missing required data for loadBusinesses');
+    if (!serviceId) {
+      console.log('❌ Missing serviceId');
+      return;
+    }
+
+    if (!selectedDate) {
+      console.log('❌ Missing selectedDate');
+      return;
+    }
+
+    if (!selectedTime) {
+      console.log('❌ Missing selectedTime');
       return;
     }
 
