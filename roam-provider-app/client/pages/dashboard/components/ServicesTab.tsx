@@ -360,7 +360,11 @@ export default function ServicesTab({
           <h1 className="text-2xl font-bold text-gray-900">Services</h1>
           <p className="text-sm text-gray-600">Manage your business services and offerings</p>
         </div>
-        <Button onClick={() => setShowAddServiceModal(true)} className="mt-4 sm:mt-0">
+        <Button onClick={() => {
+          setSearchQuery("");
+          setSelectedCategoryFilter("all");
+          setShowAddServiceModal(true);
+        }} className="mt-4 sm:mt-0">
           <Plus className="w-4 h-4 mr-2" />
           Add Service
         </Button>
