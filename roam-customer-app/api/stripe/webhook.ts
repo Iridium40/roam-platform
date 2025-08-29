@@ -208,3 +208,57 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: 'Webhook processing failed' });
   }
 }
+
+async function updateCustomerPaymentMethods(customerId: string, setupIntentId: string) {
+  try {
+    const stripe = stripeService.getStripe();
+
+    // Get the setup intent to find the payment method
+    const setupIntent = await stripe.setupIntents.retrieve(setupIntentId);
+
+    if (setupIntent.payment_method) {
+      // Get payment method details
+      const paymentMethod = await stripe.paymentMethods.retrieve(
+        setupIntent.payment_method as string
+      );
+
+      // Get existing customer profile
+      const { data: existingProfile } = await supabase
+        .from('customer_stripe_profiles')
+        .select('payment_methods')
+        .eq('stripe_customer_id', customerId)
+        .single();
+
+      const existingMethods = existingProfile?.payment_methods || [];
+
+      // Add new payment method if not already exists
+      const methodExists = existingMethods.some((method: any) => method.id === paymentMethod.id);
+
+      if (!methodExists) {
+        const updatedMethods = [...existingMethods, {
+          id: paymentMethod.id,
+          type: paymentMethod.type,
+          card: paymentMethod.card,
+          created: paymentMethod.created
+        }];
+
+        // Update customer Stripe profile
+        const { error } = await supabase
+          .from('customer_stripe_profiles')
+          .update({
+            default_payment_method_id: paymentMethod.id,
+            payment_methods: updatedMethods
+          })
+          .eq('stripe_customer_id', customerId);
+
+        if (error) {
+          console.error('Error updating customer payment methods:', error);
+        } else {
+          console.log('✅ Customer payment methods updated for:', customerId);
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error updating customer payment methods:', error);
+  }
+}
