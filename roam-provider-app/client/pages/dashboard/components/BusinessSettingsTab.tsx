@@ -1076,10 +1076,11 @@ export default function BusinessSettingsTab({
               <div className="space-y-4">
                 {Object.entries(serviceEligibility.subcategories_by_category || {}).map(([categoryId, subcats]: [string, any[]]) => {
                   const category = subcats?.[0]?.service_categories;
+                  const derivedFromSubcategory = subcats?.[0]?.service_subcategories?.service_categories;
                   const categoryItem = { id: categoryId, service_categories: category } as any;
                   // category derived above
                   const approvedCategory = serviceEligibility.approved_categories.find((c: any) => c?.service_categories?.id === categoryId)?.service_categories;
-                  const displayCategory = category || approvedCategory || null;
+                  const displayCategory = category || derivedFromSubcategory || approvedCategory || null;
 
                   const subcategoriesForThisCategory = subcats || [];
 
