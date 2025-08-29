@@ -617,11 +617,32 @@ export default function BusinessSettingsTab({
   };
 
   useEffect(() => {
-    loadBusinessData();
-    loadBusinessLocations();
-    loadBusinessDocuments();
-    loadServiceEligibility();
-  }, [business]);
+    let mounted = true;
+
+    const loadData = async () => {
+      if (!mounted) return;
+
+      // Load business data first
+      await loadBusinessData();
+
+      if (!mounted) return;
+      await loadBusinessLocations();
+
+      if (!mounted) return;
+      await loadBusinessDocuments();
+
+      if (!mounted) return;
+      await loadServiceEligibility();
+    };
+
+    if (business?.id) {
+      loadData();
+    }
+
+    return () => {
+      mounted = false;
+    };
+  }, [business?.id]); // Changed dependency to business?.id instead of entire business object
 
   // Show loading state
   if (loading) {
