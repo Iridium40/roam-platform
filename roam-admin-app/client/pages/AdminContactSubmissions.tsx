@@ -124,11 +124,18 @@ export default function AdminContactSubmissions() {
 
       setSubmissions(data || []);
       calculateStats(data || []);
-    } catch (error) {
-      console.error("Error fetching contact submissions:", error);
+    } catch (error: any) {
+      console.error("Error fetching contact submissions:", {
+        error,
+        message: error?.message,
+        details: error?.details,
+        hint: error?.hint,
+        code: error?.code,
+        stack: error?.stack
+      });
       toast({
         title: "Error",
-        description: "Failed to fetch contact submissions",
+        description: `Failed to fetch contact submissions: ${error?.message || error}`,
         variant: "destructive",
       });
     } finally {
