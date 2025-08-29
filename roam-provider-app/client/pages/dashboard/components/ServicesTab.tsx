@@ -152,6 +152,9 @@ export default function ServicesTab({
         description: `${service.name} has been added to your services.`,
       });
 
+      // Close the modal
+      setShowAddServiceModal(false);
+
       // Refresh services data
       await loadServicesData();
     } catch (error) {
