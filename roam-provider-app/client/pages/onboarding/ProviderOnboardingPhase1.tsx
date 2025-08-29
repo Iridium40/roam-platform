@@ -131,9 +131,17 @@ export default function ProviderOnboardingPhase1() {
       setError(null);
 
       console.log("Starting signup process for:", signupData.email);
+      console.log("Signup data keys:", Object.keys(signupData));
 
       // Create user account using the safe API utility
       const response = await postJson("/api/auth/signup", signupData);
+
+      console.log("Signup API response:", {
+        success: response.success,
+        status: response.status,
+        hasData: !!response.data,
+        hasError: !!response.error
+      });
 
       if (!response.success) {
         // Handle specific error cases
@@ -145,6 +153,9 @@ export default function ProviderOnboardingPhase1() {
             "An account with this email already exists. Please use a different email or try logging in.",
           );
         }
+
+        // Log the full error response for debugging
+        console.error("Signup failed with response:", response);
         throw new Error(response.error || "Failed to create account");
       }
 
@@ -152,10 +163,17 @@ export default function ProviderOnboardingPhase1() {
       console.log("Signup successful:", { userId: result?.user?.id, email: result?.user?.email });
 
       // Validate result structure
+      if (!result) {
+        console.error("No data in successful response");
+        throw new Error("Invalid response: no data returned");
+      }
+
       if (!result.user || !result.user.id) {
+        console.error("Invalid user data in response:", result);
         throw new Error("Invalid response: missing user data");
       }
 
+      console.log("Setting onboarding state to business_info phase");
       setOnboardingState((prev) => ({
         ...prev,
         phase1Step: "business_info",
@@ -164,6 +182,7 @@ export default function ProviderOnboardingPhase1() {
       }));
     } catch (error) {
       console.error("Signup error:", error);
+      console.error("Error stack:", error instanceof Error ? error.stack : "No stack available");
 
       let errorMessage = "Failed to create account";
       if (error instanceof Error) {
@@ -172,6 +191,7 @@ export default function ProviderOnboardingPhase1() {
         errorMessage = error;
       } else {
         console.error("Unknown error type:", typeof error, error);
+        errorMessage = "An unexpected error occurred during signup";
       }
 
       setError(errorMessage);
