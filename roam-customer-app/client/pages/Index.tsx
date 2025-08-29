@@ -814,21 +814,6 @@ export default function Index() {
     setCurrentPromotionSlide(newPage);
   }, [currentPromotionSlide, promotionPages.length, promotionalDeals.length]);
 
-  const nextBusinessSlide = useCallback(() => {
-    const maxPage = Math.max(0, businessPages.length - 1);
-    const newPage = Math.min(currentBusinessSlide + 1, maxPage);
-    console.log('🔄 Next business slide clicked');
-    console.log('📊 Business state:', { currentBusinessSlide, maxPage, newPage, businessesCount: filteredBusinesses.length, pagesCount: businessPages.length });
-    setCurrentBusinessSlide(newPage);
-  }, [currentBusinessSlide, businessPages.length, filteredBusinesses.length]);
-
-  const prevBusinessSlide = useCallback(() => {
-    const newPage = Math.max(currentBusinessSlide - 1, 0);
-    console.log('🔄 Prev business slide clicked');
-    console.log('📊 Business state:', { currentBusinessSlide, newPage, businessesCount: filteredBusinesses.length, pagesCount: businessPages.length });
-    setCurrentBusinessSlide(newPage);
-  }, [currentBusinessSlide, businessPages.length, filteredBusinesses.length]);
-
   const filteredBusinesses = featuredBusinesses.filter((business) => {
     const matchesSearch =
       searchQuery === "" ||
@@ -860,6 +845,21 @@ export default function Index() {
     }
     return pages;
   }, [filteredBusinesses]);
+
+  const nextBusinessSlide = useCallback(() => {
+    const maxPage = Math.max(0, businessPages.length - 1);
+    const newPage = Math.min(currentBusinessSlide + 1, maxPage);
+    console.log('🔄 Next business slide clicked');
+    console.log('📊 Business state:', { currentBusinessSlide, maxPage, newPage, businessesCount: filteredBusinesses.length, pagesCount: businessPages.length });
+    setCurrentBusinessSlide(newPage);
+  }, [currentBusinessSlide, businessPages.length, filteredBusinesses.length]);
+
+  const prevBusinessSlide = useCallback(() => {
+    const newPage = Math.max(currentBusinessSlide - 1, 0);
+    console.log('🔄 Prev business slide clicked');
+    console.log('📊 Business state:', { currentBusinessSlide, newPage, businessesCount: filteredBusinesses.length, pagesCount: businessPages.length });
+    setCurrentBusinessSlide(newPage);
+  }, [currentBusinessSlide, businessPages.length, filteredBusinesses.length]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-accent/5 to-roam-light-blue/10">
