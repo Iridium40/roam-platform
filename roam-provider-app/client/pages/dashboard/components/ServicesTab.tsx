@@ -454,14 +454,6 @@ export default function ServicesTab({
                       <Edit className="w-4 h-4 mr-1" />
                       Edit
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => toggleServiceStatus(service.id, !service.is_active)}
-                      className={service.is_active ? "text-red-600 border-red-300" : "text-green-600 border-green-300"}
-                    >
-                      {service.is_active ? "Deactivate" : "Activate"}
-                    </Button>
                   </div>
                   <Button
                     variant="ghost"
