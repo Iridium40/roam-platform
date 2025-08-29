@@ -53,10 +53,6 @@ export default function ServicesTab({
     business_price: "",
     delivery_type: "business_location"
   });
-  const [serviceForm, setServiceForm] = useState({
-    business_price: '',
-    delivery_type: 'business_location'
-  });
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState("all");
   const [selectedStatusFilter, setSelectedStatusFilter] = useState("all");
