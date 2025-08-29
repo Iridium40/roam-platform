@@ -546,7 +546,11 @@ export default function ServicesTab({
               </div>
               {eligibleServices.length > 6 && (
                 <div className="text-center mt-4">
-                  <Button variant="outline" onClick={() => setShowAddServiceModal(true)}>
+                  <Button variant="outline" onClick={() => {
+                    setSearchQuery("");
+                    setSelectedCategoryFilter("all");
+                    setShowAddServiceModal(true);
+                  }}>
                     View All {eligibleServices.length} Available Services
                   </Button>
                 </div>
