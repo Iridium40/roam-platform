@@ -104,6 +104,33 @@ const getDeliveryTypeIcon = (type: string) => {
   return icons[type] || Smartphone;
 };
 
+// Business sorting and filtering logic
+const sortAndFilterBusinesses = (businesses: Business[], sortBy: string, sortOrder: string): Business[] => {
+  const sorted = [...businesses].sort((a, b) => {
+    switch (sortBy) {
+      case 'price':
+        const priceA = a.service_price || 0;
+        const priceB = b.service_price || 0;
+        return sortOrder === 'asc' ? priceA - priceB : priceB - priceA;
+
+      case 'rating':
+        return sortOrder === 'asc' ? a.rating - b.rating : b.rating - a.rating;
+
+      case 'delivery_type':
+        const deliveryA = getDeliveryTypes(a).join(',');
+        const deliveryB = getDeliveryTypes(b).join(',');
+        return sortOrder === 'asc'
+          ? deliveryA.localeCompare(deliveryB)
+          : deliveryB.localeCompare(deliveryA);
+
+      default:
+        return 0;
+    }
+  });
+
+  return sorted;
+};
+
 interface Provider {
   id: string;
   first_name: string;
