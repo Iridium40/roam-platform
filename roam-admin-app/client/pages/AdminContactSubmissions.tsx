@@ -144,12 +144,18 @@ export default function AdminContactSubmissions() {
     try {
       setLoading(true);
 
-      // Use admin client with service role for elevated permissions
-      const adminSupabase = createAdminSupabaseClient();
-      console.log("Using admin Supabase client for contact submissions");
+      // Try admin client first, fallback to regular client if needed
+      let clientToUse = supabase;
+      try {
+        const adminSupabase = createAdminSupabaseClient();
+        console.log("Attempting to use admin Supabase client for contact submissions");
+        clientToUse = adminSupabase;
+      } catch (adminError) {
+        console.warn("Admin client creation failed, using regular client:", adminError);
+      }
 
       // First try a simple query without joins to test basic connectivity
-      const { data, error } = await adminSupabase
+      const { data, error } = await clientToUse
         .from("contact_submissions")
         .select("*")
         .order("created_at", { ascending: false });
