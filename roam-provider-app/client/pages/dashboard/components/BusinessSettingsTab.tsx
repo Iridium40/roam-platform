@@ -166,11 +166,20 @@ export default function BusinessSettingsTab({
 
       console.log('Loading service eligibility for business:', business.id);
 
+      // Get the access token from localStorage or Supabase session
+      const { supabase } = await import('@/lib/supabase');
+      const { data: { session } } = await supabase.auth.getSession();
+      const accessToken = session?.access_token || localStorage.getItem('roam_access_token');
+
+      if (!accessToken) {
+        throw new Error('Authentication required. Please sign in again.');
+      }
+
       const response = await fetch(`/api/business/service-eligibility?business_id=${business.id}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('supabase.auth.token')}`, // Add auth header if needed
+          'Authorization': `Bearer ${accessToken}`,
         },
       });
 
