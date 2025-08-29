@@ -33,6 +33,7 @@ const BookService = lazy(() => import("./pages/BookService"));
 const BusinessProfile = lazy(() => import("./pages/BusinessProfile"));
 const About = lazy(() => import("./pages/About"));
 const Contact = lazy(() => import("./pages/Contact"));
+const HowItWorks = lazy(() => import("./pages/HowItWorks"));
 const SignIn = lazy(() => import("./pages/SignIn"));
 const BecomeProvider = lazy(() => import("./pages/BecomeProvider"));
 
