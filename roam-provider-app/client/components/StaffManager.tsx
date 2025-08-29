@@ -376,11 +376,14 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
 
       </div>
 
-      {/* Quick Invite */}
+      {/* Add Staff */}
       {(isOwner || isDispatcher) && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Quick Invite</CardTitle>
+            <CardTitle className="text-lg">Add Staff Member</CardTitle>
+            <p className="text-sm text-foreground/60">
+              Send an invitation email to add a new team member
+            </p>
           </CardHeader>
           <CardContent>
             <div className="flex gap-2">
