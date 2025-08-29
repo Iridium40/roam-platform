@@ -742,25 +742,15 @@ export default function Index() {
 
   const nextServiceSlide = () => {
     const maxPage = Math.max(0, servicePages.length - 1);
-    console.log('Next service slide clicked. Current:', currentServiceSlide, 'Max:', maxPage, 'Pages:', servicePages.length);
-    console.log('Featured services count:', filteredFeaturedServices.length);
-    console.log('Service pages:', servicePages);
-    setCurrentServiceSlide((prev) => {
-      const newPage = Math.min(prev + 1, maxPage);
-      console.log('Setting page to:', newPage);
-      return newPage;
-    });
+    const newPage = Math.min(currentServiceSlide + 1, maxPage);
+    console.log('Next service slide clicked. Current:', currentServiceSlide, 'New:', newPage, 'Max:', maxPage, 'Pages:', servicePages.length);
+    setCurrentServiceSlide(newPage);
   };
 
   const prevServiceSlide = () => {
-    console.log('Prev service slide clicked. Current:', currentServiceSlide);
-    console.log('Featured services count:', filteredFeaturedServices.length);
-    console.log('Service pages:', servicePages);
-    setCurrentServiceSlide((prev) => {
-      const newPage = Math.max(prev - 1, 0);
-      console.log('Setting page to:', newPage);
-      return newPage;
-    });
+    const newPage = Math.max(currentServiceSlide - 1, 0);
+    console.log('Prev service slide clicked. Current:', currentServiceSlide, 'New:', newPage);
+    setCurrentServiceSlide(newPage);
   };
 
   // Most Popular Services: paginate into pages of 3
