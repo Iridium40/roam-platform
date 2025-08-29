@@ -93,6 +93,30 @@
       "destination": "/api/stripe/create-connect-account.ts"
     },
     {
+      "source": "/api/stripe/create-checkout-session",
+      "destination": "/api/stripe/create-checkout-session.ts"
+    },
+    {
+      "source": "/api/stripe/webhook",
+      "destination": "/api/stripe/webhook.ts"
+    },
+    {
+      "source": "/api/stripe/session",
+      "destination": "/api/stripe/session.ts"
+    },
+    {
+      "source": "/api/stripe/payment-intent",
+      "destination": "/api/stripe/payment-intent.ts"
+    },
+    {
+      "source": "/api/stripe/customer",
+      "destination": "/api/stripe/customer.ts"
+    },
+    {
+      "source": "/api/stripe/subscription",
+      "destination": "/api/stripe/subscription.ts"
+    },
+    {
       "source": "/api/plaid/create-link-token",
       "destination": "/api/plaid/create-link-token.ts"
     },
