@@ -131,6 +131,8 @@ export default function ServicesTab() {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
+  const [page, setPage] = useState(1);
+  const pageSize = 25;
   const [showAddServiceModal, setShowAddServiceModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedService, setSelectedService] = useState<BusinessService | null>(null);
@@ -149,7 +151,7 @@ export default function ServicesTab() {
     if (provider?.business_id) {
       loadServicesData();
     }
-  }, [provider?.business_id]);
+  }, [provider?.business_id, page, filterStatus]);
 
   const loadServicesData = async () => {
     try {
@@ -159,19 +161,31 @@ export default function ServicesTab() {
       const businessId = provider?.business_id;
       if (!businessId) throw new Error('Business ID not found');
 
-      // Load business services using API endpoint
-      const response = await fetch(`/api/business/services?business_id=${businessId}`);
-      if (!response.ok) {
-        const errorData = await response.json();
+      const statusParam = filterStatus === 'all' ? '' : `&status=${filterStatus}`;
+      const servicesUrl = `/api/business/services?business_id=${businessId}&page=${page}&limit=${pageSize}${statusParam}`;
+
+      // Fetch services and eligible list in parallel
+      const [servicesRes, eligibleRes] = await Promise.all([
+        fetch(servicesUrl),
+        fetch(`/api/business-eligible-services?business_id=${businessId}`)
+      ]);
+
+      if (!servicesRes.ok) {
+        const errorData = await servicesRes.json();
         throw new Error(errorData.error || 'Failed to load services');
       }
 
-      const { services, stats } = await response.json();
+      const servicesJson = await servicesRes.json();
+      const { services, stats } = servicesJson;
       setBusinessServices(services || []);
       setServiceStats(stats);
 
-      // Load eligible services (services not yet added)
-      await loadEligibleServices(businessId);
+      if (eligibleRes.ok) {
+        const eligibleJson = await eligibleRes.json();
+        const existingServiceIds = (services || []).map((bs: any) => bs.service_id);
+        const eligible = (eligibleJson.eligible_services || []).filter((svc: any) => !existingServiceIds.includes(svc.id));
+        setEligibleServices(eligible);
+      }
 
     } catch (error) {
       console.error('Error loading services data:', error);
@@ -506,8 +520,16 @@ export default function ServicesTab() {
 
       {/* Services Table */}
       <Card>
-        <CardHeader>
-          <CardTitle>Services ({filteredServices.length})</CardTitle>
+        <CardHeader className="flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <CardTitle>Services ({filteredServices.length})</CardTitle>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(p => Math.max(1, p - 1))}>Prev</Button>
+              <span className="text-sm text-gray-600">Page {page}</span>
+              <Button variant="outline" size="sm" onClick={() => setPage(p => p + 1)}>Next</Button>
+            </div>
+          </div>
+          <p className="text-xs text-gray-500">Showing up to {pageSize} items per page</p>
         </CardHeader>
         <CardContent>
           {filteredServices.length === 0 ? (
