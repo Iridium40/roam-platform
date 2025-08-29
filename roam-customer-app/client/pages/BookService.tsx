@@ -1330,8 +1330,8 @@ export default function BookService() {
                       <span className="font-medium">{service.duration_minutes} minutes</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Original Price:</span>
-                      <span className="font-medium">${service.min_price}</span>
+                      <span className="text-gray-600">Service Price:</span>
+                      <span className="font-medium">${selectedBusiness?.service_price || service.min_price}</span>
                     </div>
                     {promotion && (
                       <div className="flex justify-between text-green-600">
@@ -1341,10 +1341,20 @@ export default function BookService() {
                         </span>
                       </div>
                     )}
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Subtotal:</span>
+                      <span className="font-medium">${calculateDiscountedPrice().toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">
+                        Service Fee ({platformFeePercentage}%):
+                      </span>
+                      <span className="font-medium">${calculateServiceFee().toFixed(2)}</span>
+                    </div>
                     <div className="flex justify-between border-t pt-3">
                       <span className="text-lg font-semibold">Total:</span>
                       <span className="text-lg font-semibold text-roam-blue">
-                        ${calculateDiscountedPrice().toFixed(2)}
+                        ${calculateTotalWithFees().toFixed(2)}
                       </span>
                     </div>
                   </div>
