@@ -206,6 +206,18 @@ const App = () => (
             }
           />
           <Route
+            path="/admin/contact-submissions"
+            element={
+              <ProtectedRoute>
+                <ErrorBoundary>
+                  <Suspense fallback={<PageLoader text="Loading Contact Submissions..." />}>
+                    <AdminContactSubmissions />
+                  </Suspense>
+                </ErrorBoundary>
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/admin/promotions"
             element={
               <ProtectedRoute>
