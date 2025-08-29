@@ -153,7 +153,7 @@ export function createServer() {
   app.patch("/api/notifications/edge", handleNotificationUpdates);
 
   // Twilio conversations routes
-  app.post("/api/twilio-conversations", 
+  app.post("/api/twilio-conversations",
     requireAuth(['customer', 'provider', 'owner', 'dispatcher', 'admin']),
     async (req: AuthenticatedRequest, res) => {
       try {
@@ -162,6 +162,19 @@ export function createServer() {
       } catch (error) {
         console.error("Error importing twilio conversations handler:", error);
         res.status(500).json({ error: "Failed to load twilio conversations handler" });
+      }
+    }
+  );
+
+  // Contact form submission route (no auth required)
+  app.post("/api/contact/submit",
+    async (req, res) => {
+      try {
+        const contactHandler = await import("../api/contact/submit");
+        await contactHandler.default(req, res);
+      } catch (error) {
+        console.error("Error importing contact handler:", error);
+        res.status(500).json({ error: "Failed to load contact handler" });
       }
     }
   );
