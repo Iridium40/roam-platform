@@ -19,10 +19,20 @@ export interface AuthenticatedRequest extends Request {
 export const requireAuth = (allowedRoles?: string[]) => {
   return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const token = req.headers.authorization?.replace('Bearer ', '');
-      
+      const authHeader = req.headers.authorization;
+      const token = authHeader?.replace('Bearer ', '');
+
+      console.log('Auth debug:', {
+        hasAuthHeader: !!authHeader,
+        tokenLength: token?.length,
+        tokenPrefix: token?.substring(0, 20) + '...',
+        allowedRoles,
+        url: req.url
+      });
+
       if (!token) {
-        return res.status(401).json({ 
+        console.log('No token provided');
+        return res.status(401).json({
           error: 'Authentication required',
           code: 'AUTH_REQUIRED'
         });
@@ -56,15 +66,25 @@ export const requireAuth = (allowedRoles?: string[]) => {
       }
 
       // Get user roles
+      const userId = decoded.user_id || decoded.sub;
+      console.log('Fetching roles for user:', userId);
+
       const { data: userRoles, error: rolesError } = await supabase
         .from('user_roles')
         .select('role, business_id')
-        .eq('user_id', decoded.user_id || decoded.sub)
+        .eq('user_id', userId)
         .eq('is_active', true);
+
+      console.log('User roles query result:', {
+        userId,
+        userRoles: userRoles?.length || 0,
+        roles: userRoles?.map(r => r.role),
+        error: rolesError?.message
+      });
 
       if (rolesError) {
         console.error('Error fetching user roles:', rolesError);
-        return res.status(500).json({ 
+        return res.status(500).json({
           error: 'Failed to verify user permissions',
           code: 'ROLES_ERROR'
         });
