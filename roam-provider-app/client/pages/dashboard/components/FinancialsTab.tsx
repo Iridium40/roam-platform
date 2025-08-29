@@ -28,6 +28,7 @@ import {
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import BankAccountManager from "@/components/BankAccountManager";
+import { Switch } from "@/components/ui/switch";
 
 interface FinancialsTabProps {
   providerData: any;
