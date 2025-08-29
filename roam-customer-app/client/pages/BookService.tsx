@@ -891,6 +891,11 @@ export default function BookService() {
                           </div>
                           <div className="flex-1">
                             <h3 className="font-semibold">{provider.first_name} {provider.last_name}</h3>
+                            {provider.provider_role && (
+                              <p className="text-sm text-gray-600 capitalize">
+                                {provider.provider_role}
+                              </p>
+                            )}
                             <div className="flex items-center mt-2">
                               <span className="text-yellow-500">★</span>
                               <span className="text-sm ml-1">{provider.rating}</span>
