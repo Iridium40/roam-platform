@@ -1288,10 +1288,12 @@ export default function Index() {
             <p className="text-lg text-foreground/70 mt-4">
               Discover our most popular and highly-rated services
             </p>
-            {/* Debug info - remove in production */}
-            <div className="text-sm text-gray-500 mt-2">
-              Services: {filteredFeaturedServices.length} | Pages: {servicePages.length} | Current: {typeof currentServiceSlide === 'number' ? currentServiceSlide + 1 : 'ERROR'} | Type: {typeof currentServiceSlide}
-            </div>
+            {/* Debug info for development */}
+            {process.env.NODE_ENV === 'development' && (
+              <div className="text-xs text-gray-400 mt-1">
+                Debug: {filteredFeaturedServices.length} services, {servicePages.length} pages, current: {currentServiceSlide + 1}
+              </div>
+            )}
           </div>
 
           {filteredFeaturedServices.length > 0 ? (
