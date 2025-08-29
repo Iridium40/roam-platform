@@ -1074,7 +1074,14 @@ export default function BusinessSettingsTab({
 
               {/* Categories and Subcategories */}
               <div className="space-y-4">
-                {serviceEligibility.approved_categories.map((categoryItem) => {
+                {(
+                  serviceEligibility.approved_categories.length > 0
+                    ? serviceEligibility.approved_categories
+                    : Object.entries(serviceEligibility.subcategories_by_category || {}).map(([categoryId, subcats]: [string, any[]]) => ({
+                        id: categoryId,
+                        service_categories: subcats?.[0]?.service_categories || null
+                      }))
+                ).map((categoryItem) => {
                   const category = categoryItem.service_categories;
                   if (!category) return null;
 
