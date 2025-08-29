@@ -218,8 +218,31 @@ export default function BusinessSettingsTab({
         return;
       }
 
-      console.log('Service eligibility loaded successfully:', responseData);
-      setServiceEligibility(responseData);
+      console.log('Service eligibility loaded successfully:', {
+        businessId: responseData.business_id,
+        categoriesCount: responseData.approved_categories?.length || 0,
+        subcategoriesCount: responseData.approved_subcategories?.length || 0,
+        debug: responseData._debug
+      });
+
+      // Ensure required fields exist with defaults
+      const normalizedData = {
+        business_id: responseData.business_id || business.id,
+        approved_categories: responseData.approved_categories || [],
+        approved_subcategories: responseData.approved_subcategories || [],
+        subcategories_by_category: responseData.subcategories_by_category || {},
+        stats: {
+          total_categories: 0,
+          total_subcategories: 0,
+          categories_with_subcategories: 0,
+          available_services_count: 0,
+          last_updated: null,
+          ...responseData.stats
+        },
+        last_fetched: responseData.last_fetched || new Date().toISOString()
+      };
+
+      setServiceEligibility(normalizedData);
 
     } catch (error) {
       console.error('Error loading service eligibility:', error);
