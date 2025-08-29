@@ -159,35 +159,15 @@ export default function ServicesTab() {
       const businessId = provider?.business_id;
       if (!businessId) throw new Error('Business ID not found');
 
-      // Load business services with service details
-      const { data: servicesData, error: servicesError } = await supabase
-        .from('business_services')
-        .select(`
-          *,
-          services:service_id (
-            id,
-            name,
-            description,
-            min_price,
-            duration_minutes,
-            image_url,
-            service_subcategories (
-              service_subcategory_type,
-              service_categories (
-                service_category_type
-              )
-            )
-          )
-        `)
-        .eq('business_id', businessId)
-        .order('created_at', { ascending: false });
+      // Load business services using API endpoint
+      const response = await fetch(`/api/business/services?business_id=${businessId}`);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to load services');
+      }
 
-      if (servicesError) throw servicesError;
-
-      setBusinessServices(servicesData || []);
-
-      // Calculate stats
-      const stats = calculateServiceStats(servicesData || []);
+      const { services, stats } = await response.json();
+      setBusinessServices(services || []);
       setServiceStats(stats);
 
       // Load eligible services (services not yet added)
@@ -203,32 +183,17 @@ export default function ServicesTab() {
 
   const loadEligibleServices = async (businessId: string) => {
     try {
-      // Get all services that are not in business_services
-      const { data: allServices, error: allServicesError } = await supabase
-        .from('services')
-        .select(`
-          id,
-          name,
-          description,
-          min_price,
-          duration_minutes,
-          image_url,
-          is_active,
-          subcategory_id,
-          service_subcategories (
-            service_subcategory_type,
-            service_categories (
-              service_category_type
-            )
-          )
-        `)
-        .eq('is_active', true);
+      // Use existing API endpoint for eligible services
+      const response = await fetch(`/api/business-eligible-services?business_id=${businessId}`);
+      if (!response.ok) {
+        throw new Error('Failed to load eligible services');
+      }
 
-      if (allServicesError) throw allServicesError;
+      const { eligible_services } = await response.json();
 
       // Filter out services already added to business
       const existingServiceIds = businessServices.map(bs => bs.service_id);
-      const eligible = (allServices || []).filter(service => 
+      const eligible = (eligible_services || []).filter((service: any) =>
         !existingServiceIds.includes(service.id)
       );
 
@@ -268,45 +233,31 @@ export default function ServicesTab() {
         throw new Error('Please enter a valid price');
       }
 
-      // Check minimum price requirement
-      const selectedEligibleService = eligibleServices.find(s => s.id === serviceForm.service_id);
-      if (selectedEligibleService && price < selectedEligibleService.min_price) {
-        throw new Error(`Price must be at least $${selectedEligibleService.min_price}`);
-      }
-
-      const { data, error } = await supabase
-        .from('business_services')
-        .insert({
+      // Use API endpoint to add service
+      const response = await fetch('/api/business/services', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           business_id: businessId,
           service_id: serviceForm.service_id,
           business_price: price,
           delivery_type: serviceForm.delivery_type,
           is_active: serviceForm.is_active
-        })
-        .select(`
-          *,
-          services:service_id (
-            id,
-            name,
-            description,
-            min_price,
-            duration_minutes,
-            image_url,
-            service_subcategories (
-              service_subcategory_type,
-              service_categories (
-                service_category_type
-              )
-            )
-          )
-        `)
-        .single();
+        }),
+      });
 
-      if (error) throw error;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to add service');
+      }
+
+      const { service } = await response.json();
 
       // Update local state
-      setBusinessServices(prev => [data, ...prev]);
-      
+      setBusinessServices(prev => [service, ...prev]);
+
       // Reset form and close modal
       setServiceForm({
         service_id: '',
@@ -315,7 +266,7 @@ export default function ServicesTab() {
         is_active: true
       });
       setShowAddServiceModal(false);
-      
+
       // Reload data to update eligible services
       await loadServicesData();
 
@@ -339,35 +290,29 @@ export default function ServicesTab() {
         throw new Error('Price must be greater than 0');
       }
 
-      const { data, error } = await supabase
-        .from('business_services')
-        .update(updates)
-        .eq('business_id', businessId)
-        .eq('service_id', serviceId)
-        .select(`
-          *,
-          services:service_id (
-            id,
-            name,
-            description,
-            min_price,
-            duration_minutes,
-            image_url,
-            service_subcategories (
-              service_subcategory_type,
-              service_categories (
-                service_category_type
-              )
-            )
-          )
-        `)
-        .single();
+      // Use API endpoint to update service
+      const response = await fetch('/api/business/services', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          business_id: businessId,
+          service_id: serviceId,
+          ...updates
+        }),
+      });
 
-      if (error) throw error;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update service');
+      }
+
+      const { service } = await response.json();
 
       // Update local state
-      setBusinessServices(prev => 
-        prev.map(bs => bs.service_id === serviceId ? data : bs)
+      setBusinessServices(prev =>
+        prev.map(bs => bs.service_id === serviceId ? service : bs)
       );
 
       setShowEditModal(false);
@@ -389,17 +334,19 @@ export default function ServicesTab() {
       const businessId = provider?.business_id;
       if (!businessId) throw new Error('Business ID not found');
 
-      const { error } = await supabase
-        .from('business_services')
-        .delete()
-        .eq('business_id', businessId)
-        .eq('service_id', serviceId);
+      // Use API endpoint to delete service
+      const response = await fetch(`/api/business/services?business_id=${businessId}&service_id=${serviceId}`, {
+        method: 'DELETE',
+      });
 
-      if (error) throw error;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete service');
+      }
 
       // Update local state
       setBusinessServices(prev => prev.filter(bs => bs.service_id !== serviceId));
-      
+
       // Reload eligible services
       await loadEligibleServices(businessId);
 
