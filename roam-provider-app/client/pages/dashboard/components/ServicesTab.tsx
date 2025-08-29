@@ -57,6 +57,18 @@ export default function ServicesTab({
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState("all");
   const [selectedStatusFilter, setSelectedStatusFilter] = useState("all");
 
+  // Filter eligible services based on search and category
+  const filteredEligibleServices = eligibleServices.filter(service => {
+    const matchesSearch = searchQuery === "" ||
+      service.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      service.description?.toLowerCase().includes(searchQuery.toLowerCase());
+
+    const matchesCategory = selectedCategoryFilter === "all" ||
+      service.service_subcategories?.service_categories?.service_category_type?.toLowerCase() === selectedCategoryFilter;
+
+    return matchesSearch && matchesCategory;
+  });
+
   // Load services data
   const loadServicesData = async () => {
     if (!providerData) return;
