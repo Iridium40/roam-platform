@@ -127,6 +127,8 @@ export default function ProviderOnboardingPhase1() {
       setLoading(true);
       setError(null);
 
+      console.log("Starting signup process for:", signupData.email);
+
       // Create user account
       const response = await fetch("/api/auth/signup", {
         method: "POST",
@@ -134,25 +136,32 @@ export default function ProviderOnboardingPhase1() {
         body: JSON.stringify(signupData),
       });
 
-      let result;
-      try {
-        result = await response.json();
-      } catch (parseError) {
-        console.error("Failed to parse response JSON:", parseError);
-        // If we can't parse the response, check the status code
-        if (!response.ok) {
-          if (response.status === 409) {
-            throw new Error(
-              "An account with this email already exists. Please use a different email or try logging in.",
-            );
-          }
-          throw new Error(`Server error (${response.status}): ${response.statusText}`);
-        }
-        throw new Error("Server response was not valid JSON");
-      }
+      console.log("Signup response status:", response.status, response.statusText);
+      console.log("Response headers:", Object.fromEntries(response.headers));
 
+      // Check if response is ok before trying to parse JSON
       if (!response.ok) {
-        // Handle specific error cases
+        // For non-ok responses, try to get error text first
+        let errorMessage = "Failed to create account";
+        try {
+          const errorText = await response.text();
+          console.error("Error response text:", errorText);
+
+          // Try to parse as JSON if possible
+          try {
+            const errorData = JSON.parse(errorText);
+            errorMessage = errorData.error || errorMessage;
+          } catch {
+            // If not JSON, use the text as error message if it's reasonable
+            if (errorText && errorText.length < 200) {
+              errorMessage = errorText;
+            }
+          }
+        } catch (textError) {
+          console.error("Could not read error response:", textError);
+        }
+
+        // Handle specific status codes
         if (response.status === 409) {
           console.log(
             "💡 Developer tip: To delete test users, call: DELETE /api/admin/delete-test-user with { email: 'test@example.com' }",
@@ -161,7 +170,18 @@ export default function ProviderOnboardingPhase1() {
             "An account with this email already exists. Please use a different email or try logging in.",
           );
         }
-        throw new Error(result?.error || "Failed to create account");
+
+        throw new Error(`${errorMessage} (Status: ${response.status})`);
+      }
+
+      // Parse successful response
+      let result;
+      try {
+        result = await response.json();
+        console.log("Signup successful:", { userId: result?.user?.id, email: result?.user?.email });
+      } catch (parseError) {
+        console.error("Failed to parse success response JSON:", parseError);
+        throw new Error("Server returned an invalid response format");
       }
 
       // Validate result structure
