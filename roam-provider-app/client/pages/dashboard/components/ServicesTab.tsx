@@ -132,20 +132,43 @@ export default function ServicesTab({
 
   // Service Management Functions (from original ProviderDashboard.tsx)
   const addServiceToBusiness = async (service: any) => {
-    if (!business?.id || !providerData?.id) return;
+    if (!business?.id || !providerData?.id) {
+      console.error('Missing required data:', { businessId: business?.id, providerId: providerData?.id });
+      toast({
+        title: "Error",
+        description: "Missing business or provider information.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
+      console.log('Adding service to business:', {
+        serviceId: service.id,
+        serviceName: service.name,
+        businessId: business.id,
+        servicePrice: service.min_price || service.base_price
+      });
+
       const { error } = await supabase
         .from('business_services')
         .insert({
           business_id: business.id,
           service_id: service.id,
-          business_price: service.base_price, // Start with the base price as default
+          business_price: service.min_price || service.base_price || 0, // Use min_price first, fallback to base_price
           delivery_type: 'business_location', // Default delivery type
           is_active: true
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error details:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        });
+        throw error;
+      }
 
       toast({
         title: "Service Added",
@@ -157,11 +180,20 @@ export default function ServicesTab({
 
       // Refresh services data
       await loadServicesData();
-    } catch (error) {
-      console.error('Error adding service to business:', error);
+    } catch (error: any) {
+      console.error('Error adding service to business:', {
+        message: error?.message || 'Unknown error',
+        details: error?.details || 'No details available',
+        hint: error?.hint || 'No hint available',
+        code: error?.code || 'No code available',
+        error: error
+      });
+
+      const errorMessage = error?.message || error?.details || 'Failed to add service. Please try again.';
+
       toast({
         title: "Error",
-        description: "Failed to add service. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     }
