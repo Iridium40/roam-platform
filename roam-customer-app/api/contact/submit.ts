@@ -59,21 +59,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     console.log("Processing contact submission from:", submissionData.email);
 
-    // Prepare the full message with name and category info
-    const fullMessage = `Name: ${submissionData.name}
-Category: ${submissionData.category}
-
-Message:
-${submissionData.message}`;
-
-    // Create contact submission record
+    // Create contact submission record using the new schema
     const { data: submission, error: submissionError } = await supabase
       .from("contact_submissions")
       .insert({
         from_email: submissionData.email,
         to_email: "contactus@roamyourbestlife.com",
         subject: submissionData.subject,
-        message: fullMessage,
+        message: submissionData.message,
+        full_name: submissionData.name,
+        Category: submissionData.category,
         status: "received",
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
