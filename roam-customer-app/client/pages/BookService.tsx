@@ -769,11 +769,11 @@ export default function BookService() {
     const businessDeliveryTypes = getDeliveryTypes(selectedBusiness);
     const primaryDeliveryType = businessDeliveryTypes[0] || 'business_location';
 
-    // Prepare booking details for checkout
+    // Prepare booking details for checkout (pricing calculated server-side)
     const bookingDetails = {
       serviceId: service.id,
       businessId: selectedBusiness.id,
-      providerId: selectedProvider.id,
+      customerId: customer.id,
       bookingDate: selectedDate.toISOString().split('T')[0], // Format as YYYY-MM-DD
       startTime: selectedTime,
       guestName: `${customer.first_name} ${customer.last_name}`,
@@ -781,13 +781,7 @@ export default function BookService() {
       guestPhone: customer.phone || '',
       deliveryType: primaryDeliveryType,
       specialInstructions: '', // Placeholder for now
-      customerId: customer.id,
       promotionId: promotion?.id || null,
-      platformFeePercentage: platformFeePercentage,
-      servicePrice: selectedBusiness.service_price || service.min_price,
-      discountApplied: promotion ? (service?.min_price || 0) - calculateDiscountedPrice() : 0,
-      serviceFee: calculateServiceFee(),
-      totalAmount: calculateTotalWithFees(),
     };
 
     console.log('💳 Initiating Stripe Checkout with:', bookingDetails);
