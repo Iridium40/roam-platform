@@ -136,7 +136,6 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
   const { toast } = useToast();
   const [staff, setStaff] = useState<StaffMemberWithStats[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedStaff, setSelectedStaff] =
     useState<StaffMemberWithStats | null>(null);
@@ -145,16 +144,6 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
   const [inviteRole, setInviteRole] = useState<ProviderRole>("provider");
   const [inviteLocation, setInviteLocation] = useState("no-location");
 
-  const [newStaff, setNewStaff] = useState<NewStaffMember>({
-    first_name: "",
-    last_name: "",
-    email: "",
-    phone: "",
-    provider_role: "provider",
-    location_id: "",
-    bio: "",
-    experience_years: 0,
-  });
 
   useEffect(() => {
     fetchStaff();
@@ -219,38 +208,6 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
     }
   };
 
-  const handleAddStaff = async () => {
-    try {
-      const { error } = await supabase.from("providers").insert({
-        ...newStaff,
-        business_id: businessId,
-        verification_status: "pending",
-        is_active: false, // Will be activated after email verification
-        business_managed: true, // Default to true
-      });
-
-      if (error) throw error;
-
-      // Send invitation email (in real app)
-      console.log("Invitation email would be sent to:", newStaff.email);
-
-      setIsAddDialogOpen(false);
-      setNewStaff({
-        first_name: "",
-        last_name: "",
-        email: "",
-        phone: "",
-        provider_role: "provider",
-        location_id: "",
-        bio: "",
-        experience_years: 0,
-      });
-
-      await fetchStaff();
-    } catch (error) {
-      console.error("Error adding staff member:", error);
-    }
-  };
 
   const handleUpdateStaff = async () => {
     if (!selectedStaff) return;
@@ -429,187 +386,6 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
           </p>
         </div>
 
-        {(isOwner || isDispatcher) && (
-          <div className="flex gap-2">
-            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="bg-roam-blue hover:bg-roam-blue/90">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Staff Member
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle>Add New Staff Member</DialogTitle>
-                  <DialogDescription>
-                    Add a new team member to your business.
-                  </DialogDescription>
-                </DialogHeader>
-
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="firstName">First Name *</Label>
-                      <Input
-                        id="firstName"
-                        value={newStaff.first_name}
-                        onChange={(e) =>
-                          setNewStaff({
-                            ...newStaff,
-                            first_name: e.target.value,
-                          })
-                        }
-                        placeholder="John"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="lastName">Last Name *</Label>
-                      <Input
-                        id="lastName"
-                        value={newStaff.last_name}
-                        onChange={(e) =>
-                          setNewStaff({
-                            ...newStaff,
-                            last_name: e.target.value,
-                          })
-                        }
-                        placeholder="Doe"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email Address *</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={newStaff.email}
-                      onChange={(e) =>
-                        setNewStaff({ ...newStaff, email: e.target.value })
-                      }
-                      placeholder="john@example.com"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Phone Number *</Label>
-                    <Input
-                      id="phone"
-                      type="tel"
-                      value={newStaff.phone}
-                      onChange={(e) =>
-                        setNewStaff({ ...newStaff, phone: e.target.value })
-                      }
-                      placeholder="(555) 123-4567"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="role">Role *</Label>
-                      <Select
-                        value={newStaff.provider_role}
-                        onValueChange={(value) =>
-                          setNewStaff({
-                            ...newStaff,
-                            provider_role: value as ProviderRole,
-                          })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {roleOptions.map((role) => (
-                            <SelectItem key={role.value} value={role.value}>
-                              <div className="flex items-center gap-2">
-                                <role.icon className="w-4 h-4" />
-                                {role.label}
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="location">Location *</Label>
-                      <Select
-                        value={newStaff.location_id}
-                        onValueChange={(value) =>
-                          setNewStaff({ ...newStaff, location_id: value })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select location" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {locations.map((location) => (
-                            <SelectItem key={location.id} value={location.id}>
-                              {location.location_name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="bio">Bio (Optional)</Label>
-                    <Textarea
-                      id="bio"
-                      value={newStaff.bio}
-                      onChange={(e) =>
-                        setNewStaff({ ...newStaff, bio: e.target.value })
-                      }
-                      placeholder="Professional background and specialties..."
-                      rows={3}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="experience">Years of Experience</Label>
-                    <Input
-                      id="experience"
-                      type="number"
-                      min="0"
-                      max="50"
-                      value={newStaff.experience_years}
-                      onChange={(e) =>
-                        setNewStaff({
-                          ...newStaff,
-                          experience_years: parseInt(e.target.value) || 0,
-                        })
-                      }
-                    />
-                  </div>
-                </div>
-
-                <DialogFooter>
-                  <Button
-                    variant="outline"
-                    onClick={() => setIsAddDialogOpen(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={handleAddStaff}
-                    disabled={
-                      !newStaff.first_name ||
-                      !newStaff.last_name ||
-                      !newStaff.email ||
-                      !newStaff.phone ||
-                      !newStaff.location_id
-                    }
-                    className="bg-roam-blue hover:bg-roam-blue/90"
-                  >
-                    Add Staff Member
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </div>
-        )}
       </div>
 
       {/* Quick Invite */}
