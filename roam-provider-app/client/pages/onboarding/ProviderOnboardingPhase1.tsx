@@ -196,9 +196,18 @@ export default function ProviderOnboardingPhase1() {
         userId: result.user.id,
       }));
     } catch (error) {
-      setError(
-        error instanceof Error ? error.message : "Failed to create account",
-      );
+      console.error("Signup error:", error);
+
+      let errorMessage = "Failed to create account";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === "string") {
+        errorMessage = error;
+      } else {
+        console.error("Unknown error type:", typeof error, error);
+      }
+
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
