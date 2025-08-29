@@ -73,16 +73,6 @@ interface StaffManagerProps {
   locations: BusinessLocation[];
 }
 
-interface NewStaffMember {
-  first_name: string;
-  last_name: string;
-  email: string;
-  phone: string;
-  provider_role: ProviderRole;
-  location_id: string;
-  bio?: string;
-  experience_years?: number;
-}
 
 interface StaffMemberWithStats extends Provider {
   location_name?: string;
