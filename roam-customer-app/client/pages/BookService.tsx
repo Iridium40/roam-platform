@@ -43,6 +43,7 @@ interface Business {
   rating: number;
   review_count: number;
   delivery_types?: string[];
+  business_type?: string;
 }
 
 // Helper functions for delivery types
