@@ -640,11 +640,11 @@ export const BusinessRegistrationForm: React.FC<
                 />
                 <Label htmlFor="agreedToTerms" className="text-sm leading-5">
                   I agree to the{" "}
-                  <a href="/terms" className="text-roam-blue hover:underline">
+                  <a href="https://app.termly.io/policy-viewer/policy.html?policyUUID=8bd3c211-2aaa-4626-9910-794dc2d85aff" target="_blank" rel="noopener noreferrer" className="text-roam-blue hover:underline">
                     Terms of Service
                   </a>{" "}
                   and{" "}
-                  <a href="/privacy" className="text-roam-blue hover:underline">
+                  <a href="https://app.termly.io/policy-viewer/policy.html?policyUUID=64dec2e3-d030-4421-86ff-a3e7864709d8" target="_blank" rel="noopener noreferrer" className="text-roam-blue hover:underline">
                     Privacy Policy
                   </a>
                 </Label>
