@@ -646,6 +646,7 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
                   <SelectValue placeholder="Location" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="">No specific location</SelectItem>
                   {locations.map((location) => (
                     <SelectItem key={location.id} value={location.id}>
                       {location.location_name}
