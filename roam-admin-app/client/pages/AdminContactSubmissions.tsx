@@ -279,6 +279,14 @@ export default function AdminContactSubmissions() {
       );
     }
 
+    console.log("Filtering submissions:", {
+      totalSubmissions: submissions.length,
+      filteredCount: filtered.length,
+      statusFilter,
+      categoryFilter,
+      searchQuery,
+      sampleFiltered: filtered.slice(0, 2)
+    });
     setFilteredSubmissions(filtered);
   }, [submissions, statusFilter, categoryFilter, searchQuery]);
 
