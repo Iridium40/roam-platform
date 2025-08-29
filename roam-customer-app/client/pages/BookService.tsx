@@ -108,6 +108,7 @@ interface Provider {
   image_url?: string;
   rating: number;
   review_count: number;
+  provider_role?: string;
 }
 
 export default function BookService() {
