@@ -1,17 +1,20 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { createStripePaymentService } from '@roam/shared';
 import { createClient } from "@supabase/supabase-js";
 import Stripe from 'stripe';
 
-const stripeService = createStripePaymentService();
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2024-11-20' });
 const supabase = createClient(
   process.env.VITE_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
 
+// Disable the default body parser (equivalent to Next.js config)
+export const config = { api: { bodyParser: false } };
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    res.setHeader('Allow', 'POST');
+    return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
   const signature = req.headers['stripe-signature'] as string;
@@ -19,15 +22,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: 'Missing Stripe signature' });
   }
 
-  try {
-    // Process webhook
-    const result = await stripeService.processWebhook(JSON.stringify(req.body), signature);
-    
-    if (!result.success || !result.event) {
-      return res.status(400).json({ error: 'Invalid webhook signature' });
-    }
+  let event: Stripe.Event;
 
-    const event = result.event;
+  try {
+    // Get raw body for signature verification
+    const rawBody = await getRawBody(req);
+
+    // Verify webhook signature and construct event
+    event = stripe.webhooks.constructEvent(
+      rawBody,
+      signature,
+      process.env.STRIPE_WEBHOOK_SIGNING_SECRET!
+    );
     console.log('Processing webhook event:', event.type);
 
     switch (event.type) {
