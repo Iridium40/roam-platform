@@ -423,18 +423,43 @@ export default function BookService() {
             </h1>
 
             {/* Service Image */}
-            {service.image_url && (
-              <div className="flex justify-center mb-6">
-                <div className="relative w-full max-w-md h-64 rounded-xl overflow-hidden shadow-lg">
-                  <img
-                    src={service.image_url}
-                    alt={service.name}
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+            <div className="flex justify-center mb-6">
+              <div className="relative w-full max-w-md h-64 rounded-xl overflow-hidden shadow-lg bg-gradient-to-br from-roam-blue/10 to-roam-light-blue/20">
+                {service.image_url ? (
+                  <>
+                    <img
+                      src={service.image_url}
+                      alt={service.name}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        // Fallback if image fails to load
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                      }}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+                  </>
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <div className="text-center">
+                      <User className="w-16 h-16 text-roam-blue/60 mx-auto mb-2" />
+                      <p className="text-roam-blue/80 font-medium">{service.name}</p>
+                    </div>
+                  </div>
+                )}
+                {/* Service badge overlay */}
+                <div className="absolute top-4 left-4">
+                  <Badge className="bg-white/90 text-roam-blue shadow-sm">
+                    {service.duration_minutes} min session
+                  </Badge>
+                </div>
+                <div className="absolute top-4 right-4">
+                  <Badge className="bg-roam-blue text-white shadow-sm">
+                    From ${service.min_price}
+                  </Badge>
                 </div>
               </div>
-            )}
+            </div>
 
             {/* Promotion Applied Section */}
             {promotion && (
