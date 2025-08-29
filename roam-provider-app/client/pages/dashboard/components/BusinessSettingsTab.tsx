@@ -170,6 +170,7 @@ export default function BusinessSettingsTab({
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('supabase.auth.token')}`, // Add auth header if needed
         },
       });
 
