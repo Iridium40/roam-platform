@@ -8,6 +8,7 @@ import {
   handleNotificationUpdates,
 } from "./routes/edge-notifications";
 import { createLinkToken, exchangePublicToken, checkConnection } from "./routes/plaid";
+import { getServiceEligibility } from "./routes/service-eligibility";
 import { requireAuth, requireBusinessAccess, AuthenticatedRequest } from "./middleware/auth";
 import { validateRequest } from "./middleware/validation";
 import { schemas } from "../shared";
