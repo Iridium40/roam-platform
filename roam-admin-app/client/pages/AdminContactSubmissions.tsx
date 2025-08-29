@@ -370,8 +370,8 @@ export default function AdminContactSubmissions() {
       key: "status",
       header: "Status",
       render: (submission) => (
-        <ROAMBadge variant={getStatusBadgeVariant(submission.status)}>
-          {submission.status.replace("_", " ").toUpperCase()}
+        <ROAMBadge variant={getStatusBadgeVariant(submission.status || "received")}>
+          {(submission.status || "received").replace("_", " ").toUpperCase()}
         </ROAMBadge>
       ),
     },
