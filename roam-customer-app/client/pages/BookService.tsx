@@ -461,7 +461,7 @@ export default function BookService() {
         image_url: item.business_profiles.image_url,
         logo_url: item.business_profiles.logo_url,
         business_type: item.business_profiles.business_type,
-        service_price: item.service_price || service?.min_price || 0,
+        service_price: item.business_price || service?.min_price || 0,
         business_hours: item.business_profiles.business_hours,
         rating: 4.5, // Mock data - would come from reviews table
         review_count: 25, // Mock data
