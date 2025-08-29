@@ -1716,6 +1716,12 @@ export default function Index() {
             <p className="text-lg text-foreground/70">
               Trending services in your area this month
             </p>
+            {/* Debug info for development */}
+            {process.env.NODE_ENV === 'development' && (
+              <div className="text-xs text-gray-400 mt-1">
+                Debug: {filteredPopularServices.length} popular services, {popularPages.length} pages, current: {currentPopularSlide + 1}
+              </div>
+            )}
           </div>
 
           {filteredPopularServices.length > 0 ? (
