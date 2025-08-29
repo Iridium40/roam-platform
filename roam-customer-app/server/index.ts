@@ -120,7 +120,7 @@ export function createServer() {
     }
   );
 
-  app.post("/api/stripe/subscription", 
+  app.post("/api/stripe/subscription",
     requireAuth(['customer', 'owner', 'dispatcher', 'admin']),
     async (req: AuthenticatedRequest, res) => {
       try {
@@ -129,6 +129,42 @@ export function createServer() {
       } catch (error) {
         console.error("Error importing subscription handler:", error);
         res.status(500).json({ error: "Failed to load subscription handler" });
+      }
+    }
+  );
+
+  app.post("/api/stripe/create-checkout-session",
+    async (req, res) => {
+      try {
+        const checkoutHandler = await import("../api/stripe/create-checkout-session");
+        await checkoutHandler.default(req, res);
+      } catch (error) {
+        console.error("Error importing checkout session handler:", error);
+        res.status(500).json({ error: "Failed to load checkout session handler" });
+      }
+    }
+  );
+
+  app.post("/api/stripe/webhook",
+    async (req, res) => {
+      try {
+        const webhookHandler = await import("../api/stripe/webhook");
+        await webhookHandler.default(req, res);
+      } catch (error) {
+        console.error("Error importing webhook handler:", error);
+        res.status(500).json({ error: "Failed to load webhook handler" });
+      }
+    }
+  );
+
+  app.get("/api/stripe/session",
+    async (req, res) => {
+      try {
+        const sessionHandler = await import("../api/stripe/session");
+        await sessionHandler.default(req, res);
+      } catch (error) {
+        console.error("Error importing session handler:", error);
+        res.status(500).json({ error: "Failed to load session handler" });
       }
     }
   );
