@@ -25,6 +25,8 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
@@ -46,6 +48,10 @@ export default function BookingsTab({
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatusFilter, setSelectedStatusFilter] = useState("all");
   const [activeTab, setActiveTab] = useState("present");
+  const [presentPage, setPresentPage] = useState(1);
+  const [futurePage, setFuturePage] = useState(1);
+  const [pastPage, setPastPage] = useState(1);
+  const pageSize = 20;
 
   // Filter bookings based on search and status
   const filteredBookings = useMemo(() => {
@@ -74,7 +80,7 @@ export default function BookingsTab({
     });
   }, [bookings, searchQuery, selectedStatusFilter]);
 
-  const [presentBookings, futureBookings, pastBookings] = useMemo(() => {
+  const [presentBookings, futureBookings, pastBookings, paginatedData] = useMemo(() => {
     const present: any[] = [];
     const future: any[] = [];
     const past: any[] = [];
@@ -98,8 +104,28 @@ export default function BookingsTab({
       }
     });
 
-    return [present, future, past];
-  }, [filteredBookings]);
+    // Calculate pagination data
+    const presentStart = (presentPage - 1) * pageSize;
+    const presentEnd = presentStart + pageSize;
+    const futureStart = (futurePage - 1) * pageSize;
+    const futureEnd = futureStart + pageSize;
+    const pastStart = (pastPage - 1) * pageSize;
+    const pastEnd = pastStart + pageSize;
+
+    const paginatedPresent = present.slice(presentStart, presentEnd);
+    const paginatedFuture = future.slice(futureStart, futureEnd);
+    const paginatedPast = past.slice(pastStart, pastEnd);
+
+    const presentTotalPages = Math.ceil(present.length / pageSize);
+    const futureTotalPages = Math.ceil(future.length / pageSize);
+    const pastTotalPages = Math.ceil(past.length / pageSize);
+
+    return [present, future, past, {
+      present: { items: paginatedPresent, totalPages: presentTotalPages, currentPage: presentPage },
+      future: { items: paginatedFuture, totalPages: futureTotalPages, currentPage: futurePage },
+      past: { items: paginatedPast, totalPages: pastTotalPages, currentPage: pastPage }
+    }];
+  }, [filteredBookings, presentPage, futurePage, pastPage, pageSize]);
 
   const getStatusBadge = (status: string) => {
     const configs = {
@@ -331,8 +357,8 @@ export default function BookingsTab({
         </TabsList>
         <TabsContent value="present" className="mt-6">
           <div className="space-y-4">
-            {presentBookings.length > 0 ? (
-              presentBookings.map((booking) => (
+            {paginatedData.present.items.length > 0 ? (
+              paginatedData.present.items.map((booking) => (
                     <Card key={booking.id} className="overflow-hidden">
                       {/* Service and Booking Overview */}
                       <div className="p-4 border-b bg-gray-50">
@@ -505,13 +531,40 @@ export default function BookingsTab({
                 </div>
               </Card>
             )}
+            {presentBookings.length > pageSize && (
+              <div className="flex items-center justify-between pt-4">
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPresentPage(p => Math.max(1, p - 1))}
+                    disabled={presentPage === 1}
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPresentPage(p => Math.min(paginatedData.present.totalPages, p + 1))}
+                    disabled={presentPage === paginatedData.present.totalPages}
+                  >
+                    Next
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </div>
+                <span className="text-sm text-gray-600">
+                  Page {presentPage} of {paginatedData.present.totalPages} ({presentBookings.length} total)
+                </span>
+              </div>
+            )}
           </div>
         </TabsContent>
 
         <TabsContent value="future" className="mt-6">
           <div className="space-y-4">
-            {futureBookings.length > 0 ? (
-              futureBookings.map((booking) => (
+            {paginatedData.future.items.length > 0 ? (
+              paginatedData.future.items.map((booking) => (
                     <Card key={booking.id} className="overflow-hidden">
                       {/* Service and Booking Overview */}
                       <div className="p-4 border-b bg-gray-50">
@@ -684,13 +737,40 @@ export default function BookingsTab({
                 </div>
               </Card>
             )}
+            {futureBookings.length > pageSize && (
+              <div className="flex items-center justify-between pt-4">
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setFuturePage(p => Math.max(1, p - 1))}
+                    disabled={futurePage === 1}
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setFuturePage(p => Math.min(paginatedData.future.totalPages, p + 1))}
+                    disabled={futurePage === paginatedData.future.totalPages}
+                  >
+                    Next
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </div>
+                <span className="text-sm text-gray-600">
+                  Page {futurePage} of {paginatedData.future.totalPages} ({futureBookings.length} total)
+                </span>
+              </div>
+            )}
           </div>
         </TabsContent>
 
         <TabsContent value="past" className="mt-6">
           <div className="space-y-4">
-            {pastBookings.length > 0 ? (
-              pastBookings.map((booking) => (
+            {paginatedData.past.items.length > 0 ? (
+              paginatedData.past.items.map((booking) => (
                     <Card key={booking.id} className="overflow-hidden">
                       {/* Service and Booking Overview */}
                       <div className="p-4 border-b bg-gray-50">
@@ -862,6 +942,33 @@ export default function BookingsTab({
                   <p className="text-gray-600">No completed or cancelled bookings found.</p>
                 </div>
               </Card>
+            )}
+            {pastBookings.length > pageSize && (
+              <div className="flex items-center justify-between pt-4">
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPastPage(p => Math.max(1, p - 1))}
+                    disabled={pastPage === 1}
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPastPage(p => Math.min(paginatedData.past.totalPages, p + 1))}
+                    disabled={pastPage === paginatedData.past.totalPages}
+                  >
+                    Next
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </div>
+                <span className="text-sm text-gray-600">
+                  Page {pastPage} of {paginatedData.past.totalPages} ({pastBookings.length} total)
+                </span>
+              </div>
             )}
           </div>
         </TabsContent>
