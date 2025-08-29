@@ -310,30 +310,46 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
     if (!inviteEmail || !inviteRole || !inviteLocation) return;
 
     try {
-      // Create pending staff member
-      const { error } = await supabase.from("providers").insert({
-        first_name: "Pending",
-        last_name: "Invite",
-        email: inviteEmail,
-        phone: "",
-        provider_role: inviteRole,
-        location_id: inviteLocation,
-        business_id: businessId,
-        verification_status: "pending",
-        is_active: false,
-        business_managed: true, // Default to true
+      // Get current user info for the invitation
+      const currentUser = user;
+      const invitedBy = currentUser
+        ? `${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim()
+        : 'ROAM Team';
+
+      // Call the staff invitation API
+      const response = await fetch('/api/staff/invite', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          businessId: businessId,
+          email: inviteEmail,
+          role: inviteRole,
+          locationId: inviteLocation,
+          invitedBy: invitedBy || 'ROAM Team',
+        }),
       });
 
-      if (error) throw error;
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to send invitation');
+      }
+
+      // Show success message
+      alert(`Invitation sent successfully to ${inviteEmail}!`);
 
       // Reset form
       setInviteEmail("");
       setInviteRole("provider");
       setInviteLocation("");
 
+      // Refresh staff list
       await fetchStaff();
     } catch (error) {
       console.error("Error sending invite:", error);
+      alert(`Failed to send invitation: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
