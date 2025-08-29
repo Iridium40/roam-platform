@@ -67,10 +67,15 @@ interface ContactSubmission {
   notes?: string;
   category?: string;
   full_name?: string;
-  // Joined data
+  // Joined data from auth.users
   admin_user?: {
-    first_name: string;
-    last_name: string;
+    id: string;
+    email: string;
+    raw_user_meta_data?: {
+      first_name?: string;
+      last_name?: string;
+      full_name?: string;
+    };
   };
 }
 
