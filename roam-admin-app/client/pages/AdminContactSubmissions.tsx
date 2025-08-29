@@ -107,6 +107,7 @@ export default function AdminContactSubmissions() {
   const [editNotes, setEditNotes] = useState("");
 
   const { toast } = useToast();
+  const { user } = useAuth();
 
   // Fetch contact submissions
   const fetchSubmissions = async () => {
