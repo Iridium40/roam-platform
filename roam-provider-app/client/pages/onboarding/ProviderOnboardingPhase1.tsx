@@ -139,29 +139,49 @@ export default function ProviderOnboardingPhase1() {
       console.log("Signup response status:", response.status, response.statusText);
       console.log("Response headers:", Object.fromEntries(response.headers));
 
-      // Check if response is ok before trying to parse JSON
-      if (!response.ok) {
-        // For non-ok responses, try to get error text first
-        let errorMessage = "Failed to create account";
-        try {
-          const errorText = await response.text();
-          console.error("Error response text:", errorText);
+      // Read response as text first to avoid body stream issues
+      let responseText;
+      let result;
 
-          // Try to parse as JSON if possible
-          try {
-            const errorData = JSON.parse(errorText);
-            errorMessage = errorData.error || errorMessage;
-          } catch {
-            // If not JSON, use the text as error message if it's reasonable
-            if (errorText && errorText.length < 200) {
-              errorMessage = errorText;
-            }
-          }
-        } catch (textError) {
-          console.error("Could not read error response:", textError);
+      try {
+        responseText = await response.text();
+        console.log("Raw response length:", responseText?.length || 0);
+
+        // Parse the response text as JSON if not empty
+        if (responseText && responseText.trim()) {
+          result = JSON.parse(responseText);
+          console.log("Parsed response:", result);
+        } else {
+          throw new Error("Empty response from server");
+        }
+      } catch (error) {
+        console.error("Response processing failed:", error);
+        console.error("Response status:", response.status);
+
+        // If it's a JSON parsing error, show the raw text
+        if (error.name === "SyntaxError") {
+          console.error("Raw response that failed to parse:", responseText);
         }
 
-        // Handle specific status codes
+        // Handle based on response status
+        if (!response.ok) {
+          if (response.status === 409) {
+            console.log(
+              "💡 Developer tip: To delete test users, call: DELETE /api/admin/delete-test-user with { email: 'test@example.com' }",
+            );
+            throw new Error(
+              "An account with this email already exists. Please use a different email or try logging in.",
+            );
+          }
+          throw new Error(`Server error (${response.status}): ${response.statusText}`);
+        }
+
+        throw new Error("Failed to process server response");
+      }
+
+      // Check if response was successful
+      if (!response.ok) {
+        // Handle specific error cases
         if (response.status === 409) {
           console.log(
             "💡 Developer tip: To delete test users, call: DELETE /api/admin/delete-test-user with { email: 'test@example.com' }",
@@ -170,19 +190,10 @@ export default function ProviderOnboardingPhase1() {
             "An account with this email already exists. Please use a different email or try logging in.",
           );
         }
-
-        throw new Error(`${errorMessage} (Status: ${response.status})`);
+        throw new Error(result?.error || "Failed to create account");
       }
 
-      // Parse successful response
-      let result;
-      try {
-        result = await response.json();
-        console.log("Signup successful:", { userId: result?.user?.id, email: result?.user?.email });
-      } catch (parseError) {
-        console.error("Failed to parse success response JSON:", parseError);
-        throw new Error("Server returned an invalid response format");
-      }
+      console.log("Signup successful:", { userId: result?.user?.id, email: result?.user?.email });
 
       // Validate result structure
       if (!result.user || !result.user.id) {
