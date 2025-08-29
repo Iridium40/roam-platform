@@ -608,7 +608,7 @@ export default function AdminContactSubmissions() {
                 <div>
                   <Label className="text-sm font-medium">Submitted</Label>
                   <p className="text-sm text-muted-foreground">
-                    {format(new Date(selectedSubmission.created_at), "MMM dd, yyyy 'at' hh:mm a")}
+                    {safeFormatDate(selectedSubmission.created_at, "MMM dd, yyyy 'at' hh:mm a")}
                   </p>
                 </div>
                 {selectedSubmission.responded_at && (
