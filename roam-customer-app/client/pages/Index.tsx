@@ -747,18 +747,22 @@ export default function Index() {
     return pages;
   }, [filteredFeaturedServices]);
 
-  const nextServiceSlide = () => {
+  const nextServiceSlide = useCallback(() => {
     const maxPage = Math.max(0, servicePages.length - 1);
     const newPage = Math.min(currentServiceSlide + 1, maxPage);
-    console.log('Next service slide clicked. Current:', currentServiceSlide, 'New:', newPage, 'Max:', maxPage, 'Pages:', servicePages.length);
+    console.log('🔄 Next service slide clicked');
+    console.log('📊 Current state:', { currentServiceSlide, maxPage, newPage, servicesCount: filteredFeaturedServices.length, pagesCount: servicePages.length });
+    console.log('📋 Service pages:', servicePages.map((page, i) => ({ pageIndex: i, servicesInPage: page.length })));
     setCurrentServiceSlide(newPage);
-  };
+  }, [currentServiceSlide, servicePages, filteredFeaturedServices.length]);
 
-  const prevServiceSlide = () => {
+  const prevServiceSlide = useCallback(() => {
     const newPage = Math.max(currentServiceSlide - 1, 0);
-    console.log('Prev service slide clicked. Current:', currentServiceSlide, 'New:', newPage);
+    console.log('🔄 Prev service slide clicked');
+    console.log('📊 Current state:', { currentServiceSlide, newPage, servicesCount: filteredFeaturedServices.length, pagesCount: servicePages.length });
+    console.log('📋 Service pages:', servicePages.map((page, i) => ({ pageIndex: i, servicesInPage: page.length })));
     setCurrentServiceSlide(newPage);
-  };
+  }, [currentServiceSlide, servicePages, filteredFeaturedServices.length]);
 
   // Most Popular Services: paginate into pages of 3
   const popularPages = useMemo(() => {
