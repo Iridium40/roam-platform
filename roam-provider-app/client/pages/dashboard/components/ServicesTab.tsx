@@ -424,7 +424,11 @@ export default function ServicesTab({
                     ? "Try adjusting your search or filter criteria."
                     : "You haven't added any services yet."}
                 </p>
-                <Button onClick={() => setShowAddServiceModal(true)}>
+                <Button onClick={() => {
+                  setSearchQuery("");
+                  setSelectedCategoryFilter("all");
+                  setShowAddServiceModal(true);
+                }}>
                   <Plus className="w-4 h-4 mr-2" />
                   Add Your First Service
                 </Button>
