@@ -765,6 +765,10 @@ export default function BookService() {
       return;
     }
 
+    // Get the primary delivery type for the selected business
+    const businessDeliveryTypes = getDeliveryTypes(selectedBusiness);
+    const primaryDeliveryType = businessDeliveryTypes[0] || 'business_location';
+
     // Prepare booking details for checkout
     const bookingDetails = {
       serviceId: service.id,
@@ -775,7 +779,7 @@ export default function BookService() {
       guestName: `${customer.first_name} ${customer.last_name}`,
       guestEmail: customer.email,
       guestPhone: customer.phone || '',
-      deliveryType: selectedDeliveryType, // Assuming this is set correctly
+      deliveryType: primaryDeliveryType,
       specialInstructions: '', // Placeholder for now
       customerId: customer.id,
       promotionId: promotion?.id || null,
