@@ -817,10 +817,27 @@ export default function BookService() {
       const result = await response.json();
       console.log('📦 Response data:', result);
 
-      if (result.success && result.url) {
-        console.log('✅ Stripe checkout session created:', result.url);
-        // Redirect user to Stripe checkout page at top level (parent window)
-        window.top.location.href = result.url;
+      if (result.sessionId) {
+        console.log('✅ Stripe checkout session created:', result.sessionId);
+
+        // Use approved Stripe pattern: redirectToCheckout
+        const { getStripe } = await import('../utils/get-stripejs');
+        const stripe = await getStripe();
+
+        if (!stripe) {
+          throw new Error('Stripe failed to load');
+        }
+
+        const { error } = await stripe.redirectToCheckout({ sessionId: result.sessionId });
+
+        if (error) {
+          console.error('❌ Stripe redirect error:', error);
+          toast({
+            title: "Checkout Failed",
+            description: error.message || "Could not redirect to payment. Please try again.",
+            variant: "destructive",
+          });
+        }
       } else {
         console.error('❌ Failed to create Stripe checkout session:', result.error || result);
         toast({
