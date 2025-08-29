@@ -57,6 +57,10 @@
       "destination": "/api/twilio-conversations.ts"
     },
     {
+      "source": "/api/contact/submit",
+      "destination": "/api/contact/submit.ts"
+    },
+    {
       "source": "/api/onboarding/business-info",
       "destination": "/api/onboarding/business-info.ts"
     },
