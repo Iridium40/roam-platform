@@ -442,8 +442,8 @@ export default function BookService() {
             setCurrentStep('provider');
           } else {
             // Load all businesses that offer this service
-            loadBusinesses();
-            setCurrentStep('business');
+          loadBusinesses();
+          setCurrentStep('business');
           }
         } else {
           toast({
