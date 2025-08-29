@@ -147,63 +147,55 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
     }
 
-    // Create checkout session
-    const stripe = stripeService.getStripe();
-    
-    const session = await stripe.checkout.sessions.create({
+    // Create checkout session using approved pattern
+    const params: Stripe.Checkout.SessionCreateParams = {
       customer: stripeCustomerId,
       payment_method_types: ['card'],
+      mode: 'payment',
       line_items: [
         {
           price_data: {
             currency: 'usd',
-            product_data: {
-              name: 'Service Booking',
-              description: `Booking for ${guestName} on ${bookingDate} at ${startTime}`,
-              metadata: {
-                service_id: serviceId,
-                business_id: businessId,
-                provider_id: providerId
-              }
-            },
             unit_amount: Math.round(servicePrice * 100), // Convert to cents
+            product_data: {
+              name: service.name,
+              description: `${service.description || ''} - ${bookingDate} at ${startTime}`
+            },
           },
           quantity: 1,
         },
         ...(serviceFee > 0 ? [{
           price_data: {
             currency: 'usd',
-            product_data: {
-              name: `Service Fee (${platformFeePercentage}%)`,
-              description: 'Platform processing & support fee'
-            },
             unit_amount: Math.round(serviceFee * 100),
+            product_data: {
+              name: 'Platform Fee',
+              description: 'Processing & support fee'
+            },
           },
           quantity: 1,
         }] : []),
         ...(discountApplied > 0 ? [{
           price_data: {
             currency: 'usd',
+            unit_amount: -Math.round(discountApplied * 100), // Negative for discount
             product_data: {
               name: 'Promotion Discount',
-              description: 'Applied promotion discount'
+              description: 'Applied discount'
             },
-            unit_amount: -Math.round(discountApplied * 100), // Negative for discount
           },
           quantity: 1,
         }] : [])
       ],
-      mode: 'payment',
-      success_url: `${process.env.FRONTEND_URL || req.headers.origin}/booking-success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.FRONTEND_URL || req.headers.origin}/book-service/${serviceId}`,
+      success_url: `${req.headers.origin}/booking-success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${req.headers.origin}/book-service/${serviceId}`,
       metadata: {
         service_id: serviceId,
         business_id: businessId,
-        provider_id: providerId,
         customer_id: customerId,
         booking_date: bookingDate,
         start_time: startTime,
-        delivery_type: deliveryType,
+        delivery_type: deliveryType || '',
         special_instructions: specialInstructions || '',
         promotion_id: promotionId || '',
         guest_phone: guestPhone || '',
@@ -212,7 +204,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         service_fee: serviceFee.toString(),
         discount_applied: discountApplied.toString()
       },
-      // Enable saving payment methods for future use
       payment_intent_data: {
         setup_future_usage: 'on_session',
         metadata: {
@@ -221,20 +212,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           service_id: serviceId
         }
       }
-    });
+    };
 
-    console.log('✅ Stripe checkout session created:', {
-      sessionId: session.id,
-      customerId: stripeCustomerId,
-      amount: totalAmount
-    });
+    const session = await stripe.checkout.sessions.create(params);
 
-    return res.status(200).json({
-      success: true,
-      url: session.url,
-      sessionId: session.id,
-      customerId: stripeCustomerId
-    });
+    return res.status(200).json({ sessionId: session.id });
 
   } catch (error) {
     console.error('❌ Error creating Stripe checkout session:', error);
