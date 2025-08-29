@@ -880,6 +880,17 @@ export default function BookService() {
                                     <span>Miami, FL</span>
                                   </div>
                                 </div>
+
+                                {/* Service Pricing */}
+                                <div className="mt-2">
+                                  <div className="inline-flex items-center px-3 py-1 bg-roam-blue/10 rounded-full">
+                                    <CreditCard className="w-4 h-4 text-roam-blue mr-2" />
+                                    <span className="text-roam-blue font-semibold">
+                                      ${business.service_price || service?.min_price || 0}
+                                    </span>
+                                    <span className="text-gray-600 text-sm ml-1">for this service</span>
+                                  </div>
+                                </div>
                               </div>
 
                               {/* More Info Button */}
