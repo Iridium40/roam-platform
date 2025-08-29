@@ -44,6 +44,8 @@ interface Business {
   review_count: number;
   delivery_types?: string[];
   business_type?: string;
+  service_price?: number;
+  business_hours?: any;
 }
 
 // Helper functions for delivery types
