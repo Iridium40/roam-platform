@@ -357,7 +357,7 @@ export default function BookService() {
       console.log('🔍 Testing business_services table access...');
       const { data: testBusinessServices, error: testError } = await supabase
         .from('business_services')
-        .select('business_id, service_id, service_price, is_active')
+        .select('business_id, service_id, business_price, is_active')
         .eq('service_id', serviceId)
         .limit(5);
 
@@ -373,7 +373,7 @@ export default function BookService() {
         .from('business_services')
         .select(`
           business_id,
-          service_price,
+          business_price,
           is_active,
           business_profiles (
             id,
