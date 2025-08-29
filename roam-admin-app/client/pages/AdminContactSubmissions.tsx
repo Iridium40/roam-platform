@@ -46,6 +46,7 @@ import {
   Users,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { createClient } from "@supabase/supabase-js";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { format } from "date-fns";
