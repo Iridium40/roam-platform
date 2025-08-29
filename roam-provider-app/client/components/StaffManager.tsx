@@ -685,19 +685,14 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center gap-3">
                         <Avatar>
-                          <AvatarContent>
-                            {member.image_url ? (
-                              <img
-                                src={member.image_url}
-                                alt={`${member.first_name} ${member.last_name}`}
-                              />
-                            ) : (
-                              <AvatarFallback>
-                                {member.first_name[0]}
-                                {member.last_name[0]}
-                              </AvatarFallback>
-                            )}
-                          </AvatarContent>
+                          <AvatarImage
+                            src={member.image_url}
+                            alt={`${member.first_name} ${member.last_name}`}
+                          />
+                          <AvatarFallback>
+                            {member.first_name[0]}
+                            {member.last_name[0]}
+                          </AvatarFallback>
                         </Avatar>
                         <div>
                           <h4 className="font-semibold">
