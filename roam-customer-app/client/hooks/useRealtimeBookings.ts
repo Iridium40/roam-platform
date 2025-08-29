@@ -74,8 +74,6 @@ export function useRealtimeBookings(options: UseRealtimeBookingsOptions = {}) {
   useEffect(() => {
     if (!userId) return;
 
-    // Setting up real-time booking subscription
-
     // Create subscription for bookings table
     const subscription = supabase
       .channel("booking_updates")
@@ -95,8 +93,6 @@ export function useRealtimeBookings(options: UseRealtimeBookingsOptions = {}) {
                   : `or(customer_id.eq.${userId},provider_id.eq.${userId},business_id.eq.${userId})`,
         },
         (payload) => {
-          // Booking update received
-
           const newBooking = payload.new as any;
           const oldBooking = payload.old as any;
 
@@ -145,8 +141,6 @@ export function useRealtimeBookings(options: UseRealtimeBookingsOptions = {}) {
                   : `or(customer_id.eq.${userId},provider_id.eq.${userId},business_id.eq.${userId})`,
         },
         (payload) => {
-          logger.debug("New booking received:", payload);
-
           const newBooking = payload.new as any;
 
           const bookingUpdate: BookingUpdate = {
@@ -181,13 +175,11 @@ export function useRealtimeBookings(options: UseRealtimeBookingsOptions = {}) {
         },
       )
       .subscribe((status) => {
-        // Subscription status updated
         setIsConnected(status === "SUBSCRIBED");
       });
 
     // Cleanup subscription
     return () => {
-      // Cleaning up booking subscription
       subscription.unsubscribe();
       setIsConnected(false);
     };
@@ -227,35 +219,8 @@ export function useRealtimeBookings(options: UseRealtimeBookingsOptions = {}) {
         .limit(10);
 
       if (error) {
-        logger.error("Error refreshing bookings - Full error object:", error);
-        logger.error("Error type:", typeof error);
-        logger.error("Error keys:", Object.keys(error || {}));
-
-        // Extract meaningful error message
-        let errorMessage = "Unknown error occurred";
-        if (error) {
-          if (typeof error === "string") {
-            errorMessage = error;
-          } else if (error.message) {
-            errorMessage = error.message;
-          } else if ('error_description' in error) {
-            errorMessage = (error as any).error_description;
-          } else if (error.details) {
-            errorMessage = error.details;
-          } else if (error.hint) {
-            errorMessage = error.hint;
-          } else if (error.code) {
-            errorMessage = `Database error (${error.code})`;
-          } else {
-            try {
-              errorMessage = JSON.stringify(error);
-            } catch {
-              errorMessage = "Unable to parse error details";
-            }
-          }
-        }
-
-        logger.error("Parsed error message:", errorMessage);
+        const errorMessage = error.message || error.details || "Unknown error occurred";
+        logger.error("Error refreshing bookings:", errorMessage);
 
         // Show error toast to user
         toast({
@@ -283,35 +248,8 @@ export function useRealtimeBookings(options: UseRealtimeBookingsOptions = {}) {
       setBookingUpdates(updates);
       setLastUpdate(new Date());
     } catch (error: any) {
-      logger.error("Error in refreshBookings - Full error object:", error);
-      logger.error("Error type:", typeof error);
-      logger.error("Error keys:", Object.keys(error || {}));
-
-      // Extract meaningful error message
-      let errorMessage = "Unknown error occurred";
-      if (error) {
-        if (typeof error === "string") {
-          errorMessage = error;
-        } else if (error.message) {
-          errorMessage = error.message;
-        } else if (error.error_description) {
-          errorMessage = error.error_description;
-        } else if (error.details) {
-          errorMessage = error.details;
-        } else if (error.hint) {
-          errorMessage = error.hint;
-        } else if (error.code) {
-          errorMessage = `Database error (${error.code})`;
-        } else {
-          try {
-            errorMessage = JSON.stringify(error);
-          } catch {
-            errorMessage = "Unable to parse error details";
-          }
-        }
-      }
-
-      logger.error("Parsed error message:", errorMessage);
+      const errorMessage = error.message || error.details || "Unknown error occurred";
+      logger.error("Error in refreshBookings:", errorMessage);
 
       // Show error toast to user
       toast({

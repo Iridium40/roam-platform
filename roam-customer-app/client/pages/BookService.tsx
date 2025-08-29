@@ -300,7 +300,7 @@ export default function BookService() {
     
     const originalPrice = service.min_price;
     
-    if (promotion.savingsType === 'percentage') {
+    if (promotion.savingsType === 'percentage_off') {
       const discount = (originalPrice * promotion.savingsAmount) / 100;
       const maxDiscount = promotion.savingsMaxAmount || discount;
       const finalDiscount = Math.min(discount, maxDiscount);
@@ -391,7 +391,7 @@ export default function BookService() {
                 <div className="inline-flex items-center px-4 py-2 bg-green-50 border border-green-200 rounded-lg text-green-800">
                   <Tag className="w-4 h-4 mr-2" />
                   <span className="text-sm font-medium">
-                    Promotion Applied! Code: {promotion.code || 'HYD1234'} - {promotion.savingsType === 'percentage' ? `${promotion.savingsAmount}% off` : `$${promotion.savingsAmount} off`}
+                    Promotion Applied! Code: {promotion.code || 'HYD1234'} - {promotion.savingsType === 'percentage_off' ? `${promotion.savingsAmount}% off` : `$${promotion.savingsAmount} off`}
                   </span>
                 </div>
               </div>

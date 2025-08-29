@@ -8,6 +8,8 @@ export type Service = Database['public']['Tables']['services']['Row'];
 export type Booking = Database['public']['Tables']['bookings']['Row'];
 export type CustomerProfile = Database['public']['Tables']['customer_profiles']['Row'];
 export type Provider = Database['public']['Tables']['providers']['Row'];
+export type Review = Database['public']['Tables']['reviews']['Row'];
+export type Tip = Database['public']['Tables']['tips']['Row'];
 
 // UI-specific types
 export interface FeaturedService {
@@ -70,7 +72,7 @@ export interface TransformedPromotion {
   businessId: string;
   imageUrl: string;
   promoCode: string;
-  savingsType: string;
+  savingsType: 'percentage_off' | 'fixed_amount';
   savingsAmount: number;
   savingsMaxAmount: number;
   serviceId: string;
@@ -112,16 +114,24 @@ export interface BookingWithDetails extends Booking {
   providers?: Provider;
   services?: Service;
   business_profiles?: BusinessProfile;
+  reviews?: Review[];
+  tips?: Tip[];
   // Additional computed properties for UI
   status?: string; // Alias for booking_status
   date?: string; // Alias for booking_date
   time?: string; // Alias for start_time
+  service_name?: string; // Computed from services.name
   serviceName?: string; // Computed from services.name
   provider?: Provider; // Alias for providers
   service?: Service; // Alias for services
   price?: string; // Alias for total_amount
   duration?: string; // Service duration
   booking_time?: string; // Alias for start_time
+  booking_reference?: string; // Alias for booking_reference
+  admin_notes?: string; // Alias for admin_notes
+  total_amount?: number; // Alias for total_amount
+  business_id?: string; // Alias for business_id
+  customer_id?: string; // Alias for customer_id
 }
 
 // Filter types
@@ -182,4 +192,19 @@ export type LoadingState = 'idle' | 'loading' | 'success' | 'error';
 export interface ComponentProps {
   className?: string;
   children?: React.ReactNode;
+}
+
+// Review and Tip form types
+export interface ReviewFormData {
+  overall_rating: number;
+  service_rating?: number;
+  communication_rating?: number;
+  punctuality_rating?: number;
+  review_text?: string;
+}
+
+export interface TipFormData {
+  tip_amount: number;
+  tip_percentage?: number;
+  customer_message?: string;
 }

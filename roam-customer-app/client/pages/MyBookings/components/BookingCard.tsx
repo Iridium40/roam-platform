@@ -27,7 +27,8 @@ import {
 } from "lucide-react";
 import type { BookingWithDetails } from "@/types/index";
 import { formatBookingDate, isWithin24Hours, getDeliveryTypeLabel, getDeliveryTypeIcon } from "../utils/bookingCalculations";
-import RealtimeStatusUpdate from "@/components/BookingStatusIndicator";
+import { RealtimeStatusUpdate } from "@/components/BookingStatusIndicator";
+import ReviewAndTipModal from "./ReviewAndTipModal";
 
 interface BookingCardProps {
   booking: BookingWithDetails;
@@ -100,6 +101,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({
   onMessage,
 }) => {
   const [showMoreInfo, setShowMoreInfo] = useState(false);
+  const [showReviewModal, setShowReviewModal] = useState(false);
 
   const statusConfig = getStatusConfig(booking.status);
   const DeliveryIcon = getDeliveryIcon(booking.deliveryType);
@@ -110,8 +112,16 @@ export const BookingCard: React.FC<BookingCardProps> = ({
     (booking.status === "pending" || booking.status === "confirmed") &&
     !isWithin24Hours(booking);
 
+  // Check if booking is in the past (completed, cancelled, no_show, or past date)
+  const isPastBooking = 
+    booking.status === "completed" ||
+    booking.status === "cancelled" || 
+    booking.status === "no_show" ||
+    new Date(`${booking.date} ${booking.time}`) < new Date();
+
   return (
-    <Card className="hover:shadow-md transition-shadow">
+    <>
+      <Card className="hover:shadow-md transition-shadow">
       <CardContent className="p-4">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
           <div className="flex items-start gap-4 min-w-0 flex-1">
@@ -143,11 +153,11 @@ export const BookingCard: React.FC<BookingCardProps> = ({
               <div className="flex items-center gap-4 text-sm text-foreground/60 mb-2">
                 <div className="flex items-center gap-1">
                   <Calendar className="w-4 h-4" />
-                  {new Date(booking.booking_date).toLocaleDateString()}
+                  {new Date(booking.date).toLocaleDateString()}
                 </div>
                 <div className="flex items-center gap-1">
                   <Clock className="w-4 h-4" />
-                  {booking.booking_time} ({booking.duration})
+                  {booking.time} ({booking.duration})
                 </div>
               </div>
 
@@ -193,8 +203,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({
             </div>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0 self-start">
-            {booking.status === "completed" &&
-            new Date(booking.booking_date) < new Date() ? (
+            {isPastBooking ? (
               <Button
                 size="sm"
                 variant="outline"
@@ -318,9 +327,9 @@ export const BookingCard: React.FC<BookingCardProps> = ({
         )}
 
         <div className="flex flex-wrap items-center justify-between gap-2">
-          {/* Primary action - Message Provider (most common) */}
+          {/* Primary action - Message Provider (only for future bookings) */}
           <div className="flex gap-2">
-            {booking.status === "confirmed" && booking.providers && (
+            {!isPastBooking && (booking.status === "confirmed" || booking.status === "pending") && booking.providers && (
               <Button
                 size="sm"
                 className="bg-roam-blue hover:bg-roam-blue/90 text-white font-medium"
@@ -333,9 +342,10 @@ export const BookingCard: React.FC<BookingCardProps> = ({
             )}
           </div>
 
-          {/* Secondary actions - Cancel and Reschedule (less common) */}
+          {/* Secondary actions - Cancel and Reschedule (only for future bookings) */}
           <div className="flex gap-2">
-            {(booking.status === "pending" || booking.status === "confirmed") &&
+            {!isPastBooking && 
+              (booking.status === "pending" || booking.status === "confirmed") &&
               booking.status !== "cancelled" &&
               booking.status !== "declined" &&
               booking.status !== "completed" &&
@@ -379,21 +389,51 @@ export const BookingCard: React.FC<BookingCardProps> = ({
                 </>
               )}
           </div>
-          {booking.status === "completed" &&
-            new Date(booking.booking_date) >= new Date() && (
-              <Button size="sm" className="bg-roam-blue hover:bg-roam-blue/90">
-                <Star className="w-4 h-4 mr-2" />
-                Leave Review
-              </Button>
-            )}
-          {booking.status === "cancelled" && (
-            <Button size="sm" className="bg-roam-blue hover:bg-roam-blue/90">
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Book Again
-            </Button>
+          {booking.status === "completed" && (
+            <>
+              {booking.reviews && booking.reviews.length > 0 ? (
+                <div className="flex items-center gap-2">
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    className="border-green-500 text-green-600 hover:bg-green-50"
+                    onClick={() => setShowReviewModal(true)}
+                  >
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    View Review & Tip
+                  </Button>
+                  <span className="text-xs text-gray-500">
+                    {booking.reviews[0].overall_rating}/5 stars
+                  </span>
+                  {booking.tips && booking.tips.length > 0 && (
+                    <span className="text-xs text-gray-500">
+                      • ${booking.tips[0].tip_amount} tip
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <Button 
+                  size="sm" 
+                  className="bg-roam-blue hover:bg-roam-blue/90"
+                  onClick={() => setShowReviewModal(true)}
+                >
+                  <Star className="w-4 h-4 mr-2" />
+                  Leave Review and Tip
+                </Button>
+              )}
+            </>
           )}
+          {/* Removed duplicate "Book Again" button - already shown in top-right for all past bookings */}
         </div>
       </CardContent>
     </Card>
+
+    {/* Review and Tip Modal */}
+    <ReviewAndTipModal
+      isOpen={showReviewModal}
+      onClose={() => setShowReviewModal(false)}
+      booking={booking}
+    />
+  </>
   );
 };

@@ -255,10 +255,10 @@ export default function Index() {
     return description.substring(0, 200) + "...";
   };
 
-  const formatSavings = (promotion: Promotion) => {
+  const formatSavings = (promotion: TransformedPromotion) => {
     if (!promotion.savingsType || !promotion.savingsAmount) return null;
 
-    if (promotion.savingsType === "percentage") {
+    if (promotion.savingsType === "percentage_off") {
       const maxAmount = promotion.savingsMaxAmount
         ? ` (max $${promotion.savingsMaxAmount})`
         : "";
@@ -742,10 +742,12 @@ export default function Index() {
 
   const nextServiceSlide = () => {
     const maxPage = Math.max(0, servicePages.length - 1);
+    console.log('Next service slide clicked. Current:', currentServiceSlide, 'Max:', maxPage, 'Pages:', servicePages.length);
     setCurrentServiceSlide((prev) => Math.min(prev + 1, maxPage));
   };
 
   const prevServiceSlide = () => {
+    console.log('Prev service slide clicked. Current:', currentServiceSlide);
     setCurrentServiceSlide((prev) => Math.max(prev - 1, 0));
   };
 
@@ -760,10 +762,12 @@ export default function Index() {
 
   const nextPopularSlide = () => {
     const maxPage = Math.max(0, popularPages.length - 1);
+    console.log('Next popular slide clicked. Current:', currentPopularSlide, 'Max:', maxPage, 'Pages:', popularPages.length);
     setCurrentPopularSlide((prev) => Math.min(prev + 1, maxPage));
   };
 
   const prevPopularSlide = () => {
+    console.log('Prev popular slide clicked. Current:', currentPopularSlide);
     setCurrentPopularSlide((prev) => Math.max(prev - 1, 0));
   };
 
@@ -777,20 +781,24 @@ export default function Index() {
   }, [promotionalDeals]);
 
   const nextPromotionSlide = () => {
-    const maxSlide = Math.max(0, promotionalDeals.length - 1);
+    const maxSlide = Math.max(0, promotionPages.length - 1);
+    console.log('Next promotion slide clicked. Current:', currentPromotionSlide, 'Max:', maxSlide, 'Pages:', promotionPages.length);
     setCurrentPromotionSlide((prev) => Math.min(prev + 1, maxSlide));
   };
 
   const prevPromotionSlide = () => {
+    console.log('Prev promotion slide clicked. Current:', currentPromotionSlide);
     setCurrentPromotionSlide((prev) => Math.max(prev - 1, 0));
   };
 
   const nextBusinessSlide = () => {
     const maxPage = Math.max(0, businessPages.length - 1);
+    console.log('Next business slide clicked. Current:', currentBusinessSlide, 'Max:', maxPage, 'Pages:', businessPages.length);
     setCurrentBusinessSlide((prev) => Math.min(prev + 1, maxPage));
   };
 
   const prevBusinessSlide = () => {
+    console.log('Prev business slide clicked. Current:', currentBusinessSlide);
     setCurrentBusinessSlide((prev) => Math.max(prev - 1, 0));
   };
 
@@ -1303,7 +1311,7 @@ export default function Index() {
                     transform: `translateX(-${currentServiceSlide * 100}%)`,
                   }}
                 >
-                  {filteredFeaturedServices.map((service, serviceIndex) => (
+                  {servicePages[currentServiceSlide]?.map((service, serviceIndex) => (
                     <div
                       key={`service-${service.id}`}
                       className="w-full flex-none px-4"

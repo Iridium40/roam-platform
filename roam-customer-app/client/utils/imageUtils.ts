@@ -1,10 +1,8 @@
-import { createClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { logger } from '@/utils/logger';
 
-const supabase = createClient(
-  import.meta.env.VITE_PUBLIC_SUPABASE_URL!,
-  import.meta.env.VITE_PUBLIC_SUPABASE_ANON_KEY!
-);
+// This service will accept a Supabase client instance instead of creating its own
+// to avoid multiple GoTrueClient instances
 
 export interface ImageUploadRequirements {
   maxWidth: number;
@@ -186,6 +184,7 @@ export class ImageUploadService {
    * Upload image to Supabase storage
    */
   static async uploadImage(
+    supabase: SupabaseClient,
     file: File,
     imageType: ImageType,
     businessId: string,
@@ -253,7 +252,7 @@ export class ImageUploadService {
   /**
    * Delete image from storage
    */
-  static async deleteImage(imagePath: string): Promise<boolean> {
+  static async deleteImage(supabase: SupabaseClient, imagePath: string): Promise<boolean> {
     try {
       const { error } = await supabase.storage
         .from('business-images')

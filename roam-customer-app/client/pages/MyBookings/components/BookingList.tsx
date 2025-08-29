@@ -34,6 +34,13 @@ export const BookingList: React.FC<BookingListProps> = ({
   emptyStateMessage,
   emptyStateIcon: EmptyStateIcon,
 }) => {
+  console.log("BookingList component - received bookings:", {
+    bookingsLength: bookings.length,
+    currentPage,
+    totalPages,
+    sampleBooking: bookings[0]
+  });
+  console.log("BookingList - full bookings array:", bookings);
   if (bookings.length === 0) {
     return (
       <Card className="p-12 text-center">
