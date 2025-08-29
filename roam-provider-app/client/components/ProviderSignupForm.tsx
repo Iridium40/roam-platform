@@ -389,6 +389,7 @@ export function ProviderSignupForm({
                     variant="link"
                     className="p-0 h-auto text-roam-blue underline"
                     type="button"
+                    onClick={() => window.open('https://app.termly.io/policy-viewer/policy.html?policyUUID=8bd3c211-2aaa-4626-9910-794dc2d85aff', '_blank')}
                   >
                     Terms of Service
                   </Button>{" "}
@@ -397,6 +398,7 @@ export function ProviderSignupForm({
                     variant="link"
                     className="p-0 h-auto text-roam-blue underline"
                     type="button"
+                    onClick={() => window.open('https://app.termly.io/policy-viewer/policy.html?policyUUID=64dec2e3-d030-4421-86ff-a3e7864709d8', '_blank')}
                   >
                     Privacy Policy
                   </Button>
