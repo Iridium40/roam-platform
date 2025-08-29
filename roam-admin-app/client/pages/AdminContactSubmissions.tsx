@@ -611,6 +611,14 @@ export default function AdminContactSubmissions() {
           </ROAMCardTitle>
         </ROAMCardHeader>
         <ROAMCardContent>
+          <div className="mb-4 p-2 bg-gray-100 rounded text-sm">
+            Debug: {filteredSubmissions?.length || 0} submissions to display
+            {filteredSubmissions?.length > 0 && (
+              <div className="mt-2">
+                Sample data: {JSON.stringify(filteredSubmissions[0], null, 2).substring(0, 200)}...
+              </div>
+            )}
+          </div>
           <ROAMDataTable
             data={filteredSubmissions || []}
             columns={columns}
