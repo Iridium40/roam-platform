@@ -139,6 +139,15 @@ export default function ProviderOnboardingPhase1() {
         result = await response.json();
       } catch (parseError) {
         console.error("Failed to parse response JSON:", parseError);
+        // If we can't parse the response, check the status code
+        if (!response.ok) {
+          if (response.status === 409) {
+            throw new Error(
+              "An account with this email already exists. Please use a different email or try logging in.",
+            );
+          }
+          throw new Error(`Server error (${response.status}): ${response.statusText}`);
+        }
         throw new Error("Server response was not valid JSON");
       }
 
@@ -152,7 +161,7 @@ export default function ProviderOnboardingPhase1() {
             "An account with this email already exists. Please use a different email or try logging in.",
           );
         }
-        throw new Error(result.error || "Failed to create account");
+        throw new Error(result?.error || "Failed to create account");
       }
 
       // Validate result structure
