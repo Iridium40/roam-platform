@@ -2,9 +2,25 @@ import { Request, Response, NextFunction } from 'express';
 import { createClient } from '@supabase/supabase-js';
 import jwt from 'jsonwebtoken';
 
-const supabase = createClient(
+// Create admin client with service role key to bypass RLS
+const supabaseAdmin = createClient(
   process.env.VITE_PUBLIC_SUPABASE_URL || 'https://vssomyuyhicaxsgiaupo.supabase.co',
   process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzc29teXV5aGljYXhzZ2lhdXBvIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MzQ1MzcxNSwiZXhwIjoyMDY5MDI5NzE1fQ.54i9VPExknTktnWbyT9Z9rZKvSJOjs9fG60wncLhLlA',
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    },
+    db: {
+      schema: 'public'
+    }
+  }
+);
+
+// Create regular client for auth verification
+const supabase = createClient(
+  process.env.VITE_PUBLIC_SUPABASE_URL || 'https://vssomyuyhicaxsgiaupo.supabase.co',
+  process.env.VITE_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzc29teXV5aGljYXhzZ2lhdXBvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTM3MTUsImV4cCI6MjA2OTAyOTcxNX0.5vJy3zWFOqn1AobrIWYJVY4JQx8o2WjCPgD_xAY-fvE',
   {
     auth: {
       autoRefreshToken: false,
@@ -81,7 +97,7 @@ export const requireAuth = (allowedRoles?: string[]) => {
         tokenKeys: Object.keys(decoded)
       });
 
-      const { data: userRoles, error: rolesError } = await supabase
+      const { data: userRoles, error: rolesError } = await supabaseAdmin
         .from('user_roles')
         .select('role, business_id')
         .eq('user_id', userId)
@@ -170,7 +186,7 @@ export const requireBusinessAccess = (businessIdParam: string = 'businessId') =>
       }
 
       // Check if user has access to this business
-      const { data: userRoles, error } = await supabase
+      const { data: userRoles, error } = await supabaseAdmin
         .from('user_roles')
         .select('role, business_id')
         .eq('user_id', req.user.id)
