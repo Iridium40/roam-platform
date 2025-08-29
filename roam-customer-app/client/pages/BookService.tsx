@@ -192,6 +192,11 @@ export default function BookService() {
   // Platform fee configuration
   const [platformFeePercentage, setPlatformFeePercentage] = useState<number>(0);
 
+  // Checkout state
+  const [clientSecret, setClientSecret] = useState<string>('');
+  const [paymentBreakdown, setPaymentBreakdown] = useState<any>(null);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+
   // Time slots data
   const timeSlots = [
     { value: '09:00', label: '9:00 AM', period: 'Morning' },
