@@ -1279,7 +1279,7 @@ export default function Index() {
             </p>
             {/* Debug info - remove in production */}
             <div className="text-sm text-gray-500 mt-2">
-              Services: {filteredFeaturedServices.length} | Pages: {servicePages.length} | Current: {currentServiceSlide + 1}
+              Services: {filteredFeaturedServices.length} | Pages: {servicePages.length} | Current: {typeof currentServiceSlide === 'number' ? currentServiceSlide + 1 : 'ERROR'} | Type: {typeof currentServiceSlide}
             </div>
           </div>
 
