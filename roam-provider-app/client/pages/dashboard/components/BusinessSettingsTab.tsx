@@ -154,7 +154,7 @@ export default function BusinessSettingsTab({
   });
 
   // Load service eligibility data
-  const loadServiceEligibility = async () => {
+  const loadServiceEligibility = async (checkMounted?: () => boolean) => {
     if (!business?.id) {
       console.warn('loadServiceEligibility: No business ID available');
       return;
@@ -172,6 +172,12 @@ export default function BusinessSettingsTab({
           'Content-Type': 'application/json',
         },
       });
+
+      // Check if component is still mounted before proceeding
+      if (checkMounted && !checkMounted()) {
+        console.log('Component unmounted, aborting service eligibility load');
+        return;
+      }
 
       // Check if response is ok before trying to parse JSON
       if (!response.ok) {
@@ -196,11 +202,24 @@ export default function BusinessSettingsTab({
         throw new Error('No data received from server');
       }
 
+      // Check if component is still mounted before setting state
+      if (checkMounted && !checkMounted()) {
+        console.log('Component unmounted, not setting service eligibility state');
+        return;
+      }
+
       console.log('Service eligibility loaded successfully:', responseData);
       setServiceEligibility(responseData);
 
     } catch (error) {
       console.error('Error loading service eligibility:', error);
+
+      // Check if component is still mounted before setting error state
+      if (checkMounted && !checkMounted()) {
+        console.log('Component unmounted, not setting error state');
+        return;
+      }
+
       const errorMessage = error instanceof Error ? error.message : 'Failed to load service eligibility';
       setEligibilityError(errorMessage);
 
@@ -210,7 +229,10 @@ export default function BusinessSettingsTab({
         variant: "destructive",
       });
     } finally {
-      setEligibilityLoading(false);
+      // Always set loading to false if component is still mounted
+      if (!checkMounted || checkMounted()) {
+        setEligibilityLoading(false);
+      }
     }
   };
 
@@ -618,6 +640,7 @@ export default function BusinessSettingsTab({
 
   useEffect(() => {
     let mounted = true;
+    const checkMounted = () => mounted;
 
     const loadData = async () => {
       if (!mounted) return;
@@ -632,7 +655,7 @@ export default function BusinessSettingsTab({
       await loadBusinessDocuments();
 
       if (!mounted) return;
-      await loadServiceEligibility();
+      await loadServiceEligibility(checkMounted);
     };
 
     if (business?.id) {
@@ -925,7 +948,7 @@ export default function BusinessSettingsTab({
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Error Loading Service Categories</h3>
               <p className="text-gray-600 mb-4">{eligibilityError}</p>
-              <Button variant="outline" onClick={loadServiceEligibility}>
+              <Button variant="outline" onClick={() => loadServiceEligibility()}>
                 Try Again
               </Button>
             </div>
