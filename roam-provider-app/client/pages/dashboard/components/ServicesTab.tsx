@@ -50,6 +50,10 @@ export default function ServicesTab({
   const [showEditServiceModal, setShowEditServiceModal] = useState(false);
   const [editingService, setEditingService] = useState<any>(null);
   const [serviceForm, setServiceForm] = useState({
+    business_price: "",
+    delivery_type: "business_location"
+  });
+  const [serviceForm, setServiceForm] = useState({
     business_price: '',
     delivery_type: 'business_location'
   });
