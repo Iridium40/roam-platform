@@ -680,19 +680,23 @@ export default function BookService() {
                               </div>
 
                               {/* More Info Button */}
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                asChild
-                                className="ml-4 flex-shrink-0 hover:bg-roam-blue hover:text-white"
+                              <div
                                 onClick={(e) => e.stopPropagation()}
+                                className="ml-4 flex-shrink-0"
                               >
-                                <Link to={`/business/${business.id}`} target="_blank">
-                                  <Info className="w-4 h-4 mr-1" />
-                                  More Info
-                                  <ExternalLink className="w-3 h-3 ml-1" />
-                                </Link>
-                              </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  asChild
+                                  className="hover:bg-roam-blue hover:text-white"
+                                >
+                                  <Link to={`/business/${business.id}`} target="_blank">
+                                    <Info className="w-4 h-4 mr-1" />
+                                    More Info
+                                    <ExternalLink className="w-3 h-3 ml-1" />
+                                  </Link>
+                                </Button>
+                              </div>
                             </div>
 
                             {/* Business Description */}
