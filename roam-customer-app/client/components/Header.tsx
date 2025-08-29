@@ -192,6 +192,17 @@ export function Header() {
           </div>
         )}
       </div>
+
+      {/* Customer Authentication Modal */}
+      {authModalOpen && (
+        <Suspense fallback={<div />}>
+          <CustomerAuthModal
+            isOpen={authModalOpen}
+            onClose={() => setAuthModalOpen(false)}
+            defaultTab="signin"
+          />
+        </Suspense>
+      )}
     </nav>
   );
 }
