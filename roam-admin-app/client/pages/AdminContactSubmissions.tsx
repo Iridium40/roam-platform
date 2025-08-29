@@ -167,7 +167,8 @@ export default function AdminContactSubmissions() {
       // Test basic Supabase connection
       try {
         console.log("Testing basic Supabase connection...");
-        const { data: testData, error: testError } = await supabase
+        const adminSupabase = createAdminSupabaseClient();
+        const { data: testData, error: testError } = await adminSupabase
           .from("contact_submissions")
           .select("count", { count: "exact", head: true });
         console.log("Basic connection test:", { testData, testError });
