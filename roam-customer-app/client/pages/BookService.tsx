@@ -320,18 +320,29 @@ export default function BookService() {
       // Apply filtering logic based on business type and provider role
       let filteredProviders = data || [];
 
+      console.log('Provider filtering debug:', {
+        businessType: selectedBusiness?.business_type,
+        businessName: selectedBusiness?.business_name,
+        allProviders: data?.map(p => ({ name: `${p.first_name} ${p.last_name}`, role: p.provider_role })),
+        totalCount: data?.length
+      });
+
       if (selectedBusiness?.business_type) {
         if (selectedBusiness.business_type === 'individual') {
           // For individual businesses, only show owners
           filteredProviders = filteredProviders.filter(provider =>
             provider.provider_role === 'owner'
           );
+          console.log('Filtered for individual business (owners only):', filteredProviders.length);
         } else {
           // For non-individual businesses, only show providers (not owners)
           filteredProviders = filteredProviders.filter(provider =>
             provider.provider_role === 'provider'
           );
+          console.log('Filtered for non-individual business (providers only):', filteredProviders.length);
         }
+      } else {
+        console.log('No business type available, showing all providers');
       }
 
       // Transform data to match Provider interface
