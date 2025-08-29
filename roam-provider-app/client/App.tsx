@@ -63,6 +63,8 @@ const App = () => (
             <Route path="/image-upload-test" element={<ImageUploadTest />} />
             <Route path="/phase2-test" element={<Phase2Test />} />
 
+            {/* Staff Onboarding (Public route) */}
+            <Route path="/staff-onboarding" element={<StaffOnboarding />} />
 
             {/* Protected routes - any authenticated provider */}
             <Route
