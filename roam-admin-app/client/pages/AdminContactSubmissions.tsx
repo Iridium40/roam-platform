@@ -49,7 +49,7 @@ import { supabase } from "@/lib/supabase";
 import { createClient } from "@supabase/supabase-js";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { format } from "date-fns";
+import { format, isValid, parseISO } from "date-fns";
 
 // Status type based on database schema
 type SubmissionStatus = "received" | "in_progress" | "responded" | "closed";
