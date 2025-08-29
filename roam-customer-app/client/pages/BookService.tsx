@@ -479,6 +479,12 @@ export default function BookService() {
       const sortedBusinesses = sortAndFilterBusinesses(transformedBusinesses, sortBy, sortOrder);
       setFilteredAndSortedBusinesses(sortedBusinesses);
 
+      // Show success message
+      toast({
+        title: "Businesses loaded successfully",
+        description: `Found ${transformedBusinesses.length} available businesses for your selected time`,
+      });
+
     } catch (error) {
       console.error('Error loading businesses - Full error object:', error);
       console.error('Error type:', typeof error);
