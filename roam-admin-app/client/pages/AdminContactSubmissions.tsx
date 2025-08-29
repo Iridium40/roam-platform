@@ -531,7 +531,7 @@ export default function AdminContactSubmissions() {
         </ROAMCardHeader>
         <ROAMCardContent>
           <ROAMDataTable
-            data={filteredSubmissions}
+            data={filteredSubmissions || []}
             columns={columns}
             loading={loading}
             searchPlaceholder="Search submissions..."
