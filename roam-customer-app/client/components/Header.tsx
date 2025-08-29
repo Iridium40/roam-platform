@@ -52,12 +52,6 @@ export function Header() {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
-            <a
-              href="#services"
-              className="text-foreground/70 hover:text-roam-blue transition-colors"
-            >
-              Services
-            </a>
             <Link
               to="/how-it-works"
               className="text-foreground/70 hover:text-roam-blue transition-colors"
