@@ -176,37 +176,17 @@ export default function AdminContactSubmissions() {
 
       if (error) throw error;
 
-      console.log("Raw data from Supabase:", data);
-      console.log("Number of records returned:", data?.length || 0);
-
-      if (data && data.length > 0) {
-        console.log("First record sample:", data[0]);
-        console.log("Record fields:", Object.keys(data[0] || {}));
-      }
-
       // Ensure all submissions have default values for required fields
-      const sanitizedData = (data || []).map((submission, index) => {
-        console.log(`Processing record ${index + 1}:`, {
-          id: submission.id,
-          from_email: submission.from_email,
-          subject: submission.subject,
-          full_name: submission.full_name,
-          status: submission.status,
-          created_at: submission.created_at
-        });
+      const sanitizedData = (data || []).map(submission => ({
+        ...submission,
+        status: submission.status || "received",
+        full_name: submission.full_name || null,
+        category: submission.category || null,
+        notes: submission.notes || null,
+        created_at: submission.created_at || new Date().toISOString(),
+        updated_at: submission.updated_at || new Date().toISOString()
+      }));
 
-        return {
-          ...submission,
-          status: submission.status || "received",
-          full_name: submission.full_name || null,
-          category: submission.category || null,
-          notes: submission.notes || null,
-          created_at: submission.created_at || new Date().toISOString(),
-          updated_at: submission.updated_at || new Date().toISOString()
-        };
-      });
-
-      console.log("Sanitized data:", sanitizedData);
       setSubmissions(sanitizedData);
       calculateStats(sanitizedData);
     } catch (error: any) {
