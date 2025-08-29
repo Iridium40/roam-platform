@@ -324,9 +324,19 @@ export default function AdminContactSubmissions() {
   };
 
   // Handle edit submission
-  const handleEditSubmission = (submission: ContactSubmission) => {
+  const handleEditSubmission = (submission: ContactSubmission | undefined | null) => {
+    if (!submission) {
+      console.error("Cannot edit submission: submission is undefined or null");
+      toast({
+        title: "Error",
+        description: "Cannot edit submission: invalid data",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setSelectedSubmission(submission);
-    setEditStatus(submission.status);
+    setEditStatus(submission.status || "received");
     setEditNotes(submission.notes || "");
     setIsEditDialogOpen(true);
   };
