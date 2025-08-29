@@ -277,12 +277,12 @@ export default function BookService() {
     loadServiceAndPromotion();
   }, [serviceId, promotionId, businessId, toast]);
 
-  // Load businesses that offer this service
+  // Load businesses that offer this service with pricing and availability validation
   const loadBusinesses = async () => {
-    if (!serviceId) return;
-    
+    if (!serviceId || !selectedDate || !selectedTime) return;
+
     try {
-      // Get the service details first to understand what we're looking for
+      // Get the service details first
       const { data: serviceData, error: serviceError } = await supabase
         .from('services')
         .select('id, name, subcategory_id')
@@ -290,51 +290,78 @@ export default function BookService() {
         .single();
 
       if (serviceError) throw serviceError;
-      
+
       if (!serviceData) {
-        setBusinesses([]);
+        setAllBusinesses([]);
+        setFilteredAndSortedBusinesses([]);
         return;
       }
 
-      // Get business IDs that offer this specific service
+      // Get business services with pricing information
       const { data: businessServiceData, error: businessServiceError } = await supabase
         .from('business_services')
-        .select('business_id')
+        .select(`
+          business_id,
+          service_price,
+          is_active,
+          business_profiles (
+            id,
+            business_name,
+            business_description,
+            image_url,
+            logo_url,
+            business_type,
+            business_hours,
+            is_active
+          )
+        `)
         .eq('service_id', serviceId)
         .eq('is_active', true);
 
       if (businessServiceError) throw businessServiceError;
-      
+
       if (!businessServiceData || businessServiceData.length === 0) {
-        setBusinesses([]);
+        setAllBusinesses([]);
+        setFilteredAndSortedBusinesses([]);
         return;
       }
 
-      // Extract business IDs
-      const businessIds = businessServiceData.map(item => item.business_id);
+      // Filter businesses that are available at selected date/time
+      const availableBusinesses = businessServiceData.filter(item => {
+        const business = item.business_profiles;
+        if (!business || !business.is_active) return false;
 
-      // Then, get the business details
-      const { data: businessData, error: businessError } = await supabase
-        .from('business_profiles')
-        .select('id, business_name, business_description, image_url, logo_url, business_type')
-        .in('id', businessIds)
-        .eq('is_active', true);
-
-      if (businessError) throw businessError;
+        // TODO: Add proper business hours validation here
+        // For now, assume all businesses are available at selected time
+        // This would check if selectedDate/selectedTime falls within business hours
+        return true;
+      });
 
       // Transform data to match Business interface
-      const transformedBusinesses = businessData?.map(business => ({
-        id: business.id,
-        business_name: business.business_name,
-        description: business.business_description || '',
-        image_url: business.image_url,
-        logo_url: business.logo_url,
-        business_type: business.business_type,
+      const transformedBusinesses = availableBusinesses.map(item => ({
+        id: item.business_profiles.id,
+        business_name: item.business_profiles.business_name,
+        description: item.business_profiles.business_description || '',
+        image_url: item.business_profiles.image_url,
+        logo_url: item.business_profiles.logo_url,
+        business_type: item.business_profiles.business_type,
+        service_price: item.service_price || service?.min_price || 0,
+        business_hours: item.business_profiles.business_hours,
         rating: 4.5, // Mock data - would come from reviews table
         review_count: 25, // Mock data
-      })) || [];
-      
-      setBusinesses(transformedBusinesses);
+      }));
+
+      console.log('Loaded businesses with pricing:', transformedBusinesses.map(b => ({
+        name: b.business_name,
+        price: b.service_price
+      })));
+
+      setAllBusinesses(transformedBusinesses);
+
+      // Apply initial sorting
+      const sortedBusinesses = sortAndFilterBusinesses(transformedBusinesses, sortBy, sortOrder);
+      setFilteredAndSortedBusinesses(sortedBusinesses);
+
     } catch (error) {
       console.error('Error loading businesses:', error);
     }
