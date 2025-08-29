@@ -447,6 +447,7 @@ export default function AdminContactSubmissions() {
             variant="ghost"
             size="sm"
             onClick={() => handleViewSubmission(submission)}
+            disabled={!submission}
           >
             <Eye className="w-4 h-4" />
           </Button>
@@ -454,6 +455,7 @@ export default function AdminContactSubmissions() {
             variant="ghost"
             size="sm"
             onClick={() => handleEditSubmission(submission)}
+            disabled={!submission}
           >
             <Edit className="w-4 h-4" />
           </Button>
