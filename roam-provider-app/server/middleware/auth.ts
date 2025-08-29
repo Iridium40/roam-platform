@@ -93,9 +93,17 @@ export const requireAuth = (allowedRoles?: string[]) => {
       const userRole = userRoles?.[0]?.role || 'customer';
       const businessId = userRoles?.[0]?.business_id;
 
+      console.log('Role permission check:', {
+        userRole,
+        businessId,
+        allowedRoles,
+        hasPermission: !allowedRoles || allowedRoles.includes(userRole)
+      });
+
       // Check role permissions
       if (allowedRoles && !allowedRoles.includes(userRole)) {
-        return res.status(403).json({ 
+        console.log('Access denied: User role not in allowed roles');
+        return res.status(403).json({
           error: 'Insufficient permissions',
           code: 'INSUFFICIENT_PERMISSIONS',
           requiredRoles: allowedRoles,
