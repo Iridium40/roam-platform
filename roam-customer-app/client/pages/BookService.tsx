@@ -319,6 +319,7 @@ export default function BookService() {
         return;
       }
 
+      console.log('🏪 Fetching business services with pricing...');
       // Get business services with pricing information
       const { data: businessServiceData, error: businessServiceError } = await supabase
         .from('business_services')
@@ -339,6 +340,12 @@ export default function BookService() {
         `)
         .eq('service_id', serviceId)
         .eq('is_active', true);
+
+      console.log('🏪 Business services query result:', {
+        businessServiceData,
+        businessServiceError,
+        count: businessServiceData?.length
+      });
 
       if (businessServiceError) throw businessServiceError;
 
