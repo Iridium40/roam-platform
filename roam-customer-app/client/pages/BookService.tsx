@@ -281,7 +281,7 @@ export default function BookService() {
       // Then, get the business details
       const { data: businessData, error: businessError } = await supabase
         .from('business_profiles')
-        .select('id, business_name, business_description, image_url, logo_url')
+        .select('id, business_name, business_description, image_url, logo_url, business_type')
         .in('id', businessIds)
         .eq('is_active', true);
 
@@ -294,6 +294,7 @@ export default function BookService() {
         description: business.business_description || '',
         image_url: business.image_url,
         logo_url: business.logo_url,
+        business_type: business.business_type,
         rating: 4.5, // Mock data - would come from reviews table
         review_count: 25, // Mock data
       })) || [];
