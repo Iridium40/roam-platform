@@ -792,7 +792,7 @@ export default function BookService() {
       promotionId: promotion?.id || null,
     };
 
-    console.log('💳 Initiating Stripe Checkout with:', bookingDetails);
+    console.log('💳 Creating Payment Intent with:', bookingDetails);
 
     try {
       // Call backend to create Stripe checkout session
