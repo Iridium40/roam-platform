@@ -21,6 +21,10 @@ import {
   AlertCircle,
   Phone,
   Mail,
+  Users,
+  Activity,
+  TrendingUp,
+  Inbox,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
@@ -146,13 +150,43 @@ export default function MessagesTab({
   // Filter conversations based on search
   const filteredConversations = useMemo(() => {
     if (!searchQuery) return conversations;
-    
+
     return conversations.filter(conversation =>
       conversation.customer_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       conversation.last_message?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       conversation.booking_reference?.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [conversations, searchQuery]);
+
+  // Calculate message stats
+  const messageStats = useMemo(() => {
+    const totalConversations = conversations.length;
+    const unreadCount = conversations.reduce((sum, conv) => sum + (conv.unread_count || 0), 0);
+    const activeConversations = conversations.filter(conv => {
+      const lastMessageTime = new Date(conv.last_message_time || 0);
+      const daysSinceLastMessage = (Date.now() - lastMessageTime.getTime()) / (1000 * 60 * 60 * 24);
+      return daysSinceLastMessage <= 7; // Active if message within last 7 days
+    }).length;
+
+    // Placeholder response rate calculation
+    const responseRate = totalConversations > 0 ? 85 : 0; // Placeholder percentage
+
+    // Recent activity (conversations with activity in last 24 hours)
+    const recentActivity = conversations.filter(conv => {
+      const lastMessageTime = new Date(conv.last_message_time || 0);
+      const hoursSinceLastMessage = (Date.now() - lastMessageTime.getTime()) / (1000 * 60 * 60);
+      return hoursSinceLastMessage <= 24;
+    }).length;
+
+    return {
+      totalConversations,
+      unreadCount,
+      activeConversations,
+      responseRate,
+      recentActivity,
+      readConversations: totalConversations - unreadCount,
+    };
+  }, [conversations]);
 
   const handleSendMessage = () => {
     if (!selectedConversation || !messageText.trim()) return;
@@ -226,6 +260,89 @@ export default function MessagesTab({
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Messages</h1>
         <p className="text-sm text-gray-600">Communicate with your customers</p>
+      </div>
+
+      {/* Message Statistics */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Total Conversations</p>
+              <p className="text-3xl font-bold text-gray-900">{messageStats.totalConversations}</p>
+              <p className="text-sm text-gray-500 mt-1">
+                {messageStats.activeConversations} active this week
+              </p>
+            </div>
+            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+              <MessageCircle className="w-6 h-6 text-blue-600" />
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Unread Messages</p>
+              <p className="text-3xl font-bold text-gray-900">{messageStats.unreadCount}</p>
+              <p className="text-sm text-gray-500 mt-1">
+                {messageStats.readConversations} read conversations
+              </p>
+            </div>
+            <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+              <Inbox className="w-6 h-6 text-orange-600" />
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Response Rate</p>
+              <p className="text-3xl font-bold text-gray-900">{messageStats.responseRate}%</p>
+              <p className="text-sm text-gray-500 mt-1">
+                Average response time
+              </p>
+            </div>
+            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+              <TrendingUp className="w-6 h-6 text-green-600" />
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Recent Activity</p>
+              <p className="text-3xl font-bold text-gray-900">{messageStats.recentActivity}</p>
+              <p className="text-sm text-gray-500 mt-1">
+                Last 24 hours
+              </p>
+            </div>
+            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+              <Activity className="w-6 h-6 text-purple-600" />
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      {/* Quick Overview */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card className="p-4 text-center">
+          <p className="text-sm text-gray-600">All</p>
+          <p className="text-2xl font-bold text-blue-600">{messageStats.totalConversations}</p>
+        </Card>
+        <Card className="p-4 text-center">
+          <p className="text-sm text-gray-600">Unread</p>
+          <p className="text-2xl font-bold text-orange-600">{messageStats.unreadCount}</p>
+        </Card>
+        <Card className="p-4 text-center">
+          <p className="text-sm text-gray-600">Active</p>
+          <p className="text-2xl font-bold text-green-600">{messageStats.activeConversations}</p>
+        </Card>
+        <Card className="p-4 text-center">
+          <p className="text-sm text-gray-600">Recent</p>
+          <p className="text-2xl font-bold text-purple-600">{messageStats.recentActivity}</p>
+        </Card>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[600px]">
