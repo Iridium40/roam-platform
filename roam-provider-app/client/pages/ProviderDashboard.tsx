@@ -564,6 +564,19 @@ export default function ProviderDashboard() {
           if (businessError) throw businessError;
           if (businessData) {
             setBusiness(businessData);
+
+            // Load business locations
+            const { data: locationsData, error: locationsError } = await supabase
+              .from('business_locations')
+              .select('*')
+              .eq('business_id', providerData.business_id)
+              .order('location_name');
+
+            if (locationsError) {
+              console.error('Error loading locations:', locationsError);
+            } else {
+              setLocations(locationsData || []);
+            }
           }
         }
 
