@@ -11,7 +11,7 @@ interface InvitationToken {
   businessId: string;
   email: string;
   role: string;
-  locationId: string;
+  locationId?: string;
   type: string;
 }
 
