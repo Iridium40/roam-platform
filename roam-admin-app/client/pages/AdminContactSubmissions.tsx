@@ -139,6 +139,20 @@ export default function AdminContactSubmissions() {
   const { toast } = useToast();
   const { user } = useAuth();
 
+  // Safe date formatting function
+  const safeFormatDate = (dateString: string | null | undefined, formatStr: string = "MMM dd, yyyy") => {
+    if (!dateString) return "N/A";
+
+    try {
+      const date = typeof dateString === "string" ? parseISO(dateString) : new Date(dateString);
+      if (!isValid(date)) return "Invalid Date";
+      return format(date, formatStr);
+    } catch (error) {
+      console.warn("Date formatting error:", error, "for date:", dateString);
+      return "Invalid Date";
+    }
+  };
+
   // Fetch contact submissions
   const fetchSubmissions = async () => {
     try {
