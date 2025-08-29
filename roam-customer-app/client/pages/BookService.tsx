@@ -418,10 +418,24 @@ export default function BookService() {
         <div className="max-w-4xl mx-auto">
           {/* Service Header */}
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-foreground mb-4">
+            <h1 className="text-3xl font-bold text-foreground mb-6">
               Book {service.name}
             </h1>
-            
+
+            {/* Service Image */}
+            {service.image_url && (
+              <div className="flex justify-center mb-6">
+                <div className="relative w-full max-w-md h-64 rounded-xl overflow-hidden shadow-lg">
+                  <img
+                    src={service.image_url}
+                    alt={service.name}
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+                </div>
+              </div>
+            )}
+
             {/* Promotion Applied Section */}
             {promotion && (
               <div className="mb-4">
