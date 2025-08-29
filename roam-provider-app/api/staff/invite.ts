@@ -12,7 +12,7 @@ interface StaffInviteRequest {
   businessId: string;
   email: string;
   role: 'provider' | 'dispatcher' | 'owner';
-  locationId: string;
+  locationId?: string; // Optional - can be empty for no specific location
   invitedBy: string; // Name of the person sending the invite
 }
 
