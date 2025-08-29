@@ -650,14 +650,12 @@ export default function ProviderDashboard() {
               >
                 Services
               </button>
-              {businessSettings.business_type !== "Independent" && (
-                <button
-                  onClick={() => setActiveTab("staff")}
-                  className={`text-sm font-medium px-3 py-2 rounded-lg ${activeTab === "staff" ? "bg-gray-100 text-gray-900" : "text-gray-600 hover:text-gray-900"}`}
-                >
-                  Staff
-                </button>
-              )}
+              <button
+                onClick={() => setActiveTab("staff")}
+                className={`text-sm font-medium px-3 py-2 rounded-lg ${activeTab === "staff" ? "bg-gray-100 text-gray-900" : "text-gray-600 hover:text-gray-900"}`}
+              >
+                Staff
+              </button>
               <button
                 onClick={() => setActiveTab("financials")}
                 className={`text-sm font-medium px-3 py-2 rounded-lg ${activeTab === "financials" ? "bg-gray-100 text-gray-900" : "text-gray-600 hover:text-gray-900"}`}
