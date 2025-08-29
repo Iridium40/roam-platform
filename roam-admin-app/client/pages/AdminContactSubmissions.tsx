@@ -399,11 +399,11 @@ export default function AdminContactSubmissions() {
   };
 
   // Table columns
-  const columns: Column<ContactSubmission>[] = [
+  const columns: Column[] = [
     {
       key: "full_name",
       header: "Name",
-      render: (submission) => (
+      render: (value, submission) => (
         <div className="flex items-center gap-2">
           <User className="w-4 h-4 text-muted-foreground" />
           <span className="font-medium">
@@ -415,7 +415,7 @@ export default function AdminContactSubmissions() {
     {
       key: "from_email",
       header: "Email",
-      render: (submission) => (
+      render: (value, submission) => (
         <div className="flex items-center gap-2">
           <Mail className="w-4 h-4 text-muted-foreground" />
           <span className="text-sm">{submission.from_email}</span>
@@ -425,7 +425,7 @@ export default function AdminContactSubmissions() {
     {
       key: "subject",
       header: "Subject",
-      render: (submission) => (
+      render: (value, submission) => (
         <div className="max-w-xs">
           <span className="font-medium text-sm truncate block">
             {submission.subject}
@@ -436,7 +436,7 @@ export default function AdminContactSubmissions() {
     {
       key: "category",
       header: "Category",
-      render: (submission) => (
+      render: (value, submission) => (
         <div className="flex items-center gap-2">
           <Tag className="w-4 h-4 text-muted-foreground" />
           <span className="text-sm">
@@ -448,7 +448,7 @@ export default function AdminContactSubmissions() {
     {
       key: "status",
       header: "Status",
-      render: (submission) => (
+      render: (value, submission) => (
         <ROAMBadge variant={getStatusBadgeVariant(submission.status || "received")}>
           {(submission.status || "received").replace("_", " ").toUpperCase()}
         </ROAMBadge>
@@ -457,7 +457,7 @@ export default function AdminContactSubmissions() {
     {
       key: "created_at",
       header: "Submitted",
-      render: (submission) => (
+      render: (value, submission) => (
         <div className="flex items-center gap-2">
           <Calendar className="w-4 h-4 text-muted-foreground" />
           <span className="text-sm">
@@ -469,7 +469,7 @@ export default function AdminContactSubmissions() {
     {
       key: "actions",
       header: "Actions",
-      render: (submission) => (
+      render: (value, submission) => (
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"
