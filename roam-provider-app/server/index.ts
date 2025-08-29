@@ -183,7 +183,7 @@ export function createServer() {
 
   // Business service eligibility route
   app.get("/api/business/service-eligibility",
-    requireAuth(['owner', 'dispatcher', 'admin']),
+    requireAuth(['owner', 'dispatcher', 'provider', 'admin']),
     getServiceEligibility
   );
 
