@@ -795,11 +795,10 @@ export default function BookService() {
     console.log('💳 Creating Payment Intent with:', bookingDetails);
 
     try {
-      // Call backend to create Stripe checkout session
-      console.log('🌐 Making API call to:', '/api/stripe/create-checkout-session');
-      console.log('🌐 Current location:', window.location.href);
+      // Call backend to create Stripe Payment Intent
+      console.log('🌐 Making API call to:', '/api/stripe/create-payment-intent');
 
-      const response = await fetch('/api/stripe/create-checkout-session', {
+      const response = await fetch('/api/stripe/create-payment-intent', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
