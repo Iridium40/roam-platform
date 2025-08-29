@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Calendar,
   Clock,
@@ -44,6 +45,7 @@ export default function BookingsTab({
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatusFilter, setSelectedStatusFilter] = useState("all");
+  const [activeTab, setActiveTab] = useState("present");
 
   // Filter bookings based on search and status
   const filteredBookings = useMemo(() => {
@@ -320,27 +322,17 @@ export default function BookingsTab({
         </div>
       </div>
 
-      {/* Bookings List */}
-      <div className="space-y-8">
-        {filteredBookings.length === 0 ? (
-          <Card className="p-8">
-            <div className="text-center">
-              <Calendar className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No Bookings Found</h3>
-              <p className="text-gray-600">
-                {searchQuery || selectedStatusFilter !== "all"
-                  ? "Try adjusting your search or filter criteria."
-                  : "No bookings have been created yet."}
-              </p>
-            </div>
-          </Card>
-        ) : (
-          <>
-            {presentBookings.length > 0 && (
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900 mb-2">Present</h2>
-                <div className="space-y-4">
-                  {presentBookings.map((booking) => (
+      {/* Bookings Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="present">Present ({presentBookings.length})</TabsTrigger>
+          <TabsTrigger value="future">Future ({futureBookings.length})</TabsTrigger>
+          <TabsTrigger value="past">Past ({pastBookings.length})</TabsTrigger>
+        </TabsList>
+        <TabsContent value="present" className="mt-6">
+          <div className="space-y-4">
+            {presentBookings.length > 0 ? (
+              presentBookings.map((booking) => (
                     <Card key={booking.id} className="overflow-hidden">
                       {/* Service and Booking Overview */}
                       <div className="p-4 border-b bg-gray-50">
@@ -503,23 +495,23 @@ export default function BookingsTab({
                         )}
                       </div>
                     </Card>
-                  ))}
+              ))
+            ) : (
+              <Card className="p-8">
+                <div className="text-center">
+                  <Calendar className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No Present Bookings</h3>
+                  <p className="text-gray-600">No bookings require immediate attention.</p>
                 </div>
-              </div>
+              </Card>
             )}
+          </div>
+        </TabsContent>
 
-            {presentBookings.length === 0 && (
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900 mb-2">Present</h2>
-                <Card className="p-4 text-center text-sm text-gray-500">No Present bookings.</Card>
-              </div>
-            )}
-
-            {futureBookings.length > 0 && (
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900 mb-2">Future</h2>
-                <div className="space-y-4">
-                  {futureBookings.map((booking) => (
+        <TabsContent value="future" className="mt-6">
+          <div className="space-y-4">
+            {futureBookings.length > 0 ? (
+              futureBookings.map((booking) => (
                     <Card key={booking.id} className="overflow-hidden">
                       {/* Service and Booking Overview */}
                       <div className="p-4 border-b bg-gray-50">
@@ -682,23 +674,23 @@ export default function BookingsTab({
                         )}
                       </div>
                     </Card>
-                  ))}
+              ))
+            ) : (
+              <Card className="p-8">
+                <div className="text-center">
+                  <Calendar className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No Future Bookings</h3>
+                  <p className="text-gray-600">No upcoming bookings scheduled.</p>
                 </div>
-              </div>
+              </Card>
             )}
+          </div>
+        </TabsContent>
 
-            {futureBookings.length === 0 && (
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900 mb-2">Future</h2>
-                <Card className="p-4 text-center text-sm text-gray-500">No Future bookings.</Card>
-              </div>
-            )}
-
-            {pastBookings.length > 0 && (
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900 mb-2">Past</h2>
-                <div className="space-y-4">
-                  {pastBookings.map((booking) => (
+        <TabsContent value="past" className="mt-6">
+          <div className="space-y-4">
+            {pastBookings.length > 0 ? (
+              pastBookings.map((booking) => (
                     <Card key={booking.id} className="overflow-hidden">
                       {/* Service and Booking Overview */}
                       <div className="p-4 border-b bg-gray-50">
@@ -861,20 +853,35 @@ export default function BookingsTab({
                         )}
                       </div>
                     </Card>
-                  ))}
+              ))
+            ) : (
+              <Card className="p-8">
+                <div className="text-center">
+                  <Calendar className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No Past Bookings</h3>
+                  <p className="text-gray-600">No completed or cancelled bookings found.</p>
                 </div>
-              </div>
+              </Card>
             )}
+          </div>
+        </TabsContent>
 
-            {pastBookings.length === 0 && (
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900 mb-2">Past</h2>
-                <Card className="p-4 text-center text-sm text-gray-500">No Past bookings.</Card>
+        {filteredBookings.length === 0 && (
+          <div className="mt-6">
+            <Card className="p-8">
+              <div className="text-center">
+                <Calendar className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">No Bookings Found</h3>
+                <p className="text-gray-600">
+                  {searchQuery || selectedStatusFilter !== "all"
+                    ? "Try adjusting your search or filter criteria."
+                    : "No bookings have been created yet."}
+                </p>
               </div>
-            )}
-          </>
+            </Card>
+          </div>
         )}
-      </div>
+      </Tabs>
     </div>
   );
 }
