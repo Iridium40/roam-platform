@@ -105,6 +105,7 @@ import RealtimeBookingNotifications from "@/components/RealtimeBookingNotificati
 import BookingStatusIndicator, {
   RealtimeStatusUpdate,
 } from "@/components/BookingStatusIndicator";
+import { StaffManager } from "@/components/StaffManager";
 import type { Provider, Booking, BusinessProfile } from "@roam/shared";
 
 // Import the new modular tab components
