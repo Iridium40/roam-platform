@@ -48,7 +48,6 @@ export function Header() {
                 }}
               />
             </Link>
-            <span className="text-2xl font-semibold text-roam-blue">Services</span>
           </div>
 
           {/* Desktop Navigation */}
