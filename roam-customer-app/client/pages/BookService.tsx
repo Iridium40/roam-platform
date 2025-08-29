@@ -373,6 +373,8 @@ export default function BookService() {
       return;
     }
 
+    setCheckoutLoading(true);
+
     try {
       console.log('📋 Fetching service details...');
       // Get the service details first
