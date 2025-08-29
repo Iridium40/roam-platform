@@ -182,7 +182,9 @@ export default function AdminContactSubmissions() {
         status: submission.status || "received",
         full_name: submission.full_name || null,
         category: submission.category || null,
-        notes: submission.notes || null
+        notes: submission.notes || null,
+        created_at: submission.created_at || new Date().toISOString(),
+        updated_at: submission.updated_at || new Date().toISOString()
       }));
 
       setSubmissions(sanitizedData);
