@@ -93,8 +93,14 @@ const createAdminSupabaseClient = () => {
   const supabaseUrl = import.meta.env.VITE_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
 
+  console.log("Admin client environment check:", {
+    hasUrl: !!supabaseUrl,
+    hasServiceKey: !!serviceRoleKey,
+    url: supabaseUrl?.substring(0, 30) + "..." // Show partial URL for debugging
+  });
+
   if (!supabaseUrl || !serviceRoleKey) {
-    console.error("Missing Supabase credentials for admin client");
+    console.warn("Missing Supabase credentials for admin client, using regular client");
     return supabase; // Fallback to regular client
   }
 
