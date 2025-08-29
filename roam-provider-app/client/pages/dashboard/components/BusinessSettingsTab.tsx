@@ -48,14 +48,14 @@ interface BusinessSettingsTabProps {
 interface ServiceCategory {
   id: string;
   service_category_type: string;
-  category_description?: string;
+  description?: string;
   is_active: boolean;
 }
 
 interface ServiceSubcategory {
   id: string;
   service_subcategory_type: string;
-  subcategory_description?: string;
+  description?: string;
   is_active: boolean;
 }
 
@@ -1089,8 +1089,8 @@ export default function BusinessSettingsTab({
                             <h4 className="font-semibold text-gray-900 text-lg">
                               {category.service_category_type}
                             </h4>
-                            {category.category_description && (
-                              <p className="text-sm text-gray-600 mt-1">{category.category_description}</p>
+                            {category.description && (
+                              <p className="text-sm text-gray-600 mt-1">{category.description}</p>
                             )}
                           </div>
                           <div className="flex items-center space-x-2">
@@ -1123,9 +1123,9 @@ export default function BusinessSettingsTab({
                                       <h6 className="font-medium text-gray-900 text-sm">
                                         {subcategory.service_subcategory_type}
                                       </h6>
-                                      {subcategory.subcategory_description && (
+                                      {subcategory.description && (
                                         <p className="text-xs text-gray-600 mt-1 line-clamp-2">
-                                          {subcategory.subcategory_description}
+                                          {subcategory.description}
                                         </p>
                                       )}
                                     </div>
@@ -1278,7 +1278,7 @@ export default function BusinessSettingsTab({
               <div className="space-y-2 text-sm text-gray-500">
                 <p>• Professional licenses and certifications</p>
                 <p>• Business registration documents</p>
-                <p>• Liability insurance certificates</p>
+                <p>��� Liability insurance certificates</p>
                 <p>• Proof of address and identification</p>
               </div>
               <Button 
