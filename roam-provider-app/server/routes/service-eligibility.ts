@@ -197,6 +197,13 @@ export const getServiceEligibility: RequestHandler = async (req, res) => {
 
     console.log('Found business subcategories:', businessSubcategories?.length || 0);
 
+    // If no categories or subcategories found, check if this is due to missing tables or just no data
+    const hasAnyData = businessCategories.length > 0 || businessSubcategories.length > 0;
+
+    if (!hasAnyData) {
+      console.log('No service eligibility data found for business. This may be normal if no categories have been assigned yet.');
+    }
+
     // Group subcategories by category for better organization
     const subcategoriesByCategory: Record<string, any[]> = {};
     (businessSubcategories || []).forEach((subcategory: BusinessServiceSubcategory) => {
@@ -244,7 +251,14 @@ export const getServiceEligibility: RequestHandler = async (req, res) => {
         ...stats,
         available_services_count: availableServicesCount
       },
-      last_fetched: new Date().toISOString()
+      last_fetched: new Date().toISOString(),
+      // Add debug info for development
+      _debug: {
+        tables_checked: true,
+        categories_table_accessible: businessCategories !== null,
+        subcategories_table_accessible: businessSubcategories !== null,
+        has_data: hasAnyData
+      }
     };
 
     console.log('Sending service eligibility response:', {
