@@ -34,7 +34,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       signature,
       process.env.STRIPE_WEBHOOK_SIGNING_SECRET!
     );
-    console.log('Processing webhook event:', event.type);
+  } catch (err) {
+    console.error('Webhook signature verification failed:', err);
+    return res.status(400).json({ error: 'Invalid signature' });
+  }
+
+  console.log('Processing webhook event:', event.type);
+
+  try {
 
     switch (event.type) {
       case 'checkout.session.completed': {
