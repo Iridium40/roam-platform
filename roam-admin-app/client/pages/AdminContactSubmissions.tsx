@@ -88,6 +88,24 @@ interface SubmissionStats {
   closed: number;
 }
 
+// Create admin Supabase client with service role key for elevated permissions
+const createAdminSupabaseClient = () => {
+  const supabaseUrl = import.meta.env.VITE_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    console.error("Missing Supabase credentials for admin client");
+    return supabase; // Fallback to regular client
+  }
+
+  return createClient(supabaseUrl, serviceRoleKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  });
+};
+
 export default function AdminContactSubmissions() {
   const [submissions, setSubmissions] = useState<ContactSubmission[]>([]);
   const [filteredSubmissions, setFilteredSubmissions] = useState<ContactSubmission[]>([]);
