@@ -627,36 +627,107 @@ export default function BookService() {
                   <Building className="w-6 h-6 mr-2" />
                   Select Business
                 </h2>
-                <div className="grid gap-4">
+                <div className="grid gap-6">
                   {businesses.map((business) => (
                     <Card
                       key={business.id}
-                      className={`cursor-pointer transition-all ${
+                      className={`cursor-pointer transition-all hover:shadow-lg ${
                         selectedBusiness?.id === business.id
-                          ? 'ring-2 ring-roam-blue border-roam-blue'
+                          ? 'ring-2 ring-roam-blue border-roam-blue bg-blue-50/50'
                           : 'hover:shadow-md'
                       }`}
                       onClick={() => setSelectedBusiness(business)}
                     >
-                      <CardContent className="p-4">
-                        <div className="flex items-center space-x-4">
-                          <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center">
+                      <CardContent className="p-6">
+                        <div className="flex items-start space-x-4">
+                          {/* Enhanced Business Logo */}
+                          <div className="w-20 h-20 bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm">
                             {business.image_url ? (
-                              <img src={business.image_url} alt={business.business_name} className="w-full h-full object-cover rounded-lg" />
-                            ) : (
-                              <Building className="w-8 h-8 text-gray-400" />
+                              <img
+                                src={business.image_url}
+                                alt={`${business.business_name} logo`}
+                                className="w-full h-full object-cover rounded-xl"
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement;
+                                  target.style.display = 'none';
+                                }}
+                              />
+                            ) : null}
+                            {(!business.image_url || false) && (
+                              <Building className="w-10 h-10 text-gray-400" />
                             )}
                           </div>
-                          <div className="flex-1">
-                            <h3 className="font-semibold">{business.business_name}</h3>
-                            <p className="text-sm text-gray-600">{business.description}</p>
-                            <div className="flex items-center mt-2">
-                              <span className="text-yellow-500">★</span>
-                              <span className="text-sm ml-1">{business.rating}</span>
-                              <span className="text-sm text-gray-500 ml-1">({business.review_count} reviews)</span>
+
+                          <div className="flex-1 min-w-0">
+                            {/* Business Header */}
+                            <div className="flex items-start justify-between mb-3">
+                              <div>
+                                <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                                  {business.business_name}
+                                </h3>
+                                <div className="flex items-center space-x-4 text-sm text-gray-600">
+                                  <div className="flex items-center">
+                                    <Star className="w-4 h-4 text-yellow-500 mr-1" />
+                                    <span className="font-medium">{business.rating}</span>
+                                    <span className="ml-1">({business.review_count} reviews)</span>
+                                  </div>
+                                  <div className="flex items-center">
+                                    <MapPin className="w-4 h-4 mr-1" />
+                                    <span>Miami, FL</span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* More Info Button */}
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                asChild
+                                className="ml-4 flex-shrink-0 hover:bg-roam-blue hover:text-white"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <Link to={`/business/${business.id}`} target="_blank">
+                                  <Info className="w-4 h-4 mr-1" />
+                                  More Info
+                                  <ExternalLink className="w-3 h-3 ml-1" />
+                                </Link>
+                              </Button>
+                            </div>
+
+                            {/* Business Description */}
+                            <p className="text-sm text-gray-600 mb-3 leading-relaxed">
+                              {business.description || "Professional service provider dedicated to delivering excellent results."}
+                            </p>
+
+                            {/* Business Highlights */}
+                            <div className="flex flex-wrap gap-2">
+                              <Badge variant="secondary" className="text-xs">
+                                <Clock className="w-3 h-3 mr-1" />
+                                Same-day booking
+                              </Badge>
+                              <Badge variant="secondary" className="text-xs">
+                                <Building className="w-3 h-3 mr-1" />
+                                Licensed & Insured
+                              </Badge>
+                              <Badge variant="secondary" className="text-xs">
+                                <Star className="w-3 h-3 mr-1" />
+                                Top-rated
+                              </Badge>
                             </div>
                           </div>
                         </div>
+
+                        {/* Selection Indicator */}
+                        {selectedBusiness?.id === business.id && (
+                          <div className="mt-4 pt-4 border-t border-roam-blue/20">
+                            <div className="flex items-center text-roam-blue text-sm font-medium">
+                              <div className="w-4 h-4 rounded-full bg-roam-blue flex items-center justify-center mr-2">
+                                <div className="w-2 h-2 rounded-full bg-white"></div>
+                              </div>
+                              Selected for your booking
+                            </div>
+                          </div>
+                        )}
                       </CardContent>
                     </Card>
                   ))}
