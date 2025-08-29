@@ -305,27 +305,46 @@ export default function BookService() {
     }
   };
 
-  // Load providers from selected business
+  // Load providers from selected business with role-based filtering
   const loadProviders = async (businessId: string) => {
     try {
+      // Get all providers for this business first
       const { data, error } = await supabase
         .from('providers')
-        .select('id, first_name, last_name, image_url')
+        .select('id, first_name, last_name, image_url, provider_role')
         .eq('business_id', businessId)
         .eq('is_active', true);
 
       if (error) throw error;
-      
+
+      // Apply filtering logic based on business type and provider role
+      let filteredProviders = data || [];
+
+      if (selectedBusiness?.business_type) {
+        if (selectedBusiness.business_type === 'individual') {
+          // For individual businesses, only show owners
+          filteredProviders = filteredProviders.filter(provider =>
+            provider.provider_role === 'owner'
+          );
+        } else {
+          // For non-individual businesses, only show providers (not owners)
+          filteredProviders = filteredProviders.filter(provider =>
+            provider.provider_role === 'provider'
+          );
+        }
+      }
+
       // Transform data to match Provider interface
-      const providerData = data?.map(provider => ({
+      const providerData = filteredProviders.map(provider => ({
         id: provider.id,
         first_name: provider.first_name,
         last_name: provider.last_name,
         image_url: provider.image_url,
+        provider_role: provider.provider_role,
         rating: 4.8, // Mock data - would come from reviews table
         review_count: 15, // Mock data
-      })) || [];
-      
+      }));
+
       setProviders(providerData);
     } catch (error) {
       console.error('Error loading providers:', error);
