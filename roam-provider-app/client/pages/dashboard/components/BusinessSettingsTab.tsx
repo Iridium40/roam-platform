@@ -1091,7 +1091,7 @@ export default function BusinessSettingsTab({
                         <div className="flex items-center justify-between">
                           <div>
                             <h4 className="font-semibold text-gray-900 text-lg">
-                              {displayCategory?.description || displayCategory?.service_category_type || `Category ${categoryId}`}
+                              {displayCategory?.description || displayCategory?.service_category_type || 'Category'}
                             </h4>
                             {displayCategory?.description && (
                               <p className="text-sm text-gray-600 mt-1">{displayCategory.description}</p>
