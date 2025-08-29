@@ -222,9 +222,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 }
 
+// Helper function to get raw body for signature verification
+async function getRawBody(req: VercelRequest): Promise<string> {
+  return new Promise((resolve, reject) => {
+    let data = '';
+    req.on('data', (chunk) => {
+      data += chunk;
+    });
+    req.on('end', () => {
+      resolve(data);
+    });
+    req.on('error', (err) => {
+      reject(err);
+    });
+  });
+}
+
 async function updateCustomerPaymentMethods(customerId: string, setupIntentId: string) {
   try {
-    const stripe = stripeService.getStripe();
 
     // Get the setup intent to find the payment method
     const setupIntent = await stripe.setupIntents.retrieve(setupIntentId);
