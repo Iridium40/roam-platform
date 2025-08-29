@@ -55,79 +55,144 @@ export const getServiceEligibility: RequestHandler = async (req, res) => {
   try {
     const businessId = req.query.business_id as string;
 
+    console.log('Service eligibility request received:', {
+      businessId,
+      query: req.query,
+      hasSupabaseUrl: !!process.env.VITE_PUBLIC_SUPABASE_URL,
+      hasServiceRoleKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+    });
+
     if (!businessId) {
+      console.error('Missing business_id parameter');
       return res.status(400).json({
         error: 'business_id parameter is required'
       });
     }
 
+    // Test Supabase connection first
+    try {
+      const { data: testData, error: testError } = await supabaseAdmin
+        .from('business_profiles')
+        .select('id')
+        .eq('id', businessId)
+        .single();
+
+      console.log('Supabase connection test:', {
+        hasData: !!testData,
+        error: testError?.message,
+        businessExists: !!testData
+      });
+
+      if (testError && testError.code !== 'PGRST116') { // PGRST116 is "not found" which is ok
+        throw new Error(`Supabase connection failed: ${testError.message}`);
+      }
+    } catch (connectionError) {
+      console.error('Supabase connection test failed:', connectionError);
+      return res.status(500).json({
+        error: 'Database connection failed',
+        details: connectionError instanceof Error ? connectionError.message : 'Unknown error'
+      });
+    }
+
     console.log('Fetching service eligibility for business:', businessId);
 
-    // Fetch business service categories
-    const { data: businessCategories, error: categoriesError } = await supabaseAdmin
-      .from('business_service_categories')
-      .select(`
-        id,
-        business_id,
-        category_id,
-        is_active,
-        created_at,
-        updated_at,
-        service_categories:category_id (
+    // Check if tables exist and fetch business service categories
+    let businessCategories: any[] = [];
+    try {
+      const { data, error: categoriesError } = await supabaseAdmin
+        .from('business_service_categories')
+        .select(`
           id,
-          service_category_type,
-          category_description,
-          is_active
-        )
-      `)
-      .eq('business_id', businessId)
-      .eq('is_active', true)
-      .order('created_at', { ascending: true });
+          business_id,
+          category_id,
+          is_active,
+          created_at,
+          updated_at,
+          service_categories:category_id (
+            id,
+            service_category_type,
+            category_description,
+            is_active
+          )
+        `)
+        .eq('business_id', businessId)
+        .eq('is_active', true)
+        .order('created_at', { ascending: true });
 
-    if (categoriesError) {
-      console.error('Error fetching business service categories:', categoriesError);
-      return res.status(500).json({
-        error: 'Failed to fetch business service categories',
-        details: categoriesError.message
-      });
+      if (categoriesError) {
+        console.error('Error fetching business service categories:', categoriesError);
+
+        // Check if table doesn't exist
+        if (categoriesError.code === '42P01') {
+          console.warn('business_service_categories table does not exist - returning empty results');
+          businessCategories = [];
+        } else {
+          return res.status(500).json({
+            error: 'Failed to fetch business service categories',
+            details: categoriesError.message,
+            code: categoriesError.code
+          });
+        }
+      } else {
+        businessCategories = data || [];
+      }
+    } catch (tableError) {
+      console.error('Table access error for business_service_categories:', tableError);
+      businessCategories = [];
     }
 
     console.log('Found business categories:', businessCategories?.length || 0);
 
-    // Fetch business service subcategories
-    const { data: businessSubcategories, error: subcategoriesError } = await supabaseAdmin
-      .from('business_service_subcategories')
-      .select(`
-        id,
-        business_id,
-        subcategory_id,
-        category_id,
-        is_active,
-        created_at,
-        updated_at,
-        service_subcategories:subcategory_id (
+    // Check if tables exist and fetch business service subcategories
+    let businessSubcategories: any[] = [];
+    try {
+      const { data, error: subcategoriesError } = await supabaseAdmin
+        .from('business_service_subcategories')
+        .select(`
           id,
-          service_subcategory_type,
-          subcategory_description,
-          is_active
-        ),
-        service_categories:category_id (
-          id,
-          service_category_type,
-          category_description,
-          is_active
-        )
-      `)
-      .eq('business_id', businessId)
-      .eq('is_active', true)
-      .order('created_at', { ascending: true });
+          business_id,
+          subcategory_id,
+          category_id,
+          is_active,
+          created_at,
+          updated_at,
+          service_subcategories:subcategory_id (
+            id,
+            service_subcategory_type,
+            subcategory_description,
+            is_active
+          ),
+          service_categories:category_id (
+            id,
+            service_category_type,
+            category_description,
+            is_active
+          )
+        `)
+        .eq('business_id', businessId)
+        .eq('is_active', true)
+        .order('created_at', { ascending: true });
 
-    if (subcategoriesError) {
-      console.error('Error fetching business service subcategories:', subcategoriesError);
-      return res.status(500).json({
-        error: 'Failed to fetch business service subcategories',
-        details: subcategoriesError.message
-      });
+      if (subcategoriesError) {
+        console.error('Error fetching business service subcategories:', subcategoriesError);
+
+        // Check if table doesn't exist
+        if (subcategoriesError.code === '42P01') {
+          console.warn('business_service_subcategories table does not exist - returning empty results');
+          businessSubcategories = [];
+        } else {
+          return res.status(500).json({
+            error: 'Failed to fetch business service subcategories',
+            details: subcategoriesError.message,
+            code: subcategoriesError.code
+          });
+        }
+      } else {
+        businessSubcategories = data || [];
+      }
+    } catch (tableError) {
+      console.error('Table access error for business_service_subcategories:', tableError);
+      businessSubcategories = [];
     }
 
     console.log('Found business subcategories:', businessSubcategories?.length || 0);
