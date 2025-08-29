@@ -727,7 +727,14 @@ export default function Index() {
 
   // Reset carousel when filters change
   useEffect(() => {
-    setCarouselSlides(prev => ({ ...prev, currentServiceSlide: 0 }));
+    console.log('Resetting carousel due to filter change');
+    setCarouselSlides(prev => ({
+      ...prev,
+      currentServiceSlide: 0,
+      currentPopularSlide: 0,
+      currentPromotionSlide: 0,
+      currentBusinessSlide: 0
+    }));
   }, [selectedCategory, searchQuery, selectedDelivery]);
 
   // Featured Services: paginate into pages of 2 for desktop, 1 for mobile
