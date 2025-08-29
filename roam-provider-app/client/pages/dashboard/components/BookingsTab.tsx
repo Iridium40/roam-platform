@@ -27,6 +27,9 @@ import {
   AlertCircle,
   ChevronLeft,
   ChevronRight,
+  DollarSign,
+  TrendingUp,
+  Activity,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
@@ -126,6 +129,35 @@ export default function BookingsTab({
       past: { items: paginatedPast, totalPages: pastTotalPages, currentPage: pastPage }
     }];
   }, [filteredBookings, presentPage, futurePage, pastPage, pageSize]);
+
+  // Calculate booking stats
+  const bookingStats = useMemo(() => {
+    const totalBookings = bookings.length;
+    const pendingBookings = bookings.filter(b => b.booking_status === 'pending').length;
+    const confirmedBookings = bookings.filter(b => b.booking_status === 'confirmed').length;
+    const completedBookings = bookings.filter(b => b.booking_status === 'completed').length;
+    const cancelledBookings = bookings.filter(b => b.booking_status === 'cancelled').length;
+    const inProgressBookings = bookings.filter(b => b.booking_status === 'in_progress').length;
+
+    const totalRevenue = bookings
+      .filter(b => b.booking_status === 'completed')
+      .reduce((sum, b) => sum + (b.total_amount || 0), 0);
+
+    const averageBookingValue = completedBookings > 0 ? totalRevenue / completedBookings : 0;
+    const completionRate = totalBookings > 0 ? (completedBookings / totalBookings) * 100 : 0;
+
+    return {
+      totalBookings,
+      pendingBookings,
+      confirmedBookings,
+      completedBookings,
+      cancelledBookings,
+      inProgressBookings,
+      totalRevenue,
+      averageBookingValue,
+      completionRate,
+    };
+  }, [bookings]);
 
   const getStatusBadge = (status: string) => {
     const configs = {
@@ -328,6 +360,97 @@ export default function BookingsTab({
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Bookings</h1>
         <p className="text-sm text-gray-600">Manage and track all your bookings</p>
+      </div>
+
+      {/* Booking Statistics */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Total Bookings</p>
+              <p className="text-3xl font-bold text-gray-900">{bookingStats.totalBookings}</p>
+              <p className="text-sm text-gray-500 mt-1">
+                {bookingStats.completionRate.toFixed(1)}% completion rate
+              </p>
+            </div>
+            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+              <Calendar className="w-6 h-6 text-blue-600" />
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Total Revenue</p>
+              <p className="text-3xl font-bold text-gray-900">${bookingStats.totalRevenue.toFixed(2)}</p>
+              <p className="text-sm text-gray-500 mt-1">
+                ${bookingStats.averageBookingValue.toFixed(2)} avg per booking
+              </p>
+            </div>
+            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+              <DollarSign className="w-6 h-6 text-green-600" />
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Pending Actions</p>
+              <p className="text-3xl font-bold text-gray-900">{bookingStats.pendingBookings}</p>
+              <p className="text-sm text-gray-500 mt-1">
+                {bookingStats.inProgressBookings} in progress
+              </p>
+            </div>
+            <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+              <Clock className="w-6 h-6 text-orange-600" />
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Completed</p>
+              <p className="text-3xl font-bold text-gray-900">{bookingStats.completedBookings}</p>
+              <p className="text-sm text-gray-500 mt-1">
+                {bookingStats.cancelledBookings} cancelled
+              </p>
+            </div>
+            <div className="w-12 h-12 bg-emerald-100 rounded-lg flex items-center justify-center">
+              <CheckCircle className="w-6 h-6 text-emerald-600" />
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      {/* Quick Status Overview */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <Card className="p-4 text-center">
+          <p className="text-sm text-gray-600">Present</p>
+          <p className="text-2xl font-bold text-blue-600">{presentBookings.length}</p>
+        </Card>
+        <Card className="p-4 text-center">
+          <p className="text-sm text-gray-600">Future</p>
+          <p className="text-2xl font-bold text-green-600">{futureBookings.length}</p>
+        </Card>
+        <Card className="p-4 text-center">
+          <p className="text-sm text-gray-600">Past</p>
+          <p className="text-2xl font-bold text-purple-600">{pastBookings.length}</p>
+        </Card>
+        <Card className="p-4 text-center">
+          <p className="text-sm text-gray-600">Pending</p>
+          <p className="text-2xl font-bold text-orange-600">{bookingStats.pendingBookings}</p>
+        </Card>
+        <Card className="p-4 text-center">
+          <p className="text-sm text-gray-600">Confirmed</p>
+          <p className="text-2xl font-bold text-green-600">{bookingStats.confirmedBookings}</p>
+        </Card>
+        <Card className="p-4 text-center">
+          <p className="text-sm text-gray-600">Completed</p>
+          <p className="text-2xl font-bold text-emerald-600">{bookingStats.completedBookings}</p>
+        </Card>
       </div>
 
       {/* Filters */}
