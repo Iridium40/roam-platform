@@ -74,6 +74,12 @@ export const requireAuth = (allowedRoles?: string[]) => {
       // Get user roles
       const userId = decoded.user_id || decoded.sub;
       console.log('Fetching roles for user:', userId);
+      console.log('Decoded token details:', {
+        user_id: decoded.user_id,
+        sub: decoded.sub,
+        email: decoded.email,
+        tokenKeys: Object.keys(decoded)
+      });
 
       const { data: userRoles, error: rolesError } = await supabase
         .from('user_roles')
@@ -85,7 +91,10 @@ export const requireAuth = (allowedRoles?: string[]) => {
         userId,
         userRoles: userRoles?.length || 0,
         roles: userRoles?.map(r => r.role),
-        error: rolesError?.message
+        rawUserRoles: userRoles,
+        error: rolesError?.message,
+        errorCode: rolesError?.code,
+        fullError: rolesError
       });
 
       if (rolesError) {
