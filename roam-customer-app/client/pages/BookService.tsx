@@ -14,6 +14,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { Elements } from '@stripe/react-stripe-js';
+import { stripePromise } from '../lib/stripe-client';
+import { CheckoutForm } from '../components/CheckoutForm';
 
 type BookingStep = 'datetime' | 'business' | 'provider' | 'summary' | 'checkout';
 
