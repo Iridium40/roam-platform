@@ -163,13 +163,14 @@ export default function BusinessSettingsTab({
 
       const response = await fetch(`/api/business/service-eligibility?business_id=${business.id}`);
 
+      // Read the response body once
+      const responseData = await response.json();
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to load service eligibility');
+        throw new Error(responseData.error || 'Failed to load service eligibility');
       }
 
-      const data = await response.json();
-      setServiceEligibility(data);
+      setServiceEligibility(responseData);
     } catch (error) {
       console.error('Error loading service eligibility:', error);
       setEligibilityError(error instanceof Error ? error.message : 'Failed to load service eligibility');
