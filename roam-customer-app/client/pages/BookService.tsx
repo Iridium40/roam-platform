@@ -823,6 +823,9 @@ export default function BookService() {
 
                   <div className="text-sm text-gray-600">
                     {filteredAndSortedBusinesses.length} business{filteredAndSortedBusinesses.length !== 1 ? 'es' : ''} available
+                    {sortBy === 'price' && ` • Sorted by price (${sortOrder === 'asc' ? 'low to high' : 'high to low'})`}
+                    {sortBy === 'rating' && ` • Sorted by rating (${sortOrder === 'asc' ? 'low to high' : 'high to low'})`}
+                    {sortBy === 'delivery_type' && ` • Sorted by delivery type`}
                   </div>
                 </div>
 
