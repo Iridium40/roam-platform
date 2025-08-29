@@ -303,6 +303,20 @@ export default function BookingsTab({
     return `https://maps.google.com/maps?q=${encodedAddress}`;
   };
 
+  // Reset pagination when search or filter changes
+  useEffect(() => {
+    setPresentPage(1);
+    setFuturePage(1);
+    setPastPage(1);
+  }, [searchQuery, selectedStatusFilter]);
+
+  // Reset current tab pagination when tab changes
+  useEffect(() => {
+    if (activeTab === 'present') setPresentPage(1);
+    else if (activeTab === 'future') setFuturePage(1);
+    else if (activeTab === 'past') setPastPage(1);
+  }, [activeTab]);
+
   // Load bookings when component mounts
   useEffect(() => {
     loadBookings();
