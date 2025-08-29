@@ -1351,19 +1351,27 @@ export default function BookService() {
                         </span>
                       </div>
                     )}
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Subtotal:</span>
-                      <span className="font-medium">${calculateDiscountedPrice().toFixed(2)}</span>
+                    <div className="border-t border-gray-200 pt-3 mt-3">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Subtotal:</span>
+                        <span className="font-medium">${calculateDiscountedPrice().toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center">
+                          <span className="text-gray-600">Service Fee ({platformFeePercentage}%):</span>
+                          <div className="ml-2 group relative">
+                            <Info className="w-4 h-4 text-gray-400 cursor-help" />
+                            <div className="invisible group-hover:visible absolute left-1/2 -translate-x-1/2 bottom-6 bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap z-10">
+                              Platform processing & support fee
+                            </div>
+                          </div>
+                        </div>
+                        <span className="font-medium">${calculateServiceFee().toFixed(2)}</span>
+                      </div>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">
-                        Service Fee ({platformFeePercentage}%):
-                      </span>
-                      <span className="font-medium">${calculateServiceFee().toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between border-t pt-3">
-                      <span className="text-lg font-semibold">Total:</span>
-                      <span className="text-lg font-semibold text-roam-blue">
+                    <div className="flex justify-between border-t-2 border-roam-blue/20 pt-3 mt-3">
+                      <span className="text-xl font-bold">Total:</span>
+                      <span className="text-xl font-bold text-roam-blue">
                         ${calculateTotalWithFees().toFixed(2)}
                       </span>
                     </div>
