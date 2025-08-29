@@ -370,3 +370,12 @@ export function createServer() {
 
   return app;
 }
+
+// Start server if this file is run directly
+if (import.meta.url === `file://${process.argv[1]}`) {
+  const app = createServer();
+  const port = process.env.PORT || 3002;
+  app.listen(port, () => {
+    console.log(`Provider app server running on port ${port}`);
+  });
+}
