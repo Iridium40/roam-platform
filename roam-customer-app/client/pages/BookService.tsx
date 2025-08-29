@@ -303,6 +303,36 @@ export default function BookService() {
     }
   }, [sortBy, sortOrder, allBusinesses]);
 
+  // Fetch platform fee configuration
+  useEffect(() => {
+    const fetchPlatformFee = async () => {
+      try {
+        console.log('💰 Fetching platform fee configuration...');
+        const { data, error } = await supabase
+          .from('system_config')
+          .select('config_value')
+          .eq('config_key', 'platform_fee_percentage')
+          .single();
+
+        if (error) {
+          console.error('Error fetching platform fee:', error);
+          // Default to 0% if config not found
+          setPlatformFeePercentage(0);
+          return;
+        }
+
+        const feePercentage = parseFloat(data.config_value) || 0;
+        console.log('💰 Platform fee percentage loaded:', feePercentage + '%');
+        setPlatformFeePercentage(feePercentage);
+      } catch (error) {
+        console.error('Error fetching platform fee configuration:', error);
+        setPlatformFeePercentage(0);
+      }
+    };
+
+    fetchPlatformFee();
+  }, []);
+
   // Load businesses that offer this service with pricing and availability validation
   const loadBusinesses = async () => {
     console.log('🏢 loadBusinesses called with:', {
