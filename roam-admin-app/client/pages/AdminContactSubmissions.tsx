@@ -119,16 +119,10 @@ export default function AdminContactSubmissions() {
     try {
       setLoading(true);
       
+      // First try a simple query without joins to test basic connectivity
       const { data, error } = await supabase
         .from("contact_submissions")
-        .select(`
-          *,
-          admin_user:auth.users!responded_by(
-            id,
-            email,
-            raw_user_meta_data
-          )
-        `)
+        .select("*")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
