@@ -23,7 +23,7 @@ interface BusinessServiceCategory {
   service_categories?: {
     id: string;
     service_category_type: string;
-    category_description?: string;
+    description?: string;
     is_active: boolean;
   };
 }
@@ -39,13 +39,13 @@ interface BusinessServiceSubcategory {
   service_subcategories?: {
     id: string;
     service_subcategory_type: string;
-    subcategory_description?: string;
+    description?: string;
     is_active: boolean;
   };
   service_categories?: {
     id: string;
     service_category_type: string;
-    category_description?: string;
+    description?: string;
     is_active: boolean;
   };
 }
@@ -111,7 +111,7 @@ export const getServiceEligibility: RequestHandler = async (req, res) => {
           service_categories:category_id (
             id,
             service_category_type,
-            category_description,
+            description,
             is_active
           )
         `)
@@ -159,13 +159,13 @@ export const getServiceEligibility: RequestHandler = async (req, res) => {
           service_subcategories:subcategory_id (
             id,
             service_subcategory_type,
-            subcategory_description,
+            description,
             is_active
           ),
           service_categories:category_id (
             id,
             service_category_type,
-            category_description,
+            description,
             is_active
           )
         `)
