@@ -1,8 +1,8 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { createStripePaymentService } from '@roam/shared';
+import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 
-const stripeService = createStripePaymentService();
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2024-11-20' });
 const supabase = createClient(
   process.env.VITE_PUBLIC_SUPABASE_URL || '',
   process.env.SUPABASE_SERVICE_ROLE_KEY || ''
@@ -19,14 +19,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    res.setHeader('Allow', 'POST');
+    return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
   try {
     const {
       serviceId,
       businessId,
-      providerId,
+      customerId,
       bookingDate,
       startTime,
       guestName,
@@ -34,24 +35,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       guestPhone,
       deliveryType,
       specialInstructions,
-      customerId,
-      promotionId,
-      platformFeePercentage,
-      servicePrice,
-      discountApplied,
-      serviceFee,
-      totalAmount
+      promotionId
     } = req.body;
 
     // Validate required fields
-    if (!serviceId || !businessId || !providerId || !customerId || !totalAmount) {
-      return res.status(400).json({ 
-        error: 'Missing required fields: serviceId, businessId, providerId, customerId, totalAmount' 
+    if (!serviceId || !businessId || !customerId) {
+      return res.status(400).json({
+        error: 'Missing required fields: serviceId, businessId, customerId'
       });
-    }
-
-    if (totalAmount <= 0) {
-      return res.status(400).json({ error: 'Total amount must be greater than 0' });
     }
 
     // Get or create Stripe customer
