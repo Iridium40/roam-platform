@@ -254,7 +254,8 @@ export default function AdminContactSubmissions() {
         }
       }
 
-      const { error } = await supabase
+      const adminSupabase = createAdminSupabaseClient();
+      const { error } = await adminSupabase
         .from("contact_submissions")
         .update(updates)
         .eq("id", submissionId);
