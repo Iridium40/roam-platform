@@ -1537,12 +1537,12 @@ export default function Index() {
                   {promotionPages.map((page, pageIndex) => (
                     <div
                       key={`promotion-page-${pageIndex}`}
-                      className="flex gap-6 w-full flex-none px-4"
+                      className="w-full flex-none grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 px-4"
                     >
                       {page.map((promotion) => (
                         <Card
                           key={promotion.id}
-                          className="group hover:shadow-2xl transition-all duration-500 hover:-translate-y-3 border-0 shadow-xl bg-white overflow-hidden rounded-3xl flex-shrink-0 w-full md:w-[calc(50%-12px)]"
+                          className="group hover:shadow-2xl transition-all duration-500 hover:-translate-y-3 border-0 shadow-xl bg-white overflow-hidden rounded-3xl w-full"
                         >
                           {/* Hero Image Section */}
                           <div className="relative h-64 bg-gradient-to-br from-roam-yellow/20 via-roam-light-blue/10 to-roam-blue/5 overflow-hidden">
