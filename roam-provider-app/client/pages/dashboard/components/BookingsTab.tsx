@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import BookingStatusIndicator from "@/components/BookingStatusIndicator";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -331,13 +332,7 @@ export default function BookingsTab({
                     </div>
                   </div>
                   <div className="flex items-center justify-between sm:justify-end space-x-2 sm:space-x-3 flex-shrink-0">
-                    <Badge
-                      variant="outline"
-                      className={`${getStatusBadge(booking.booking_status).className} px-1.5 sm:px-2 py-0.5 text-xs`}
-                    >
-                      {booking.booking_status === "confirmed" ? "✅" :
-                       booking.booking_status === "pending" ? "⏳" : "❓"}
-                    </Badge>
+                    <BookingStatusIndicator status={booking.booking_status} size="sm" showProgress={false} />
                     <div className="text-right">
                       <p className="text-base sm:text-lg font-bold text-gray-900">
                         ${booking.total_amount || "115"}
