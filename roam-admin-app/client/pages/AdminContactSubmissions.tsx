@@ -411,7 +411,7 @@ export default function AdminContactSubmissions() {
         <div className="flex items-center gap-2">
           <Calendar className="w-4 h-4 text-muted-foreground" />
           <span className="text-sm">
-            {format(new Date(submission.created_at), "MMM dd, yyyy")}
+            {safeFormatDate(submission.created_at)}
           </span>
         </div>
       ),
