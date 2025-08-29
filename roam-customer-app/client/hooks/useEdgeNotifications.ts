@@ -43,6 +43,43 @@ export function useEdgeNotifications() {
   const connect = useCallback(() => {
     if (!currentUser?.id) return;
 
+    // In development, skip SSE connection and use mock data
+    if (process.env.NODE_ENV === 'development') {
+      logger.debug('Development mode: Using mock notifications instead of SSE');
+      setIsConnected(true);
+      
+      // Add some mock notifications for development
+      const mockNotifications = [
+        {
+          id: 'mock-1',
+          type: 'booking_status_update',
+          userId: currentUser.id,
+          userType: 'customer',
+          message: 'Your booking with Beauty Salon has been confirmed',
+          timestamp: new Date().toISOString(),
+          read: false,
+          data: {
+            serviceName: 'Hair Styling',
+            newStatus: 'confirmed',
+            bookingId: 'mock-booking-1'
+          }
+        },
+        {
+          id: 'mock-2',
+          type: 'new_message',
+          userId: currentUser.id,
+          userType: 'customer',
+          message: 'New message from your service provider',
+          timestamp: new Date(Date.now() - 300000).toISOString(),
+          read: false,
+          bookingId: 'mock-booking-1'
+        }
+      ];
+      
+      setNotifications(mockNotifications);
+      return;
+    }
+
     try {
       // Close existing connection
       if (eventSourceRef.current) {
@@ -98,7 +135,6 @@ export function useEdgeNotifications() {
                 setNotifications(prev => [data, ...prev.slice(0, 49)]); // Keep last 50
               }
           }
-          
         } catch (error) {
           logger.error('Error parsing SSE message:', error);
         }
@@ -107,25 +143,17 @@ export function useEdgeNotifications() {
       eventSource.onerror = (error) => {
         logger.error('SSE connection error:', error);
         setIsConnected(false);
-
-        // Check if this is a development environment and log helpful info
-        if (process.env.NODE_ENV === 'development') {
-          logger.debug('SSE connection failed - this might be expected in development');
-          logger.debug('Make sure the dev server is running with the notifications route');
-        }
-
-        // Only attempt to reconnect if we're not already trying to reconnect
+        
+        // Attempt to reconnect after 5 seconds
         if (reconnectTimeoutRef.current) {
           clearTimeout(reconnectTimeoutRef.current);
         }
-
-        // Attempt to reconnect after 10 seconds, but only if page is visible
+        
         reconnectTimeoutRef.current = setTimeout(() => {
-          if (document.visibilityState === 'visible' && currentUser?.id) {
-            logger.debug('Attempting to reconnect to SSE...');
+          if (currentUser?.id) {
             connect();
           }
-        }, 10000);
+        }, 5000);
       };
 
       eventSourceRef.current = eventSource;
@@ -133,14 +161,8 @@ export function useEdgeNotifications() {
     } catch (error) {
       logger.error('Error connecting to notification stream:', error);
       setIsConnected(false);
-
-      // In development, provide helpful feedback
-      if (process.env.NODE_ENV === 'development') {
-        logger.debug('SSE connection failed. This is normal in development mode.');
-        logger.debug('Notifications will work in production with Vercel Edge Functions.');
-      }
     }
-  }, [currentUser?.id, connect]);
+  }, [currentUser?.id]);
 
   // Disconnect from SSE stream
   const disconnect = useCallback(() => {
@@ -214,6 +236,14 @@ export function useEdgeNotifications() {
   // Mark notification as read
   const markAsRead = useCallback(async (notificationId: string) => {
     try {
+      // In development, just update local state
+      if (process.env.NODE_ENV === 'development') {
+        setNotifications(prev => 
+          prev.map(n => n.id === notificationId ? { ...n, read: true } : n)
+        );
+        return;
+      }
+
       const response = await fetch('/api/notifications/edge', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },

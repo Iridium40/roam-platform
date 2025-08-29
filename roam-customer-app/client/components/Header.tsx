@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Menu, X, Calendar } from "lucide-react";
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState, useCallback } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { EdgeNotificationCenter } from "@/components/EdgeNotificationCenter";
 import { CustomerAvatarDropdown } from "@/components/CustomerAvatarDropdown";
 import { useAuth } from "@/contexts/AuthContext";
@@ -11,6 +11,17 @@ export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { customer, isAuthenticated } = useAuth();
   const { siteLogo } = useSystemConfig();
+  const navigate = useNavigate();
+
+  const handleSignInClick = useCallback(() => {
+    if (isAuthenticated) {
+      // Navigate to my bookings
+      navigate("/my-bookings");
+    } else {
+      // Navigate to sign-in page
+      navigate("/sign-in");
+    }
+  }, [isAuthenticated, navigate]);
 
   return (
     <nav className="border-b bg-background/80 backdrop-blur-md sticky top-0 z-50">
@@ -63,25 +74,23 @@ export function Header() {
               <>
                 <EdgeNotificationCenter />
                 <Button
-                  asChild
                   variant="ghost"
                   className="text-foreground hover:bg-foreground/10 border-2 border-gray-400"
+                  onClick={handleSignInClick}
                 >
-                  <Link to="/my-bookings" className="flex items-center">
-                    <Calendar className="w-4 h-4 mr-2" />
-                    My Bookings
-                  </Link>
+                  <Calendar className="w-4 h-4 mr-2" />
+                  My Bookings
                 </Button>
                 <CustomerAvatarDropdown />
               </>
             ) : (
               <>
                 <Button
-                  asChild
                   variant="outline"
                   className="border-roam-blue text-roam-blue hover:bg-roam-blue hover:text-white"
+                  onClick={handleSignInClick}
                 >
-                  <Link to="/sign-in">Sign In</Link>
+                  Sign In
                 </Button>
                 <Button asChild className="bg-roam-blue hover:bg-roam-blue/90">
                   <Link to="/become-a-provider">Become a Provider</Link>
@@ -137,13 +146,13 @@ export function Header() {
               
               {isAuthenticated ? (
                 <>
-                  <Link
-                    to="/my-bookings"
+                  <button
+                    onClick={handleSignInClick}
                     className="text-foreground/70 hover:text-roam-blue transition-colors flex items-center"
                   >
                     <Calendar className="w-4 h-4 mr-2" />
                     My Bookings
-                  </Link>
+                  </button>
                   <Link
                     to="/customer/profile"
                     className="text-foreground/70 hover:text-roam-blue transition-colors"
@@ -160,11 +169,11 @@ export function Header() {
               ) : (
                 <div className="flex flex-col space-y-2 pt-4">
                   <Button
-                    asChild
                     variant="outline"
                     className="border-roam-blue text-roam-blue hover:bg-roam-blue hover:text-white"
+                    onClick={handleSignInClick}
                   >
-                    <Link to="/sign-in">Sign In</Link>
+                    Sign In
                   </Button>
                   <Button asChild className="bg-roam-blue hover:bg-roam-blue/90">
                     <Link to="/become-a-provider">Become a Provider</Link>

@@ -1,8 +1,10 @@
 import "./global.css";
 
 import { Toaster } from "@/components/ui/toaster";
-import "@/utils/testUtils";
-import { createRoot } from "react-dom/client";
+// Import testUtils only in development
+if (import.meta.env.DEV) {
+  import("@/utils/testUtils");
+}
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -12,6 +14,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { Suspense, lazy } from "react";
 import { Loader2 } from "lucide-react";
 import { PageErrorBoundary } from "@/components/ErrorBoundary";
+import AnnouncementPopup from "@/components/AnnouncementPopup";
 import { 
   CustomerFavorites, 
   CustomerLocations, 
@@ -20,16 +23,18 @@ import {
   CustomerSettings 
 } from "@/components/placeholders/PlaceholderPages";
 
-declare global {
-  interface HTMLElement {
-    _reactRoot?: ReturnType<typeof createRoot>;
-  }
-}
+
 
 // Lazy load pages for better performance
 const Index = lazy(() => import("./pages/Index"));
 const MyBookings = lazy(() => import("./pages/MyBookings"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const BookService = lazy(() => import("./pages/BookService"));
+const BusinessProfile = lazy(() => import("./pages/BusinessProfile"));
+const About = lazy(() => import("./pages/About"));
+const Contact = lazy(() => import("./pages/Contact"));
+const SignIn = lazy(() => import("./pages/SignIn"));
+const BecomeProvider = lazy(() => import("./pages/BecomeProvider"));
 
 // Loading component for Suspense fallback
 const PageLoader = () => (
@@ -57,6 +62,12 @@ const App = () => (
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/bookings" element={<MyBookings />} />
+                <Route path="/book-service/:serviceId" element={<BookService />} />
+                <Route path="/business/:businessId" element={<BusinessProfile />} />
+                <Route path="/about" element={<About />} />
+                <Route path="/contact" element={<Contact />} />
+                <Route path="/sign-in" element={<SignIn />} />
+                <Route path="/become-a-provider" element={<BecomeProvider />} />
                 <Route
                   path="/my-bookings"
                   element={
@@ -111,26 +122,9 @@ const App = () => (
           </AuthProvider>
         </PageErrorBoundary>
       </BrowserRouter>
+      <AnnouncementPopup appType="customer" />
     </TooltipProvider>
   </QueryClientProvider>
 );
-
-const container = document.getElementById("root")!;
-
-if (import.meta.hot) {
-  const root = createRoot(container);
-  root.render(<App />);
-  import.meta.hot.dispose(() => {
-    root.unmount();
-  });
-} else {
-  if (!container._reactRoot) {
-    const root = createRoot(container);
-    container._reactRoot = root;
-    root.render(<App />);
-  } else {
-    container._reactRoot.render(<App />);
-  }
-}
 
 export default App;

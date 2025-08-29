@@ -1,9 +1,9 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { AuthAPI } from "@/lib/supabase/auth";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "@/hooks/use-toast";
 
-// Local provider type
+// Provider type - v3 auth fix
 interface Provider {
   id: string;
   user_id: string;
@@ -50,73 +50,211 @@ interface ProviderAuthProviderProps {
 export const ProviderAuthProvider: React.FC<ProviderAuthProviderProps> = ({ children }) => {
   const [provider, setProvider] = useState<Provider | null>(null);
   const [loading, setLoading] = useState(true);
+  const [authInitialized, setAuthInitialized] = useState(false);
+  const authProcessingRef = useRef<Set<string>>(new Set());
+  const lastProcessedUserRef = useRef<string | null>(null);
+  const authValidationRef = useRef<boolean>(false);
 
-  const clearStoredData = () => {
+  const clearStoredData = useCallback(() => {
     localStorage.removeItem("roam_provider");
     localStorage.removeItem("roam_access_token");
     localStorage.removeItem("roam_user_type");
-  };
+  }, []);
 
+  // Immediate auth state validation to prevent loops
+  const validateAuthState = useCallback(async (): Promise<boolean> => {
+    if (authValidationRef.current) return true;
+    
+    try {
+      const { supabase } = await import("@/lib/supabase");
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      if (error) {
+        console.log(" Auth validation failed:", error.message);
+        clearStoredData();
+        authValidationRef.current = true;
+        return false;
+      }
+      
+      if (!session?.user) {
+        console.log(" No active session found");
+        clearStoredData();
+        authValidationRef.current = true;
+        return false;
+      }
+      
+      console.log(" Auth state validated for user:", session.user.id);
+      authValidationRef.current = true;
+      return true;
+    } catch (error) {
+      console.error(" Auth validation error:", error);
+      clearStoredData();
+      authValidationRef.current = true;
+      return false;
+    }
+  }, [clearStoredData]);
+
+  const processUserAuth = useCallback(async (userId: string, accessToken: string): Promise<boolean> => {
+    // Validate auth state first
+    const isValidAuth = await validateAuthState();
+    if (!isValidAuth) {
+      console.log(" Auth validation failed, skipping user processing");
+      return false;
+    }
+
+    // Prevent duplicate processing with Set-based tracking
+    if (authProcessingRef.current.has(userId)) {
+      console.log(" Auth already processing for user:", userId);
+      return true;
+    }
+
+    // Skip if this is the same user we just processed
+    if (lastProcessedUserRef.current === userId) {
+      console.log(" Skipping - same user already processed:", userId);
+      return true;
+    }
+
+    authProcessingRef.current.add(userId);
+    console.log(" Processing auth for user:", userId);
+    
+    try {
+      const providerData = await AuthAPI.getProviderByUserId(userId);
+      
+      if (providerData) {
+        console.log(" Provider data loaded:", providerData.provider_role);
+        setProvider(providerData);
+        lastProcessedUserRef.current = userId;
+        
+        localStorage.setItem("roam_provider", JSON.stringify(providerData));
+        localStorage.setItem("roam_access_token", accessToken);
+        localStorage.setItem("roam_user_type", "provider");
+        apiClient.setAuthToken(accessToken);
+        return true;
+      } else {
+        console.log(" No provider data found");
+        clearStoredData();
+        lastProcessedUserRef.current = null;
+        return false;
+      }
+    } catch (error) {
+      console.error(" Auth processing error:", error);
+      clearStoredData();
+      lastProcessedUserRef.current = null;
+      return false;
+    } finally {
+      authProcessingRef.current.delete(userId);
+    }
+  }, [clearStoredData, validateAuthState]);
+
+  // Initial auth setup with immediate validation
   useEffect(() => {
-    const initializeAuth = async () => {
+    if (authInitialized) return;
+
+    const initAuth = async () => {
       try {
-        // Try to restore session from localStorage first
+        // Immediate auth state validation
+        const isValidAuth = await validateAuthState();
+        if (!isValidAuth) {
+          console.log(" Initial auth validation failed");
+          setLoading(false);
+          setAuthInitialized(true);
+          return;
+        }
+
+        // Check localStorage first
         const storedProvider = localStorage.getItem("roam_provider");
         const storedToken = localStorage.getItem("roam_access_token");
 
         if (storedProvider && storedToken) {
-          const providerData = JSON.parse(storedProvider);
-          
-          // Set auth token for API client
-          apiClient.setAuthToken(storedToken);
-          
-          if (providerData.user_id) {
-            setProvider(providerData);
-            setLoading(false);
-            return;
-          } else {
+          try {
+            const providerData = JSON.parse(storedProvider);
+            if (providerData.user_id) {
+              setProvider(providerData);
+              lastProcessedUserRef.current = providerData.user_id;
+              apiClient.setAuthToken(storedToken);
+              console.log(" Restored from localStorage:", providerData.provider_role);
+              setLoading(false);
+              setAuthInitialized(true);
+              return;
+            }
+          } catch (e) {
+            console.log(" Invalid stored data, clearing");
             clearStoredData();
           }
         }
 
-        // Try to get current session from Supabase
+        // Check current session
         const { data: { session } } = await import("@/lib/supabase").then(m => m.supabase.auth.getSession());
         
         if (session?.user) {
-          const providerData = await AuthAPI.getProviderByUserId(session.user.id);
-          
-          if (providerData) {
-            setProvider(providerData);
-            localStorage.setItem("roam_provider", JSON.stringify(providerData));
-            localStorage.setItem("roam_access_token", session.access_token);
-            localStorage.setItem("roam_user_type", "provider");
-            apiClient.setAuthToken(session.access_token);
-          } else {
-            clearStoredData();
-          }
+          await processUserAuth(session.user.id, session.access_token);
         } else {
           clearStoredData();
         }
       } catch (error) {
-        console.error("Error during provider auth initialization:", error);
+        console.error(" Auth initialization error:", error);
         clearStoredData();
       } finally {
         setLoading(false);
+        setAuthInitialized(true);
       }
     };
 
-    initializeAuth();
-  }, []);
+    initAuth();
+  }, [authInitialized, processUserAuth, clearStoredData, validateAuthState]);
+
+  // Auth state listener
+  useEffect(() => {
+    if (!authInitialized) return;
+
+    let authSubscription: any;
+    
+    const setupListener = async () => {
+      const { supabase } = await import("@/lib/supabase");
+      const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
+        console.log(" Auth event:", event, session?.user?.id);
+        
+        if (event === 'SIGNED_IN' && session?.user) {
+          // Only process if different from current user
+          if (lastProcessedUserRef.current !== session.user.id) {
+            console.log(" New sign-in detected");
+            await processUserAuth(session.user.id, session.access_token);
+          } else {
+            console.log(" Same user sign-in, skipping");
+          }
+        } else if (event === 'SIGNED_OUT') {
+          console.log(" Sign-out detected");
+          setProvider(null);
+          lastProcessedUserRef.current = null;
+          authProcessingRef.current.clear();
+          clearStoredData();
+          apiClient.clearAuthToken();
+        }
+      });
+      
+      authSubscription = data.subscription;
+    };
+
+    setupListener();
+
+    return () => {
+      if (authSubscription) {
+        authSubscription.unsubscribe();
+      }
+    };
+  }, [authInitialized, processUserAuth, clearStoredData]);
 
   const signOut = async () => {
     setLoading(true);
     try {
       setProvider(null);
+      lastProcessedUserRef.current = null;
+      authProcessingRef.current.clear();
       clearStoredData();
       apiClient.clearAuthToken();
       await AuthAPI.signOut();
     } catch (error) {
-      console.error("Provider sign out error:", error);
+      console.error(" Sign out error:", error);
     } finally {
       setLoading(false);
     }
@@ -132,11 +270,10 @@ export const ProviderAuthProvider: React.FC<ProviderAuthProviderProps> = ({ chil
         setProvider(providerData);
         localStorage.setItem("roam_provider", JSON.stringify(providerData));
       } else {
-        // Provider no longer exists, sign out
         await signOut();
       }
     } catch (error) {
-      console.error("Error refreshing provider:", error);
+      console.error(" Refresh error:", error);
     }
   };
 

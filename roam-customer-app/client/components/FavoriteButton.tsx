@@ -26,35 +26,27 @@ export function FavoriteButton({
   const [isCheckingStatus, setIsCheckingStatus] = useState(true);
 
   const {
-    isLoading,
-    addServiceToFavorites,
-    removeServiceFromFavorites,
-    isServiceFavorited,
-    addBusinessToFavorites,
-    removeBusinessFromFavorites,
-    isBusinessFavorited,
-    addProviderToFavorites,
-    removeProviderFromFavorites,
-    isProviderFavorited,
+    loading: isLoading,
+    addFavorite,
+    removeFavorite,
+    isFavorite,
+    customer,
   } = useFavorites();
 
-  // Check if item is favorited on mount
+  // Check if item is favorited on mount - only when customer is authenticated
   useEffect(() => {
     const checkFavoriteStatus = async () => {
+      // Don't check favorite status if customer is not authenticated
+      if (!customer) {
+        setIsFavorited(false);
+        setIsCheckingStatus(false);
+        return;
+      }
+
       setIsCheckingStatus(true);
       try {
-        let favorited = false;
-        switch (type) {
-          case "service":
-            favorited = await isServiceFavorited(itemId);
-            break;
-          case "business":
-            favorited = await isBusinessFavorited(itemId);
-            break;
-          case "provider":
-            favorited = await isProviderFavorited(itemId);
-            break;
-        }
+        // For now, treat all types as provider favorites since that's what the hook supports
+        const favorited = isFavorite(itemId);
         setIsFavorited(favorited);
       } catch (error) {
         logger.error("Error checking favorite status:", error);
@@ -64,51 +56,28 @@ export function FavoriteButton({
     };
 
     checkFavoriteStatus();
-  }, [
-    type,
-    itemId,
-    isServiceFavorited,
-    isBusinessFavorited,
-    isProviderFavorited,
-  ]);
+  }, [customer, itemId, isFavorite]);
 
   const handleToggleFavorite = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
-    try {
-      let success = false;
+    // Don't allow favoriting if customer is not authenticated
+    if (!customer) {
+      // You could show a sign-in prompt here
+      logger.warn("Customer must be authenticated to favorite items");
+      return;
+    }
 
+    try {
       if (isFavorited) {
         // Remove from favorites
-        switch (type) {
-          case "service":
-            success = await removeServiceFromFavorites(itemId);
-            break;
-          case "business":
-            success = await removeBusinessFromFavorites(itemId);
-            break;
-          case "provider":
-            success = await removeProviderFromFavorites(itemId);
-            break;
-        }
+        await removeFavorite(itemId);
+        setIsFavorited(false);
       } else {
         // Add to favorites
-        switch (type) {
-          case "service":
-            success = await addServiceToFavorites(itemId);
-            break;
-          case "business":
-            success = await addBusinessToFavorites(itemId);
-            break;
-          case "provider":
-            success = await addProviderToFavorites(itemId);
-            break;
-        }
-      }
-
-      if (success) {
-        setIsFavorited(!isFavorited);
+        await addFavorite(itemId);
+        setIsFavorited(true);
       }
     } catch (error) {
       logger.error("Error toggling favorite:", error);
@@ -138,22 +107,31 @@ export function FavoriteButton({
   };
 
   const isWorking = isLoading || isCheckingStatus;
+  const isAuthenticated = !!customer;
 
   return (
     <Button
       variant={variant}
       size="sm"
       onClick={handleToggleFavorite}
-      disabled={isWorking}
+      disabled={isWorking || !isAuthenticated}
       className={cn(
         getSizeClasses(),
         "transition-all duration-200",
-        isFavorited
+        !isAuthenticated
+          ? "text-gray-300 cursor-not-allowed"
+          : isFavorited
           ? "text-red-500 hover:text-red-600"
           : "text-gray-400 hover:text-red-500",
         className,
       )}
-      title={isFavorited ? `Remove from favorites` : `Add to favorites`}
+      title={
+        !isAuthenticated
+          ? "Sign in to add favorites"
+          : isFavorited
+          ? `Remove from favorites`
+          : `Add to favorites`
+      }
     >
       <Heart
         className={cn(

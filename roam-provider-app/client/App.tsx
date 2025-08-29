@@ -11,6 +11,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/auth/AuthProvider";
 import { ProtectedRoute, RoleBasedRedirect } from "@/components/ProtectedRoute";
 import SystemBrandingInitializer from "@/components/SystemBrandingInitializer";
+import AnnouncementPopup from "@/components/AnnouncementPopup";
 
 // Type declaration for React root container
 declare global {
@@ -22,14 +23,16 @@ declare global {
 // Provider Portal Pages Only
 import ProviderPortal from "./pages/ProviderPortal";
 import ProviderDashboard from "./pages/ProviderDashboard";
-import ProviderOnboardingFlow from "./pages/ProviderOnboardingFlow";
+import ProviderOnboardingFlow from "./pages/onboarding/ProviderOnboardingFlow";
+import ProviderOnboardingPhase1 from "./pages/onboarding/ProviderOnboardingPhase1";
 import LandingPage from "./pages/LandingPage";
+import Blog from "./pages/Blog";
 import ErrorBoundary from "./lib/errors/ErrorBoundary";
 import NotFound from "./pages/NotFound";
 import SignIn from "./pages/SignIn";
-import Phase2Entry from "./pages/Phase2Entry";
-import ImageUploadTest from "./pages/ImageUploadTest";
-import Phase2Test from "./pages/Phase2Test";
+import Phase2Entry from "./pages/onboarding/Phase2Entry";
+import ImageUploadTest from "./pages/testing/ImageUploadTest";
+import Phase2Test from "./pages/onboarding/Phase2Test";
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 
@@ -47,6 +50,9 @@ const App = () => (
             {/* Landing Page */}
             <Route path="/" element={<Navigate to="/landing" replace />} />
             <Route path="/landing" element={<LandingPage />} />
+
+            {/* Blog */}
+            <Route path="/blog" element={<Blog />} />
 
             {/* Provider Portal Authentication */}
             <Route path="/sign-in" element={<SignIn />} />
@@ -131,6 +137,26 @@ const App = () => (
               }
             />
 
+            {/* Alternative onboarding route (without hyphen) */}
+            <Route
+              path="/provider-onboarding-flow"
+              element={
+                <ErrorBoundary>
+                  <ProviderOnboardingFlow />
+                </ErrorBoundary>
+              }
+            />
+
+            {/* Phase 1 Route */}
+            <Route
+              path="/provider-onboarding/phase1"
+              element={
+                <ErrorBoundary>
+                  <ProviderOnboardingPhase1 />
+                </ErrorBoundary>
+              }
+            />
+
             {/* Phase 2 Entry Point - Token validation */}
             <Route
               path="/provider-onboarding/phase2"
@@ -151,6 +177,16 @@ const App = () => (
               }
             />
 
+            {/* Onboarding Complete */}
+            <Route
+              path="/provider-onboarding/complete"
+              element={
+                <ErrorBoundary>
+                  <ProviderOnboardingFlow />
+                </ErrorBoundary>
+              }
+            />
+
 
 
             {/* 404 - Catch all */}
@@ -160,6 +196,7 @@ const App = () => (
       </BrowserRouter>
       <Analytics />
       <SpeedInsights />
+      <AnnouncementPopup appType="provider" />
     </TooltipProvider>
   </QueryClientProvider>
 );

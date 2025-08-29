@@ -1,13 +1,18 @@
 // Direct Supabase API calls to bypass client hanging issues
-const SUPABASE_URL = import.meta.env.VITE_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co";
-const SUPABASE_ANON_KEY = import.meta.env.VITE_PUBLIC_SUPABASE_ANON_KEY || "placeholder-key";
-
 import { logger } from "../utils/logger";
 
-// Log a warning if using fallback values
-if (!import.meta.env.VITE_PUBLIC_SUPABASE_URL || !import.meta.env.VITE_PUBLIC_SUPABASE_ANON_KEY) {
-  logger.warn("⚠️ Supabase environment variables not set. Using placeholder values. Please set VITE_PUBLIC_SUPABASE_URL and VITE_PUBLIC_SUPABASE_ANON_KEY in your .env file.");
-}
+// Environment variables will be accessed within the class to avoid initialization issues
+const getSupabaseConfig = () => {
+  const url = import.meta.env.VITE_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co";
+  const key = import.meta.env.VITE_PUBLIC_SUPABASE_ANON_KEY || "placeholder-key";
+  
+  // Log a warning if using fallback values
+  if (!import.meta.env.VITE_PUBLIC_SUPABASE_URL || !import.meta.env.VITE_PUBLIC_SUPABASE_ANON_KEY) {
+    logger.warn("⚠️ Supabase environment variables not set. Using placeholder values. Please set VITE_PUBLIC_SUPABASE_URL and VITE_PUBLIC_SUPABASE_ANON_KEY in your .env file.");
+  }
+  
+  return { url, key };
+};
 
 interface AuthResponse {
   access_token?: string;
@@ -53,8 +58,9 @@ class DirectSupabaseAPI {
   private accessToken: string | null = null;
 
   constructor() {
-    this.baseURL = SUPABASE_URL;
-    this.apiKey = SUPABASE_ANON_KEY;
+    const config = getSupabaseConfig();
+    this.baseURL = config.url;
+    this.apiKey = config.key;
   }
 
   private getHeaders(useAuthToken = false): Record<string, string> {

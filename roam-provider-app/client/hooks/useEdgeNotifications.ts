@@ -1,216 +1,83 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 
-interface Notification {
+export interface Notification {
   id: string;
-  type: string;
-  userId: string;
-  userType: string;
-  bookingId?: string;
+  user_id: string;
+  type: 'booking_status_update' | 'new_message' | 'booking_reminder' | 'system_alert' | 'payment_received';
+  title: string;
   message: string;
-  timestamp: string;
   read: boolean;
+  timestamp: string;
   data?: any;
 }
 
-interface NotificationPreferences {
+export interface NotificationPreferences {
   email: boolean;
-  push: boolean;
   sms: boolean;
+  push: boolean;
   inApp: boolean;
 }
 
 export function useEdgeNotifications() {
-  const { user, customer, userType } = useAuth();
-  const { toast } = useToast();
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [isConnected, setIsConnected] = useState(false);
+  const [isConnected, setIsConnected] = useState(true);
   const [preferences, setPreferences] = useState<NotificationPreferences>({
     email: true,
+    sms: false,
     push: true,
-    sms: true,
-    inApp: true
+    inApp: true,
   });
-  
-  const eventSourceRef = useRef<EventSource | null>(null);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
-  const currentUser = user || customer;
+  const unreadCount = notifications.filter(n => !n.read).length;
 
-  // Connect to SSE stream
-  const connect = useCallback(() => {
-    if (!currentUser?.id) return;
-
+  // Fetch initial notifications
+  const fetchNotifications = useCallback(async () => {
     try {
-      // Close existing connection
-      if (eventSourceRef.current) {
-        eventSourceRef.current.close();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (error) {
+        console.error('Error fetching notifications:', error);
+        return;
       }
 
-      // Create new SSE connection
-      const eventSource = new EventSource(
-        `/api/notifications/edge?userId=${currentUser.id}&userType=${userType || 'customer'}`
-      );
-
-      eventSource.onopen = () => {
-        setIsConnected(true);
-        console.log('Connected to notification stream');
-      };
-
-      eventSource.onmessage = (event) => {
-        try {
-          const notification: Notification = JSON.parse(event.data);
-          
-          // Handle different notification types
-          switch (notification.type) {
-            case 'connected':
-              console.log('SSE connection established');
-              break;
-              
-            case 'booking_status_update':
-              handleBookingStatusUpdate(notification);
-              break;
-              
-            case 'new_message':
-              handleNewMessage(notification);
-              break;
-              
-            case 'booking_reminder':
-              handleBookingReminder(notification);
-              break;
-              
-            default:
-              handleGenericNotification(notification);
-          }
-
-          // Add to notifications list
-          setNotifications(prev => [notification, ...prev.slice(0, 49)]); // Keep last 50
-          
-        } catch (error) {
-          console.error('Error parsing notification:', error);
-        }
-      };
-
-      eventSource.onerror = (error) => {
-        console.error('SSE connection error:', error);
-        setIsConnected(false);
-
-        // Check if this is a development environment and log helpful info
-        if (import.meta.env.DEV) {
-          console.log('SSE connection failed - this might be expected in development');
-          console.log('Make sure the dev server is running with the notifications route');
-        }
-
-        // Attempt to reconnect after 5 seconds, but only if not in a continuous error loop
-        if (reconnectTimeoutRef.current) {
-          clearTimeout(reconnectTimeoutRef.current);
-        }
-
-        reconnectTimeoutRef.current = setTimeout(() => {
-          if (document.visibilityState === 'visible') {
-            connect();
-          }
-        }, 5000);
-      };
-
-      eventSourceRef.current = eventSource;
-
+      setNotifications(data || []);
     } catch (error) {
-      console.error('Error connecting to notification stream:', error);
-      setIsConnected(false);
-
-      // In development, provide helpful feedback
-      if (import.meta.env.DEV) {
-        console.log('SSE connection failed. This is normal in development mode.');
-        console.log('Notifications will work in production with Vercel Edge Functions.');
-      }
+      console.error('Error fetching notifications:', error);
+    } finally {
+      setLoading(false);
     }
-  }, [currentUser?.id, userType]);
-
-  // Disconnect from SSE stream
-  const disconnect = useCallback(() => {
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close();
-      eventSourceRef.current = null;
-    }
-    
-    if (reconnectTimeoutRef.current) {
-      clearTimeout(reconnectTimeoutRef.current);
-      reconnectTimeoutRef.current = null;
-    }
-    
-    setIsConnected(false);
   }, []);
-
-  // Handle booking status updates
-  const handleBookingStatusUpdate = (notification: Notification) => {
-    const { data } = notification;
-    
-    toast({
-      title: 'Booking Status Updated',
-      description: `${data.serviceName} - ${data.newStatus}`,
-      action: data.bookingId ? {
-        label: 'View Booking',
-        onClick: () => {
-          // Navigate to booking details
-          window.location.href = `/my-bookings?booking=${data.bookingId}`;
-        }
-      } : undefined
-    });
-  };
-
-  // Handle new messages
-  const handleNewMessage = (notification: Notification) => {
-    toast({
-      title: 'New Message',
-      description: notification.message,
-      action: notification.bookingId ? {
-        label: 'Open Chat',
-        onClick: () => {
-          // Open messaging modal
-          window.location.href = `/my-bookings?chat=${notification.bookingId}`;
-        }
-      } : undefined
-    });
-  };
-
-  // Handle booking reminders
-  const handleBookingReminder = (notification: Notification) => {
-    toast({
-      title: 'Booking Reminder',
-      description: notification.message,
-      action: notification.bookingId ? {
-        label: 'View Details',
-        onClick: () => {
-          window.location.href = `/my-bookings?booking=${notification.bookingId}`;
-        }
-      } : undefined
-    });
-  };
-
-  // Handle generic notifications
-  const handleGenericNotification = (notification: Notification) => {
-    toast({
-      title: 'Notification',
-      description: notification.message
-    });
-  };
 
   // Mark notification as read
   const markAsRead = useCallback(async (notificationId: string) => {
     try {
-      const response = await fetch('/api/notifications/edge', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ notificationId, read: true })
-      });
+      const { error } = await supabase
+        .from('notifications')
+        .update({ read: true })
+        .eq('id', notificationId);
 
-      if (response.ok) {
-        setNotifications(prev => 
-          prev.map(n => n.id === notificationId ? { ...n, read: true } : n)
-        );
+      if (error) {
+        console.error('Error marking notification as read:', error);
+        return;
       }
+
+      setNotifications(prev => 
+        prev.map(n => 
+          n.id === notificationId ? { ...n, read: true } : n
+        )
+      );
     } catch (error) {
       console.error('Error marking notification as read:', error);
     }
@@ -219,87 +86,167 @@ export function useEdgeNotifications() {
   // Mark all notifications as read
   const markAllAsRead = useCallback(async () => {
     try {
-      const response = await fetch('/api/notifications/edge', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          userId: currentUser?.id, 
-          markAllRead: true 
-        })
-      });
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
-      if (response.ok) {
-        setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      const { error } = await supabase
+        .from('notifications')
+        .update({ read: true })
+        .eq('user_id', user.id)
+        .eq('read', false);
+
+      if (error) {
+        console.error('Error marking all notifications as read:', error);
+        return;
       }
+
+      setNotifications(prev => 
+        prev.map(n => ({ ...n, read: true }))
+      );
+
+      toast({
+        title: "Notifications marked as read",
+        description: "All notifications have been marked as read.",
+      });
     } catch (error) {
       console.error('Error marking all notifications as read:', error);
     }
-  }, [currentUser?.id]);
+  }, [toast]);
 
   // Update notification preferences
   const updatePreferences = useCallback(async (newPreferences: Partial<NotificationPreferences>) => {
     try {
-      const response = await fetch('/api/notifications/preferences', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: currentUser?.id,
-          preferences: { ...preferences, ...newPreferences }
-        })
-      });
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
-      if (response.ok) {
-        setPreferences(prev => ({ ...prev, ...newPreferences }));
+      const updatedPreferences = { ...preferences, ...newPreferences };
+      
+      const { error } = await supabase
+        .from('user_preferences')
+        .upsert({
+          user_id: user.id,
+          notification_preferences: updatedPreferences,
+        });
+
+      if (error) {
+        console.error('Error updating preferences:', error);
+        return;
+      }
+
+      setPreferences(updatedPreferences);
+      
+      toast({
+        title: "Preferences updated",
+        description: "Your notification preferences have been saved.",
+      });
+    } catch (error) {
+      console.error('Error updating preferences:', error);
+    }
+  }, [preferences, toast]);
+
+  // Load user preferences
+  const loadPreferences = useCallback(async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('user_preferences')
+        .select('notification_preferences')
+        .eq('user_id', user.id)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error loading preferences:', error);
+        return;
+      }
+
+      if (data?.notification_preferences) {
+        setPreferences(data.notification_preferences);
       }
     } catch (error) {
-      console.error('Error updating notification preferences:', error);
+      console.error('Error loading preferences:', error);
     }
-  }, [currentUser?.id, preferences]);
+  }, []);
 
-  // Get unread count
-  const unreadCount = notifications.filter(n => !n.read).length;
-
-  // Connect on mount and user change
+  // Set up real-time subscription
   useEffect(() => {
-    if (currentUser?.id) {
-      connect();
-    }
+    let subscription: any;
 
-    // Handle page visibility changes
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && currentUser?.id && !isConnected) {
-        // Reconnect when page becomes visible
-        connect();
-      } else if (document.visibilityState === 'hidden') {
-        // Optionally disconnect when page is hidden to save resources
-        // disconnect();
+    const setupSubscription = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      subscription = supabase
+        .channel('notifications')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'notifications',
+            filter: `user_id=eq.${user.id}`,
+          },
+          (payload) => {
+            const newNotification = payload.new as Notification;
+            setNotifications(prev => [newNotification, ...prev]);
+            
+            // Show toast for new notifications if in-app notifications are enabled
+            if (preferences.inApp) {
+              toast({
+                title: newNotification.title,
+                description: newNotification.message,
+                duration: 5000,
+              });
+            }
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'notifications',
+            filter: `user_id=eq.${user.id}`,
+          },
+          (payload) => {
+            const updatedNotification = payload.new as Notification;
+            setNotifications(prev => 
+              prev.map(n => 
+                n.id === updatedNotification.id ? updatedNotification : n
+              )
+            );
+          }
+        )
+        .subscribe((status) => {
+          setIsConnected(status === 'SUBSCRIBED');
+        });
+    };
+
+    setupSubscription();
+
+    return () => {
+      if (subscription) {
+        subscription.unsubscribe();
       }
     };
+  }, [preferences.inApp, toast]);
 
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      disconnect();
-    };
-  }, [currentUser?.id, connect, disconnect, isConnected]);
-
-  // Cleanup on unmount
+  // Initial load
   useEffect(() => {
-    return () => {
-      disconnect();
-    };
-  }, [disconnect]);
+    fetchNotifications();
+    loadPreferences();
+  }, [fetchNotifications, loadPreferences]);
 
   return {
     notifications,
     isConnected,
     preferences,
     unreadCount,
+    loading,
     markAsRead,
     markAllAsRead,
     updatePreferences,
-    connect,
-    disconnect
+    refetch: fetchNotifications,
   };
 }

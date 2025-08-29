@@ -26,7 +26,7 @@ export class StripePaymentService extends BasePaymentService {
   constructor(config?: Partial<PaymentConfig>) {
     const stripeConfig: PaymentConfig = {
       provider: 'stripe',
-      secretKey: config?.secretKey || env.stripe.secretKey,
+      secretKey: config?.secretKey || env.stripe.secretKey || '',
       publishableKey: config?.publishableKey || env.stripe.publishableKey,
       webhookSecret: config?.webhookSecret || env.stripe.webhookSecret,
       apiVersion: '2024-06-20',
@@ -537,5 +537,44 @@ export function createStripePaymentService(config?: Partial<PaymentConfig>): Str
 
 /**
  * Default Stripe payment service instance
+ * Only create in server environments where secret key is available
  */
-export const stripePaymentService = createStripePaymentService();
+export const stripePaymentService = (() => {
+  try {
+    // Only create the service if we're in a server environment with proper configuration
+    const isBrowser = typeof window !== 'undefined';
+    const hasSecretKey = env.stripe.secretKey;
+    
+    if (isBrowser || !hasSecretKey) {
+      // Return a mock service for browser environments
+      return {
+        getStripe: () => {
+          throw new Error('Stripe service not available in browser environment');
+        },
+        createPaymentIntent: async () => {
+          throw new Error('Stripe service not available in browser environment');
+        },
+        confirmPayment: async () => {
+          throw new Error('Stripe service not available in browser environment');
+        },
+        // Add other methods as needed with similar error messages
+      } as any;
+    }
+    
+    return createStripePaymentService();
+  } catch (error) {
+    console.warn('Failed to initialize Stripe service:', error);
+    return {
+      getStripe: () => {
+        throw new Error('Stripe service not available');
+      },
+      createPaymentIntent: async () => {
+        throw new Error('Stripe service not available');
+      },
+      confirmPayment: async () => {
+        throw new Error('Stripe service not available');
+      },
+      // Add other methods as needed with similar error messages
+    } as any;
+  }
+})();

@@ -53,6 +53,10 @@ export function EdgeNotificationCenter() {
         return '💬';
       case 'booking_reminder':
         return '⏰';
+      case 'payment_received':
+        return '💰';
+      case 'system_alert':
+        return '⚠️';
       default:
         return '🔔';
     }
@@ -66,6 +70,10 @@ export function EdgeNotificationCenter() {
         return 'text-green-600';
       case 'booking_reminder':
         return 'text-orange-600';
+      case 'payment_received':
+        return 'text-green-600';
+      case 'system_alert':
+        return 'text-red-600';
       default:
         return 'text-gray-600';
     }
@@ -140,13 +148,22 @@ export function EdgeNotificationCenter() {
                       </span>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2">
-                          <p
-                            className={`text-sm font-medium ${
-                              notification.read ? 'text-muted-foreground' : 'text-foreground'
-                            }`}
-                          >
-                            {notification.message}
-                          </p>
+                          <div className="flex-1">
+                            <p
+                              className={`text-sm font-medium ${
+                                notification.read ? 'text-muted-foreground' : 'text-foreground'
+                              }`}
+                            >
+                              {notification.title}
+                            </p>
+                            <p
+                              className={`text-xs ${
+                                notification.read ? 'text-muted-foreground' : 'text-foreground/80'
+                              }`}
+                            >
+                              {notification.message}
+                            </p>
+                          </div>
                           {!notification.read && (
                             <Button
                               variant="ghost"
@@ -248,3 +265,5 @@ export function EdgeNotificationCenter() {
     </>
   );
 }
+
+export default EdgeNotificationCenter;

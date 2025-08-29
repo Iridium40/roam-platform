@@ -8,21 +8,21 @@ const EnvironmentSchema = z.object({
   // Supabase configuration
   VITE_PUBLIC_SUPABASE_URL: z.string().url('Invalid Supabase URL'),
   VITE_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1, 'Supabase anon key is required'),
-  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1, 'Supabase service role key is required'),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().optional(), // Server-side only
   
   // Stripe configuration
   VITE_STRIPE_PUBLISHABLE_KEY: z.string().min(1, 'Stripe publishable key is required'),
-  STRIPE_SECRET_KEY: z.string().min(1, 'Stripe secret key is required'),
+  STRIPE_SECRET_KEY: z.string().optional(), // Server-side only
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
   
   // Twilio configuration
-  VITE_TWILIO_ACCOUNT_SID: z.string().min(1, 'Twilio account SID is required'),
-  VITE_TWILIO_AUTH_TOKEN: z.string().min(1, 'Twilio auth token is required'),
-  VITE_TWILIO_CONVERSATIONS_SERVICE_SID: z.string().min(1, 'Twilio conversations service SID is required'),
+  VITE_TWILIO_ACCOUNT_SID: z.string().optional(), // Optional for browser
+  VITE_TWILIO_AUTH_TOKEN: z.string().optional(), // Optional for browser
+  VITE_TWILIO_CONVERSATIONS_SERVICE_SID: z.string().optional(), // Optional for browser
   TWILIO_FROM_NUMBER: z.string().optional(),
   
   // Email configuration (Resend)
-  RESEND_API_KEY: z.string().min(1, 'Resend API key is required'),
+  RESEND_API_KEY: z.string().optional(), // Server-side only
   
   // Plaid configuration
   PLAID_CLIENT_ID: z.string().optional(),
@@ -47,7 +47,7 @@ const EnvironmentSchema = z.object({
   VITE_ENABLE_PERFORMANCE_MONITORING: z.string().transform((val: string) => val === 'true').default('false'),
   
   // JWT configuration
-  JWT_SECRET: z.string().min(1, 'JWT secret is required'),
+  JWT_SECRET: z.string().optional(), // Server-side only
   
   // Push notifications
   VITE_VAPID_PUBLIC_KEY: z.string().optional(),
@@ -88,44 +88,47 @@ export class EnvironmentConfig {
 
   private loadAndValidateConfig(): EnvironmentConfigType {
     try {
-      // Load environment variables
+      // Load environment variables - support both Node.js and browser environments
+      const isBrowser = typeof window !== 'undefined';
+      const envSource = isBrowser ? (import.meta as any).env : process.env;
+      
       const envVars = {
-        NODE_ENV: process.env.NODE_ENV,
-        VITE_PUBLIC_SUPABASE_URL: process.env.VITE_PUBLIC_SUPABASE_URL,
-        VITE_PUBLIC_SUPABASE_ANON_KEY: process.env.VITE_PUBLIC_SUPABASE_ANON_KEY,
-        SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
-        VITE_STRIPE_PUBLISHABLE_KEY: process.env.VITE_STRIPE_PUBLISHABLE_KEY,
-        STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
-        STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
-        VITE_TWILIO_ACCOUNT_SID: process.env.VITE_TWILIO_ACCOUNT_SID,
-        VITE_TWILIO_AUTH_TOKEN: process.env.VITE_TWILIO_AUTH_TOKEN,
-        VITE_TWILIO_CONVERSATIONS_SERVICE_SID: process.env.VITE_TWILIO_CONVERSATIONS_SERVICE_SID,
-        TWILIO_FROM_NUMBER: process.env.TWILIO_FROM_NUMBER,
-        RESEND_API_KEY: process.env.RESEND_API_KEY,
-        PLAID_CLIENT_ID: process.env.PLAID_CLIENT_ID,
-        PLAID_SECRET: process.env.PLAID_SECRET,
-        PLAID_ENV: process.env.PLAID_ENV,
-        PLAID_WEBHOOK_URL: process.env.PLAID_WEBHOOK_URL,
-        VITE_GOOGLE_MAPS_API_KEY: process.env.VITE_GOOGLE_MAPS_API_KEY,
-        VITE_GOOGLE_CLIENT_ID: process.env.VITE_GOOGLE_CLIENT_ID,
-        VITE_APP_URL: process.env.VITE_APP_URL,
-        VITE_API_BASE_URL: process.env.VITE_API_BASE_URL,
-        VITE_APP_VERSION: process.env.VITE_APP_VERSION,
-        FRONTEND_URL: process.env.FRONTEND_URL,
-        VITE_ENABLE_REAL_TIME: process.env.VITE_ENABLE_REAL_TIME,
-        VITE_ENABLE_ANALYTICS: process.env.VITE_ENABLE_ANALYTICS,
-        VITE_ENABLE_DEBUG_MODE: process.env.VITE_ENABLE_DEBUG_MODE,
-        VITE_ENABLE_PERFORMANCE_MONITORING: process.env.VITE_ENABLE_PERFORMANCE_MONITORING,
-        JWT_SECRET: process.env.JWT_SECRET,
-        VITE_JWT_SECRET: process.env.VITE_JWT_SECRET,
-        VITE_RESEND_API_KEY: process.env.VITE_RESEND_API_KEY,
-        VITE_SUPABASE_URL: process.env.VITE_SUPABASE_URL,
-        VITE_SUPABASE_ANON_KEY: process.env.VITE_SUPABASE_ANON_KEY,
-        VITE_VAPID_PUBLIC_KEY: process.env.VITE_VAPID_PUBLIC_KEY,
-        VITE_CDN_BASE_URL: process.env.VITE_CDN_BASE_URL,
-        VITE_GA_TRACKING_ID: process.env.VITE_GA_TRACKING_ID,
-        VITE_SENTRY_DSN: process.env.VITE_SENTRY_DSN,
-        PING_MESSAGE: process.env.PING_MESSAGE,
+        NODE_ENV: envSource.NODE_ENV || 'development',
+        VITE_PUBLIC_SUPABASE_URL: envSource.VITE_PUBLIC_SUPABASE_URL,
+        VITE_PUBLIC_SUPABASE_ANON_KEY: envSource.VITE_PUBLIC_SUPABASE_ANON_KEY,
+        SUPABASE_SERVICE_ROLE_KEY: envSource.SUPABASE_SERVICE_ROLE_KEY,
+        VITE_STRIPE_PUBLISHABLE_KEY: envSource.VITE_STRIPE_PUBLISHABLE_KEY,
+        STRIPE_SECRET_KEY: envSource.STRIPE_SECRET_KEY,
+        STRIPE_WEBHOOK_SECRET: envSource.STRIPE_WEBHOOK_SECRET,
+        VITE_TWILIO_ACCOUNT_SID: envSource.VITE_TWILIO_ACCOUNT_SID,
+        VITE_TWILIO_AUTH_TOKEN: envSource.VITE_TWILIO_AUTH_TOKEN,
+        VITE_TWILIO_CONVERSATIONS_SERVICE_SID: envSource.VITE_TWILIO_CONVERSATIONS_SERVICE_SID,
+        TWILIO_FROM_NUMBER: envSource.TWILIO_FROM_NUMBER,
+        RESEND_API_KEY: envSource.RESEND_API_KEY,
+        PLAID_CLIENT_ID: envSource.PLAID_CLIENT_ID,
+        PLAID_SECRET: envSource.PLAID_SECRET,
+        PLAID_ENV: envSource.PLAID_ENV,
+        PLAID_WEBHOOK_URL: envSource.PLAID_WEBHOOK_URL,
+        VITE_GOOGLE_MAPS_API_KEY: envSource.VITE_GOOGLE_MAPS_API_KEY,
+        VITE_GOOGLE_CLIENT_ID: envSource.VITE_GOOGLE_CLIENT_ID,
+        VITE_APP_URL: envSource.VITE_APP_URL,
+        VITE_API_BASE_URL: envSource.VITE_API_BASE_URL,
+        VITE_APP_VERSION: envSource.VITE_APP_VERSION,
+        FRONTEND_URL: envSource.FRONTEND_URL,
+        VITE_ENABLE_REAL_TIME: envSource.VITE_ENABLE_REAL_TIME,
+        VITE_ENABLE_ANALYTICS: envSource.VITE_ENABLE_ANALYTICS,
+        VITE_ENABLE_DEBUG_MODE: envSource.VITE_ENABLE_DEBUG_MODE,
+        VITE_ENABLE_PERFORMANCE_MONITORING: envSource.VITE_ENABLE_PERFORMANCE_MONITORING,
+        JWT_SECRET: envSource.JWT_SECRET,
+        VITE_JWT_SECRET: envSource.VITE_JWT_SECRET,
+        VITE_RESEND_API_KEY: envSource.VITE_RESEND_API_KEY,
+        VITE_SUPABASE_URL: envSource.VITE_SUPABASE_URL,
+        VITE_SUPABASE_ANON_KEY: envSource.VITE_SUPABASE_ANON_KEY,
+        VITE_VAPID_PUBLIC_KEY: envSource.VITE_VAPID_PUBLIC_KEY,
+        VITE_CDN_BASE_URL: envSource.VITE_CDN_BASE_URL,
+        VITE_GA_TRACKING_ID: envSource.VITE_GA_TRACKING_ID,
+        VITE_SENTRY_DSN: envSource.VITE_SENTRY_DSN,
+        PING_MESSAGE: envSource.PING_MESSAGE,
       };
 
       // Validate and parse environment variables

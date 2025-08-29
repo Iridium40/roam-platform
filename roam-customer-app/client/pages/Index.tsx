@@ -289,16 +289,8 @@ export default function Index() {
             image_url,
             is_active,
             is_featured,
-            service_subcategories!inner (
-              id,
-              service_subcategory_type,
-              description,
-              service_categories!inner (
-                id,
-                service_category_type
-              )
-            )
-          `,
+            subcategory_id
+          `
           )
           .eq("is_active", true)
           .eq("is_featured", true);
@@ -316,9 +308,7 @@ export default function Index() {
             (service: any) => ({
               id: service.id,
               title: service.name,
-              category:
-                service.service_subcategories?.service_categories
-                  ?.service_category_type || "General",
+              category: "General", // Simplified for now
               image:
                 service.image_url ||
                 "https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=500&h=300&fit=crop",
@@ -346,16 +336,8 @@ export default function Index() {
             image_url,
             is_active,
             is_popular,
-            service_subcategories!inner (
-              id,
-              service_subcategory_type,
-              description,
-              service_categories!inner (
-                id,
-                service_category_type
-              )
-            )
-          `,
+            subcategory_id
+          `
           )
           .eq("is_active", true)
           .eq("is_popular", true)
@@ -374,9 +356,7 @@ export default function Index() {
             (service: any) => ({
               id: service.id,
               title: service.name,
-              category:
-                service.service_subcategories?.service_categories
-                  ?.service_category_type || "General",
+              category: "General", // Simplified for now
               image:
                 service.image_url ||
                 "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=500&h=300&fit=crop",
@@ -463,7 +443,7 @@ export default function Index() {
               business.image_url ||
               "/api/placeholder/80/80",
             cover_image_url: business.cover_image_url,
-            specialties: business.service_categories || [
+            specialties: [
               "Professional Service",
               "Quality Care",
               "Experienced",
@@ -851,8 +831,8 @@ export default function Index() {
       {/* Announcement Popup */}
       <AnnouncementPopup isCustomer={isCustomer} />
       {/* Google One Tap - only show when not authenticated */}
-      {/* Google One Tap - enabled for Google OAuth */}
-      {!isCustomer && import.meta.env.VITE_GOOGLE_CLIENT_ID && (
+      {/* Google One Tap - temporarily disabled due to OAuth configuration */}
+      {/* {!isCustomer && import.meta.env.VITE_GOOGLE_CLIENT_ID && (
         <Suspense fallback={null}>
           <GoogleOneTap
             clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}
@@ -864,7 +844,7 @@ export default function Index() {
             }}
           />
         </Suspense>
-      )}
+      )} */}
       <Header />
 
       {/* Hero Section with Search */}
@@ -2012,7 +1992,7 @@ export default function Index() {
                                   className="flex-1 bg-gradient-to-r from-roam-blue to-roam-light-blue hover:from-roam-blue/90 hover:to-roam-light-blue/90 text-white font-semibold py-3 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]"
                                 >
                                   <Link
-                                    to={`/business/${business.id}?tab=services`}
+                                    to={`/business/${business.id}?tab=services&book=true`}
                                   >
                                     <Calendar className="w-4 h-4 mr-2" />
                                     Book

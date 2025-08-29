@@ -25,12 +25,29 @@ export type UserStatus = 'active' | 'inactive' | 'suspended' | 'pending_verifica
 export type ServiceStatus = 'active' | 'inactive' | 'draft';
 export type ServiceCategoryType = "beauty" | "fitness" | "therapy" | "healthcare";
 export type ServiceSubcategoryType = "hair_and_makeup" | "spray_tan" | "esthetician" | "massage_therapy" | "iv_therapy" | "physical_therapy" | "nurse_practitioner" | "physician" | "chiropractor" | "yoga_instructor" | "pilates_instructor" | "personal_trainer" | "injectables" | "health_coach";
-export type CustomerLocationType = "home" | "condo" | "hotel" | "other" | null;
+export type CustomerLocationType = "home" | "condo" | "hotel" | "oatasse popther" | null;
 
-// Notification Types
-export type NotificationType = 'booking_update' | 'payment' | 'system' | 'marketing';
-export type NotificationStatus = 'sent' | 'delivered' | 'failed' | 'pending';
-export type MessageNotificationType = 'message' | 'mention' | 'system';
+  // Notification Types
+  export type NotificationType = 'booking_status_update' | 'new_message' | 'booking_reminder' | 'system_alert' | 'payment_received';
+  export type NotificationStatus = 'sent' | 'delivered' | 'failed' | 'pending';
+  export type MessageNotificationType = 'message' | 'mention' | 'system';
+
+  // Transaction Types
+  export type TransactionType = 'payment' | 'payout' | 'refund' | 'fee' | 'adjustment';
+  export type Status = 'pending' | 'completed' | 'failed' | 'cancelled' | 'processing';
+
+// Promotion Types
+export type PromotionSavingsType = 'percentage' | 'fixed_amount';
+
+// Document Types
+export type BusinessDocumentType = 'drivers_license' | 'proof_of_address' | 'liability_insurance' | 'professional_license' | 'professional_certificate' | 'business_license';
+export type BusinessDocumentStatus = 'pending' | 'verified' | 'rejected' | 'under_review';
+
+  // Announcement Types
+  export type AnnouncementAudience = 'all' | 'customer' | 'provider' | 'business' | 'staff';
+  export type AnnouncementType = 'general' | 'promotional' | 'maintenance' | 'feature' | 'alert' | 'news' | 'update';
+
+
 
 export type Database = {
   public: {
@@ -159,6 +176,15 @@ export type Database = {
           tip_status: TipStatus;
           tip_requested_at: string | null;
           tip_deadline: string | null;
+          booking_reference: string | null;
+          business_id: string;
+          decline_reason: string | null;
+          rescheduled_at: string | null;
+          rescheduled_by: string | null;
+          reschedule_reason: string | null;
+          original_booking_date: string | null;
+          original_start_time: string | null;
+          reschedule_count: number;
         };
         Insert: {
           id?: string;
@@ -194,6 +220,15 @@ export type Database = {
           tip_status?: TipStatus;
           tip_requested_at?: string | null;
           tip_deadline?: string | null;
+          booking_reference?: string | null;
+          business_id: string;
+          decline_reason?: string | null;
+          rescheduled_at?: string | null;
+          rescheduled_by?: string | null;
+          reschedule_reason?: string | null;
+          original_booking_date?: string | null;
+          original_start_time?: string | null;
+          reschedule_count?: number;
         };
         Update: {
           id?: string;
@@ -229,6 +264,15 @@ export type Database = {
           tip_status?: TipStatus;
           tip_requested_at?: string | null;
           tip_deadline?: string | null;
+          booking_reference?: string | null;
+          business_id?: string;
+          decline_reason?: string | null;
+          rescheduled_at?: string | null;
+          rescheduled_by?: string | null;
+          reschedule_reason?: string | null;
+          original_booking_date?: string | null;
+          original_start_time?: string | null;
+          reschedule_count?: number;
         };
       };
 
@@ -279,42 +323,42 @@ export type Database = {
       services: {
         Row: {
           id: string;
-          business_id: string;
+          subcategory_id: string;
           name: string;
           description: string | null;
-          category: ServiceCategoryType;
-          price: number;
-          duration: number;
-          is_active: boolean;
-          created_at: string;
-          updated_at: string;
-          status: ServiceStatus;
+          min_price: number;
+          duration_minutes: number;
+          image_url: string | null;
+          is_active: boolean | null;
+          created_at: string | null;
+          is_featured: boolean | null;
+          is_popular: boolean | null;
         };
         Insert: {
           id?: string;
-          business_id: string;
+          subcategory_id: string;
           name: string;
           description?: string | null;
-          category: ServiceCategoryType;
-          price: number;
-          duration: number;
-          is_active?: boolean;
-          created_at?: string;
-          updated_at?: string;
-          status?: ServiceStatus;
+          min_price: number;
+          duration_minutes: number;
+          image_url?: string | null;
+          is_active?: boolean | null;
+          created_at?: string | null;
+          is_featured?: boolean | null;
+          is_popular?: boolean | null;
         };
         Update: {
           id?: string;
-          business_id?: string;
+          subcategory_id?: string;
           name?: string;
           description?: string | null;
-          category?: ServiceCategoryType;
-          price?: number;
-          duration?: number;
-          is_active?: boolean;
-          created_at?: string;
-          updated_at?: string;
-          status?: ServiceStatus;
+          min_price?: number;
+          duration_minutes?: number;
+          image_url?: string | null;
+          is_active?: boolean | null;
+          created_at?: string | null;
+          is_featured?: boolean | null;
+          is_popular?: boolean | null;
         };
       };
 
@@ -360,6 +404,247 @@ export type Database = {
           status?: NotificationStatus;
         };
       };
+
+      // User preferences table
+      user_preferences: {
+        Row: {
+          id: string;
+          user_id: string;
+          notification_preferences: Json | null;
+          created_at: string | null;
+          updated_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          notification_preferences?: Json | null;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          notification_preferences?: Json | null;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+      };
+
+      // Provider bank accounts table
+      provider_bank_accounts: {
+        Row: {
+          id: string;
+          user_id: string;
+          business_id: string | null;
+          plaid_access_token: string;
+          plaid_item_id: string;
+          account_data: Json;
+          institution_data: Json | null;
+          webhook_status: string | null;
+          webhook_error: Json | null;
+          last_webhook_at: string | null;
+          connected_at: string | null;
+          created_at: string | null;
+          updated_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          business_id?: string | null;
+          plaid_access_token: string;
+          plaid_item_id: string;
+          account_data: Json;
+          institution_data?: Json | null;
+          webhook_status?: string | null;
+          webhook_error?: Json | null;
+          last_webhook_at?: string | null;
+          connected_at?: string | null;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          business_id?: string | null;
+          plaid_access_token?: string;
+          plaid_item_id?: string;
+          account_data?: Json;
+          institution_data?: Json | null;
+          webhook_status?: string | null;
+          webhook_error?: Json | null;
+          last_webhook_at?: string | null;
+          connected_at?: string | null;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+      };
+
+
+
+             // Financial transactions table
+       financial_transactions: {
+         Row: {
+           id: string;
+           booking_id: string;
+           amount: number;
+           currency: string | null;
+           stripe_transaction_id: string | null;
+           payment_method: string | null;
+           description: string | null;
+           metadata: Json | null;
+           created_at: string | null;
+           processed_at: string | null;
+           transaction_type: TransactionType | null;
+           status: Status | null;
+         };
+         Insert: {
+           id?: string;
+           booking_id: string;
+           amount: number;
+           currency?: string | null;
+           stripe_transaction_id?: string | null;
+           payment_method?: string | null;
+           description?: string | null;
+           metadata?: Json | null;
+           created_at?: string | null;
+           processed_at?: string | null;
+           transaction_type?: TransactionType | null;
+           status?: Status | null;
+         };
+         Update: {
+           id?: string;
+           booking_id?: string;
+           amount?: number;
+           currency?: string | null;
+           stripe_transaction_id?: string | null;
+           payment_method?: string | null;
+           description?: string | null;
+           metadata?: Json | null;
+           created_at?: string | null;
+           processed_at?: string | null;
+           transaction_type?: TransactionType | null;
+           status?: Status | null;
+         };
+       };
+
+       // Plaid bank connections table
+       plaid_bank_connections: {
+         Row: {
+           id: string;
+           user_id: string | null;
+           business_id: string | null;
+           plaid_access_token: string | null;
+           plaid_item_id: string | null;
+           plaid_account_id: string | null;
+           institution_id: string | null;
+           institution_name: string | null;
+           account_name: string | null;
+           account_mask: string | null;
+           account_type: string | null;
+           account_subtype: string | null;
+           verification_status: string | null;
+           routing_numbers: string[] | null;
+           account_number_mask: string | null;
+           connected_at: string | null;
+           is_active: boolean | null;
+           created_at: string | null;
+           updated_at: string | null;
+         };
+         Insert: {
+           id?: string;
+           user_id?: string | null;
+           business_id?: string | null;
+           plaid_access_token?: string | null;
+           plaid_item_id?: string | null;
+           plaid_account_id?: string | null;
+           institution_id?: string | null;
+           institution_name?: string | null;
+           account_name?: string | null;
+           account_mask?: string | null;
+           account_type?: string | null;
+           account_subtype?: string | null;
+           verification_status?: string | null;
+           routing_numbers?: string[] | null;
+           account_number_mask?: string | null;
+           connected_at?: string | null;
+           is_active?: boolean | null;
+           created_at?: string | null;
+           updated_at?: string | null;
+         };
+         Update: {
+           id?: string;
+           user_id?: string | null;
+           business_id?: string | null;
+           plaid_access_token?: string | null;
+           plaid_item_id?: string | null;
+           plaid_account_id?: string | null;
+           institution_id?: string | null;
+           institution_name?: string | null;
+           account_name?: string | null;
+           account_mask?: string | null;
+           account_type?: string | null;
+           account_subtype?: string | null;
+           verification_status?: string | null;
+           routing_numbers?: string[] | null;
+           account_number_mask?: string | null;
+           connected_at?: string | null;
+           is_active?: boolean | null;
+           created_at?: string | null;
+           updated_at?: string | null;
+         };
+       };
+
+       // Manual bank accounts table
+       manual_bank_accounts: {
+         Row: {
+           id: string;
+           user_id: string;
+           business_id: string | null;
+           account_name: string;
+           account_type: string;
+           account_number: string;
+           routing_number: string;
+           bank_name: string;
+           is_verified: boolean;
+           is_default: boolean;
+           stripe_account_id: string | null;
+           verification_status: string;
+           created_at: string | null;
+           updated_at: string | null;
+         };
+         Insert: {
+           id?: string;
+           user_id: string;
+           business_id?: string | null;
+           account_name: string;
+           account_type: string;
+           account_number: string;
+           routing_number: string;
+           bank_name: string;
+           is_verified?: boolean;
+           is_default?: boolean;
+           stripe_account_id?: string | null;
+           verification_status?: string;
+           created_at?: string | null;
+           updated_at?: string | null;
+         };
+         Update: {
+           id?: string;
+           user_id?: string;
+           business_id?: string | null;
+           account_name?: string;
+           account_type?: string;
+           account_number?: string;
+           routing_number?: string;
+           bank_name?: string;
+           is_verified?: boolean;
+           is_default?: boolean;
+           stripe_account_id?: string | null;
+           verification_status?: string;
+           created_at?: string | null;
+           updated_at?: string | null;
+         };
+       };
 
       // Twilio conversations metadata
       conversation_metadata: {
@@ -858,56 +1143,50 @@ export type Database = {
         Row: {
           id: string;
           title: string;
-          description: string;
-          discount_type: string;
-          discount_value: number;
-          valid_from: string;
-          valid_until: string;
+          description: string | null;
+          start_date: string | null;
+          end_date: string | null;
           is_active: boolean | null;
           created_at: string | null;
-          business_id: string;
-          service_id: string | null;
-          max_uses: number | null;
-          current_uses: number | null;
-          min_order_amount: number | null;
-          promo_code: string | null;
+          business_id: string | null;
           image_url: string | null;
+          promo_code: string;
+          savings_type: PromotionSavingsType | null;
+          savings_amount: number | null;
+          savings_max_amount: number | null;
+          service_id: string | null;
         };
         Insert: {
           id?: string;
           title: string;
-          description: string;
-          discount_type: string;
-          discount_value: number;
-          valid_from: string;
-          valid_until: string;
+          description?: string | null;
+          start_date?: string | null;
+          end_date?: string | null;
           is_active?: boolean | null;
           created_at?: string | null;
-          business_id: string;
-          service_id?: string | null;
-          max_uses?: number | null;
-          current_uses?: number | null;
-          min_order_amount?: number | null;
-          promo_code?: string | null;
+          business_id?: string | null;
           image_url?: string | null;
+          promo_code: string;
+          savings_type?: PromotionSavingsType | null;
+          savings_amount?: number | null;
+          savings_max_amount?: number | null;
+          service_id?: string | null;
         };
         Update: {
           id?: string;
           title?: string;
-          description?: string;
-          discount_type?: string;
-          discount_value?: number;
-          valid_from?: string;
-          valid_until?: string;
+          description?: string | null;
+          start_date?: string | null;
+          end_date?: string | null;
           is_active?: boolean | null;
           created_at?: string | null;
-          business_id?: string;
-          service_id?: string | null;
-          max_uses?: number | null;
-          current_uses?: number | null;
-          min_order_amount?: number | null;
-          promo_code?: string | null;
+          business_id?: string | null;
           image_url?: string | null;
+          promo_code?: string;
+          savings_type?: PromotionSavingsType | null;
+          savings_amount?: number | null;
+          savings_max_amount?: number | null;
+          service_id?: string | null;
         };
       };
       // Promotion usage
@@ -915,26 +1194,32 @@ export type Database = {
         Row: {
           id: string;
           promotion_id: string;
-          customer_id: string;
           booking_id: string;
+          discount_applied: number;
+          original_amount: number;
+          final_amount: number;
+          created_at: string | null;
           used_at: string | null;
-          discount_amount: number | null;
         };
         Insert: {
           id?: string;
           promotion_id: string;
-          customer_id: string;
           booking_id: string;
+          discount_applied: number;
+          original_amount: number;
+          final_amount: number;
+          created_at?: string | null;
           used_at?: string | null;
-          discount_amount?: number | null;
         };
         Update: {
           id?: string;
           promotion_id?: string;
-          customer_id?: string;
           booking_id?: string;
+          discount_applied?: number;
+          original_amount?: number;
+          final_amount?: number;
+          created_at?: string | null;
           used_at?: string | null;
-          discount_amount?: number | null;
         };
       };
       // Reviews
@@ -942,53 +1227,137 @@ export type Database = {
         Row: {
           id: string;
           booking_id: string;
-          customer_id: string;
-          provider_id: string | null;
-          business_id: string;
-          rating: number;
+          overall_rating: number;
+          service_rating: number | null;
+          communication_rating: number | null;
+          punctuality_rating: number | null;
           review_text: string | null;
-          is_verified: boolean | null;
-          created_at: string | null;
-          updated_at: string | null;
-          moderated: boolean | null;
+          is_approved: boolean | null;
+          is_featured: boolean | null;
           moderated_by: string | null;
           moderated_at: string | null;
           moderation_notes: string | null;
-          is_public: boolean | null;
+          created_at: string | null;
         };
         Insert: {
           id?: string;
           booking_id: string;
-          customer_id: string;
-          provider_id?: string | null;
-          business_id: string;
-          rating: number;
+          overall_rating: number;
+          service_rating?: number | null;
+          communication_rating?: number | null;
+          punctuality_rating?: number | null;
           review_text?: string | null;
-          is_verified?: boolean | null;
-          created_at?: string | null;
-          updated_at?: string | null;
-          moderated?: boolean | null;
+          is_approved?: boolean | null;
+          is_featured?: boolean | null;
           moderated_by?: string | null;
           moderated_at?: string | null;
           moderation_notes?: string | null;
-          is_public?: boolean | null;
+          created_at?: string | null;
         };
         Update: {
           id?: string;
           booking_id?: string;
-          customer_id?: string;
-          provider_id?: string | null;
-          business_id?: string;
-          rating?: number;
+          overall_rating?: number;
+          service_rating?: number | null;
+          communication_rating?: number | null;
+          punctuality_rating?: number | null;
           review_text?: string | null;
-          is_verified?: boolean | null;
-          created_at?: string | null;
-          updated_at?: string | null;
-          moderated?: boolean | null;
+          is_approved?: boolean | null;
+          is_featured?: boolean | null;
           moderated_by?: string | null;
           moderated_at?: string | null;
           moderation_notes?: string | null;
-          is_public?: boolean | null;
+          created_at?: string | null;
+        };
+      };
+      // Addons table
+      addons: {
+        Row: {
+          id: string;
+          name: string;
+          description: string | null;
+          category: string;
+          min_price: number;
+          image_url: string | null;
+          is_available: boolean | null;
+          created_at: string | null;
+          updated_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          description?: string | null;
+          category: string;
+          min_price: number;
+          image_url?: string | null;
+          is_available?: boolean | null;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          description?: string | null;
+          category?: string;
+          min_price?: number;
+          image_url?: string | null;
+          is_available?: boolean | null;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+      };
+      // Service addons
+      service_addons: {
+        Row: {
+          id: string;
+          name: string;
+          description: string | null;
+          image_url: string | null;
+          is_active: boolean | null;
+          created_at: string | null;
+          updated_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          description?: string | null;
+          image_url?: string | null;
+          is_active?: boolean | null;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          description?: string | null;
+          image_url?: string | null;
+          is_active?: boolean | null;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+      };
+      // Service addon eligibility
+      service_addon_eligibility: {
+        Row: {
+          id: string;
+          service_id: string;
+          addon_id: string;
+          is_recommended: boolean | null;
+          created_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          service_id: string;
+          addon_id: string;
+          is_recommended?: boolean | null;
+          created_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          service_id?: string;
+          addon_id?: string;
+          is_recommended?: boolean | null;
+          created_at?: string | null;
         };
       };
       // Provider addons
@@ -1082,41 +1451,41 @@ export type Database = {
         };
       };
       // Announcements
-      announcements: {
-        Row: {
-          id: string;
-          title: string;
-          content: string;
-          is_active: boolean | null;
-          created_at: string | null;
-          start_date: string | null;
-          end_date: string | null;
-          announcement_audience: string | null;
-          announcement_type: string | null;
-        };
-        Insert: {
-          id?: string;
-          title: string;
-          content: string;
-          is_active?: boolean | null;
-          created_at?: string | null;
-          start_date?: string | null;
-          end_date?: string | null;
-          announcement_audience?: string | null;
-          announcement_type?: string | null;
-        };
-        Update: {
-          id?: string;
-          title?: string;
-          content?: string;
-          is_active?: boolean | null;
-          created_at?: string | null;
-          start_date?: string | null;
-          end_date?: string | null;
-          announcement_audience?: string | null;
-          announcement_type?: string | null;
-        };
+          announcements: {
+      Row: {
+        id: string;
+        title: string;
+        content: string;
+        is_active: boolean | null;
+        created_at: string | null;
+        start_date: string | null;
+        end_date: string | null;
+        announcement_audience: AnnouncementAudience | null;
+        announcement_type: AnnouncementType | null;
       };
+      Insert: {
+        id?: string;
+        title: string;
+        content: string;
+        is_active?: boolean | null;
+        created_at?: string | null;
+        start_date?: string | null;
+        end_date?: string | null;
+        announcement_audience?: AnnouncementAudience | null;
+        announcement_type?: AnnouncementType | null;
+      };
+      Update: {
+        id?: string;
+        title?: string;
+        content?: string;
+        is_active?: boolean | null;
+        created_at?: string | null;
+        start_date?: string | null;
+        end_date?: string | null;
+        announcement_audience?: AnnouncementAudience | null;
+        announcement_type?: AnnouncementType | null;
+      };
+         };
       // Customers table
       customers: {
         Row: {
@@ -1185,50 +1554,56 @@ export type Database = {
         Row: {
           id: string;
           business_id: string;
-          name: string;
-          address: string;
-          city: string;
-          state: string;
-          zip_code: string;
-          country: string;
+          location_name: string | null;
+          address_line1: string | null;
+          address_line2: string | null;
+          city: string | null;
+          state: string | null;
+          postal_code: string | null;
+          country: string | null;
           latitude: number | null;
           longitude: number | null;
-          is_primary: boolean | null;
           is_active: boolean | null;
           created_at: string | null;
-          updated_at: string | null;
+          is_primary: boolean | null;
+          offers_mobile_services: boolean | null;
+          mobile_service_radius: number | null;
         };
         Insert: {
           id?: string;
           business_id: string;
-          name: string;
-          address: string;
-          city: string;
-          state: string;
-          zip_code: string;
-          country: string;
+          location_name?: string | null;
+          address_line1?: string | null;
+          address_line2?: string | null;
+          city?: string | null;
+          state?: string | null;
+          postal_code?: string | null;
+          country?: string | null;
           latitude?: number | null;
           longitude?: number | null;
-          is_primary?: boolean | null;
           is_active?: boolean | null;
           created_at?: string | null;
-          updated_at?: string | null;
+          is_primary?: boolean | null;
+          offers_mobile_services?: boolean | null;
+          mobile_service_radius?: number | null;
         };
         Update: {
           id?: string;
           business_id?: string;
-          name?: string;
-          address?: string;
-          city?: string;
-          state?: string;
-          zip_code?: string;
-          country?: string;
+          location_name?: string | null;
+          address_line1?: string | null;
+          address_line2?: string | null;
+          city?: string | null;
+          state?: string | null;
+          postal_code?: string | null;
+          country?: string | null;
           latitude?: number | null;
           longitude?: number | null;
-          is_primary?: boolean | null;
           is_active?: boolean | null;
           created_at?: string | null;
-          updated_at?: string | null;
+          is_primary?: boolean | null;
+          offers_mobile_services?: boolean | null;
+          mobile_service_radius?: number | null;
         };
       };
       // Business services
@@ -1237,43 +1612,28 @@ export type Database = {
           id: string;
           business_id: string;
           service_id: string;
-          price: number;
-          duration: number;
+          business_price: number;
           is_active: boolean | null;
-          is_featured: boolean | null;
-          is_popular: boolean | null;
           created_at: string | null;
-          updated_at: string | null;
-          description: string | null;
-          image_url: string | null;
+          delivery_type: DeliveryType | null;
         };
         Insert: {
           id?: string;
           business_id: string;
           service_id: string;
-          price: number;
-          duration: number;
+          business_price: number;
           is_active?: boolean | null;
-          is_featured?: boolean | null;
-          is_popular?: boolean | null;
           created_at?: string | null;
-          updated_at?: string | null;
-          description?: string | null;
-          image_url?: string | null;
+          delivery_type?: DeliveryType | null;
         };
         Update: {
           id?: string;
           business_id?: string;
           service_id?: string;
-          price?: number;
-          duration?: number;
+          business_price?: number;
           is_active?: boolean | null;
-          is_featured?: boolean | null;
-          is_popular?: boolean | null;
           created_at?: string | null;
-          updated_at?: string | null;
-          description?: string | null;
-          image_url?: string | null;
+          delivery_type?: DeliveryType | null;
         };
       };
       // Business addons
@@ -1282,7 +1642,7 @@ export type Database = {
           id: string;
           business_id: string;
           addon_id: string;
-          price: number;
+          business_price: number;
           is_active: boolean | null;
           created_at: string | null;
           updated_at: string | null;
@@ -1291,7 +1651,7 @@ export type Database = {
           id?: string;
           business_id: string;
           addon_id: string;
-          price: number;
+          business_price: number;
           is_active?: boolean | null;
           created_at?: string | null;
           updated_at?: string | null;
@@ -1300,7 +1660,7 @@ export type Database = {
           id?: string;
           business_id?: string;
           addon_id?: string;
-          price?: number;
+          business_price?: number;
           is_active?: boolean | null;
           created_at?: string | null;
           updated_at?: string | null;
@@ -1340,42 +1700,45 @@ export type Database = {
       business_documents: {
         Row: {
           id: string;
-          business_id: string;
-          document_type: string;
+          document_type: BusinessDocumentType;
+          document_name: string;
           file_url: string;
-          file_name: string;
-          file_size: number | null;
-          is_verified: boolean | null;
-          verified_at: string | null;
+          file_size_bytes: number | null;
           verified_by: string | null;
+          verified_at: string | null;
+          rejection_reason: string | null;
+          expiry_date: string | null;
           created_at: string | null;
-          updated_at: string | null;
+          verification_status: BusinessDocumentStatus | null;
+          business_id: string;
         };
         Insert: {
           id?: string;
-          business_id: string;
-          document_type: string;
+          document_type: BusinessDocumentType;
+          document_name: string;
           file_url: string;
-          file_name: string;
-          file_size?: number | null;
-          is_verified?: boolean | null;
-          verified_at?: string | null;
+          file_size_bytes?: number | null;
           verified_by?: string | null;
+          verified_at?: string | null;
+          rejection_reason?: string | null;
+          expiry_date?: string | null;
           created_at?: string | null;
-          updated_at?: string | null;
+          verification_status?: BusinessDocumentStatus | null;
+          business_id: string;
         };
         Update: {
           id?: string;
-          business_id?: string;
-          document_type?: string;
+          document_type?: BusinessDocumentType;
+          document_name?: string;
           file_url?: string;
-          file_name?: string;
-          file_size?: number | null;
-          is_verified?: boolean | null;
-          verified_at?: string | null;
+          file_size_bytes?: number | null;
           verified_by?: string | null;
+          verified_at?: string | null;
+          rejection_reason?: string | null;
+          expiry_date?: string | null;
           created_at?: string | null;
-          updated_at?: string | null;
+          verification_status?: BusinessDocumentStatus | null;
+          business_id?: string;
         };
       };
       // Provider calendar connections
@@ -1711,6 +2074,132 @@ export type Database = {
           business_managed?: boolean | null;
         };
       };
+      // Provider availability
+      provider_availability: {
+        Row: {
+          id: string;
+          provider_id: string | null;
+          business_id: string | null;
+          schedule_type: string | null;
+          day_of_week: number | null;
+          start_date: string | null;
+          end_date: string | null;
+          start_time: string;
+          end_time: string;
+          max_bookings_per_slot: number | null;
+          slot_duration_minutes: number | null;
+          buffer_time_minutes: number | null;
+          is_active: boolean | null;
+          is_blocked: boolean | null;
+          block_reason: string | null;
+          allowed_services: string[] | null;
+          location_type: string | null;
+          service_location_id: string | null;
+          override_price: number | null;
+          notes: string | null;
+          created_by: string | null;
+          created_at: string | null;
+          updated_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          provider_id?: string | null;
+          business_id?: string | null;
+          schedule_type?: string | null;
+          day_of_week?: number | null;
+          start_date?: string | null;
+          end_date?: string | null;
+          start_time: string;
+          end_time: string;
+          max_bookings_per_slot?: number | null;
+          slot_duration_minutes?: number | null;
+          buffer_time_minutes?: number | null;
+          is_active?: boolean | null;
+          is_blocked?: boolean | null;
+          block_reason?: string | null;
+          allowed_services?: string[] | null;
+          location_type?: string | null;
+          service_location_id?: string | null;
+          override_price?: number | null;
+          notes?: string | null;
+          created_by?: string | null;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          provider_id?: string | null;
+          business_id?: string | null;
+          schedule_type?: string | null;
+          day_of_week?: number | null;
+          start_date?: string | null;
+          end_date?: string | null;
+          start_time?: string;
+          end_time?: string;
+          max_bookings_per_slot?: number | null;
+          slot_duration_minutes?: number | null;
+          buffer_time_minutes?: number | null;
+          is_active?: boolean | null;
+          is_blocked?: boolean | null;
+          block_reason?: string | null;
+          allowed_services?: string[] | null;
+          location_type?: string | null;
+          service_location_id?: string | null;
+          override_price?: number | null;
+          notes?: string | null;
+          created_by?: string | null;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+      };
+      // Provider availability exceptions
+      provider_availability_exceptions: {
+        Row: {
+          id: string;
+          provider_id: string | null;
+          exception_date: string;
+          exception_type: string | null;
+          start_time: string | null;
+          end_time: string | null;
+          max_bookings: number | null;
+          service_location_id: string | null;
+          reason: string;
+          notes: string | null;
+          created_by: string | null;
+          created_at: string | null;
+          updated_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          provider_id?: string | null;
+          exception_date: string;
+          exception_type?: string | null;
+          start_time?: string | null;
+          end_time?: string | null;
+          max_bookings?: number | null;
+          service_location_id?: string | null;
+          reason: string;
+          notes?: string | null;
+          created_by?: string | null;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          provider_id?: string | null;
+          exception_date?: string;
+          exception_type?: string | null;
+          start_time?: string | null;
+          end_time?: string | null;
+          max_bookings?: number | null;
+          service_location_id?: string | null;
+          reason?: string;
+          notes?: string | null;
+          created_by?: string | null;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+      };
     };
   };
 };
@@ -1720,3 +2209,5 @@ export type Provider = Database['public']['Tables']['providers']['Row'];
 export type Booking = Database['public']['Tables']['bookings']['Row'];
 export type BusinessProfile = Database['public']['Tables']['business_profiles']['Row'];
 export type CustomerProfile = Database['public']['Tables']['customer_profiles']['Row'];
+export type Promotion = Database['public']['Tables']['promotions']['Row'];
+export type PromotionUsage = Database['public']['Tables']['promotion_usage']['Row'];

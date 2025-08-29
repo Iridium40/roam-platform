@@ -21,15 +21,32 @@ import { useEdgeNotifications } from '@/hooks/useEdgeNotifications';
 import { formatDistanceToNow } from 'date-fns';
 
 export function EdgeNotificationCenter() {
-  const {
-    notifications,
-    isConnected,
-    preferences,
-    unreadCount,
-    markAsRead,
-    markAllAsRead,
-    updatePreferences
-  } = useEdgeNotifications();
+  // Add defensive programming to prevent initialization errors
+  let notifications: any[] = [];
+  let isConnected = false;
+  let preferences = {
+    email: true,
+    push: true,
+    sms: true,
+    inApp: true
+  };
+  let unreadCount = 0;
+  let markAsRead = (id: string) => {};
+  let markAllAsRead = () => {};
+  let updatePreferences = (prefs: any) => {};
+
+  try {
+    const edgeNotifications = useEdgeNotifications();
+    notifications = edgeNotifications.notifications || [];
+    isConnected = edgeNotifications.isConnected || false;
+    preferences = edgeNotifications.preferences || preferences;
+    unreadCount = edgeNotifications.unreadCount || 0;
+    markAsRead = edgeNotifications.markAsRead || (() => {});
+    markAllAsRead = edgeNotifications.markAllAsRead || (() => {});
+    updatePreferences = edgeNotifications.updatePreferences || (() => {});
+  } catch (error) {
+    console.error('Error initializing EdgeNotificationCenter:', error);
+  }
 
   const [showSettings, setShowSettings] = useState(false);
 

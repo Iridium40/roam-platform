@@ -7,10 +7,14 @@ import { Announcement } from "@roam/shared";
 import { logger } from '@/utils/logger';
 
 interface AnnouncementPopupProps {
-  isCustomer?: boolean;
+  appType?: 'customer' | 'provider' | 'admin';
+  autoShow?: boolean;
 }
 
-export function AnnouncementPopup({ isCustomer = false }: AnnouncementPopupProps) {
+export function AnnouncementPopup({ 
+  appType = 'customer', 
+  autoShow = true 
+}: AnnouncementPopupProps) {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -18,18 +22,35 @@ export function AnnouncementPopup({ isCustomer = false }: AnnouncementPopupProps
 
   useEffect(() => {
     fetchAnnouncements();
-  }, [isCustomer]);
+  }, [appType]);
 
   const fetchAnnouncements = async () => {
     try {
       setLoading(true);
       const today = new Date().toISOString().split('T')[0]; // Get YYYY-MM-DD format
 
+      // Determine which audiences to fetch based on app type
+      let audiences: string[] = [];
+      
+      switch (appType) {
+        case 'customer':
+          audiences = ['all', 'customer', 'business'];
+          break;
+        case 'provider':
+          audiences = ['all', 'provider', 'business'];
+          break;
+        case 'admin':
+          audiences = ['all', 'staff', 'business'];
+          break;
+        default:
+          audiences = ['all', 'customer', 'business'];
+      }
+
       const { data, error } = await supabase
         .from("announcements")
         .select("*")
         .eq("is_active", true)
-        .eq("announcement_audience", "customer")
+        .in("announcement_audience", audiences)
         .or(`start_date.is.null,start_date.lte.${today}`)
         .or(`end_date.is.null,end_date.gte.${today}`)
         .order("created_at", { ascending: false });
@@ -63,8 +84,8 @@ export function AnnouncementPopup({ isCustomer = false }: AnnouncementPopupProps
 
       setAnnouncements(validAnnouncements);
       
-      // Show popup if there are announcements and user is a customer
-      if (validAnnouncements.length > 0 && isCustomer) {
+      // Show popup if there are announcements and autoShow is enabled
+      if (validAnnouncements.length > 0 && autoShow) {
         setIsOpen(true);
       }
     } catch (error) {

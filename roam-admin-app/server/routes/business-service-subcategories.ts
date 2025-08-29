@@ -3,7 +3,9 @@ import { createClient } from '@supabase/supabase-js';
 
 // Use the correct Supabase URL and service role key
 const supabaseUrl = 'https://vssomyuyhicaxsgiaupo.supabase.co';
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndobmtveHdnb2xia21wbmN6eXdwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NTU1MjQ3OSwiZXhwIjoyMDcxMTI4NDc5fQ.9o48A-HxMvvn54GUTbtAIxEsklkIjPtuLtG-63T2t-o';
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzc29teXV5aGljYXhzZ2lhdXBvIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MzQ1MzcxNSwiZXhwIjoyMDY5MDI5NzE1fQ.54i9VPExknTktnWbyT9Z9rZKvSJOjs9fG60wncLhLlA';
+
+
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -20,7 +22,19 @@ export async function handleBusinessServiceSubcategories(req: Request, res: Resp
 
         const { data: subcategories, error: fetchError } = await supabase
           .from('business_service_subcategories')
-          .select('*')
+          .select(`
+            *,
+            service_categories (
+              id,
+              description,
+              service_category_type
+            ),
+            service_subcategories (
+              id,
+              description,
+              service_subcategory_type
+            )
+          `)
           .eq('business_id', businessId)
           .order('created_at', { ascending: false });
 
@@ -42,7 +56,19 @@ export async function handleBusinessServiceSubcategories(req: Request, res: Resp
         const { data: newSubcategory, error: insertError } = await supabase
           .from('business_service_subcategories')
           .insert(subcategoryData)
-          .select()
+          .select(`
+            *,
+            service_categories (
+              id,
+              description,
+              service_category_type
+            ),
+            service_subcategories (
+              id,
+              description,
+              service_subcategory_type
+            )
+          `)
           .single();
 
         if (insertError) {
