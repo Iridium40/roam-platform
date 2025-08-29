@@ -825,7 +825,7 @@ export default function BookService() {
                 </div>
 
                 <div className="grid gap-6">
-                  {businesses.map((business) => (
+                  {filteredAndSortedBusinesses.map((business) => (
                     <Card
                       key={business.id}
                       className={`cursor-pointer transition-all hover:shadow-lg ${
