@@ -106,31 +106,44 @@ const getDeliveryTypeIcon = (type: string) => {
 
 // Business sorting and filtering logic
 const sortAndFilterBusinesses = (businesses: Business[], sortBy: string, sortOrder: string): Business[] => {
-  const sorted = [...businesses].sort((a, b) => {
-    switch (sortBy) {
-      case 'price':
-        const priceA = a.service_price || 0;
-        const priceB = b.service_price || 0;
-        return sortOrder === 'asc' ? priceA - priceB : priceB - priceA;
+  try {
+    console.log('🔄 Sorting businesses:', { count: businesses.length, sortBy, sortOrder });
 
-      case 'rating':
-        return sortOrder === 'asc' ? a.rating - b.rating : b.rating - a.rating;
+    const sorted = [...businesses].sort((a, b) => {
+      try {
+        switch (sortBy) {
+          case 'price':
+            const priceA = a.service_price || 0;
+            const priceB = b.service_price || 0;
+            return sortOrder === 'asc' ? priceA - priceB : priceB - priceA;
 
-      case 'delivery_type':
-        // Sort by delivery type priority: mobile -> business_location -> virtual
-        const deliveryPriority = { mobile: 1, business_location: 2, virtual: 3 };
-        const primaryDeliveryA = getDeliveryTypes(a)[0] || 'business_location';
-        const primaryDeliveryB = getDeliveryTypes(b)[0] || 'business_location';
-        const priorityA = deliveryPriority[primaryDeliveryA as keyof typeof deliveryPriority] || 999;
-        const priorityB = deliveryPriority[primaryDeliveryB as keyof typeof deliveryPriority] || 999;
-        return sortOrder === 'asc' ? priorityA - priorityB : priorityB - priorityA;
+          case 'rating':
+            return sortOrder === 'asc' ? a.rating - b.rating : b.rating - a.rating;
 
-      default:
+          case 'delivery_type':
+            // Sort by delivery type priority: mobile -> business_location -> virtual
+            const deliveryPriority = { mobile: 1, business_location: 2, virtual: 3 };
+            const primaryDeliveryA = getDeliveryTypes(a)[0] || 'business_location';
+            const primaryDeliveryB = getDeliveryTypes(b)[0] || 'business_location';
+            const priorityA = deliveryPriority[primaryDeliveryA as keyof typeof deliveryPriority] || 999;
+            const priorityB = deliveryPriority[primaryDeliveryB as keyof typeof deliveryPriority] || 999;
+            return sortOrder === 'asc' ? priorityA - priorityB : priorityB - priorityA;
+
+          default:
+            return 0;
+        }
+      } catch (sortError) {
+        console.error('Error in individual sort comparison:', sortError);
         return 0;
-    }
-  });
+      }
+    });
 
-  return sorted;
+    console.log('✅ Sorting completed successfully');
+    return sorted;
+  } catch (error) {
+    console.error('❌ Error in sortAndFilterBusinesses:', error);
+    return businesses; // Return original array if sorting fails
+  }
 };
 
 interface Provider {
