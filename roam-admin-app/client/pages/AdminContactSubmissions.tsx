@@ -195,6 +195,16 @@ export default function AdminContactSubmissions() {
 
   // Update submission status
   const updateSubmissionStatus = async (submissionId: string, newStatus: SubmissionStatus, notes?: string) => {
+    // Ensure admin user is authenticated
+    if (!user?.id) {
+      toast({
+        title: "Authentication Error",
+        description: "You must be logged in to update submissions",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       const updates: any = {
         status: newStatus,
