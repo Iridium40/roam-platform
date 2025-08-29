@@ -469,7 +469,8 @@ export default function BookService() {
 
       console.log('Loaded businesses with pricing:', transformedBusinesses.map(b => ({
         name: b.business_name,
-        price: b.service_price
+        price: b.service_price,
+        originalBusinessPrice: availableBusinesses.find(item => item.business_profiles.id === b.id)?.business_price
       })));
 
       setAllBusinesses(transformedBusinesses);
