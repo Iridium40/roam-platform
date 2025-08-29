@@ -39,13 +39,33 @@ export async function safeApiCall<T = any>(
     };
   }
 
-  // Read response body safely using clone to avoid body stream issues
+  // Read response body once and handle all logic based on that
   let responseText: string;
+  let data: any = null;
+
   try {
-    // Clone the response to create a separate readable stream
-    const responseClone = response.clone();
-    responseText = await responseClone.text();
+    responseText = await response.text();
     console.log(`Response length: ${responseText?.length || 0} characters`);
+
+    // Parse JSON if response has content
+    if (responseText && responseText.trim()) {
+      try {
+        data = JSON.parse(responseText);
+        console.log('Successfully parsed response JSON');
+      } catch (parseError) {
+        console.error('Failed to parse JSON response:', parseError);
+        console.error('Raw response:', responseText);
+
+        // If it's an error response and we can't parse JSON, use status text
+        return {
+          success: false,
+          error: response.ok
+            ? 'Server returned invalid JSON response'
+            : `Server error (${response.status}): ${response.statusText}`,
+          status: response.status,
+        };
+      }
+    }
   } catch (readError) {
     console.error('Failed to read response text:', readError);
     return {
@@ -55,42 +75,9 @@ export async function safeApiCall<T = any>(
     };
   }
 
-  // Parse JSON if response has content
-  let data: any = null;
-  if (responseText && responseText.trim()) {
-    try {
-      data = JSON.parse(responseText);
-    } catch (parseError) {
-      console.error('Failed to parse JSON response:', parseError);
-      console.error('Raw response:', responseText);
-
-      if (!response.ok) {
-        // If it's an error response and we can't parse JSON, use status text
-        return {
-          success: false,
-          error: `Server error (${response.status}): ${response.statusText}`,
-          status: response.status,
-        };
-      }
-
-      return {
-        success: false,
-        error: 'Server returned invalid JSON response',
-        status: response.status,
-      };
-    }
-  } else if (!response.ok) {
-    // Empty error response
-    return {
-      success: false,
-      error: `Server error (${response.status}): ${response.statusText}`,
-      status: response.status,
-    };
-  }
-
-  // Handle error responses
+  // Handle error responses (non-2xx status codes)
   if (!response.ok) {
-    const errorMessage = data?.error || data?.message || `Server error (${response.status})`;
+    const errorMessage = data?.error || data?.message || responseText || `Server error (${response.status}): ${response.statusText}`;
     console.error('API Error:', errorMessage);
 
     return {
