@@ -409,7 +409,7 @@ export default function FinancialsTab({
           <CardTitle className="flex items-center justify-between">
             <span className="flex items-center space-x-2">
               <Receipt className="w-5 h-5" />
-              <span>Tax Information (1099 / Stripe Tax)</span>
+              <span>Tax Information<br /></span>
             </span>
             <Badge variant="outline">Required for payouts & 1099s</Badge>
           </CardTitle>
