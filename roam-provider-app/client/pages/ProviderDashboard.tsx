@@ -747,9 +747,9 @@ export default function ProviderDashboard() {
 
         {/* Staff Tab */}
         {activeTab === "staff" && (
-          <StaffTab
-            providerData={providerData}
-            business={business}
+          <StaffManager
+            businessId={business?.id || providerData?.business_id || ""}
+            locations={locations}
           />
         )}
 
