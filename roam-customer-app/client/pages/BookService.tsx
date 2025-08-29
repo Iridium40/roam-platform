@@ -843,7 +843,7 @@ export default function BookService() {
       }
 
       toast({
-        title: "Checkout Error",
+        title: "Payment Setup Error",
         description: errorMessage,
         variant: "destructive",
       });
