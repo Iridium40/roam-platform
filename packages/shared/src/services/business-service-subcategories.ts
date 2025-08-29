@@ -1,13 +1,7 @@
-import { createClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
-// Use environment configuration with browser compatibility
-const isBrowser = typeof window !== 'undefined';
-const envSource = isBrowser ? (import.meta as any).env : process.env;
-
-const supabaseUrl = envSource.VITE_PUBLIC_SUPABASE_URL || envSource.SUPABASE_URL || 'https://vssomyuyhicaxsgiaupo.supabase.co';
-const supabaseServiceRoleKey = envSource.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndobmtveHdnb2xia21wbmN6eXdwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NTU1MjQ3OSwiZXhwIjoyMDcxMTI4NDc5fQ.9o48A-HxMvvn54GUTbtAIxEsklkIjPtuLtG-63T2t-o';
-
-const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+// This service will accept a Supabase client instance instead of creating its own
+// to avoid multiple GoTrueClient instances
 
 export interface BusinessServiceSubcategory {
   id: string;
@@ -40,7 +34,10 @@ export class BusinessServiceSubcategoriesService {
   /**
    * Fetch business service subcategories for a specific business
    */
-  static async getBusinessServiceSubcategories(businessId: string): Promise<BusinessServiceSubcategoryWithRelations[]> {
+  static async getBusinessServiceSubcategories(
+    supabase: SupabaseClient, 
+    businessId: string
+  ): Promise<BusinessServiceSubcategoryWithRelations[]> {
     const { data, error } = await supabase
       .from('business_service_subcategories')
       .select(`
@@ -70,12 +67,15 @@ export class BusinessServiceSubcategoriesService {
   /**
    * Add a new business service subcategory
    */
-  static async addBusinessServiceSubcategory(subcategoryData: {
-    business_id: string;
-    category_id: string;
-    subcategory_id: string;
-    is_active?: boolean;
-  }): Promise<BusinessServiceSubcategory> {
+  static async addBusinessServiceSubcategory(
+    supabase: SupabaseClient,
+    subcategoryData: {
+      business_id: string;
+      category_id: string;
+      subcategory_id: string;
+      is_active?: boolean;
+    }
+  ): Promise<BusinessServiceSubcategory> {
     const { data, error } = await supabase
       .from('business_service_subcategories')
       .insert([{
@@ -96,7 +96,10 @@ export class BusinessServiceSubcategoriesService {
   /**
    * Remove a business service subcategory
    */
-  static async removeBusinessServiceSubcategory(subcategoryId: string): Promise<void> {
+  static async removeBusinessServiceSubcategory(
+    supabase: SupabaseClient,
+    subcategoryId: string
+  ): Promise<void> {
     const { error } = await supabase
       .from('business_service_subcategories')
       .delete()
@@ -111,7 +114,7 @@ export class BusinessServiceSubcategoriesService {
   /**
    * Fetch available service categories
    */
-  static async getAvailableServiceCategories(): Promise<ServiceCategory[]> {
+  static async getAvailableServiceCategories(supabase: SupabaseClient): Promise<ServiceCategory[]> {
     const { data, error } = await supabase
       .from('service_categories')
       .select('id, service_category_type, description')
@@ -129,7 +132,7 @@ export class BusinessServiceSubcategoriesService {
   /**
    * Fetch available service subcategories
    */
-  static async getAvailableServiceSubcategories(): Promise<ServiceSubcategory[]> {
+  static async getAvailableServiceSubcategories(supabase: SupabaseClient): Promise<ServiceSubcategory[]> {
     const { data, error } = await supabase
       .from('service_subcategories')
       .select('id, category_id, service_subcategory_type, description')
@@ -147,7 +150,7 @@ export class BusinessServiceSubcategoriesService {
   /**
    * Fetch business service categories for a specific business
    */
-  static async getBusinessServiceCategories(businessId: string): Promise<any[]> {
+  static async getBusinessServiceCategories(supabase: SupabaseClient, businessId: string): Promise<any[]> {
     const { data, error } = await supabase
       .from('business_service_categories')
       .select(`
@@ -172,11 +175,14 @@ export class BusinessServiceSubcategoriesService {
   /**
    * Add a new business service category
    */
-  static async addBusinessServiceCategory(categoryData: {
-    business_id: string;
-    category_id: string;
-    is_active?: boolean;
-  }): Promise<any> {
+  static async addBusinessServiceCategory(
+    supabase: SupabaseClient,
+    categoryData: {
+      business_id: string;
+      category_id: string;
+      is_active?: boolean;
+    }
+  ): Promise<any> {
     const { data, error } = await supabase
       .from('business_service_categories')
       .insert([{
@@ -197,7 +203,7 @@ export class BusinessServiceSubcategoriesService {
   /**
    * Remove a business service category
    */
-  static async removeBusinessServiceCategory(categoryId: string): Promise<void> {
+  static async removeBusinessServiceCategory(supabase: SupabaseClient, categoryId: string): Promise<void> {
     const { error } = await supabase
       .from('business_service_categories')
       .delete()

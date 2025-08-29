@@ -109,15 +109,13 @@ export class ConversationsService {
   /**
    * Create a new conversation
    */
-  static async createConversation(params: CreateConversationParams): Promise<string> {
+  static async createConversation(_params: CreateConversationParams): Promise<string> {
     try {
       // For now, this is a placeholder implementation
       // In a real implementation, you would:
       // 1. Create the conversation in conversation_metadata
       // 2. Add participants to conversation_participants
       // 3. Return the conversation ID
-      
-      console.log('Creating conversation:', params);
       
       // Placeholder: return a mock conversation ID
       return `conv_${Date.now()}`;
@@ -130,15 +128,13 @@ export class ConversationsService {
   /**
    * Send a message
    */
-  static async sendMessage(params: SendMessageParams): Promise<string> {
+  static async sendMessage(_params: SendMessageParams): Promise<string> {
     try {
       // For now, this is a placeholder implementation
       // In a real implementation, you would:
       // 1. Insert the message into a messages table
       // 2. Update the last_message_at in conversation_metadata
       // 3. Return the message ID
-      
-      console.log('Sending message:', params);
       
       // Placeholder: return a mock message ID
       return `msg_${Date.now()}`;
@@ -158,8 +154,6 @@ export class ConversationsService {
       // 1. Insert the participant into conversation_participants
       // 2. Update the participant_count in conversation_metadata
       // 3. Return the participant ID
-      
-      console.log('Adding participant:', params);
       
       // Placeholder: return a mock participant ID
       return `part_${Date.now()}`;
@@ -196,8 +190,6 @@ export class ConversationsService {
     try {
       // For now, we'll return empty messages since we don't have a messages table
       // In a real implementation, you'd query a messages table
-      console.log('Loading messages for conversation:', conversationId);
-      
       return [];
     } catch (error) {
       console.error('Error loading messages:', error);

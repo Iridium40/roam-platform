@@ -33,6 +33,8 @@ export default function MyBookings() {
   const { customer, loading: authLoading } = useAuth();
   const currentUser = customer;
 
+  // Debug logging removed to reduce console spam
+
   // State for modals
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [selectedBookingForCancel, setSelectedBookingForCancel] =
@@ -47,6 +49,9 @@ export default function MyBookings() {
 
   // Use modular hooks
   const { bookings, setBookings, loading, error, refreshBookings } = useBookingsData(currentUser);
+  
+  // Temporarily remove console logs to reduce noise
+  
   const {
     filteredBookings,
     paginatedBookings,
@@ -203,7 +208,6 @@ export default function MyBookings() {
                   onPrevPage={() => prevPage("upcoming")}
                   onPageChange={(page) => {
                     // This would need to be implemented in the hook
-                    console.log("Page change to:", page);
                   }}
                   emptyStateMessage="You don't have any upcoming bookings. Browse our services to book your next appointment."
                   emptyStateIcon={Calendar}
@@ -222,7 +226,7 @@ export default function MyBookings() {
                   onNextPage={() => nextPage("active")}
                   onPrevPage={() => prevPage("active")}
                   onPageChange={(page) => {
-                    console.log("Page change to:", page);
+                    // Page change handler
                   }}
                   emptyStateMessage="No active services at the moment. Your upcoming bookings will appear here when they start."
                   emptyStateIcon={CheckCircle}
@@ -241,7 +245,7 @@ export default function MyBookings() {
                   onNextPage={() => nextPage("past")}
                   onPrevPage={() => prevPage("past")}
                   onPageChange={(page) => {
-                    console.log("Page change to:", page);
+                    // Page change handler
                   }}
                   emptyStateMessage="No past bookings found. Your completed and cancelled bookings will appear here."
                   emptyStateIcon={Clock}

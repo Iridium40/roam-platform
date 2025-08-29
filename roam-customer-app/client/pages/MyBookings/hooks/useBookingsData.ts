@@ -40,14 +40,33 @@ export const useBookingsData = (currentUser: any) => {
         setLoading(true);
         setError(null);
 
-        console.log("Fetching bookings for customer:", currentUser.id);
+        console.log("Fetching bookings for user:", currentUser.id);
         
-        // Use simple Supabase query with regular joins (not inner joins)
+        // First, try a simple query to just get bookings without joins
+        const { data: simpleData, error: simpleError } = await supabase
+          .from("bookings")
+          .select("*")
+          .eq("customer_id", currentUser.id)
+          .order("booking_date", { ascending: false });
+
+        console.log("Simple query result:", { simpleData, simpleError });
+
+        if (simpleError) {
+          throw simpleError;
+        }
+
+        if (!simpleData || simpleData.length === 0) {
+          console.log("No bookings found for user");
+          setBookings([]);
+          return;
+        }
+
+        // Use a simpler Supabase query approach that should work
         const { data, error } = await supabase
           .from("bookings")
           .select(`
             *,
-            providers (
+            providers!left (
               id,
               first_name,
               last_name,
@@ -57,25 +76,42 @@ export const useBookingsData = (currentUser: any) => {
               business_id,
               average_rating
             ),
-            services (
+            services!left (
               id,
               name,
               description,
               min_price,
               duration_minutes
             ),
-            customer_profiles (
+            customer_profiles!left (
               id,
               first_name,
               last_name,
               email,
               phone
+            ),
+            reviews!left (
+              id,
+              overall_rating,
+              service_rating,
+              communication_rating,
+              punctuality_rating,
+              review_text,
+              created_at
+            ),
+            tips!left (
+              id,
+              tip_amount,
+              tip_percentage,
+              customer_message,
+              payment_status,
+              created_at
             )
           `)
           .eq("customer_id", currentUser.id)
           .order("booking_date", { ascending: false });
 
-        console.log("Supabase response:", { data, error });
+        console.log("Full query result:", { data, error });
 
         if (error) {
           throw error;
@@ -113,17 +149,18 @@ export const useBookingsData = (currentUser: any) => {
           original_booking_date: booking.original_booking_date,
           original_start_time: booking.original_start_time,
           reschedule_reason: booking.reschedule_reason,
+          // Add missing fields that might be expected
+          booking_time: booking.start_time, // For backward compatibility
+          updated_at: booking.created_at, // Use created_at as fallback since updated_at doesn't exist
         }));
-
+        
         console.log("Transformed bookings:", transformedBookings);
-        console.log("Number of bookings found:", transformedBookings.length);
         setBookings(transformedBookings);
       } catch (err: any) {
         console.error("Error fetching bookings:", err);
         
         // Retry logic for network errors
         if (retryCount < 3 && (err.code === "NETWORK_ERROR" || err.message?.includes("fetch"))) {
-          console.log(`Retrying fetch (attempt ${retryCount + 1})...`);
           setTimeout(() => fetchBookings(retryCount + 1), 1000 * (retryCount + 1));
           return;
         }

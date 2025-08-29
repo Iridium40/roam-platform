@@ -14,6 +14,8 @@ interface Business {
   business_name: string;
   description: string;
   image_url?: string;
+  logo_url?: string;
+  cover_image_url?: string;
   rating: number;
   review_count: number;
 }
@@ -50,7 +52,15 @@ export default function BusinessProfile() {
         // Load business details
         const { data: businessData, error: businessError } = await supabase
           .from('business_profiles')
-          .select('*')
+          .select(`
+            id,
+            business_name,
+            business_description,
+            image_url,
+            logo_url,
+            cover_image_url,
+            verification_status
+          `)
           .eq('id', businessId)
           .single();
 
@@ -59,8 +69,10 @@ export default function BusinessProfile() {
         setBusiness({
           id: businessData.id,
           business_name: businessData.business_name,
-          description: businessData.description,
+          description: businessData.business_description || '',
           image_url: businessData.image_url,
+          logo_url: businessData.logo_url,
+          cover_image_url: businessData.cover_image_url,
           rating: 4.5, // Mock data
           review_count: 25, // Mock data
         });
@@ -158,12 +170,27 @@ export default function BusinessProfile() {
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="max-w-6xl mx-auto">
+          {/* Cover Image */}
+          {business.cover_image_url && (
+            <div className="mb-8">
+              <div className="w-full h-64 bg-gray-200 rounded-lg overflow-hidden">
+                <img 
+                  src={business.cover_image_url} 
+                  alt={`${business.business_name} cover`} 
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            </div>
+          )}
+          
           {/* Business Header */}
           <div className="bg-white rounded-lg shadow-lg p-8 mb-8">
             <div className="flex items-start gap-6">
-              <div className="w-24 h-24 bg-gray-200 rounded-lg flex items-center justify-center flex-shrink-0">
-                {business.image_url ? (
-                  <img src={business.image_url} alt={business.business_name} className="w-full h-full object-cover rounded-lg" />
+              <div className="w-24 h-24 bg-gray-200 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
+                {business.logo_url ? (
+                  <img src={business.logo_url} alt={business.business_name} className="w-full h-full object-cover" />
+                ) : business.image_url ? (
+                  <img src={business.image_url} alt={business.business_name} className="w-full h-full object-cover" />
                 ) : (
                   <Building className="w-12 h-12 text-gray-400" />
                 )}
@@ -264,34 +291,34 @@ export default function BusinessProfile() {
                       {services.map((service) => (
                         <Card key={service.id} className="hover:shadow-md transition-shadow">
                           <CardContent className="p-6">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-4">
-                                <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center">
-                                  {service.image_url ? (
-                                    <img src={service.image_url} alt={service.name} className="w-full h-full object-cover rounded-lg" />
-                                  ) : (
-                                    <Clock className="w-8 h-8 text-gray-400" />
-                                  )}
-                                </div>
-                                <div>
-                                  <h3 className="font-semibold text-lg">{service.name}</h3>
-                                  <p className="text-gray-600 text-sm">{service.description}</p>
-                                  <div className="flex items-center gap-4 mt-2">
-                                    <Badge variant="secondary" className="text-sm">
-                                      ${service.min_price} starting
-                                    </Badge>
-                                    <Badge variant="outline" className="text-sm">
-                                      {service.duration_minutes} minutes
-                                    </Badge>
-                                  </div>
+                            <div className="flex gap-6">
+                              <div className="w-24 h-32 bg-gray-200 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
+                                {service.image_url ? (
+                                  <img src={service.image_url} alt={service.name} className="w-full h-full object-cover" />
+                                ) : (
+                                  <Clock className="w-12 h-12 text-gray-400" />
+                                )}
+                              </div>
+                              <div className="flex-1">
+                                <h3 className="font-semibold text-xl mb-2">{service.name}</h3>
+                                <p className="text-gray-600 mb-4 leading-relaxed">{service.description}</p>
+                                <div className="flex items-center gap-4 mb-4">
+                                  <Badge variant="secondary" className="text-sm">
+                                    ${service.min_price} Starting
+                                  </Badge>
+                                  <Badge variant="outline" className="text-sm">
+                                    {service.duration_minutes} Minutes
+                                  </Badge>
                                 </div>
                               </div>
-                              <Button asChild>
-                                <Link to={`/book-service/${service.id}?business_id=${business.id}`}>
-                                  <Calendar className="w-4 h-4 mr-2" />
-                                  Book Now
-                                </Link>
-                              </Button>
+                              <div className="flex items-center">
+                                <Button asChild>
+                                  <Link to={`/book-service/${service.id}?business_id=${business.id}`}>
+                                    <Calendar className="w-4 h-4 mr-2" />
+                                    Book Now
+                                  </Link>
+                                </Button>
+                              </div>
                             </div>
                           </CardContent>
                         </Card>

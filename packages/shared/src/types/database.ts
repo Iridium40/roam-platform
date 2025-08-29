@@ -27,9 +27,9 @@ export type ServiceCategoryType = "beauty" | "fitness" | "therapy" | "healthcare
 export type ServiceSubcategoryType = "hair_and_makeup" | "spray_tan" | "esthetician" | "massage_therapy" | "iv_therapy" | "physical_therapy" | "nurse_practitioner" | "physician" | "chiropractor" | "yoga_instructor" | "pilates_instructor" | "personal_trainer" | "injectables" | "health_coach";
 export type CustomerLocationType = "home" | "condo" | "hotel" | "oatasse popther" | null;
 
-  // Notification Types
+// Notification Types
   export type NotificationType = 'booking_status_update' | 'new_message' | 'booking_reminder' | 'system_alert' | 'payment_received';
-  export type NotificationStatus = 'sent' | 'delivered' | 'failed' | 'pending';
+export type NotificationStatus = 'sent' | 'delivered' | 'failed' | 'pending';
   export type MessageNotificationType = 'message' | 'mention' | 'system';
 
   // Transaction Types
@@ -643,8 +643,8 @@ export type Database = {
            verification_status?: string;
            created_at?: string | null;
            updated_at?: string | null;
-         };
-       };
+        };
+      };
 
       // Twilio conversations metadata
       conversation_metadata: {
@@ -2211,3 +2211,58 @@ export type BusinessProfile = Database['public']['Tables']['business_profiles'][
 export type CustomerProfile = Database['public']['Tables']['customer_profiles']['Row'];
 export type Promotion = Database['public']['Tables']['promotions']['Row'];
 export type PromotionUsage = Database['public']['Tables']['promotion_usage']['Row'];
+
+// Review and Tip Types
+export interface Review {
+  id: string;
+  booking_id: string;
+  overall_rating: number;
+  service_rating?: number;
+  communication_rating?: number;
+  punctuality_rating?: number;
+  review_text?: string;
+  is_approved?: boolean;
+  is_featured?: boolean;
+  moderated_by?: string;
+  moderated_at?: string;
+  moderation_notes?: string;
+  created_at: string;
+}
+
+export interface Tip {
+  id: string;
+  booking_id: string;
+  customer_id?: string;
+  provider_id: string;
+  business_id: string;
+  tip_amount: number;
+  tip_percentage?: number;
+  stripe_payment_intent_id?: string;
+  payment_status?: string;
+  platform_fee_amount?: number;
+  provider_net_amount: number;
+  customer_message?: string;
+  provider_response?: string;
+  provider_responded_at?: string;
+  tip_given_at: string;
+  payment_processed_at?: string;
+  payout_status?: string;
+  payout_batch_id?: string;
+  payout_date?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ReviewFormData {
+  overall_rating: number;
+  service_rating?: number;
+  communication_rating?: number;
+  punctuality_rating?: number;
+  review_text?: string;
+}
+
+export interface TipFormData {
+  tip_amount: number;
+  tip_percentage?: number;
+  customer_message?: string;
+}

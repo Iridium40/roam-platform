@@ -20,8 +20,8 @@ import {
   User,
   X
 } from 'lucide-react';
-import { useConversations, ConversationMessage, Conversation } from '@/hooks/useConversations';
-import { useCustomerConversations } from '@/hooks/useCustomerConversations';
+import { useConversations } from '@/hooks/useConversations';
+import type { ConversationMessage, Conversation } from '@roam/shared';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatDistanceToNow } from 'date-fns';
 import { logger } from '@/utils/logger';

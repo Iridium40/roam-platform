@@ -47,11 +47,7 @@ export const useConversations = (options: UseConversationsOptions) => {
       setLoading(true);
       setError(null);
       
-      console.log('🔄 Loading conversations for user:', userId, userType);
-      
       const conversations = await ConversationsService.loadConversations(userId, userType);
-      
-      console.log('📥 Loaded conversations:', conversations);
       setConversations(conversations);
     } catch (error: any) {
       console.error('Error loading conversations:', error);
@@ -72,11 +68,7 @@ export const useConversations = (options: UseConversationsOptions) => {
       setLoading(true);
       setError(null);
       
-      console.log('🔄 Loading messages for conversation:', conversationId);
-      
       const messages = await ConversationsService.loadMessages(conversationId);
-      
-      console.log('📥 Loaded messages:', messages);
       setMessages(messages);
     } catch (error: any) {
       console.error('Error loading messages:', error);
@@ -96,11 +88,7 @@ export const useConversations = (options: UseConversationsOptions) => {
       setLoading(true);
       setError(null);
       
-      console.log('🔄 Loading participants for conversation:', conversationId);
-      
       const participants = await ConversationsService.loadParticipants(conversationId);
-      
-      console.log('📥 Loaded participants:', participants);
       setParticipants(participants);
     } catch (error: any) {
       console.error('Error loading participants:', error);
@@ -119,8 +107,6 @@ export const useConversations = (options: UseConversationsOptions) => {
     try {
       setSending(true);
       setError(null);
-      
-      console.log('📤 Sending message to conversation:', conversationId);
       
       const params: SendMessageParams = {
         conversationId,
@@ -145,8 +131,6 @@ export const useConversations = (options: UseConversationsOptions) => {
 
   // Create a new conversation
   const createConversation = useCallback(async (params: CreateConversationParams) => {
-    console.log('🚀 createConversation called with:', params);
-    
     try {
       setLoading(true);
       setError(null);
@@ -170,8 +154,6 @@ export const useConversations = (options: UseConversationsOptions) => {
 
   // Add participant to conversation
   const addParticipant = useCallback(async (params: AddParticipantParams) => {
-    console.log('👤 addParticipant called with:', params);
-    
     try {
       setLoading(true);
       setError(null);
@@ -195,8 +177,6 @@ export const useConversations = (options: UseConversationsOptions) => {
 
   // Mark conversation as read
   const markAsRead = useCallback(async (conversationId: string) => {
-    console.log('✅ markAsRead called with:', conversationId);
-    
     try {
       setError(null);
       

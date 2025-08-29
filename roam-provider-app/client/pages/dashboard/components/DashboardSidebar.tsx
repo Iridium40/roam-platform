@@ -31,7 +31,7 @@ const navigationItems = [
   },
   {
     id: "staff",
-    label: "Staff",
+    label: "Staff Management",
     icon: Users,
     description: "Manage team members and roles",
     badge: "5",
@@ -82,6 +82,9 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
   isMobileOpen,
   onMobileClose,
 }) => {
+  // Debug: Log navigation items
+  console.log('Navigation items:', navigationItems.map(item => ({ id: item.id, label: item.label })));
+  console.log('Active tab:', activeTab);
   return (
     <>
       {/* Mobile overlay */}
@@ -99,6 +102,7 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
           transform transition-transform duration-200 ease-in-out
           ${isMobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
         `}
+        style={{ minHeight: '100vh' }}
       >
         <div className="flex flex-col h-full">
           {/* Mobile close button */}
@@ -110,10 +114,16 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 p-4 space-y-2">
+          <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+            {/* Debug: Show total navigation items */}
+            <div className="text-xs text-gray-500 mb-2">
+              Total items: {navigationItems.length}
+            </div>
             {navigationItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
+
+              console.log('Rendering navigation item:', item.id, item.label);
 
               return (
                 <Button
@@ -122,6 +132,7 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
                   className={`
                     w-full justify-start h-auto p-3
                     ${isActive ? "bg-primary text-primary-foreground" : "hover:bg-gray-100"}
+                    ${item.id === 'staff' ? 'border-2 border-red-500' : ''}
                   `}
                   onClick={() => onTabChange(item.id)}
                 >
