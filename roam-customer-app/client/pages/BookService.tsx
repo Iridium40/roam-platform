@@ -41,7 +41,64 @@ interface Business {
   image_url?: string;
   rating: number;
   review_count: number;
+  delivery_types?: string[];
 }
+
+// Helper functions for delivery types
+const getDeliveryTypes = (business: Business): string[] => {
+  // If business has explicit delivery types, use them
+  if (business.delivery_types?.length) {
+    return business.delivery_types;
+  }
+
+  // Otherwise, determine based on business type/name (intelligent defaults)
+  const businessName = business.business_name.toLowerCase();
+  const description = business.description?.toLowerCase() || '';
+
+  // Mobile services (likely to travel to customers)
+  if (businessName.includes('mobile') ||
+      businessName.includes('home') ||
+      businessName.includes('house') ||
+      description.includes('mobile') ||
+      description.includes('your location') ||
+      description.includes('on-site')) {
+    return ['mobile', 'business_location'];
+  }
+
+  // Virtual services (online consultations, therapy, etc.)
+  if (businessName.includes('virtual') ||
+      businessName.includes('online') ||
+      businessName.includes('telehealth') ||
+      businessName.includes('consultation') ||
+      description.includes('virtual') ||
+      description.includes('video call')) {
+    return ['virtual', 'business_location'];
+  }
+
+  // Default: most businesses offer services at their location
+  // Some also offer mobile services
+  return ['business_location', 'mobile'];
+};
+
+const getDeliveryTypeLabel = (type: string): string => {
+  const labels: Record<string, string> = {
+    mobile: 'Mobile Service',
+    business_location: 'Business Location',
+    virtual: 'Virtual/Online',
+    both: 'Mobile & Business'
+  };
+  return labels[type] || type;
+};
+
+const getDeliveryTypeIcon = (type: string) => {
+  const icons: Record<string, any> = {
+    mobile: Truck,
+    business_location: Building,
+    virtual: Video,
+    both: Smartphone
+  };
+  return icons[type] || Smartphone;
+};
 
 interface Provider {
   id: string;
