@@ -620,7 +620,7 @@ export default function ProviderDashboard() {
                 alt="ROAM"
                 className="h-8 w-auto"
               />
-              <span className="text-lg font-semibold text-gray-900">Provider Management</span>
+              <span className="text-lg font-semibold text-gray-900"> Provider Management</span>
             </div>
             
             {/* Desktop Navigation */}
