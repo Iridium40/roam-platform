@@ -137,8 +137,20 @@
       "destination": "/api/system-config-test.ts"
     },
     {
+      "source": "/api/auth",
+      "destination": "/api/auth/index.ts"
+    },
+    {
       "source": "/api/auth/signup",
       "destination": "/api/auth/signup.ts"
+    },
+    {
+      "source": "/api/mfa",
+      "destination": "/api/mfa/index.ts"
+    },
+    {
+      "source": "/api/bookings/create",
+      "destination": "/api/bookings/create.ts"
     },
     {
       "source": "/api/admin/delete-test-user",
