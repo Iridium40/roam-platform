@@ -311,6 +311,12 @@ export default function BookService() {
       selectedTimeType: typeof selectedTime
     });
 
+    // Show loading state to user
+    toast({
+      title: "Loading businesses...",
+      description: "Finding available providers for your selected time",
+    });
+
     if (!serviceId) {
       console.log('❌ Missing serviceId');
       return;
