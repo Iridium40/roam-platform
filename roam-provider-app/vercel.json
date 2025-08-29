@@ -104,6 +104,10 @@
       "destination": "/api/business-eligible-services.ts"
     },
     {
+      "source": "/api/business/tax-info",
+      "destination": "/api/business/tax-info.ts"
+    },
+    {
       "source": "/api/plaid/create-link-token",
       "destination": "/api/plaid/create-link-token.ts"
     },
