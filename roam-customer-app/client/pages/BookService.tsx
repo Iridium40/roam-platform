@@ -138,6 +138,12 @@ export default function BookService() {
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
   const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null);
 
+  // Business sorting and filtering
+  const [sortBy, setSortBy] = useState<'price' | 'rating' | 'delivery_type'>('price');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [allBusinesses, setAllBusinesses] = useState<Business[]>([]); // Store all businesses
+  const [filteredAndSortedBusinesses, setFilteredAndSortedBusinesses] = useState<Business[]>([]); // Display these
+
   // Time slots data
   const timeSlots = [
     { value: '09:00', label: '9:00 AM', period: 'Morning' },
