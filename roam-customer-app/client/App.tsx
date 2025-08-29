@@ -30,6 +30,7 @@ const Index = lazy(() => import("./pages/Index"));
 const MyBookings = lazy(() => import("./pages/MyBookings"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const BookService = lazy(() => import("./pages/BookService"));
+const BookingSuccess = lazy(() => import("./pages/BookingSuccess"));
 const BusinessProfile = lazy(() => import("./pages/BusinessProfile"));
 const About = lazy(() => import("./pages/About"));
 const Contact = lazy(() => import("./pages/Contact"));
