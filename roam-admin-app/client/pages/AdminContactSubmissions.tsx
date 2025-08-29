@@ -318,7 +318,17 @@ export default function AdminContactSubmissions() {
   };
 
   // Handle view submission
-  const handleViewSubmission = (submission: ContactSubmission) => {
+  const handleViewSubmission = (submission: ContactSubmission | undefined | null) => {
+    if (!submission) {
+      console.error("Cannot view submission: submission is undefined or null");
+      toast({
+        title: "Error",
+        description: "Cannot view submission: invalid data",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setSelectedSubmission(submission);
     setIsViewDialogOpen(true);
   };
