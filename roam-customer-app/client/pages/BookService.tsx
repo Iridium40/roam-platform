@@ -15,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
-type BookingStep = 'datetime' | 'business' | 'provider' | 'summary';
+type BookingStep = 'datetime' | 'business' | 'provider' | 'summary' | 'checkout';
 
 interface Promotion {
   id: string;
