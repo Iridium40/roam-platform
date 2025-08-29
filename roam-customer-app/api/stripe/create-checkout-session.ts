@@ -45,9 +45,75 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
+    // Pull authoritative pricing from Supabase - never trust client data
+    const { data: businessService, error: businessServiceError } = await supabase
+      .from('business_services')
+      .select(`
+        business_price,
+        delivery_type,
+        is_active,
+        services:service_id (
+          id,
+          name,
+          description,
+          min_price,
+          duration_minutes
+        )
+      `)
+      .eq('business_id', businessId)
+      .eq('service_id', serviceId)
+      .eq('is_active', true)
+      .single();
+
+    if (businessServiceError || !businessService) {
+      return res.status(404).json({
+        error: 'Service not available from this business'
+      });
+    }
+
+    // Validate service pricing
+    const service = businessService.services as any;
+    const servicePrice = businessService.business_price;
+
+    if (servicePrice < service.min_price) {
+      return res.status(400).json({
+        error: `Invalid pricing configuration for ${service.name}`
+      });
+    }
+
+    // Calculate platform fee (server-side calculation)
+    const platformFeePercentage = 0.029; // 2.9% platform fee
+    const serviceFee = servicePrice * platformFeePercentage;
+
+    // Apply any promotions (server-side validation)
+    let discountApplied = 0;
+    if (promotionId) {
+      const { data: promotion } = await supabase
+        .from('promotions')
+        .select('discount_value, discount_type, is_active, max_uses, current_uses')
+        .eq('id', promotionId)
+        .eq('is_active', true)
+        .single();
+
+      if (promotion && promotion.current_uses < promotion.max_uses) {
+        if (promotion.discount_type === 'percentage') {
+          discountApplied = servicePrice * (promotion.discount_value / 100);
+        } else {
+          discountApplied = promotion.discount_value;
+        }
+      }
+    }
+
+    // Calculate final total (server-side)
+    const totalAmount = servicePrice + serviceFee - discountApplied;
+
+    if (totalAmount <= 0) {
+      return res.status(400).json({ error: 'Invalid total amount' });
+    }
+
     // Get or create Stripe customer
     let stripeCustomerId: string;
-    
+
     // Check if customer already has a Stripe profile
     const { data: existingProfile } = await supabase
       .from('customer_stripe_profiles')
@@ -59,7 +125,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       stripeCustomerId = existingProfile.stripe_customer_id;
     } else {
       // Create new Stripe customer
-      const stripe = stripeService.getStripe();
       const customer = await stripe.customers.create({
         email: guestEmail,
         name: guestName,
