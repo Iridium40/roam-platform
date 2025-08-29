@@ -90,6 +90,9 @@ export default function BookingsTab({
         future.push(b);
       } else if (dateStr <= todayStr && presentSet.has(status)) {
         present.push(b);
+      } else {
+        if (dateStr > todayStr) future.push(b);
+        else present.push(b);
       }
     });
 
@@ -505,6 +508,13 @@ export default function BookingsTab({
               </div>
             )}
 
+            {presentBookings.length === 0 && (
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 mb-2">Present</h2>
+                <Card className="p-4 text-center text-sm text-gray-500">No Present bookings.</Card>
+              </div>
+            )}
+
             {futureBookings.length > 0 && (
               <div>
                 <h2 className="text-lg font-semibold text-gray-900 mb-2">Future</h2>
@@ -677,6 +687,13 @@ export default function BookingsTab({
               </div>
             )}
 
+            {futureBookings.length === 0 && (
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 mb-2">Future</h2>
+                <Card className="p-4 text-center text-sm text-gray-500">No Future bookings.</Card>
+              </div>
+            )}
+
             {pastBookings.length > 0 && (
               <div>
                 <h2 className="text-lg font-semibold text-gray-900 mb-2">Past</h2>
@@ -846,6 +863,13 @@ export default function BookingsTab({
                     </Card>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {pastBookings.length === 0 && (
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 mb-2">Past</h2>
+                <Card className="p-4 text-center text-sm text-gray-500">No Past bookings.</Card>
               </div>
             )}
           </>
