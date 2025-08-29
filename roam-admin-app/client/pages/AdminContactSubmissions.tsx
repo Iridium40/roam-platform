@@ -156,8 +156,17 @@ export default function AdminContactSubmissions() {
 
       if (error) throw error;
 
-      setSubmissions(data || []);
-      calculateStats(data || []);
+      // Ensure all submissions have default values for required fields
+      const sanitizedData = (data || []).map(submission => ({
+        ...submission,
+        status: submission.status || "received",
+        full_name: submission.full_name || null,
+        category: submission.category || null,
+        notes: submission.notes || null
+      }));
+
+      setSubmissions(sanitizedData);
+      calculateStats(sanitizedData);
     } catch (error: any) {
       console.error("Error fetching contact submissions:", {
         error,
