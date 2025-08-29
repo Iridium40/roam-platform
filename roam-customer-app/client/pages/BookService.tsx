@@ -726,9 +726,9 @@ export default function BookService() {
 
   const calculateDiscountedPrice = () => {
     if (!service || !promotion) return service?.min_price || 0;
-    
+
     const originalPrice = service.min_price;
-    
+
     if (promotion.savingsType === 'percentage_off') {
       const discount = (originalPrice * promotion.savingsAmount) / 100;
       const maxDiscount = promotion.savingsMaxAmount || discount;
@@ -737,8 +737,21 @@ export default function BookService() {
     } else if (promotion.savingsType === 'fixed_amount') {
       return Math.max(originalPrice - promotion.savingsAmount, 0);
     }
-    
+
     return originalPrice;
+  };
+
+  // Calculate service fee based on platform fee percentage
+  const calculateServiceFee = () => {
+    const basePrice = calculateDiscountedPrice();
+    return (basePrice * platformFeePercentage) / 100;
+  };
+
+  // Calculate total price including service fee
+  const calculateTotalWithFees = () => {
+    const basePrice = calculateDiscountedPrice();
+    const serviceFee = calculateServiceFee();
+    return basePrice + serviceFee;
   };
 
   const handleCheckout = () => {
