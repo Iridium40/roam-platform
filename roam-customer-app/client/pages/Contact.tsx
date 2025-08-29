@@ -51,11 +51,20 @@ export default function Contact() {
         body: JSON.stringify(formData),
       });
 
-      const result = await response.json();
-
+      // Check response status first before reading body
       if (!response.ok) {
-        throw new Error(result.error || 'Failed to submit contact form');
+        let errorMessage = 'Failed to submit contact form';
+        try {
+          const errorResult = await response.json();
+          errorMessage = errorResult.error || errorMessage;
+        } catch {
+          // If we can't parse the error response, use the default message
+        }
+        throw new Error(errorMessage);
       }
+
+      // Only read the body if response is ok
+      const result = await response.json();
 
       toast({
         title: "Message Sent Successfully!",
