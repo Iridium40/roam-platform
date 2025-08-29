@@ -117,11 +117,13 @@ const sortAndFilterBusinesses = (businesses: Business[], sortBy: string, sortOrd
         return sortOrder === 'asc' ? a.rating - b.rating : b.rating - a.rating;
 
       case 'delivery_type':
-        const deliveryA = getDeliveryTypes(a).join(',');
-        const deliveryB = getDeliveryTypes(b).join(',');
-        return sortOrder === 'asc'
-          ? deliveryA.localeCompare(deliveryB)
-          : deliveryB.localeCompare(deliveryA);
+        // Sort by delivery type priority: mobile -> business_location -> virtual
+        const deliveryPriority = { mobile: 1, business_location: 2, virtual: 3 };
+        const primaryDeliveryA = getDeliveryTypes(a)[0] || 'business_location';
+        const primaryDeliveryB = getDeliveryTypes(b)[0] || 'business_location';
+        const priorityA = deliveryPriority[primaryDeliveryA as keyof typeof deliveryPriority] || 999;
+        const priorityB = deliveryPriority[primaryDeliveryB as keyof typeof deliveryPriority] || 999;
+        return sortOrder === 'asc' ? priorityA - priorityB : priorityB - priorityA;
 
       default:
         return 0;
