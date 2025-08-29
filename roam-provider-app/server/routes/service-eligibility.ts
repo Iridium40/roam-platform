@@ -40,7 +40,14 @@ interface BusinessServiceSubcategory {
     id: string;
     service_subcategory_type: string;
     description?: string;
+    category_id?: string;
     is_active: boolean;
+    service_categories?: {
+      id: string;
+      service_category_type: string;
+      description?: string;
+      is_active: boolean;
+    };
   };
   service_categories?: {
     id: string;
@@ -160,7 +167,14 @@ export const getServiceEligibility: RequestHandler = async (req, res) => {
             id,
             service_subcategory_type,
             description,
-            is_active
+            category_id,
+            is_active,
+            service_categories:category_id (
+              id,
+              service_category_type,
+              description,
+              is_active
+            )
           ),
           service_categories:category_id (
             id,
