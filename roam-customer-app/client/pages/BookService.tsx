@@ -186,6 +186,9 @@ export default function BookService() {
   const [allBusinesses, setAllBusinesses] = useState<Business[]>([]); // Store all businesses
   const [filteredAndSortedBusinesses, setFilteredAndSortedBusinesses] = useState<Business[]>([]); // Display these
 
+  // Platform fee configuration
+  const [platformFeePercentage, setPlatformFeePercentage] = useState<number>(0);
+
   // Time slots data
   const timeSlots = [
     { value: '09:00', label: '9:00 AM', period: 'Morning' },
