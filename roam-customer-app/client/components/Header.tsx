@@ -1,14 +1,22 @@
 import { Button } from "@/components/ui/button";
 import { Menu, X, Calendar } from "lucide-react";
-import { useState, useCallback } from "react";
+import { useState, useCallback, Suspense, lazy } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { EdgeNotificationCenter } from "@/components/EdgeNotificationCenter";
 import { CustomerAvatarDropdown } from "@/components/CustomerAvatarDropdown";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSystemConfig } from "@/hooks/useSystemConfig";
 
+// Lazy load the auth modal
+const CustomerAuthModal = lazy(() =>
+  import("@/components/CustomerAuthModal").then(module => ({
+    default: module.CustomerAuthModal
+  }))
+);
+
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
   const { customer, isAuthenticated } = useAuth();
   const { siteLogo } = useSystemConfig();
   const navigate = useNavigate();
@@ -18,8 +26,8 @@ export function Header() {
       // Navigate to my bookings
       navigate("/my-bookings");
     } else {
-      // Navigate to sign-in page
-      navigate("/sign-in");
+      // Open sign-in modal
+      setAuthModalOpen(true);
     }
   }, [isAuthenticated, navigate]);
 
