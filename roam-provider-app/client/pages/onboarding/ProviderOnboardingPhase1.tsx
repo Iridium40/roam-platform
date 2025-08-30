@@ -19,6 +19,9 @@ import { ProviderSignupForm } from "@/components/ProviderSignupForm";
 import { BusinessInfoForm } from "@/components/BusinessInfoForm";
 import { DocumentUploadForm } from "@/components/DocumentUploadForm";
 import { ApplicationReviewPage } from "@/components/ApplicationReviewPage";
+
+// Import utilities
+import { postJson } from "@/lib/api-utils";
 import { useAuth } from "@/contexts/auth/AuthProvider";
 
 type Phase1Step = "signup" | "business_info" | "documents" | "review" | "submitted";
@@ -127,22 +130,20 @@ export default function ProviderOnboardingPhase1() {
       setLoading(true);
       setError(null);
 
-      // Create user account
-      const response = await fetch("/api/auth/signup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(signupData),
+      console.log("Starting signup process for:", signupData.email);
+      console.log("Signup data keys:", Object.keys(signupData));
+
+      // Create user account using the safe API utility
+      const response = await postJson("/api/auth/signup", signupData);
+
+      console.log("Signup API response:", {
+        success: response.success,
+        status: response.status,
+        hasData: !!response.data,
+        hasError: !!response.error
       });
 
-      let result;
-      try {
-        result = await response.json();
-      } catch (parseError) {
-        console.error("Failed to parse response JSON:", parseError);
-        throw new Error("Server response was not valid JSON");
-      }
-
-      if (!response.ok) {
+      if (!response.success) {
         // Handle specific error cases
         if (response.status === 409) {
           console.log(
@@ -152,14 +153,27 @@ export default function ProviderOnboardingPhase1() {
             "An account with this email already exists. Please use a different email or try logging in.",
           );
         }
-        throw new Error(result.error || "Failed to create account");
+
+        // Log the full error response for debugging
+        console.error("Signup failed with response:", response);
+        throw new Error(response.error || "Failed to create account");
       }
 
+      const result = response.data;
+      console.log("Signup successful:", { userId: result?.user?.id, email: result?.user?.email });
+
       // Validate result structure
+      if (!result) {
+        console.error("No data in successful response");
+        throw new Error("Invalid response: no data returned");
+      }
+
       if (!result.user || !result.user.id) {
+        console.error("Invalid user data in response:", result);
         throw new Error("Invalid response: missing user data");
       }
 
+      console.log("Setting onboarding state to business_info phase");
       setOnboardingState((prev) => ({
         ...prev,
         phase1Step: "business_info",
@@ -167,9 +181,20 @@ export default function ProviderOnboardingPhase1() {
         userId: result.user.id,
       }));
     } catch (error) {
-      setError(
-        error instanceof Error ? error.message : "Failed to create account",
-      );
+      console.error("Signup error:", error);
+      console.error("Error stack:", error instanceof Error ? error.stack : "No stack available");
+
+      let errorMessage = "Failed to create account";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === "string") {
+        errorMessage = error;
+      } else {
+        console.error("Unknown error type:", typeof error, error);
+        errorMessage = "An unexpected error occurred during signup";
+      }
+
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

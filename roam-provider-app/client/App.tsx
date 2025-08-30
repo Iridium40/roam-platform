@@ -33,6 +33,7 @@ import SignIn from "./pages/SignIn";
 import Phase2Entry from "./pages/onboarding/Phase2Entry";
 import ImageUploadTest from "./pages/testing/ImageUploadTest";
 import Phase2Test from "./pages/onboarding/Phase2Test";
+import StaffOnboarding from "./pages/StaffOnboarding";
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 
@@ -62,6 +63,8 @@ const App = () => (
             <Route path="/image-upload-test" element={<ImageUploadTest />} />
             <Route path="/phase2-test" element={<Phase2Test />} />
 
+            {/* Staff Onboarding (Public route) */}
+            <Route path="/staff-onboarding" element={<StaffOnboarding />} />
 
             {/* Protected routes - any authenticated provider */}
             <Route

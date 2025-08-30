@@ -5,8 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
-import { Avatar, AvatarContent, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -16,7 +15,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -58,8 +56,9 @@ import {
   Settings,
   Send,
 } from "lucide-react";
-import { useAuth } from "@/contexts/auth/AuthProvider";
+import { useProviderAuth } from "@/contexts/auth/ProviderAuthContext";
 import { supabase } from "@/lib/supabase";
+import { useToast } from "@/hooks/use-toast";
 import type {
   Provider,
   BusinessLocation,
@@ -72,16 +71,6 @@ interface StaffManagerProps {
   locations: BusinessLocation[];
 }
 
-interface NewStaffMember {
-  first_name: string;
-  last_name: string;
-  email: string;
-  phone: string;
-  provider_role: ProviderRole;
-  location_id: string;
-  bio?: string;
-  experience_years?: number;
-}
 
 interface StaffMemberWithStats extends Provider {
   location_name?: string;
@@ -131,28 +120,18 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
   businessId,
   locations,
 }) => {
-  const { user, isOwner, isDispatcher } = useAuth();
+  const { provider: user, isOwner, isDispatcher } = useProviderAuth();
+  const { toast } = useToast();
   const [staff, setStaff] = useState<StaffMemberWithStats[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedStaff, setSelectedStaff] =
     useState<StaffMemberWithStats | null>(null);
   const [activeTab, setActiveTab] = useState("all");
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<ProviderRole>("provider");
-  const [inviteLocation, setInviteLocation] = useState("");
+  const [inviteLocation, setInviteLocation] = useState("no-location");
 
-  const [newStaff, setNewStaff] = useState<NewStaffMember>({
-    first_name: "",
-    last_name: "",
-    email: "",
-    phone: "",
-    provider_role: "provider",
-    location_id: "",
-    bio: "",
-    experience_years: 0,
-  });
 
   useEffect(() => {
     fetchStaff();
@@ -217,38 +196,6 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
     }
   };
 
-  const handleAddStaff = async () => {
-    try {
-      const { error } = await supabase.from("providers").insert({
-        ...newStaff,
-        business_id: businessId,
-        verification_status: "pending",
-        is_active: false, // Will be activated after email verification
-        business_managed: true, // Default to true
-      });
-
-      if (error) throw error;
-
-      // Send invitation email (in real app)
-      console.log("Invitation email would be sent to:", newStaff.email);
-
-      setIsAddDialogOpen(false);
-      setNewStaff({
-        first_name: "",
-        last_name: "",
-        email: "",
-        phone: "",
-        provider_role: "provider",
-        location_id: "",
-        bio: "",
-        experience_years: 0,
-      });
-
-      await fetchStaff();
-    } catch (error) {
-      console.error("Error adding staff member:", error);
-    }
-  };
 
   const handleUpdateStaff = async () => {
     if (!selectedStaff) return;
@@ -307,33 +254,57 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
   };
 
   const sendInvite = async () => {
-    if (!inviteEmail || !inviteRole || !inviteLocation) return;
+    if (!inviteEmail || !inviteRole) return;
 
     try {
-      // Create pending staff member
-      const { error } = await supabase.from("providers").insert({
-        first_name: "Pending",
-        last_name: "Invite",
-        email: inviteEmail,
-        phone: "",
-        provider_role: inviteRole,
-        location_id: inviteLocation,
-        business_id: businessId,
-        verification_status: "pending",
-        is_active: false,
-        business_managed: true, // Default to true
+      // Get current user info for the invitation
+      const currentUser = user;
+      const invitedBy = currentUser
+        ? `${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim()
+        : 'ROAM Team';
+
+      // Call the staff invitation API
+      const response = await fetch('/api/staff/invite', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          businessId: businessId,
+          email: inviteEmail,
+          role: inviteRole,
+          locationId: inviteLocation === "no-location" ? null : inviteLocation,
+          invitedBy: invitedBy || 'ROAM Team',
+        }),
       });
 
-      if (error) throw error;
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to send invitation');
+      }
+
+      // Show success message
+      toast({
+        title: "Invitation Sent!",
+        description: `Staff invitation has been sent to ${inviteEmail}`,
+        variant: "default",
+      });
 
       // Reset form
       setInviteEmail("");
       setInviteRole("provider");
-      setInviteLocation("");
+      setInviteLocation("no-location");
 
+      // Refresh staff list
       await fetchStaff();
     } catch (error) {
       console.error("Error sending invite:", error);
+      toast({
+        title: "Failed to Send Invitation",
+        description: error instanceof Error ? error.message : 'Unknown error occurred',
+        variant: "destructive",
+      });
     }
   };
 
@@ -403,194 +374,16 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
           </p>
         </div>
 
-        {(isOwner || isDispatcher) && (
-          <div className="flex gap-2">
-            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="bg-roam-blue hover:bg-roam-blue/90">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Staff Member
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle>Add New Staff Member</DialogTitle>
-                  <DialogDescription>
-                    Add a new team member to your business.
-                  </DialogDescription>
-                </DialogHeader>
-
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="firstName">First Name *</Label>
-                      <Input
-                        id="firstName"
-                        value={newStaff.first_name}
-                        onChange={(e) =>
-                          setNewStaff({
-                            ...newStaff,
-                            first_name: e.target.value,
-                          })
-                        }
-                        placeholder="John"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="lastName">Last Name *</Label>
-                      <Input
-                        id="lastName"
-                        value={newStaff.last_name}
-                        onChange={(e) =>
-                          setNewStaff({
-                            ...newStaff,
-                            last_name: e.target.value,
-                          })
-                        }
-                        placeholder="Doe"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email Address *</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={newStaff.email}
-                      onChange={(e) =>
-                        setNewStaff({ ...newStaff, email: e.target.value })
-                      }
-                      placeholder="john@example.com"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Phone Number *</Label>
-                    <Input
-                      id="phone"
-                      type="tel"
-                      value={newStaff.phone}
-                      onChange={(e) =>
-                        setNewStaff({ ...newStaff, phone: e.target.value })
-                      }
-                      placeholder="(555) 123-4567"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="role">Role *</Label>
-                      <Select
-                        value={newStaff.provider_role}
-                        onValueChange={(value) =>
-                          setNewStaff({
-                            ...newStaff,
-                            provider_role: value as ProviderRole,
-                          })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {roleOptions.map((role) => (
-                            <SelectItem key={role.value} value={role.value}>
-                              <div className="flex items-center gap-2">
-                                <role.icon className="w-4 h-4" />
-                                {role.label}
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="location">Location *</Label>
-                      <Select
-                        value={newStaff.location_id}
-                        onValueChange={(value) =>
-                          setNewStaff({ ...newStaff, location_id: value })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select location" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {locations.map((location) => (
-                            <SelectItem key={location.id} value={location.id}>
-                              {location.location_name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="bio">Bio (Optional)</Label>
-                    <Textarea
-                      id="bio"
-                      value={newStaff.bio}
-                      onChange={(e) =>
-                        setNewStaff({ ...newStaff, bio: e.target.value })
-                      }
-                      placeholder="Professional background and specialties..."
-                      rows={3}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="experience">Years of Experience</Label>
-                    <Input
-                      id="experience"
-                      type="number"
-                      min="0"
-                      max="50"
-                      value={newStaff.experience_years}
-                      onChange={(e) =>
-                        setNewStaff({
-                          ...newStaff,
-                          experience_years: parseInt(e.target.value) || 0,
-                        })
-                      }
-                    />
-                  </div>
-                </div>
-
-                <DialogFooter>
-                  <Button
-                    variant="outline"
-                    onClick={() => setIsAddDialogOpen(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={handleAddStaff}
-                    disabled={
-                      !newStaff.first_name ||
-                      !newStaff.last_name ||
-                      !newStaff.email ||
-                      !newStaff.phone ||
-                      !newStaff.location_id
-                    }
-                    className="bg-roam-blue hover:bg-roam-blue/90"
-                  >
-                    Add Staff Member
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </div>
-        )}
       </div>
 
-      {/* Quick Invite */}
+      {/* Add Staff */}
       {(isOwner || isDispatcher) && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Quick Invite</CardTitle>
+            <CardTitle className="text-lg">Add Staff Member</CardTitle>
+            <p className="text-sm text-foreground/60">
+              Send an invitation email to add a new team member
+            </p>
           </CardHeader>
           <CardContent>
             <div className="flex gap-2">
@@ -620,6 +413,7 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
                   <SelectValue placeholder="Location" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="no-location">No specific location</SelectItem>
                   {locations.map((location) => (
                     <SelectItem key={location.id} value={location.id}>
                       {location.location_name}
@@ -629,7 +423,7 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
               </Select>
               <Button
                 onClick={sendInvite}
-                disabled={!inviteEmail || !inviteRole || !inviteLocation}
+                disabled={!inviteEmail || !inviteRole}
                 className="bg-roam-blue hover:bg-roam-blue/90"
               >
                 <Send className="w-4 h-4 mr-2" />
@@ -685,19 +479,14 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center gap-3">
                         <Avatar>
-                          <AvatarContent>
-                            {member.image_url ? (
-                              <img
-                                src={member.image_url}
-                                alt={`${member.first_name} ${member.last_name}`}
-                              />
-                            ) : (
-                              <AvatarFallback>
-                                {member.first_name[0]}
-                                {member.last_name[0]}
-                              </AvatarFallback>
-                            )}
-                          </AvatarContent>
+                          <AvatarImage
+                            src={member.image_url}
+                            alt={`${member.first_name} ${member.last_name}`}
+                          />
+                          <AvatarFallback>
+                            {member.first_name[0]}
+                            {member.last_name[0]}
+                          </AvatarFallback>
                         </Avatar>
                         <div>
                           <h4 className="font-semibold">

@@ -46,6 +46,7 @@ import {
   ShieldCheck,
   Briefcase,
   Wrench,
+  MessageSquare,
 } from "lucide-react";
 
 interface NavItem {
@@ -120,6 +121,11 @@ const navigationSections: NavSection[] = [
         href: "/admin/bookings",
         icon: <Calendar className="w-5 h-5" />,
         label: "Bookings",
+      },
+      {
+        href: "/admin/contact-submissions",
+        icon: <MessageSquare className="w-5 h-5" />,
+        label: "Contact Submissions",
       },
       {
         href: "/admin/promotions",

@@ -30,6 +30,10 @@ import {
   Share2,
   Shield,
   Eye,
+  Tags,
+  CheckCircle,
+  Calendar,
+  Info,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
@@ -39,6 +43,57 @@ import BusinessDocumentUploadForm from "@/components/BusinessDocumentUploadForm"
 interface BusinessSettingsTabProps {
   providerData: any;
   business: any;
+}
+
+interface ServiceCategory {
+  id: string;
+  service_category_type: string;
+  description?: string;
+  is_active: boolean;
+}
+
+interface ServiceSubcategory {
+  id: string;
+  service_subcategory_type: string;
+  description?: string;
+  is_active: boolean;
+}
+
+interface BusinessServiceCategory {
+  id: string;
+  business_id: string;
+  category_id: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  service_categories?: ServiceCategory;
+}
+
+interface BusinessServiceSubcategory {
+  id: string;
+  business_id: string;
+  subcategory_id: string;
+  category_id: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  service_subcategories?: ServiceSubcategory;
+  service_categories?: ServiceCategory;
+}
+
+interface ServiceEligibilityData {
+  business_id: string;
+  approved_categories: BusinessServiceCategory[];
+  approved_subcategories: BusinessServiceSubcategory[];
+  subcategories_by_category: Record<string, BusinessServiceSubcategory[]>;
+  stats: {
+    total_categories: number;
+    total_subcategories: number;
+    categories_with_subcategories: number;
+    available_services_count: number;
+    last_updated: number | null;
+  };
+  last_fetched: string;
 }
 
 export default function BusinessSettingsTab({
@@ -78,6 +133,11 @@ export default function BusinessSettingsTab({
   const [showDocumentUploadModal, setShowDocumentUploadModal] = useState(false);
   const [businessDocuments, setBusinessDocuments] = useState<any[]>([]);
   const [documentsLoading, setDocumentsLoading] = useState(false);
+
+  // Service Eligibility State
+  const [serviceEligibility, setServiceEligibility] = useState<ServiceEligibilityData | null>(null);
+  const [eligibilityLoading, setEligibilityLoading] = useState(false);
+  const [eligibilityError, setEligibilityError] = useState<string | null>(null);
   const [locationForm, setLocationForm] = useState({
     location_name: "",
     address_line1: "",
@@ -92,6 +152,131 @@ export default function BusinessSettingsTab({
     offers_mobile_services: false,
     mobile_service_radius: 25,
   });
+
+  // Load service eligibility data
+  const loadServiceEligibility = async (checkMounted?: () => boolean) => {
+    if (!business?.id) {
+      console.warn('loadServiceEligibility: No business ID available');
+      return;
+    }
+
+    try {
+      setEligibilityLoading(true);
+      setEligibilityError(null);
+
+      console.log('Loading service eligibility for business:', business.id);
+
+      // Get the access token from localStorage or Supabase session
+      const { supabase } = await import('@/lib/supabase');
+      const { data: { session } } = await supabase.auth.getSession();
+      const accessToken = session?.access_token || localStorage.getItem('roam_access_token');
+
+      console.log('Service eligibility auth debug:', {
+        hasSession: !!session,
+        hasSessionToken: !!session?.access_token,
+        hasStoredToken: !!localStorage.getItem('roam_access_token'),
+        tokenSource: session?.access_token ? 'session' : 'localStorage',
+        tokenLength: accessToken?.length,
+        businessId: business.id
+      });
+
+      if (!accessToken) {
+        throw new Error('Authentication required. Please sign in again.');
+      }
+
+      const response = await fetch(`/api/business/service-eligibility?business_id=${business.id}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+      });
+
+      // Check if component is still mounted before proceeding
+      if (checkMounted && !checkMounted()) {
+        console.log('Component unmounted, aborting service eligibility load');
+        return;
+      }
+
+      // Check if response is ok before trying to parse JSON
+      if (!response.ok) {
+        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+
+        // Try to parse error response if it's JSON
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch (parseError) {
+          // If we can't parse the error response, use the status text
+          console.warn('Could not parse error response:', parseError);
+        }
+
+        throw new Error(errorMessage);
+      }
+
+      // Parse the successful response
+      const responseData = await response.json();
+
+      if (!responseData) {
+        throw new Error('No data received from server');
+      }
+
+      // Check if component is still mounted before setting state
+      if (checkMounted && !checkMounted()) {
+        console.log('Component unmounted, not setting service eligibility state');
+        return;
+      }
+
+      console.log('Service eligibility loaded successfully:', {
+        businessId: responseData.business_id,
+        categoriesCount: responseData.approved_categories?.length || 0,
+        subcategoriesCount: responseData.approved_subcategories?.length || 0,
+        debug: responseData._debug
+      });
+
+      // Ensure required fields exist with defaults
+      const normalizedData = {
+        business_id: responseData.business_id || business.id,
+        approved_categories: responseData.approved_categories || [],
+        approved_subcategories: responseData.approved_subcategories || [],
+        subcategories_by_category: responseData.subcategories_by_category || {},
+        stats: {
+          total_categories: 0,
+          total_subcategories: 0,
+          categories_with_subcategories: 0,
+          available_services_count: 0,
+          last_updated: null,
+          ...responseData.stats
+        },
+        last_fetched: responseData.last_fetched || new Date().toISOString()
+      };
+
+      setServiceEligibility(normalizedData);
+
+    } catch (error) {
+      console.error('Error loading service eligibility:', error);
+
+      // Check if component is still mounted before setting error state
+      if (checkMounted && !checkMounted()) {
+        console.log('Component unmounted, not setting error state');
+        return;
+      }
+
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load service eligibility';
+      setEligibilityError(errorMessage);
+
+      toast({
+        title: "Error",
+        description: "Failed to load service eligibility data.",
+        variant: "destructive",
+      });
+    } finally {
+      // Always set loading to false if component is still mounted
+      if (!checkMounted || checkMounted()) {
+        setEligibilityLoading(false);
+      }
+    }
+  };
 
   // Load business documents
   const loadBusinessDocuments = async () => {
@@ -496,10 +681,33 @@ export default function BusinessSettingsTab({
   };
 
   useEffect(() => {
-    loadBusinessData();
-    loadBusinessLocations();
-    loadBusinessDocuments();
-  }, [business]);
+    let mounted = true;
+    const checkMounted = () => mounted;
+
+    const loadData = async () => {
+      if (!mounted) return;
+
+      // Load business data first
+      await loadBusinessData();
+
+      if (!mounted) return;
+      await loadBusinessLocations();
+
+      if (!mounted) return;
+      await loadBusinessDocuments();
+
+      if (!mounted) return;
+      await loadServiceEligibility(checkMounted);
+    };
+
+    if (business?.id) {
+      loadData();
+    }
+
+    return () => {
+      mounted = false;
+    };
+  }, [business?.id]); // Changed dependency to business?.id instead of entire business object
 
   // Show loading state
   if (loading) {
@@ -758,6 +966,216 @@ export default function BusinessSettingsTab({
         </CardContent>
       </Card>
 
+      {/* Approved Service Categories */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <Tags className="w-5 h-5 mr-2" />
+            Approved Service Categories
+          </CardTitle>
+          <p className="text-sm text-gray-600">
+            Service categories and subcategories approved by platform administration for your business
+          </p>
+        </CardHeader>
+        <CardContent>
+          {eligibilityLoading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="text-gray-600 mt-2">Loading service eligibility...</p>
+            </div>
+          ) : eligibilityError ? (
+            <div className="text-center py-8">
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Info className="w-6 h-6 text-red-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Error Loading Service Categories</h3>
+              <p className="text-gray-600 mb-4">{eligibilityError}</p>
+              <Button variant="outline" onClick={() => loadServiceEligibility()}>
+                Try Again
+              </Button>
+            </div>
+          ) : !serviceEligibility || (serviceEligibility.approved_categories.length === 0 && serviceEligibility.approved_subcategories.length === 0) ? (
+            <div className="text-center py-8">
+              <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Tags className="w-6 h-6 text-gray-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">No Service Categories Approved</h3>
+              <p className="text-gray-600 mb-4">
+                Your business doesn't have any approved service categories yet. Contact platform administration to get approved for specific service categories.
+              </p>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
+                <div className="flex items-start space-x-3">
+                  <Info className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                  <div className="text-sm text-blue-800">
+                    <p className="font-medium mb-1">What are service categories?</p>
+                    <p>Service categories determine which types of services you can offer to customers. Each category contains specific subcategories that define the exact services available to your business.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {/* Summary Stats */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                      <Tags className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-blue-600 font-medium">Categories</p>
+                      <p className="text-2xl font-bold text-blue-900">{serviceEligibility.stats.total_categories}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                      <CheckCircle className="w-5 h-5 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-green-600 font-medium">Subcategories</p>
+                      <p className="text-2xl font-bold text-green-900">{serviceEligibility.stats.total_subcategories}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                      <Building className="w-5 h-5 text-purple-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-purple-600 font-medium">Available Services</p>
+                      <p className="text-2xl font-bold text-purple-900">{serviceEligibility.stats.available_services_count}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Last Updated Info */}
+              {serviceEligibility.stats.last_updated && (
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                  <div className="flex items-center space-x-2 text-sm text-gray-600">
+                    <Calendar className="w-4 h-4" />
+                    <span>
+                      Last updated: {new Date(serviceEligibility.stats.last_updated).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Categories and Subcategories */}
+              <div className="space-y-4">
+                {Object.entries(serviceEligibility.subcategories_by_category || {}).map(([categoryId, subcats]: [string, any[]]) => {
+                  const category = subcats?.[0]?.service_categories;
+                  const derivedFromSubcategory = subcats?.[0]?.service_subcategories?.service_categories;
+                  const categoryItem = { id: categoryId, service_categories: category } as any;
+                  // category derived above
+                  const approvedCategory = serviceEligibility.approved_categories.find((c: any) => c?.service_categories?.id === categoryId)?.service_categories;
+                  const displayCategory = category || derivedFromSubcategory || approvedCategory || null;
+
+                  const subcategoriesForThisCategory = subcats || [];
+
+                  return (
+                    <div key={categoryItem.id} className="border border-gray-200 rounded-lg overflow-hidden">
+                      {/* Category Header */}
+                      <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h4 className="font-semibold text-gray-900 text-lg">
+                              {displayCategory?.description || displayCategory?.service_category_type || 'Category'}
+                            </h4>
+                            {displayCategory?.description && (
+                              <p className="text-sm text-gray-600 mt-1">{displayCategory.description}</p>
+                            )}
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-medium">
+                              Approved
+                            </span>
+                            <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+                              {subcategoriesForThisCategory.length} subcategories
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Subcategories */}
+                      {subcategoriesForThisCategory.length > 0 && (
+                        <div className="p-4">
+                          <h5 className="text-sm font-medium text-gray-700 mb-3">Approved Subcategories:</h5>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                            {subcategoriesForThisCategory.map((subcategoryItem) => {
+                              const subcategory = subcategoryItem.service_subcategories;
+                              if (!subcategory) return null;
+
+                              return (
+                                <div
+                                  key={subcategoryItem.id}
+                                  className="bg-white border border-gray-200 rounded-lg p-3 hover:bg-gray-50 transition-colors"
+                                >
+                                  <div className="flex items-start justify-between">
+                                    <div className="flex-1">
+                                      <h6 className="font-medium text-gray-900 text-sm">
+                                        {subcategory.description || subcategory.service_subcategory_type}
+                                      </h6>
+                                      {subcategory.description && (
+                                        <p className="text-xs text-gray-600 mt-1 line-clamp-2">
+                                          {subcategory.description}
+                                        </p>
+                                      )}
+                                    </div>
+                                    <CheckCircle className="w-4 h-4 text-green-600 ml-2 flex-shrink-0" />
+                                  </div>
+                                  <div className="text-xs text-gray-500 mt-2">
+                                    Approved on {new Date(subcategoryItem.created_at).toLocaleDateString()}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* No Subcategories Message */}
+                      {subcategoriesForThisCategory.length === 0 && (
+                        <div className="p-4 text-center">
+                          <p className="text-sm text-gray-500">
+                            No specific subcategories approved for this category yet.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Additional Info */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-start space-x-3">
+                  <Info className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                  <div className="text-sm text-blue-800">
+                    <p className="font-medium mb-1">Service Category Management</p>
+                    <p>
+                      These service categories are managed by platform administration. To request additional categories or subcategories,
+                      please contact support. Only approved categories will allow you to add related services to your business offering.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Business Hours */}
       <Card>
         <CardHeader>
@@ -864,7 +1282,7 @@ export default function BusinessSettingsTab({
               <div className="space-y-2 text-sm text-gray-500">
                 <p>• Professional licenses and certifications</p>
                 <p>• Business registration documents</p>
-                <p>• Liability insurance certificates</p>
+                <p>��� Liability insurance certificates</p>
                 <p>• Proof of address and identification</p>
               </div>
               <Button 

@@ -5,7 +5,7 @@ import { StaffWidget } from "./widgets/StaffWidget";
 import { RevenueWidget } from "./widgets/RevenueWidget";
 import { AnalyticsWidget } from "./widgets/AnalyticsWidget";
 import { LocationWidget } from "./widgets/LocationWidget";
-import { ServiceWidget } from "./widgets/ServiceWidget";
+import ServicesTab from "./ServicesTab";
 import { NotificationWidget } from "./widgets/NotificationWidget";
 import { SettingsWidget } from "./widgets/SettingsWidget";
 
@@ -58,7 +58,7 @@ export const DashboardContent: React.FC<DashboardContentProps> = ({
       case "locations":
         return <LocationWidget data={data.locations} onRefresh={onRefresh} />;
       case "services":
-        return <ServiceWidget onRefresh={onRefresh} />;
+        return <ServicesTab />;
       case "notifications":
         return <NotificationWidget onRefresh={onRefresh} />;
       case "settings":

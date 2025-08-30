@@ -727,7 +727,14 @@ export default function Index() {
 
   // Reset carousel when filters change
   useEffect(() => {
-    setCarouselSlides(prev => ({ ...prev, currentServiceSlide: 0 }));
+    console.log('Resetting carousel due to filter change');
+    setCarouselSlides(prev => ({
+      ...prev,
+      currentServiceSlide: 0,
+      currentPopularSlide: 0,
+      currentPromotionSlide: 0,
+      currentBusinessSlide: 0
+    }));
   }, [selectedCategory, searchQuery, selectedDelivery]);
 
   // Featured Services: paginate into pages of 2 for desktop, 1 for mobile
@@ -740,16 +747,22 @@ export default function Index() {
     return pages;
   }, [filteredFeaturedServices]);
 
-  const nextServiceSlide = () => {
+  const nextServiceSlide = useCallback(() => {
     const maxPage = Math.max(0, servicePages.length - 1);
-    console.log('Next service slide clicked. Current:', currentServiceSlide, 'Max:', maxPage, 'Pages:', servicePages.length, 'ServicePages:', servicePages);
-    setCurrentServiceSlide((prev) => Math.min(prev + 1, maxPage));
-  };
+    const newPage = Math.min(currentServiceSlide + 1, maxPage);
+    console.log('🔄 Next service slide clicked');
+    console.log('📊 Current state:', { currentServiceSlide, maxPage, newPage, servicesCount: filteredFeaturedServices.length, pagesCount: servicePages.length });
+    console.log('📋 Service pages:', servicePages.map((page, i) => ({ pageIndex: i, servicesInPage: page.length })));
+    setCurrentServiceSlide(newPage);
+  }, [currentServiceSlide, servicePages, filteredFeaturedServices.length]);
 
-  const prevServiceSlide = () => {
-    console.log('Prev service slide clicked. Current:', currentServiceSlide);
-    setCurrentServiceSlide((prev) => Math.max(prev - 1, 0));
-  };
+  const prevServiceSlide = useCallback(() => {
+    const newPage = Math.max(currentServiceSlide - 1, 0);
+    console.log('🔄 Prev service slide clicked');
+    console.log('📊 Current state:', { currentServiceSlide, newPage, servicesCount: filteredFeaturedServices.length, pagesCount: servicePages.length });
+    console.log('📋 Service pages:', servicePages.map((page, i) => ({ pageIndex: i, servicesInPage: page.length })));
+    setCurrentServiceSlide(newPage);
+  }, [currentServiceSlide, servicePages, filteredFeaturedServices.length]);
 
   // Most Popular Services: paginate into pages of 3
   const popularPages = useMemo(() => {
@@ -760,16 +773,22 @@ export default function Index() {
     return pages;
   }, [filteredPopularServices]);
 
-  const nextPopularSlide = () => {
+  const nextPopularSlide = useCallback(() => {
     const maxPage = Math.max(0, popularPages.length - 1);
-    console.log('Next popular slide clicked. Current:', currentPopularSlide, 'Max:', maxPage, 'Pages:', popularPages.length);
-    setCurrentPopularSlide((prev) => Math.min(prev + 1, maxPage));
-  };
+    const newPage = Math.min(currentPopularSlide + 1, maxPage);
+    console.log('🔄 Next popular slide clicked');
+    console.log('📊 Popular state:', { currentPopularSlide, maxPage, newPage, servicesCount: filteredPopularServices.length, pagesCount: popularPages.length });
+    console.log('📋 Popular pages:', popularPages.map((page, i) => ({ pageIndex: i, servicesInPage: page.length })));
+    setCurrentPopularSlide(newPage);
+  }, [currentPopularSlide, popularPages, filteredPopularServices.length]);
 
-  const prevPopularSlide = () => {
-    console.log('Prev popular slide clicked. Current:', currentPopularSlide);
-    setCurrentPopularSlide((prev) => Math.max(prev - 1, 0));
-  };
+  const prevPopularSlide = useCallback(() => {
+    const newPage = Math.max(currentPopularSlide - 1, 0);
+    console.log('🔄 Prev popular slide clicked');
+    console.log('📊 Popular state:', { currentPopularSlide, newPage, servicesCount: filteredPopularServices.length, pagesCount: popularPages.length });
+    console.log('📋 Popular pages:', popularPages.map((page, i) => ({ pageIndex: i, servicesInPage: page.length })));
+    setCurrentPopularSlide(newPage);
+  }, [currentPopularSlide, popularPages, filteredPopularServices.length]);
 
   // Old promotions pagination logic (kept for existing database promotions if needed)
   const promotionPages = useMemo(() => {
@@ -780,27 +799,20 @@ export default function Index() {
     return pages;
   }, [promotions]);
 
-  const nextPromotionSlide = () => {
+  const nextPromotionSlide = useCallback(() => {
     const maxSlide = Math.max(0, promotionPages.length - 1);
-    console.log('Next promotion slide clicked. Current:', currentPromotionSlide, 'Max:', maxSlide, 'Pages:', promotionPages.length);
-    setCurrentPromotionSlide((prev) => Math.min(prev + 1, maxSlide));
-  };
+    const newPage = Math.min(currentPromotionSlide + 1, maxSlide);
+    console.log('🔄 Next promotion slide clicked');
+    console.log('📊 Promotion state:', { currentPromotionSlide, maxSlide, newPage, promotionsCount: promotions.length, pagesCount: promotionPages.length });
+    setCurrentPromotionSlide(newPage);
+  }, [currentPromotionSlide, promotionPages.length, promotions.length]);
 
-  const prevPromotionSlide = () => {
-    console.log('Prev promotion slide clicked. Current:', currentPromotionSlide);
-    setCurrentPromotionSlide((prev) => Math.max(prev - 1, 0));
-  };
-
-  const nextBusinessSlide = () => {
-    const maxPage = Math.max(0, businessPages.length - 1);
-    console.log('Next business slide clicked. Current:', currentBusinessSlide, 'Max:', maxPage, 'Pages:', businessPages.length);
-    setCurrentBusinessSlide((prev) => Math.min(prev + 1, maxPage));
-  };
-
-  const prevBusinessSlide = () => {
-    console.log('Prev business slide clicked. Current:', currentBusinessSlide);
-    setCurrentBusinessSlide((prev) => Math.max(prev - 1, 0));
-  };
+  const prevPromotionSlide = useCallback(() => {
+    const newPage = Math.max(currentPromotionSlide - 1, 0);
+    console.log('🔄 Prev promotion slide clicked');
+    console.log('📊 Promotion state:', { currentPromotionSlide, newPage, promotionsCount: promotions.length, pagesCount: promotionPages.length });
+    setCurrentPromotionSlide(newPage);
+  }, [currentPromotionSlide, promotionPages.length, promotions.length]);
 
   const filteredBusinesses = featuredBusinesses.filter((business) => {
     const matchesSearch =
@@ -833,6 +845,21 @@ export default function Index() {
     }
     return pages;
   }, [filteredBusinesses]);
+
+  const nextBusinessSlide = useCallback(() => {
+    const maxPage = Math.max(0, businessPages.length - 1);
+    const newPage = Math.min(currentBusinessSlide + 1, maxPage);
+    console.log('🔄 Next business slide clicked');
+    console.log('📊 Business state:', { currentBusinessSlide, maxPage, newPage, businessesCount: filteredBusinesses.length, pagesCount: businessPages.length });
+    setCurrentBusinessSlide(newPage);
+  }, [currentBusinessSlide, businessPages.length, filteredBusinesses.length]);
+
+  const prevBusinessSlide = useCallback(() => {
+    const newPage = Math.max(currentBusinessSlide - 1, 0);
+    console.log('🔄 Prev business slide clicked');
+    console.log('📊 Business state:', { currentBusinessSlide, newPage, businessesCount: filteredBusinesses.length, pagesCount: businessPages.length });
+    setCurrentBusinessSlide(newPage);
+  }, [currentBusinessSlide, businessPages.length, filteredBusinesses.length]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-accent/5 to-roam-light-blue/10">
@@ -1275,30 +1302,48 @@ export default function Index() {
             <p className="text-lg text-foreground/70 mt-4">
               Discover our most popular and highly-rated services
             </p>
+            {/* Debug info for development */}
+            {process.env.NODE_ENV === 'development' && (
+              <div className="text-xs text-gray-400 mt-1">
+                Debug: {filteredFeaturedServices.length} services, {servicePages.length} pages, current: {currentServiceSlide + 1}
+              </div>
+            )}
           </div>
 
           {filteredFeaturedServices.length > 0 ? (
             <div className="relative overflow-hidden">
               {/* Navigation Arrows */}
-              {filteredFeaturedServices.length > 1 && (
+              {servicePages.length > 1 && (
                 <>
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={prevServiceSlide}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      console.log('Prev button clicked!');
+                      prevServiceSlide();
+                    }}
                     disabled={currentServiceSlide === 0}
-                    className="absolute left-4 top-1/2 -translate-y-1/2 z-10 bg-white/90 border-roam-blue text-roam-blue hover:bg-roam-blue hover:text-white shadow-lg disabled:opacity-50"
+                    className="absolute left-4 top-1/2 -translate-y-1/2 z-50 bg-white border-2 border-roam-blue text-roam-blue hover:bg-roam-blue hover:text-white shadow-xl disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    style={{ pointerEvents: 'auto' }}
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={nextServiceSlide}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      console.log('Next button clicked!');
+                      nextServiceSlide();
+                    }}
                     disabled={
                       currentServiceSlide >= servicePages.length - 1
                     }
-                    className="absolute right-4 top-1/2 -translate-y-1/2 z-10 bg-white/90 border-roam-blue text-roam-blue hover:bg-roam-blue hover:text-white shadow-lg disabled:opacity-50"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 z-50 bg-white border-2 border-roam-blue text-roam-blue hover:bg-roam-blue hover:text-white shadow-xl disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    style={{ pointerEvents: 'auto' }}
                   >
                     <ChevronRight className="w-4 h-4" />
                   </Button>
@@ -1311,92 +1356,94 @@ export default function Index() {
                     transform: `translateX(-${currentServiceSlide * 100}%)`,
                   }}
                 >
-                  {servicePages[currentServiceSlide]?.map((service, serviceIndex) => (
+                  {servicePages.map((page, pageIndex) => (
                     <div
-                      key={`service-${service.id}`}
-                      className="w-full flex-none px-4"
+                      key={`page-${pageIndex}`}
+                      className="w-full flex-none grid grid-cols-1 md:grid-cols-2 gap-6 px-4"
                     >
-                      <Card
-                        key={service.id}
-                        className="hover:shadow-xl transition-all duration-300 cursor-pointer border-border/50 hover:border-roam-light-blue/50 overflow-hidden w-full"
-                      >
-                        <div className="relative h-64">
-                          <img
-                            src={service.image}
-                            alt={service.title}
-                            className="w-full h-full object-cover"
-                          />
-                          <div className="absolute top-4 left-4">
-                            <Badge
-                              className={`${getCategoryColor(service.category)} text-white border-0`}
-                              icon={getCategoryIcon(service.category)}
-                            >
-                              {service.category}
-                            </Badge>
-                          </div>
-                          <div className="absolute top-4 right-4 flex gap-2">
-                            <FavoriteButton
-                              type="service"
-                              itemId={service.id}
-                              size="sm"
-                              variant="ghost"
-                              className="bg-white/90 hover:bg-white"
+                      {page.map((service, serviceIndex) => (
+                        <Card
+                          key={service.id}
+                          className="hover:shadow-xl transition-all duration-300 cursor-pointer border-border/50 hover:border-roam-light-blue/50 overflow-hidden w-full"
+                        >
+                          <div className="relative h-64">
+                            <img
+                              src={service.image}
+                              alt={service.title}
+                              className="w-full h-full object-cover"
                             />
-                            <Badge
-                              variant="secondary"
-                              className="bg-white/90 text-gray-800"
-                            >
-                              <Star className="w-3 h-3 mr-1 text-roam-warning fill-current" />
-                              {service.rating}
-                            </Badge>
-                          </div>
-                        </div>
-                        <CardContent className="p-6">
-                          <h3 className="text-xl font-semibold mb-2">
-                            {service.title}
-                          </h3>
-                          <div className="mb-4">
-                            <p className="text-foreground/70">
-                              {getDisplayDescription(
-                                service.description,
-                                service.id,
-                              )}
-                            </p>
-                            {service.description.length > 200 && (
-                              <button
-                                onClick={() => toggleDescription(service.id)}
-                                className="md:hidden text-roam-blue text-sm font-medium hover:underline mt-1"
+                            <div className="absolute top-4 left-4">
+                              <Badge
+                                className={`${getCategoryColor(service.category)} text-white border-0`}
+                                icon={getCategoryIcon(service.category)}
                               >
-                                {expandedDescriptions.has(service.id)
-                                  ? "Show less"
-                                  : "Read more"}
-                              </button>
-                            )}
-                          </div>
-                          <div className="flex items-center justify-between mb-4">
-                            <div className="flex items-center gap-2">
-                              <span className="text-2xl font-bold text-roam-blue">
-                                Starting at {service.price}
-                              </span>
+                                {service.category}
+                              </Badge>
                             </div>
-                            <Badge
-                              variant="outline"
-                              className="border-roam-blue text-roam-blue"
-                            >
-                              {service.duration}
-                            </Badge>
+                            <div className="absolute top-4 right-4 flex gap-2">
+                              <FavoriteButton
+                                type="service"
+                                itemId={service.id}
+                                size="sm"
+                                variant="ghost"
+                                className="bg-white/90 hover:bg-white"
+                              />
+                              <Badge
+                                variant="secondary"
+                                className="bg-white/90 text-gray-800"
+                              >
+                                <Star className="w-3 h-3 mr-1 text-roam-warning fill-current" />
+                                {service.rating}
+                              </Badge>
+                            </div>
                           </div>
-                          <Button
-                            asChild
-                            className="w-full bg-roam-blue hover:bg-roam-blue/90"
-                          >
-                            <Link to={`/book-service/${service.id}`}>
-                              <Calendar className="w-4 h-4 mr-2" />
-                              Book This Service
-                            </Link>
-                          </Button>
-                        </CardContent>
-                      </Card>
+                          <CardContent className="p-6">
+                            <h3 className="text-xl font-semibold mb-2">
+                              {service.title}
+                            </h3>
+                            <div className="mb-4">
+                              <p className="text-foreground/70">
+                                {getDisplayDescription(
+                                  service.description,
+                                  service.id,
+                                )}
+                              </p>
+                              {service.description.length > 200 && (
+                                <button
+                                  onClick={() => toggleDescription(service.id)}
+                                  className="md:hidden text-roam-blue text-sm font-medium hover:underline mt-1"
+                                >
+                                  {expandedDescriptions.has(service.id)
+                                    ? "Show less"
+                                    : "Read more"}
+                                </button>
+                              )}
+                            </div>
+                            <div className="flex items-center justify-between mb-4">
+                              <div className="flex items-center gap-2">
+                                <span className="text-2xl font-bold text-roam-blue">
+                                  Starting at {service.price}
+                                </span>
+                              </div>
+                              <Badge
+                                variant="outline"
+                                className="border-roam-blue text-roam-blue"
+                              >
+                                {service.duration}
+                              </Badge>
+                            </div>
+                            <Button
+                              asChild
+                              className="w-full bg-roam-blue hover:bg-roam-blue/90"
+                            >
+                              <Link to={`/book-service/${service.id}`}>
+                                <Calendar className="w-4 h-4 mr-2" />
+                                Book This Service
+                              </Link>
+                            </Button>
+                          </CardContent>
+                        </Card>
+                      ))}
                     </div>
                   ))}
                 </div>
@@ -1490,12 +1537,12 @@ export default function Index() {
                   {promotionPages.map((page, pageIndex) => (
                     <div
                       key={`promotion-page-${pageIndex}`}
-                      className="flex gap-6 w-full flex-none px-4"
+                      className="w-full flex-none grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 px-4"
                     >
                       {page.map((promotion) => (
                         <Card
                           key={promotion.id}
-                          className="group hover:shadow-2xl transition-all duration-500 hover:-translate-y-3 border-0 shadow-xl bg-white overflow-hidden rounded-3xl flex-shrink-0 w-full md:w-[calc(50%-12px)]"
+                          className="group hover:shadow-2xl transition-all duration-500 hover:-translate-y-3 border-0 shadow-xl bg-white overflow-hidden rounded-3xl w-full"
                         >
                           {/* Hero Image Section */}
                           <div className="relative h-64 bg-gradient-to-br from-roam-yellow/20 via-roam-light-blue/10 to-roam-blue/5 overflow-hidden">
@@ -1677,6 +1724,12 @@ export default function Index() {
             <p className="text-lg text-foreground/70">
               Trending services in your area this month
             </p>
+            {/* Debug info for development */}
+            {process.env.NODE_ENV === 'development' && (
+              <div className="text-xs text-gray-400 mt-1">
+                Debug: {filteredPopularServices.length} popular services, {popularPages.length} pages, current: {currentPopularSlide + 1}
+              </div>
+            )}
           </div>
 
           {filteredPopularServices.length > 0 ? (
@@ -1687,18 +1740,30 @@ export default function Index() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={prevPopularSlide}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      console.log('Popular Prev button clicked!');
+                      prevPopularSlide();
+                    }}
                     disabled={currentPopularSlide === 0}
-                    className="absolute left-4 top-1/2 -translate-y-1/2 z-10 bg-white/90 border-roam-blue text-roam-blue hover:bg-roam-blue hover:text-white shadow-lg disabled:opacity-50"
+                    className="absolute left-4 top-1/2 -translate-y-1/2 z-50 bg-white border-2 border-roam-blue text-roam-blue hover:bg-roam-blue hover:text-white shadow-xl disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    style={{ pointerEvents: 'auto' }}
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={nextPopularSlide}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      console.log('Popular Next button clicked!');
+                      nextPopularSlide();
+                    }}
                     disabled={currentPopularSlide >= popularPages.length - 1}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 z-10 bg-white/90 border-roam-blue text-roam-blue hover:text-white shadow-lg disabled:opacity-50"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 z-50 bg-white border-2 border-roam-blue text-roam-blue hover:bg-roam-blue hover:text-white shadow-xl disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    style={{ pointerEvents: 'auto' }}
                   >
                     <ChevronRight className="w-4 h-4" />
                   </Button>

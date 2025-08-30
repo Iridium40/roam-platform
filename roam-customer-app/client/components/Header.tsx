@@ -1,14 +1,22 @@
 import { Button } from "@/components/ui/button";
 import { Menu, X, Calendar } from "lucide-react";
-import { useState, useCallback } from "react";
+import { useState, useCallback, Suspense, lazy } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { EdgeNotificationCenter } from "@/components/EdgeNotificationCenter";
 import { CustomerAvatarDropdown } from "@/components/CustomerAvatarDropdown";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSystemConfig } from "@/hooks/useSystemConfig";
 
+// Lazy load the auth modal
+const CustomerAuthModal = lazy(() =>
+  import("@/components/CustomerAuthModal").then(module => ({
+    default: module.CustomerAuthModal
+  }))
+);
+
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
   const { customer, isAuthenticated } = useAuth();
   const { siteLogo } = useSystemConfig();
   const navigate = useNavigate();
@@ -18,8 +26,8 @@ export function Header() {
       // Navigate to my bookings
       navigate("/my-bookings");
     } else {
-      // Navigate to sign-in page
-      navigate("/sign-in");
+      // Open sign-in modal
+      setAuthModalOpen(true);
     }
   }, [isAuthenticated, navigate]);
 
@@ -40,23 +48,16 @@ export function Header() {
                 }}
               />
             </Link>
-            <span className="text-2xl font-semibold text-roam-blue">Services</span>
           </div>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
-            <a
-              href="#services"
-              className="text-foreground/70 hover:text-roam-blue transition-colors"
-            >
-              Services
-            </a>
-            <a
-              href="#how-it-works"
+            <Link
+              to="/how-it-works"
               className="text-foreground/70 hover:text-roam-blue transition-colors"
             >
               How it Works
-            </a>
+            </Link>
             <Link
               to="/about"
               className="text-foreground/70 hover:text-roam-blue transition-colors"
@@ -119,18 +120,12 @@ export function Header() {
         {isMenuOpen && (
           <div className="md:hidden py-4 border-t">
             <div className="flex flex-col space-y-4">
-              <a
-                href="#services"
-                className="text-foreground/70 hover:text-roam-blue transition-colors"
-              >
-                Services
-              </a>
-              <a
-                href="#how-it-works"
+              <Link
+                to="/how-it-works"
                 className="text-foreground/70 hover:text-roam-blue transition-colors"
               >
                 How it Works
-              </a>
+              </Link>
               <Link
                 to="/about"
                 className="text-foreground/70 hover:text-roam-blue transition-colors"
@@ -184,6 +179,17 @@ export function Header() {
           </div>
         )}
       </div>
+
+      {/* Customer Authentication Modal */}
+      {authModalOpen && (
+        <Suspense fallback={<div />}>
+          <CustomerAuthModal
+            isOpen={authModalOpen}
+            onClose={() => setAuthModalOpen(false)}
+            defaultTab="signin"
+          />
+        </Suspense>
+      )}
     </nav>
   );
 }

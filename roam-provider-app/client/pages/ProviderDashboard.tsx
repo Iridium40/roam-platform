@@ -91,7 +91,6 @@ import {
   ChevronDown,
   User,
   Menu,
-  BookOpen,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
@@ -105,6 +104,7 @@ import RealtimeBookingNotifications from "@/components/RealtimeBookingNotificati
 import BookingStatusIndicator, {
   RealtimeStatusUpdate,
 } from "@/components/BookingStatusIndicator";
+import { StaffManager } from "@/components/StaffManager";
 import type { Provider, Booking, BusinessProfile } from "@roam/shared";
 
 // Import the new modular tab components
@@ -113,7 +113,6 @@ import {
   BookingsTab,
   MessagesTab,
   ServicesTab,
-  StaffTab,
   FinancialsTab,
   ProfileTab,
   BusinessSettingsTab,
@@ -565,6 +564,19 @@ export default function ProviderDashboard() {
           if (businessError) throw businessError;
           if (businessData) {
             setBusiness(businessData);
+
+            // Load business locations
+            const { data: locationsData, error: locationsError } = await supabase
+              .from('business_locations')
+              .select('*')
+              .eq('business_id', providerData.business_id)
+              .order('location_name');
+
+            if (locationsError) {
+              console.error('Error loading locations:', locationsError);
+            } else {
+              setLocations(locationsData || []);
+            }
           }
         }
 
@@ -620,7 +632,11 @@ export default function ProviderDashboard() {
                 alt="ROAM"
                 className="h-8 w-auto"
               />
-              <span className="text-lg font-semibold text-gray-900">Partner Management</span>
+              <span className="text-lg font-semibold text-gray-900">
+                Provider
+                <br />
+                &nbsp;Management
+              </span>
             </div>
             
             {/* Desktop Navigation */}
@@ -649,14 +665,12 @@ export default function ProviderDashboard() {
               >
                 Services
               </button>
-              {businessSettings.business_type !== "Independent" && (
-                <button
-                  onClick={() => setActiveTab("staff")}
-                  className={`text-sm font-medium px-3 py-2 rounded-lg ${activeTab === "staff" ? "bg-gray-100 text-gray-900" : "text-gray-600 hover:text-gray-900"}`}
-                >
-                  Staff
-                </button>
-              )}
+              <button
+                onClick={() => setActiveTab("staff")}
+                className={`text-sm font-medium px-3 py-2 rounded-lg ${activeTab === "staff" ? "bg-gray-100 text-gray-900" : "text-gray-600 hover:text-gray-900"}`}
+              >
+                Staff
+              </button>
               <button
                 onClick={() => setActiveTab("financials")}
                 className={`text-sm font-medium px-3 py-2 rounded-lg ${activeTab === "financials" ? "bg-gray-100 text-gray-900" : "text-gray-600 hover:text-gray-900"}`}
@@ -667,12 +681,6 @@ export default function ProviderDashboard() {
           </div>
 
           <div className="flex items-center space-x-4">
-              <Button variant="ghost" size="sm" asChild>
-                <Link to="/blog">
-                  <BookOpen className="w-4 h-4" />
-                  <span className="hidden sm:inline ml-2">Blog</span>
-                </Link>
-              </Button>
             <Button variant="ghost" size="sm">
               <Bell className="w-4 h-4" />
             </Button>
@@ -748,9 +756,9 @@ export default function ProviderDashboard() {
 
         {/* Staff Tab */}
         {activeTab === "staff" && (
-          <StaffTab
-            providerData={providerData}
-            business={business}
+          <StaffManager
+            businessId={business?.id || providerData?.business_id || ""}
+            locations={locations}
           />
         )}
 

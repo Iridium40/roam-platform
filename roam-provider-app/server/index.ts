@@ -8,6 +8,7 @@ import {
   handleNotificationUpdates,
 } from "./routes/edge-notifications";
 import { createLinkToken, exchangePublicToken, checkConnection } from "./routes/plaid";
+import { getServiceEligibility } from "./routes/service-eligibility";
 import { requireAuth, requireBusinessAccess, AuthenticatedRequest } from "./middleware/auth";
 import { validateRequest } from "./middleware/validation";
 import { schemas } from "../shared";
@@ -180,8 +181,30 @@ export function createServer() {
     }
   );
 
+  // Business service eligibility route
+  app.get("/api/business/service-eligibility",
+    requireAuth(['owner', 'dispatcher', 'provider', 'admin']),
+    getServiceEligibility
+  );
+
+  // Business tax info routes (Stripe Tax / 1099)
+  app.get("/api/business/tax-info",
+    requireAuth(['owner', 'dispatcher', 'admin']),
+    async (req, res) => {
+      const { getBusinessTaxInfo } = await import('./routes/tax-info');
+      return getBusinessTaxInfo(req, res);
+    }
+  );
+  app.put("/api/business/tax-info",
+    requireAuth(['owner', 'dispatcher', 'admin']),
+    async (req, res) => {
+      const { upsertBusinessTaxInfo } = await import('./routes/tax-info');
+      return upsertBusinessTaxInfo(req, res);
+    }
+  );
+
   // Business profile routes with auth and business access
-  app.get("/api/business/profile/:businessId", 
+  app.get("/api/business/profile/:businessId",
     requireAuth(['owner', 'dispatcher', 'admin']),
     requireBusinessAccess('businessId'),
     async (req: AuthenticatedRequest, res) => {
@@ -362,4 +385,13 @@ export function createServer() {
   });
 
   return app;
+}
+
+// Start server if this file is run directly
+if (import.meta.url === `file://${process.argv[1]}`) {
+  const app = createServer();
+  const port = process.env.PORT || 3002;
+  app.listen(port, () => {
+    console.log(`Provider app server running on port ${port}`);
+  });
 }

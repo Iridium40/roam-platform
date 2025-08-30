@@ -1,17 +1,20 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { createStripePaymentService } from '@roam/shared';
 import { createClient } from "@supabase/supabase-js";
 import Stripe from 'stripe';
 
-const stripeService = createStripePaymentService();
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2024-11-20' });
 const supabase = createClient(
   process.env.VITE_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
 
+// Disable the default body parser (equivalent to Next.js config)
+export const config = { api: { bodyParser: false } };
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    res.setHeader('Allow', 'POST');
+    return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
   const signature = req.headers['stripe-signature'] as string;
@@ -19,18 +22,77 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: 'Missing Stripe signature' });
   }
 
-  try {
-    // Process webhook
-    const result = await stripeService.processWebhook(JSON.stringify(req.body), signature);
-    
-    if (!result.success || !result.event) {
-      return res.status(400).json({ error: 'Invalid webhook signature' });
-    }
+  let event: Stripe.Event;
 
-    const event = result.event;
-    console.log('Processing webhook event:', event.type);
+  try {
+    // Get raw body for signature verification
+    const rawBody = await getRawBody(req);
+
+    // Verify webhook signature and construct event
+    event = stripe.webhooks.constructEvent(
+      rawBody,
+      signature,
+      process.env.STRIPE_WEBHOOK_SIGNING_SECRET!
+    );
+  } catch (err) {
+    console.error('Webhook signature verification failed:', err);
+    return res.status(400).json({ error: 'Invalid signature' });
+  }
+
+  console.log('Processing webhook event:', event.type);
+
+  try {
 
     switch (event.type) {
+      case 'checkout.session.completed': {
+        const session = event.data.object;
+        const metadata = session.metadata;
+
+        if (metadata && metadata.customer_id) {
+          // Extract booking details from metadata
+          const bookingData = {
+            customer_id: metadata.customer_id,
+            service_id: metadata.service_id,
+            business_id: metadata.business_id,
+            provider_id: metadata.provider_id,
+            booking_date: metadata.booking_date,
+            start_time: metadata.start_time,
+            delivery_type: metadata.delivery_type,
+            special_instructions: metadata.special_instructions || '',
+            promotion_id: metadata.promotion_id || null,
+            guest_phone: metadata.guest_phone || '',
+            total_amount: parseFloat(metadata.total_amount),
+            service_price: parseFloat(metadata.service_price),
+            service_fee: parseFloat(metadata.service_fee),
+            discount_applied: parseFloat(metadata.discount_applied),
+            stripe_session_id: session.id,
+            stripe_payment_intent_id: session.payment_intent,
+            payment_status: 'paid',
+            booking_status: 'confirmed',
+            paid_at: new Date().toISOString()
+          };
+
+          // Create booking in database
+          const { data: booking, error: bookingError } = await supabase
+            .from('bookings')
+            .insert([bookingData])
+            .select()
+            .single();
+
+          if (bookingError) {
+            console.error('Error creating booking:', bookingError);
+          } else {
+            console.log('✅ Booking created successfully:', booking.id);
+
+            // Update customer Stripe profile with payment method if saved
+            if (session.customer && session.setup_intent) {
+              await updateCustomerPaymentMethods(session.customer, session.setup_intent);
+            }
+          }
+        }
+        break;
+      }
+
       case 'payment_intent.succeeded': {
         const paymentIntent = event.data.object;
         const bookingId = paymentIntent.metadata?.bookingId;
@@ -157,5 +219,74 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   } catch (error) {
     console.error('Webhook error:', error);
     return res.status(400).json({ error: 'Webhook processing failed' });
+  }
+}
+
+// Helper function to get raw body for signature verification
+async function getRawBody(req: VercelRequest): Promise<string> {
+  return new Promise((resolve, reject) => {
+    let data = '';
+    req.on('data', (chunk) => {
+      data += chunk;
+    });
+    req.on('end', () => {
+      resolve(data);
+    });
+    req.on('error', (err) => {
+      reject(err);
+    });
+  });
+}
+
+async function updateCustomerPaymentMethods(customerId: string, setupIntentId: string) {
+  try {
+
+    // Get the setup intent to find the payment method
+    const setupIntent = await stripe.setupIntents.retrieve(setupIntentId);
+
+    if (setupIntent.payment_method) {
+      // Get payment method details
+      const paymentMethod = await stripe.paymentMethods.retrieve(
+        setupIntent.payment_method as string
+      );
+
+      // Get existing customer profile
+      const { data: existingProfile } = await supabase
+        .from('customer_stripe_profiles')
+        .select('payment_methods')
+        .eq('stripe_customer_id', customerId)
+        .single();
+
+      const existingMethods = existingProfile?.payment_methods || [];
+
+      // Add new payment method if not already exists
+      const methodExists = existingMethods.some((method: any) => method.id === paymentMethod.id);
+
+      if (!methodExists) {
+        const updatedMethods = [...existingMethods, {
+          id: paymentMethod.id,
+          type: paymentMethod.type,
+          card: paymentMethod.card,
+          created: paymentMethod.created
+        }];
+
+        // Update customer Stripe profile
+        const { error } = await supabase
+          .from('customer_stripe_profiles')
+          .update({
+            default_payment_method_id: paymentMethod.id,
+            payment_methods: updatedMethods
+          })
+          .eq('stripe_customer_id', customerId);
+
+        if (error) {
+          console.error('Error updating customer payment methods:', error);
+        } else {
+          console.log('✅ Customer payment methods updated for:', customerId);
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error updating customer payment methods:', error);
   }
 }

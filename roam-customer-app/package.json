@@ -15,7 +15,9 @@
     ]
   },
   "scripts": {
-    "dev": "vite",
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:client": "vite",
+    "dev:server": "tsx watch server/dev-server.ts",
     "build": "cd ../packages/shared && npm run build && cd ../../roam-customer-app && npm run build:client && npm run build:server",
     "build:client": "vite build",
     "build:server": "vite build --config vite.config.server.ts",
