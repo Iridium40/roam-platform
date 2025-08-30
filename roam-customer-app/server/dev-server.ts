@@ -1,11 +1,11 @@
 import { createServer } from './index.js';
 
-const port = 3001;
+const port = 3003;
 const app = createServer();
 
 app.listen(port, () => {
   console.log(`🚀 Development API server running on http://localhost:${port}`);
-  console.log(`📋 Available endpoints:`);
+  console.log(`�� Available endpoints:`);
   console.log(`   POST /api/contact/submit - Contact form submissions`);
   console.log(`   POST /api/stripe/create-checkout-session - Create Stripe checkout`);
   console.log(`   POST /api/stripe/webhook - Stripe webhook handler`);
