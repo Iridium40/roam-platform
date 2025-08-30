@@ -49,7 +49,7 @@ import {
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 
-type AnnouncementAudience = "customer" | "provider" | "all" | "staff";
+type AnnouncementAudience = "customer" | "provider" | "all" | "staff" | "business";
 type AnnouncementType =
   | "general"
   | "maintenance"
