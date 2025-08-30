@@ -984,6 +984,7 @@ export default function AdminAnnouncements() {
                       <SelectItem value="all">All Users</SelectItem>
                       <SelectItem value="customer">Customers</SelectItem>
                       <SelectItem value="provider">Providers</SelectItem>
+                      <SelectItem value="business">Businesses</SelectItem>
                       <SelectItem value="staff">Staff</SelectItem>
                     </SelectContent>
                   </Select>
