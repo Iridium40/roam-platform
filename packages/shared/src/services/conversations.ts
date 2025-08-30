@@ -147,7 +147,7 @@ export class ConversationsService {
   /**
    * Add a participant to a conversation
    */
-  static async addParticipant(params: AddParticipantParams): Promise<string> {
+  static async addParticipant(_params: AddParticipantParams): Promise<string> {
     try {
       // For now, this is a placeholder implementation
       // In a real implementation, you would:
@@ -186,7 +186,7 @@ export class ConversationsService {
   /**
    * Load messages for a conversation
    */
-  static async loadMessages(conversationId: string): Promise<ConversationMessage[]> {
+  static async loadMessages(_conversationId: string): Promise<ConversationMessage[]> {
     try {
       // For now, we'll return empty messages since we don't have a messages table
       // In a real implementation, you'd query a messages table

@@ -624,7 +624,7 @@ export default function Index() {
   ];
 
   // Use real promotions data from database
-  const promotionalDeals = promotions;
+
 
   const deliveryIcons = {
     mobile: Car,
@@ -742,7 +742,7 @@ export default function Index() {
 
   const nextServiceSlide = () => {
     const maxPage = Math.max(0, servicePages.length - 1);
-    console.log('Next service slide clicked. Current:', currentServiceSlide, 'Max:', maxPage, 'Pages:', servicePages.length);
+    console.log('Next service slide clicked. Current:', currentServiceSlide, 'Max:', maxPage, 'Pages:', servicePages.length, 'ServicePages:', servicePages);
     setCurrentServiceSlide((prev) => Math.min(prev + 1, maxPage));
   };
 
@@ -773,12 +773,12 @@ export default function Index() {
 
   // Old promotions pagination logic (kept for existing database promotions if needed)
   const promotionPages = useMemo(() => {
-    const pages: FeaturedService[][] = [];
-    for (let i = 0; i < promotionalDeals.length; i += 3) {
-      pages.push(promotionalDeals.slice(i, i + 3));
+    const pages: TransformedPromotion[][] = [];
+    for (let i = 0; i < promotions.length; i += 3) {
+      pages.push(promotions.slice(i, i + 3));
     }
     return pages;
-  }, [promotionalDeals]);
+  }, [promotions]);
 
   const nextPromotionSlide = () => {
     const maxSlide = Math.max(0, promotionPages.length - 1);
@@ -1296,7 +1296,7 @@ export default function Index() {
                     size="sm"
                     onClick={nextServiceSlide}
                     disabled={
-                      currentServiceSlide >= filteredFeaturedServices.length - 1
+                      currentServiceSlide >= servicePages.length - 1
                     }
                     className="absolute right-4 top-1/2 -translate-y-1/2 z-10 bg-white/90 border-roam-blue text-roam-blue hover:bg-roam-blue hover:text-white shadow-lg disabled:opacity-50"
                   >
@@ -1455,7 +1455,7 @@ export default function Index() {
             </p>
           </div>
 
-          {promotionalDeals.length > 0 ? (
+          {promotions.length > 0 ? (
             <div className="relative">
               {/* Navigation Arrows */}
               {promotionPages.length > 1 && (
