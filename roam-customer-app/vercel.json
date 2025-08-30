@@ -109,6 +109,10 @@
       "destination": "/api/stripe/payment-intent.ts"
     },
     {
+      "source": "/api/stripe/create-payment-intent",
+      "destination": "/api/stripe/create-payment-intent.ts"
+    },
+    {
       "source": "/api/stripe/customer",
       "destination": "/api/stripe/customer.ts"
     },

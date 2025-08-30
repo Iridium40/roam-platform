@@ -107,6 +107,19 @@ export function createServer() {
     }
   );
 
+  app.post("/api/stripe/create-payment-intent", 
+    requireAuth(['customer', 'owner', 'dispatcher', 'admin']),
+    async (req: AuthenticatedRequest, res) => {
+      try {
+        const createPaymentHandler = await import("../api/stripe/create-payment-intent");
+        await createPaymentHandler.default(req, res);
+      } catch (error) {
+        console.error("Error importing create payment intent handler:", error);
+        res.status(500).json({ error: "Failed to load create payment intent handler" });
+      }
+    }
+  );
+
   app.post("/api/stripe/customer", 
     requireAuth(['customer', 'owner', 'dispatcher', 'admin']),
     async (req: AuthenticatedRequest, res) => {

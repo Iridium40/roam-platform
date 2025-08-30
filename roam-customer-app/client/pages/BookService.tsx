@@ -800,10 +800,19 @@ export default function BookService() {
       // Call backend to create Stripe Payment Intent
       console.log('🌐 Making API call to:', '/api/stripe/create-payment-intent');
 
+      // Get the current session token
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
+      if (!token) {
+        throw new Error('No authentication token available. Please sign in again.');
+      }
+
       const response = await fetch('/api/stripe/create-payment-intent', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify(bookingDetails),
       });
