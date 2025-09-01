@@ -2,7 +2,10 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2025-08-27.basil' });
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { 
+  apiVersion: '2025-08-27.basil' 
+});
+
 const supabase = createClient(
   process.env.VITE_PUBLIC_SUPABASE_URL || '',
   process.env.SUPABASE_SERVICE_ROLE_KEY || ''
@@ -25,6 +28,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const {
+      bookingId,
       serviceId,
       businessId,
       customerId,
@@ -35,89 +39,37 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       guestPhone,
       deliveryType,
       specialInstructions,
-      promotionId
+      promotionId,
+      totalAmount,
+      serviceName,
+      businessName
     } = req.body;
 
     // Validate required fields
-    if (!serviceId || !businessId || !customerId) {
-      return res.status(400).json({
-        error: 'Missing required fields: serviceId, businessId, customerId'
+    if (!serviceId || !businessId || !customerId || !totalAmount) {
+      return res.status(400).json({ 
+        error: 'Missing required fields: serviceId, businessId, customerId, totalAmount' 
       });
     }
 
-    // Pull authoritative pricing from Supabase - never trust client data
-    const { data: businessService, error: businessServiceError } = await supabase
-      .from('business_services')
-      .select(`
-        business_price,
-        delivery_type,
-        is_active,
-        services:service_id (
-          id,
-          name,
-          description,
-          min_price,
-          duration_minutes
-        )
-      `)
-      .eq('business_id', businessId)
-      .eq('service_id', serviceId)
-      .eq('is_active', true)
+    // Get customer details from Supabase
+    const { data: customer, error: customerError } = await supabase
+      .from('customer_profiles')
+      .select('*')
+      .eq('id', customerId)
       .single();
 
-    if (businessServiceError || !businessService) {
-      return res.status(404).json({
-        error: 'Service not available from this business'
-      });
-    }
-
-    // Validate service pricing
-    const service = businessService.services as any;
-    const servicePrice = businessService.business_price;
-
-    if (servicePrice < service.min_price) {
-      return res.status(400).json({
-        error: `Invalid pricing configuration for ${service.name}`
-      });
-    }
-
-    // Calculate platform fee (server-side calculation)
-    const platformFeePercentage = 0.029; // 2.9% platform fee
-    const serviceFee = servicePrice * platformFeePercentage;
-
-    // Apply any promotions (server-side validation)
-    let discountApplied = 0;
-    if (promotionId) {
-      const { data: promotion } = await supabase
-        .from('promotions')
-        .select('discount_value, discount_type, is_active, max_uses, current_uses')
-        .eq('id', promotionId)
-        .eq('is_active', true)
-        .single();
-
-      if (promotion && promotion.current_uses < promotion.max_uses) {
-        if (promotion.discount_type === 'percentage') {
-          discountApplied = servicePrice * (promotion.discount_value / 100);
-        } else {
-          discountApplied = promotion.discount_value;
-        }
-      }
-    }
-
-    // Calculate final total (server-side)
-    const totalAmount = servicePrice + serviceFee - discountApplied;
-
-    if (totalAmount <= 0) {
-      return res.status(400).json({ error: 'Invalid total amount' });
+    if (customerError || !customer) {
+      return res.status(404).json({ error: 'Customer not found' });
     }
 
     // Get or create Stripe customer
-    let stripeCustomerId: string;
-
+    let stripeCustomerId: string | undefined;
+    
     // Check if customer already has a Stripe profile
     const { data: existingProfile } = await supabase
       .from('customer_stripe_profiles')
-      .select('stripe_customer_id, default_payment_method_id')
+      .select('stripe_customer_id')
       .eq('user_id', customerId)
       .single();
 
@@ -125,17 +77,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       stripeCustomerId = existingProfile.stripe_customer_id;
     } else {
       // Create new Stripe customer
-      const customer = await stripe.customers.create({
-        email: guestEmail,
-        name: guestName,
-        phone: guestPhone,
+      const stripeCustomer = await stripe.customers.create({
+        email: guestEmail || customer.email,
+        name: guestName || `${customer.first_name} ${customer.last_name}`,
+        phone: guestPhone || customer.phone,
         metadata: {
           user_id: customerId,
           source: 'roam_booking'
         }
       });
 
-      stripeCustomerId = customer.id;
+      stripeCustomerId = stripeCustomer.id;
 
       // Save to database
       await supabase
@@ -143,86 +95,123 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .insert({
           user_id: customerId,
           stripe_customer_id: stripeCustomerId,
-          stripe_email: guestEmail
+          stripe_email: guestEmail || customer.email
         });
     }
 
-    // Create checkout session using approved pattern
-    const params: Stripe.Checkout.SessionCreateParams = {
+    // Calculate platform fee (2.9% + 30 cents)
+    const platformFeePercentage = 0.029;
+    const platformFee = Math.round(totalAmount * platformFeePercentage * 100); // in cents
+    const processingFee = 30; // Stripe processing fee in cents
+    const totalAmountCents = Math.round(totalAmount * 100);
+
+    // Create Checkout Session
+    const session = await stripe.checkout.sessions.create({
       customer: stripeCustomerId,
       payment_method_types: ['card'],
-      mode: 'payment',
       line_items: [
         {
           price_data: {
             currency: 'usd',
-            unit_amount: Math.round(servicePrice * 100), // Convert to cents
             product_data: {
-              name: service.name,
-              description: `${service.description || ''} - ${bookingDate} at ${startTime}`
+              name: serviceName || 'Service Booking',
+              description: `Booking for ${businessName || 'Business'} - ${deliveryType || 'Service'}`,
+              metadata: {
+                service_id: serviceId,
+                business_id: businessId,
+                delivery_type: deliveryType || '',
+                booking_date: bookingDate || '',
+                start_time: startTime || '',
+                special_instructions: specialInstructions || ''
+              }
             },
+            unit_amount: totalAmountCents,
           },
           quantity: 1,
         },
-        ...(serviceFee > 0 ? [{
-          price_data: {
-            currency: 'usd',
-            unit_amount: Math.round(serviceFee * 100),
-            product_data: {
-              name: 'Platform Fee',
-              description: 'Processing & support fee'
-            },
-          },
-          quantity: 1,
-        }] : []),
-        ...(discountApplied > 0 ? [{
-          price_data: {
-            currency: 'usd',
-            unit_amount: -Math.round(discountApplied * 100), // Negative for discount
-            product_data: {
-              name: 'Promotion Discount',
-              description: 'Applied discount'
-            },
-          },
-          quantity: 1,
-        }] : [])
       ],
-      success_url: `${req.headers.origin}/booking-success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${req.headers.origin}/book-service/${serviceId}`,
+      mode: 'payment',
+      success_url: `${process.env.VITE_APP_URL || 'http://localhost:5174'}/booking-success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.VITE_APP_URL || 'http://localhost:5174'}/book-service?serviceId=${serviceId}&businessId=${businessId}`,
       metadata: {
-        service_id: serviceId,
-        business_id: businessId,
-        customer_id: customerId,
-        booking_date: bookingDate,
-        start_time: startTime,
-        delivery_type: deliveryType || '',
-        special_instructions: specialInstructions || '',
-        promotion_id: promotionId || '',
-        guest_phone: guestPhone || '',
-        total_amount: totalAmount.toString(),
-        service_price: servicePrice.toString(),
-        service_fee: serviceFee.toString(),
-        discount_applied: discountApplied.toString()
+        bookingId: bookingId || '',
+        customerId,
+        serviceId,
+        businessId,
+        totalAmount: totalAmount.toString(),
+        platformFee: (platformFee / 100).toString(),
+        bookingDate: bookingDate || '',
+        startTime: startTime || '',
+        deliveryType: deliveryType || '',
+        specialInstructions: specialInstructions || '',
+        promotionId: promotionId || '',
+        guestPhone: guestPhone || ''
       },
-      payment_intent_data: {
-        setup_future_usage: 'on_session',
-        metadata: {
-          customer_id: customerId,
-          booking_type: 'service',
-          service_id: serviceId
+      // Customize appearance
+      custom_fields: [
+        {
+          key: 'booking_date',
+          label: {
+            type: 'custom',
+            custom: 'Booking Date'
+          },
+          type: 'text',
+          optional: true,
+          default: bookingDate || ''
+        },
+        {
+          key: 'start_time',
+          label: {
+            type: 'custom',
+            custom: 'Start Time'
+          },
+          type: 'text',
+          optional: true,
+          default: startTime || ''
         }
+      ],
+      // Apply branding
+      billing_address_collection: 'required',
+      customer_update: {
+        address: 'auto',
+        name: 'auto'
+      },
+      // Enable automatic tax calculation if needed
+      automatic_tax: {
+        enabled: true
       }
-    };
+    });
 
-    const session = await stripe.checkout.sessions.create(params);
+    // If bookingId provided, update booking with checkout session
+    if (bookingId) {
+      await supabase
+        .from('bookings')
+        .update({
+          stripe_checkout_session_id: session.id,
+          total_amount: totalAmount,
+          service_fee: platformFee / 100,
+          payment_status: 'pending'
+        })
+        .eq('id', bookingId);
+    }
 
-    return res.status(200).json({ sessionId: session.id });
+    return res.status(200).json({
+      sessionId: session.id,
+      url: session.url,
+      amount: totalAmount,
+      breakdown: {
+        serviceAmount: totalAmount,
+        platformFee: platformFee / 100,
+        processingFee: processingFee / 100,
+        total: totalAmount
+      }
+    });
 
-  } catch (error) {
-    console.error('❌ Error creating Stripe checkout session:', error);
+  } catch (error: any) {
+    console.error('Checkout session creation failed:', error);
     return res.status(500).json({
-      error: 'Failed to create checkout session',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Checkout setup failed',
+      details: error.message
     });
   }
 }

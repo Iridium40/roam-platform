@@ -779,7 +779,7 @@ export default function BookService() {
     const businessDeliveryTypes = getDeliveryTypes(selectedBusiness);
     const primaryDeliveryType = businessDeliveryTypes[0] || 'business_location';
 
-    // Prepare booking details for checkout (pricing calculated server-side)
+    // Prepare booking details for checkout
     const bookingDetails = {
       serviceId: service.id,
       businessId: selectedBusiness.id,
@@ -792,27 +792,21 @@ export default function BookService() {
       deliveryType: primaryDeliveryType,
       specialInstructions: '', // Placeholder for now
       promotionId: promotion?.id || null,
+      totalAmount: calculateTotalAmount(),
+      serviceName: service.name,
+      businessName: selectedBusiness.business_name,
     };
 
-    console.log('💳 Creating Payment Intent with:', bookingDetails);
+    console.log('💳 Creating Stripe Checkout Session with:', bookingDetails);
 
     try {
-      // Call backend to create Stripe Payment Intent
-      console.log('🌐 Making API call to:', '/api/stripe/create-payment-intent');
+      // Call backend to create Stripe Checkout Session
+      console.log('🌐 Making API call to:', '/api/stripe/create-checkout-session');
 
-      // Get the current session token
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
-
-      if (!token) {
-        throw new Error('No authentication token available. Please sign in again.');
-      }
-
-      const response = await fetch('/api/stripe/create-payment-intent', {
+      const response = await fetch('/api/stripe/create-checkout-session', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify(bookingDetails),
       });
@@ -829,13 +823,12 @@ export default function BookService() {
       const result = await response.json();
       console.log('📦 Response data:', result);
 
-      if (result.clientSecret) {
-        console.log('✅ Payment Intent created successfully');
-        setClientSecret(result.clientSecret);
-        setPaymentBreakdown(result.breakdown);
-        setCurrentStep('checkout');
+      if (result.url) {
+        console.log('✅ Checkout Session created successfully');
+        // Redirect to Stripe Checkout
+        window.location.href = result.url;
       } else {
-        console.error('❌ Failed to create Payment Intent:', result.error || result);
+        console.error('❌ Failed to create Checkout Session:', result.error || result);
         toast({
           title: "Payment Setup Failed",
           description: result.error || "Could not initialize payment. Please try again.",
@@ -843,7 +836,7 @@ export default function BookService() {
         });
       }
     } catch (error) {
-      console.error('❌ Error during Payment Intent creation:', error);
+      console.error('❌ Error during Checkout Session creation:', error);
 
       // Provide more detailed error information
       let errorMessage = "An unexpected error occurred. Please try again.";
