@@ -1,59 +1,100 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { createStripePaymentService } from '@roam/shared';
+import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 
-const stripeService = createStripePaymentService();
-const stripe = stripeService.stripe;
+// Initialize Stripe with latest API version
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: "2025-08-27.basil",
+});
 
+// Initialize Supabase client
 const supabase = createClient(
   process.env.VITE_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
 
-interface TaxInformation {
-  business_tax_id?: string;
-  business_tax_id_type?: "ein" | "ssn";
-  mcc?: string;
-  product_description?: string;
-  url?: string;
-}
-
 interface ConnectAccountRequest {
   userId: string;
   businessId: string;
-  businessType: "sole_proprietorship" | "llc" | "corporation" | "partnership";
   businessName: string;
+  businessType: "individual" | "company";
   email: string;
-  taxInfo: TaxInformation;
   country: string;
-  capabilities: {
-    card_payments?: { requested: boolean };
-    transfers?: { requested: boolean };
-  };
+  // Individual account fields
+  firstName?: string;
+  lastName?: string;
+  dateOfBirth?: string;
+  ssnLast4?: string;
+  // Company account fields
+  companyName?: string;
+  taxId?: string;
+  phone?: string;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // Enable CORS
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
   try {
+    // Validate required environment variables
+    if (!process.env.STRIPE_SECRET_KEY) {
+      console.error("Missing STRIPE_SECRET_KEY environment variable");
+      return res.status(500).json({ 
+        error: "Stripe configuration error",
+        details: "STRIPE_SECRET_KEY is not configured"
+      });
+    }
+
     const {
       userId,
       businessId,
-      businessType,
       businessName,
+      businessType,
       email,
-      taxInfo,
-      country = "US",
-      capabilities,
+      country,
+      firstName,
+      lastName,
+      dateOfBirth,
+      ssnLast4,
+      companyName,
+      taxId,
+      phone,
     }: ConnectAccountRequest = req.body;
 
-    if (!userId || !businessId || !businessType || !businessName || !email) {
-      return res.status(400).json({ error: "Missing required fields" });
+    // Validate required fields
+    if (!userId || !businessId || !businessName || !businessType || !email || !country) {
+      return res.status(400).json({ 
+        error: "Missing required fields",
+        required: ["userId", "businessId", "businessName", "businessType", "email", "country"]
+      });
     }
 
-    // Verify business profile exists and prerequisites are met
+    // Validate business type specific fields
+    if (businessType === "individual") {
+      if (!firstName || !lastName || !dateOfBirth) {
+        return res.status(400).json({ 
+          error: "Individual accounts require firstName, lastName, and dateOfBirth"
+        });
+      }
+    } else if (businessType === "company") {
+      if (!companyName || !taxId) {
+        return res.status(400).json({ 
+          error: "Company accounts require companyName and taxId"
+        });
+      }
+    }
+
+    // Verify business profile exists and is approved
     const { data: businessProfile, error: businessError } = await supabase
       .from("business_profiles")
       .select("*")
@@ -62,212 +103,157 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .single();
 
     if (businessError || !businessProfile) {
-      // In development mode, create a mock business profile if not found
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Development mode: Creating mock business profile for Stripe Connect');
-        // Continue with mock data
-      } else {
-        return res.status(404).json({ error: "Business profile not found" });
-      }
+      return res.status(404).json({ error: "Business profile not found" });
     }
 
-    // Skip verification checks in development mode
-    if (process.env.NODE_ENV !== 'development') {
-      if (businessProfile && businessProfile.verification_status !== "approved") {
-        return res.status(403).json({
-          error: "Business must be approved before Stripe account creation",
-          currentStatus: businessProfile.verification_status,
-        });
-      }
-
-      // Check if identity is verified
-      if (businessProfile && !businessProfile.identity_verified) {
-        return res.status(403).json({
-          error:
-            "Identity verification must be completed before Stripe account creation",
-        });
-      }
-
-      // Check if bank is connected
-      if (businessProfile && !businessProfile.bank_connected) {
-        return res.status(403).json({
-          error: "Bank account must be connected before Stripe account creation",
-        });
-      }
-    } else {
-      console.log('Development mode: Skipping verification checks for Stripe Connect');
+    if (businessProfile.verification_status !== "approved") {
+      return res.status(403).json({
+        error: "Business must be approved before creating Stripe Connect account",
+        currentStatus: businessProfile.verification_status,
+      });
     }
 
-    // Check if Stripe account already exists
+    // Check if Stripe Connect account already exists
     const { data: existingAccount } = await supabase
       .from("stripe_connect_accounts")
       .select("*")
+      .eq("user_id", userId)
       .eq("business_id", businessId)
       .single();
 
-    if (existingAccount && existingAccount.account_id) {
-      // Return existing account
-      const stripeAccount = await stripe.accounts.retrieve(
-        existingAccount.account_id,
-      );
-
-      return res.status(200).json({
-        account: {
-          id: stripeAccount.id,
-          type: stripeAccount.type,
-          country: stripeAccount.country,
-          default_currency: stripeAccount.default_currency,
-          details_submitted: stripeAccount.details_submitted,
-          charges_enabled: stripeAccount.charges_enabled,
-          payouts_enabled: stripeAccount.payouts_enabled,
-          requirements: stripeAccount.requirements,
-          capabilities: stripeAccount.capabilities,
-        },
-        existing: true,
+    if (existingAccount) {
+      return res.status(409).json({
+        error: "Stripe Connect account already exists for this business",
+        accountId: existingAccount.stripe_account_id,
+        status: existingAccount.status,
       });
     }
 
     // Prepare account creation parameters
     const accountParams: Stripe.AccountCreateParams = {
-      type: "express",
       country,
       email,
-      capabilities: capabilities || {
+      business_type: businessType,
+      business_profile: {
+        name: businessName,
+        url: businessProfile.website || undefined,
+        mcc: businessProfile.mcc_code || undefined,
+      },
+      capabilities: {
         card_payments: { requested: true },
         transfers: { requested: true },
       },
-      business_type:
-        businessType === "sole_proprietorship" ? "individual" : "company",
-      metadata: {
-        user_id: userId,
-        business_id: businessId,
-        business_name: businessName,
-        business_type: businessType,
+      // Platform is responsible for pricing and fee collection
+      controller: {
+        fees: {
+          payer: 'application' as const,
+        },
+        // Platform is responsible for losses / refunds / chargebacks
+        losses: {
+          payments: 'application' as const,
+        },
+        // Give them access to the express dashboard for management
+        stripe_dashboard: {
+          type: 'express' as const,
+        },
       },
     };
 
-    // Add business profile information
-    if (businessType !== "sole_proprietorship") {
+    // Add individual-specific fields
+    if (businessType === "individual") {
+      accountParams.individual = {
+        first_name: firstName!,
+        last_name: lastName!,
+        email,
+        phone: phone || undefined,
+        dob: {
+          day: parseInt(dateOfBirth!.split('-')[2]),
+          month: parseInt(dateOfBirth!.split('-')[1]),
+          year: parseInt(dateOfBirth!.split('-')[0]),
+        },
+        ssn_last_4: ssnLast4 || undefined,
+        address: {
+          country,
+          line1: businessProfile.business_address || undefined,
+          city: businessProfile.business_city || undefined,
+          state: businessProfile.business_state || undefined,
+          postal_code: businessProfile.business_zip || undefined,
+        },
+      };
+    }
+
+    // Add company-specific fields
+    if (businessType === "company") {
       accountParams.company = {
-        name: businessName,
-        structure:
-          businessType === "llc"
-            ? "single_member_llc" // Use correct Stripe value
-            : businessType === "corporation"
-              ? "private_corporation" // Use correct Stripe value
-              : "private_partnership" as any, // Use correct Stripe value
-      };
-
-      if (taxInfo.business_tax_id) {
-        accountParams.company.tax_id = taxInfo.business_tax_id;
-      }
-    }
-
-    // Add business information
-    if (taxInfo.mcc) {
-      accountParams.business_profile = {
-        mcc: taxInfo.mcc,
-        name: businessName,
-        product_description: taxInfo.product_description,
-        support_email: email,
-        url: taxInfo.url,
+        name: companyName!,
+        tax_id: taxId!,
+        phone: phone || undefined,
+        address: {
+          country,
+          line1: businessProfile.business_address || undefined,
+          city: businessProfile.business_city || undefined,
+          state: businessProfile.business_state || undefined,
+          postal_code: businessProfile.business_zip || undefined,
+        },
       };
     }
+
+    console.log("Creating Stripe Connect account with params:", JSON.stringify(accountParams, null, 2));
 
     // Create Stripe Connect account
     const account = await stripe.accounts.create(accountParams);
 
+    console.log("Stripe Connect account created:", account.id);
+
     // Store account information in database
     const { error: dbError } = await supabase
       .from("stripe_connect_accounts")
-      .upsert(
-        {
-          user_id: userId,
-          business_id: businessId,
-          account_id: account.id,
-          account_type: account.type,
-          country: account.country,
-          default_currency: account.default_currency,
-          business_type: accountParams.business_type,
-          details_submitted: account.details_submitted,
-          charges_enabled: account.charges_enabled,
-          payouts_enabled: account.payouts_enabled,
-          capabilities: account.capabilities,
-          requirements: account.requirements,
-          created_at: new Date(account.created * 1000).toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-        {
-          onConflict: "business_id",
-        },
-      );
-
-    if (dbError) {
-      console.error("Error storing Stripe account:", dbError);
-      // Continue anyway - account was created successfully
-    }
-
-    // Create onboarding link if account needs setup
-    let onboardingUrl = null;
-    if (!account.details_submitted) {
-      try {
-        const accountLink = await stripe.accountLinks.create({
-          account: account.id,
-          refresh_url: `${req.headers.origin || "http://localhost:8080"}/provider-onboarding/stripe`,
-          return_url: `${req.headers.origin || "http://localhost:8080"}/provider-onboarding/complete`,
-          type: "account_onboarding",
-        });
-
-        onboardingUrl = accountLink.url;
-      } catch (linkError) {
-        console.error("Error creating account link:", linkError);
-        // Continue without onboarding link
-      }
-    }
-
-    // Update business profile
-    const { error: updateError } = await supabase
-      .from("business_profiles")
-      .update({
-        stripe_connect_account_id: account.id,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", businessId);
-
-    if (updateError) {
-      console.error("Error updating business profile:", updateError);
-    }
-
-    // Update setup progress
-    const { error: progressError } = await supabase
-      .from("business_setup_progress")
-      .update({
-        stripe_connect_completed:
-          account.charges_enabled && account.payouts_enabled,
-        current_step:
-          account.charges_enabled && account.payouts_enabled ? 8 : 7,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("business_id", businessId);
-
-    if (progressError) {
-      console.error("Error updating setup progress:", progressError);
-    }
-
-    return res.status(200).json({
-      account: {
-        id: account.id,
-        type: account.type,
-        country: account.country,
-        default_currency: account.default_currency,
-        details_submitted: account.details_submitted,
+      .insert({
+        user_id: userId,
+        business_id: businessId,
+        stripe_account_id: account.id,
+        status: account.charges_enabled ? "active" : "pending",
+        business_type: businessType,
+        country,
         charges_enabled: account.charges_enabled,
         payouts_enabled: account.payouts_enabled,
+        details_submitted: account.details_submitted,
         requirements: account.requirements,
-        capabilities: account.capabilities,
-      },
-      onboarding_url: onboardingUrl,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      });
+
+    if (dbError) {
+      console.error("Error storing connect account in database:", dbError);
+      // Continue anyway - Stripe account was created successfully
+    }
+
+    // Create account link for onboarding
+    const accountLink = await stripe.accountLinks.create({
+      account: account.id,
+      refresh_url: `${process.env.VITE_APP_URL || 'http://localhost:5175'}/provider-onboarding/phase2/stripe-setup?refresh=true`,
+      return_url: `${process.env.VITE_APP_URL || 'http://localhost:5175'}/provider-onboarding/phase2/stripe-setup?success=true`,
+      type: "account_onboarding",
+      collect: "eventually_due",
     });
+
+    return res.status(200).json({
+      success: true,
+      account: {
+        id: account.id,
+        status: account.charges_enabled ? "active" : "pending",
+        charges_enabled: account.charges_enabled,
+        payouts_enabled: account.payouts_enabled,
+        details_submitted: account.details_submitted,
+        requirements: account.requirements,
+      },
+      accountLink: {
+        url: accountLink.url,
+        expires_at: accountLink.expires_at,
+      },
+      message: "Stripe Connect account created successfully",
+    });
+
   } catch (error) {
     console.error("Stripe Connect account creation error:", error);
 
@@ -276,6 +262,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         error: "Stripe error",
         details: error.message,
         type: error.type,
+        code: error.code,
       });
     }
 
