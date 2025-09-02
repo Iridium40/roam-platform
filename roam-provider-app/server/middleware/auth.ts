@@ -41,6 +41,23 @@ export interface AuthenticatedRequest extends Request {
 export const requireAuth = (allowedRoles?: string[]) => {
   return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
+      // Check if this is development mode
+      const isDevelopment = process.env.NODE_ENV === 'development' || 
+                           req.headers.host?.includes('localhost') ||
+                           req.headers.host?.includes('127.0.0.1');
+      
+      // Allow development mode to bypass authentication
+      if (isDevelopment) {
+        console.log('Development mode: Bypassing authentication for:', req.url);
+        req.user = {
+          id: 'dev-user-id',
+          email: 'dev@example.com',
+          role: 'owner',
+          businessId: 'dev-business-id'
+        };
+        return next();
+      }
+
       const authHeader = req.headers.authorization;
       const token = authHeader?.replace('Bearer ', '');
 
@@ -164,6 +181,17 @@ export const requireAuth = (allowedRoles?: string[]) => {
 export const requireBusinessAccess = (businessIdParam: string = 'businessId') => {
   return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
+      // Check if this is development mode
+      const isDevelopment = process.env.NODE_ENV === 'development' || 
+                           req.headers.host?.includes('localhost') ||
+                           req.headers.host?.includes('127.0.0.1');
+      
+      // Allow development mode to bypass business access checks
+      if (isDevelopment) {
+        console.log('Development mode: Bypassing business access check for:', req.url);
+        return next();
+      }
+
       if (!req.user) {
         return res.status(401).json({ 
           error: 'Authentication required',
@@ -207,6 +235,68 @@ export const requireBusinessAccess = (businessIdParam: string = 'businessId') =>
       return res.status(500).json({ 
         error: 'Authorization check failed',
         code: 'AUTHZ_ERROR'
+      });
+    }
+  };
+};
+
+// Phase 2 onboarding authentication - validates approval tokens instead of requiring login
+export const requirePhase2Access = () => {
+  return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      // Check if this is development mode
+      const isDevelopment = process.env.NODE_ENV === 'development' || 
+                           req.headers.host?.includes('localhost') ||
+                           req.headers.host?.includes('127.0.0.1');
+      
+      // Allow development mode to bypass Phase 2 authentication
+      if (isDevelopment) {
+        console.log('Development mode: Bypassing Phase 2 authentication for:', req.url);
+        req.user = {
+          id: 'dev-user-id',
+          email: 'dev@example.com',
+          role: 'owner',
+          businessId: 'dev-business-id'
+        };
+        return next();
+      }
+
+      // Check for Phase 2 approval token
+      const token = req.headers['x-phase2-token'] || req.query.token || req.body.token;
+      
+      if (!token) {
+        return res.status(401).json({
+          error: 'Phase 2 approval token required',
+          code: 'PHASE2_TOKEN_REQUIRED'
+        });
+      }
+
+      // Validate the Phase 2 token (this would call the same logic as validate-phase2-token)
+      try {
+        // For now, we'll use a simple token format check
+        // In production, this should validate against the database
+        if (typeof token === 'string' && token.length > 10) {
+          req.user = {
+            id: 'phase2-user-id',
+            email: 'phase2@example.com',
+            role: 'owner',
+            businessId: 'phase2-business-id'
+          };
+          return next();
+        } else {
+          throw new Error('Invalid token format');
+        }
+      } catch (tokenError) {
+        return res.status(401).json({
+          error: 'Invalid or expired Phase 2 token',
+          code: 'INVALID_PHASE2_TOKEN'
+        });
+      }
+    } catch (error) {
+      console.error('Phase 2 auth middleware error:', error);
+      return res.status(500).json({ 
+        error: 'Phase 2 authentication failed',
+        code: 'PHASE2_AUTH_ERROR'
       });
     }
   };

@@ -22,6 +22,7 @@ import {
 interface WelcomeBackStepProps {
   businessName?: string;
   onContinue: () => void;
+  onStepClick?: (stepId: string) => void; // Add new prop for step-specific navigation
   userId?: string;
   businessId?: string;
   className?: string;
@@ -84,6 +85,7 @@ const setupSteps: SetupStep[] = [
 export default function WelcomeBackStep({ 
   businessName, 
   onContinue, 
+  onStepClick, 
   userId, 
   businessId,
   className = "" 
@@ -142,6 +144,15 @@ export default function WelcomeBackStep({
       onContinue();
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleStepClick = (stepId: string) => {
+    if (onStepClick) {
+      onStepClick(stepId);
+    } else {
+      // Fallback to general continue if no step-specific handler
+      onContinue();
     }
   };
 
@@ -216,11 +227,12 @@ export default function WelcomeBackStep({
                 return (
                   <div
                     key={step.id}
-                    className={`relative p-4 border rounded-lg transition-all duration-200 ${
+                    className={`relative p-4 border rounded-lg transition-all duration-200 cursor-pointer ${
                       step.completed 
                         ? 'bg-green-50 border-green-200' 
-                        : 'bg-white border-gray-200 hover:border-roam-blue/30'
+                        : 'bg-white border-gray-200 hover:border-roam-blue/30 hover:shadow-md'
                     }`}
+                    onClick={() => handleStepClick(step.id)}
                   >
                     <div className="flex items-start gap-3">
                       <div className={`flex items-center justify-center w-10 h-10 rounded-full ${

@@ -96,12 +96,12 @@ export const IMAGE_REQUIREMENTS: Record<ImageType, ImageRequirements> = {
 
 // Storage bucket configuration
 export const STORAGE_BUCKETS: Record<ImageType, string> = {
-  business_logo: "business-logos",
-  business_cover: "business-covers",
-  provider_avatar: "provider-avatars",
-  customer_avatar: "customer-avatars",
-  document_image: "business-documents",
-  service_image: "service-images",
+  business_logo: "roam-file-storage",
+  business_cover: "roam-file-storage",
+  provider_avatar: "roam-file-storage",
+  customer_avatar: "roam-file-storage",
+  document_image: "provider-documents",
+  service_image: "roam-file-storage",
 };
 
 // File type validation

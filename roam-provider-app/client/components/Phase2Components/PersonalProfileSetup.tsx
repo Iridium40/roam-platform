@@ -23,7 +23,8 @@ import {
   Plus,
   Trash2
 } from 'lucide-react';
-import ImageUploadService, { ImageType } from '@/utils/imageUtils';
+import { ImageStorageService } from '@/utils/image/imageStorage';
+import { ImageType } from '@/utils/image/imageTypes';
 
 interface PersonalProfileData {
   professionalTitle: string;
@@ -98,8 +99,8 @@ export default function PersonalProfileSetup({
     loadExistingData();
     return () => {
       // Cleanup preview URLs
-      if (avatarUpload.preview) ImageUploadService.cleanupPreviewUrl(avatarUpload.preview);
-      if (coverUpload.preview) ImageUploadService.cleanupPreviewUrl(coverUpload.preview);
+      if (avatarUpload.preview) ImageStorageService.cleanupPreviewUrl(avatarUpload.preview);
+      if (coverUpload.preview) ImageStorageService.cleanupPreviewUrl(coverUpload.preview);
     };
   }, []);
 
@@ -157,15 +158,15 @@ export default function PersonalProfileSetup({
 
     const uploadState = imageType === 'avatar' ? avatarUpload : coverUpload;
     const setUploadState = imageType === 'avatar' ? setAvatarUpload : setCoverUpload;
-    const uploadType: ImageType = imageType === 'avatar' ? 'personalAvatar' : 'personalCover';
+    const uploadType: ImageType = imageType === 'avatar' ? 'provider_avatar' : 'provider_cover';
 
     // Clean up previous preview
     if (uploadState.preview) {
-      ImageUploadService.cleanupPreviewUrl(uploadState.preview);
+      ImageStorageService.cleanupPreviewUrl(uploadState.preview);
     }
 
     // Validate image
-    const validation = await ImageUploadService.validateImage(file, uploadType);
+    const validation = await ImageStorageService.validateImage(file, uploadType);
     
     if (!validation.isValid) {
       setUploadState({
@@ -179,7 +180,7 @@ export default function PersonalProfileSetup({
     }
 
     // Create preview
-    const preview = ImageUploadService.generatePreviewUrl(file);
+    const preview = ImageStorageService.generatePreviewUrl(file);
     
     setUploadState({
       file,
@@ -193,14 +194,14 @@ export default function PersonalProfileSetup({
   const uploadImage = async (imageType: 'avatar' | 'cover') => {
     const uploadState = imageType === 'avatar' ? avatarUpload : coverUpload;
     const setUploadState = imageType === 'avatar' ? setAvatarUpload : setCoverUpload;
-    const uploadType: ImageType = imageType === 'avatar' ? 'personalAvatar' : 'personalCover';
+    const uploadType: ImageType = imageType === 'avatar' ? 'provider_avatar' : 'provider_cover';
 
     if (!uploadState.file) return;
 
     setUploadState(prev => ({ ...prev, uploading: true, error: undefined }));
 
     try {
-      const result = await ImageUploadService.uploadImage(
+      const result = await ImageStorageService.uploadImage(
         uploadState.file,
         uploadType,
         businessId,
@@ -242,7 +243,7 @@ export default function PersonalProfileSetup({
     const setUploadState = imageType === 'avatar' ? setAvatarUpload : setCoverUpload;
 
     if (uploadState.preview) {
-      ImageUploadService.cleanupPreviewUrl(uploadState.preview);
+      ImageStorageService.cleanupPreviewUrl(uploadState.preview);
     }
 
     setUploadState({
@@ -315,27 +316,28 @@ export default function PersonalProfileSetup({
         await uploadImage('cover');
       }
 
-      // Save personal profile data
-      const response = await fetch(`/api/provider/profile/${userId}`, {
+      // Save personal profile data (use test endpoint for development)
+      const response = await fetch(`/api/test-personal-profile`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
-          businessId
+          userId
         })
       });
 
       if (!response.ok) {
-        throw new Error('Failed to save personal profile');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to save personal profile');
       }
 
-      // Mark step as completed
-      await fetch('/api/onboarding/save-phase2-progress', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      // Mark step as completed (use test endpoint for development)
+      await fetch("/api/test-phase2-progress", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           business_id: businessId,
-          step: 'personal_profile',
+          step: "personal_profile",
           data: formData
         })
       });

@@ -59,6 +59,27 @@ export const IMAGE_REQUIREMENTS = {
 
 export type ImageType = keyof typeof IMAGE_REQUIREMENTS;
 
+// Type mapping to convert between camelCase and underscore formats
+type ImageTypeMapping = {
+  businessLogo: 'business_logo';
+  businessCover: 'business_cover';
+  personalAvatar: 'provider_avatar';
+  personalCover: 'provider_cover';
+  staffPhoto: 'staff_photo';
+};
+
+function mapImageType(imageType: ImageType): keyof typeof import('./image/imageTypes').ImageType {
+  const mapping: ImageTypeMapping = {
+    businessLogo: 'business_logo',
+    businessCover: 'business_cover',
+    personalAvatar: 'provider_avatar',
+    personalCover: 'provider_cover',
+    staffPhoto: 'staff_photo'
+  };
+  
+  return mapping[imageType] as keyof typeof import('./image/imageTypes').ImageType;
+}
+
 export interface ImageValidationResult {
   isValid: boolean;
   errors: string[];
@@ -182,7 +203,7 @@ export class ImageUploadService {
   }
 
   /**
-   * Upload image to Supabase storage
+   * Upload image to storage
    */
   static async uploadImage(
     file: File,
@@ -191,54 +212,30 @@ export class ImageUploadService {
     userId?: string
   ): Promise<ImageUploadResult> {
     try {
-      // Validate image first
+      // Validate file
       const validation = await this.validateImage(file, imageType);
       if (!validation.isValid) {
         return {
           success: false,
-          error: validation.errors.join(', ')
+          error: validation.errors[0] || 'Validation failed'
         };
       }
 
       // Resize if needed
       const optimizedFile = await this.resizeImage(file, imageType);
 
-      // Generate unique filename
-      const fileExtension = optimizedFile.name.split('.').pop() || 'jpg';
-      const timestamp = Date.now();
-      const randomId = Math.random().toString(36).substring(2);
-      const fileName = `${imageType}_${businessId}_${timestamp}_${randomId}.${fileExtension}`;
+      // Import and use the working ImageStorageService
+      const { ImageStorageService } = await import('./image/imageStorage');
+      
+      // Use the working upload method
+      const result = await ImageStorageService.uploadImage(
+        optimizedFile,
+        mapImageType(imageType),
+        businessId,
+        userId
+      );
 
-      // Determine storage path
-      const storagePath = this.getStoragePath(imageType, businessId, userId);
-      const fullPath = `${storagePath}/${fileName}`;
-
-      // Upload to Supabase storage
-      const { data, error } = await supabase.storage
-        .from('business-images')
-        .upload(fullPath, optimizedFile, {
-          cacheControl: '3600',
-          upsert: false
-        });
-
-      if (error) {
-        console.error('Storage upload error:', error);
-        return {
-          success: false,
-          error: `Upload failed: ${error.message}`
-        };
-      }
-
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from('business-images')
-        .getPublicUrl(fullPath);
-
-      return {
-        success: true,
-        url: fullPath,
-        publicUrl: urlData.publicUrl
-      };
+      return result;
 
     } catch (error) {
       console.error('Image upload error:', error);
@@ -352,6 +349,23 @@ export class ImageUploadService {
    */
   static cleanupPreviewUrl(url: string): void {
     URL.revokeObjectURL(url);
+  }
+
+  /**
+   * Convert file to base64 for server-side processing
+   */
+  private static async fileToBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => {
+        const base64 = reader.result as string;
+        // Remove the data:image/jpeg;base64, prefix
+        const base64Data = base64.split(',')[1];
+        resolve(base64Data);
+      };
+      reader.onerror = error => reject(error);
+    });
   }
 }
 

@@ -198,19 +198,21 @@ export async function exchangePublicToken(req: Request, res: Response) {
 
     // Store the connection in your database
     const { error: dbError } = await supabase
-      .from("plaid_connections")
+      .from("plaid_bank_connections")
       .upsert({
         user_id: userId,
         business_id: businessId,
-        access_token: accessToken,
-        item_id: itemId,
-        account_id: account_id,
+        plaid_access_token: accessToken,
+        plaid_item_id: itemId,
+        plaid_account_id: account_id,
+        institution_id: metadata?.institution?.institution_id || null,
         institution_name: metadata?.institution?.name || "Unknown Bank",
         account_name: selectedAccount.name,
         account_mask: selectedAccount.mask,
         account_type: selectedAccount.type,
         account_subtype: selectedAccount.subtype,
-        created_at: new Date().toISOString(),
+        verification_status: 'verified',
+        connected_at: new Date().toISOString(),
       });
 
     if (dbError) {
@@ -257,17 +259,18 @@ export async function checkConnection(req: Request, res: Response) {
     let connection = null;
     try {
       const { data, error } = await supabase
-        .from("plaid_connections")
+        .from("plaid_bank_connections")
         .select("*")
         .eq("user_id", userId)
         .eq("business_id", businessId)
+        .eq("is_active", true)
         .single();
 
       if (error && error.code !== "PGRST116") { // PGRST116 is "not found"
         console.error("Database error:", error);
         // In development, don't fail if table doesn't exist
         if (process.env.NODE_ENV === "development" && error.code === "42P01") {
-          console.log("Development mode: plaid_connections table doesn't exist, continuing");
+          console.log("Development mode: plaid_bank_connections table doesn't exist, continuing");
         } else {
           return res.status(500).json({ error: "Failed to check connection" });
         }
@@ -288,10 +291,10 @@ export async function checkConnection(req: Request, res: Response) {
       console.log("Found existing connection");
       res.json({
         connection: {
-          access_token: connection.access_token,
-          item_id: connection.item_id,
+          access_token: connection.plaid_access_token,
+          item_id: connection.plaid_item_id,
           accounts: [{
-            account_id: connection.account_id,
+            account_id: connection.plaid_account_id,
             name: connection.account_name,
             mask: connection.account_mask,
             type: connection.account_type,
@@ -299,6 +302,7 @@ export async function checkConnection(req: Request, res: Response) {
           }],
           institution: {
             name: connection.institution_name,
+            institution_id: connection.institution_id,
           },
         },
       });

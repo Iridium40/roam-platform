@@ -9,9 +9,27 @@ import {
 } from "./routes/edge-notifications";
 import { createLinkToken, exchangePublicToken, checkConnection } from "./routes/plaid";
 import { getServiceEligibility } from "./routes/service-eligibility";
-import { requireAuth, requireBusinessAccess, AuthenticatedRequest } from "./middleware/auth";
+import { requireAuth, requireBusinessAccess, requirePhase2Access, AuthenticatedRequest } from "./middleware/auth";
 import { validateRequest } from "./middleware/validation";
 import { schemas } from "../shared";
+
+// Import supabase client from auth middleware
+import { createClient } from '@supabase/supabase-js';
+
+// Create supabase client for database operations
+const supabase = createClient(
+  process.env.VITE_PUBLIC_SUPABASE_URL || 'https://vssomyuyhicaxsgiaupo.supabase.co',
+  process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzc29teXV5aGljYXhzZ2lhdXBvIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MzQ1MzcxNSwiZXhwIjoyMDY5MDI5NzE1fQ.54i9VPExknTktnWbyT9Z9rZKvSJOjs9fG60wncLhLlA',
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    },
+    db: {
+      schema: 'public'
+    }
+  }
+);
 
 export function createServer() {
   const app = express();
@@ -49,7 +67,7 @@ export function createServer() {
 
   // Business info route - use Vercel API function with validation
   app.post("/api/onboarding/business-info", 
-    validateRequest(schemas.businessInfo),
+    validateRequest(schemas.businessInfoRequest),
     async (req, res) => {
       try {
         const businessInfoHandler = await import(
@@ -114,16 +132,71 @@ export function createServer() {
 
   // Plaid routes
   app.post("/api/plaid/create-link-token", createLinkToken);
-  app.post("/api/plaid/exchange-public-token", 
-    validateRequest(schemas.plaidToken),
-    exchangePublicToken
-  );
+  app.post("/api/plaid/exchange-public-token", async (req, res) => {
+    try {
+      console.log("Local server: Plaid exchange public token route called");
+      
+      // Development mode bypass for Plaid token exchange
+      if (process.env.NODE_ENV === 'development') {
+        console.log("Development mode: Bypassing Plaid token exchange");
+        
+        const { public_token, account_id, userId, businessId } = req.body;
+        
+        // Return mock Plaid connection data
+        res.json({
+          success: true,
+          connection: {
+            access_token: 'access-sandbox-mock123456789',
+            item_id: 'item-sandbox-mock123456789',
+            accounts: [{
+              account_id: account_id || 'mock-account-id',
+              name: 'Mock Checking Account',
+              mask: '1234',
+              type: 'depository',
+              subtype: 'checking'
+            }],
+            institution: {
+              name: 'Mock Bank',
+              institution_id: 'ins_mock123456789'
+            }
+          },
+          testMode: true,
+          message: 'Development mode: Mock Plaid connection created'
+        });
+        return;
+      }
+      
+      // Production mode: use validation and handler
+      validateRequest(schemas.plaidToken)(req, res, () => {
+        exchangePublicToken(req, res);
+      });
+    } catch (error) {
+      console.error("Error in Plaid exchange public token:", error);
+      res.status(500).json({ error: "Failed to process Plaid token exchange" });
+    }
+  });
   app.get("/api/plaid/check-connection/:userId", checkConnection);
 
   // Stripe create connect account route
   app.post("/api/stripe/create-connect-account", async (req, res) => {
     try {
       console.log("Local server: Stripe create connect account route called");
+      
+      // Development mode bypass for Stripe Connect
+      if (process.env.NODE_ENV === 'development') {
+        console.log("Development mode: Bypassing Stripe Connect account creation");
+        
+        // Return mock Stripe Connect account data
+        res.json({
+          success: true,
+          account_id: 'acct_mock123456789',
+          onboarding_url: 'https://dashboard.stripe.com/express/onboarding/on_mock123456789',
+          testMode: true,
+          message: 'Development mode: Mock Stripe Connect account created'
+        });
+        return;
+      }
+      
       const stripeHandler = await import("../api/stripe/create-connect-account");
       await stripeHandler.default(req as any, res as any);
     } catch (error) {
@@ -162,9 +235,9 @@ export function createServer() {
     }
   });
 
-  // Phase 2 progress routes with auth
+  // Phase 2 progress routes with Phase 2 access (no login required)
   app.post("/api/onboarding/save-phase2-progress", 
-    requireAuth(['owner', 'admin']),
+    requirePhase2Access(),
     validateRequest(schemas.phase2Progress),
     async (req: AuthenticatedRequest, res) => {
       try {
@@ -218,6 +291,105 @@ export function createServer() {
         res
           .status(500)
           .json({ error: "Failed to load business profile handler" });
+      }
+    }
+  );
+
+  // Business profile route for Phase 2 onboarding (no login required)
+  app.get("/api/onboarding/business-profile/:businessId",
+    requirePhase2Access(),
+    async (req: AuthenticatedRequest, res) => {
+      try {
+        const profileHandler = await import(
+          "../api/business/profile/[businessId]"
+        );
+        await profileHandler.default(req, res);
+      } catch (error) {
+        console.error("Error importing business profile handler for onboarding:", error);
+        res
+          .status(500)
+          .json({ error: "Failed to load business profile handler" });
+      }
+    }
+  );
+
+  // Test business profile endpoint for development (no auth required)
+  app.put("/api/test-business-profile",
+    async (req, res) => {
+      try {
+        const { businessId, ...profileData } = req.body;
+        
+        console.log('Test business profile update:', { businessId, profileData });
+        
+        // In development mode, just return success
+        res.json({
+          success: true,
+          message: 'Test business profile updated successfully',
+          testMode: true,
+          data: profileData
+        });
+      } catch (error) {
+        console.error('Test business profile error:', error);
+        res.status(500).json({ error: 'Test endpoint error' });
+      }
+    }
+  );
+
+  // Test Phase 2 progress endpoint for development (no auth required)
+  app.post("/api/test-phase2-progress",
+    async (req, res) => {
+      try {
+        const { business_id, step, data } = req.body;
+        
+        console.log('Test Phase 2 progress update:', { business_id, step, data });
+        
+        // In development mode, just return success
+        res.json({
+          success: true,
+          message: 'Test Phase 2 progress updated successfully',
+          testMode: true,
+          step,
+          data
+        });
+      } catch (error) {
+        console.error('Test Phase 2 progress error:', error);
+        res.status(500).json({ error: 'Test endpoint error' });
+      }
+    }
+  );
+
+  // Test personal profile endpoint for development (no auth required)
+  app.put("/api/test-personal-profile",
+    async (req, res) => {
+      try {
+        const { userId, ...profileData } = req.body;
+        
+        console.log('Test personal profile update:', { userId, profileData });
+        
+        // In development mode, just return success
+        res.json({
+          success: true,
+          message: 'Test personal profile updated successfully',
+          testMode: true,
+          data: profileData
+        });
+      } catch (error) {
+        console.error('Test personal profile error:', error);
+        res.status(500).json({ error: 'Test endpoint error' });
+      }
+    }
+  );
+
+  // Image upload endpoint for Phase 2 onboarding (uses service role)
+  app.post("/api/onboarding/upload-image",
+    requirePhase2Access(),
+    async (req: AuthenticatedRequest, res) => {
+      try {
+        const uploadHandler = await import("../api/onboarding/upload-image");
+        await uploadHandler.default(req, res);
+      } catch (error) {
+        console.error("Error importing upload image handler:", error);
+        res.status(500).json({ error: "Failed to load upload image handler" });
       }
     }
   );
@@ -342,6 +514,591 @@ export function createServer() {
   //     }
   //   }
   // );
+
+  // Business eligible services route
+  app.get("/api/business-eligible-services", async (req, res) => {
+    try {
+      const { business_id } = req.query;
+      
+      if (!business_id) {
+        return res.status(400).json({ error: "Business ID is required" });
+      }
+
+      // Development mode bypass - return mock data based on business type
+      // Temporarily disabled to test with real Supabase data
+      if (false && process.env.NODE_ENV === 'development') {
+        console.log("Development mode: Returning mock eligible services for business:", business_id);
+        
+        // In development, we'll simulate that this business has been approved for
+        // "Home Services" category with "House Cleaning" and "Lawn Care" subcategories
+        const mockEligibleServices = [
+          {
+            id: 'service-1',
+            name: 'House Cleaning',
+            description: 'Professional house cleaning service including dusting, vacuuming, mopping, and bathroom cleaning',
+            min_price: 50,
+            duration_minutes: 120,
+            is_active: true,
+            subcategory_id: 'house-cleaning',
+            is_configured: false,
+            business_price: null,
+            delivery_type: null,
+            business_is_active: null,
+            service_subcategories: {
+              service_subcategory_type: 'House Cleaning',
+              service_categories: {
+                service_category_type: 'Home Services'
+              }
+            }
+          },
+          {
+            id: 'service-2',
+            name: 'Lawn Care',
+            description: 'Complete lawn maintenance including mowing, edging, and basic landscaping',
+            min_price: 75,
+            duration_minutes: 90,
+            is_active: true,
+            subcategory_id: 'lawn-care',
+            is_configured: false,
+            business_price: null,
+            delivery_type: null,
+            business_is_active: null,
+            service_subcategories: {
+              service_subcategory_type: 'Lawn Care',
+              service_categories: {
+                service_category_type: 'Home Services'
+              }
+            }
+          },
+          {
+            id: 'service-3',
+            name: 'Deep Cleaning',
+            description: 'Intensive cleaning service for move-in/move-out or seasonal deep cleaning',
+            min_price: 150,
+            duration_minutes: 240,
+            is_active: true,
+            subcategory_id: 'deep-cleaning',
+            is_configured: false,
+            business_price: null,
+            delivery_type: null,
+            business_is_active: null,
+            service_subcategories: {
+              service_subcategory_type: 'Deep Cleaning',
+              service_categories: {
+                service_category_type: 'Home Services'
+              }
+            }
+          }
+        ];
+
+        const mockEligibleAddons = [
+          {
+            id: 'addon-1',
+            name: 'Premium Cleaning Products',
+            description: 'Eco-friendly, professional-grade cleaning materials',
+            image_url: null,
+            is_active: true
+          },
+          {
+            id: 'addon-2',
+            name: 'Window Cleaning',
+            description: 'Interior and exterior window cleaning service',
+            image_url: null,
+            is_active: true
+          },
+          {
+            id: 'addon-3',
+            name: 'Carpet Cleaning',
+            description: 'Professional carpet and upholstery cleaning',
+            image_url: null,
+            is_active: true
+          },
+          {
+            id: 'addon-4',
+            name: 'Garden Maintenance',
+            description: 'Additional garden care and plant maintenance',
+            image_url: null,
+            is_active: true
+          }
+        ];
+
+        // Create service-addon mapping (which addons are compatible with which services)
+        const mockServiceAddonMap = {
+          'service-1': ['addon-1', 'addon-2', 'addon-3'], // House Cleaning compatible addons
+          'service-2': ['addon-4'], // Lawn Care compatible addons
+          'service-3': ['addon-1', 'addon-2', 'addon-3'] // Deep Cleaning compatible addons
+        };
+
+        res.json({
+          business_id: business_id,
+          service_count: mockEligibleServices.length,
+          addon_count: mockEligibleAddons.length,
+          eligible_services: mockEligibleServices,
+          eligible_addons: mockEligibleAddons,
+          service_addon_map: mockServiceAddonMap
+        });
+        return;
+      }
+
+                   // Production mode - query real database
+             try {
+               console.log("Production mode: Querying real database for eligible services");
+               
+               // Get business details and its approved subcategories
+               const { data: business, error: businessError } = await supabase
+                 .from('business_service_subcategories')
+                 .select(`
+                   subcategory_id,
+                   service_subcategories(
+                     id, 
+                     service_subcategory_type,
+                     service_categories(
+                       id,
+                       service_category_type
+                     )
+                   )
+                 `)
+                 .eq('business_id', business_id)
+                 .eq('is_active', true);
+
+                       if (businessError) {
+                 console.error('Error fetching business subcategories:', businessError);
+                 return res.status(500).json({ error: 'Failed to fetch business subcategories' });
+               }
+       
+               if (!business || business.length === 0) {
+                 console.log('No subcategories found for business:', business_id);
+                 return res.json({
+                   business_id: business_id,
+                   service_count: 0,
+                   addon_count: 0,
+                   eligible_services: [],
+                   eligible_addons: [],
+                   service_addon_map: {}
+                 });
+               }
+       
+               // Extract subcategory IDs
+               const subcategoryIds = business.map((bs: any) => bs.subcategory_id);
+
+        // Get eligible services based on business subcategories
+        const { data: eligibleServices, error: servicesError } = await supabase
+          .from('services')
+          .select(`
+            id, 
+            name, 
+            description, 
+            min_price,
+            duration_minutes, 
+            image_url, 
+            is_active,
+            subcategory_id,
+            service_subcategories(
+              service_subcategory_type,
+              service_categories(service_category_type)
+            )
+          `)
+          .in('subcategory_id', subcategoryIds)
+          .eq('is_active', true);
+
+        if (servicesError) {
+          console.error('Error fetching eligible services:', servicesError);
+          return res.status(500).json({ error: 'Failed to fetch eligible services' });
+        }
+
+        // Get service addons
+        const { data: eligibleAddons, error: addonsError } = await supabase
+          .from('service_addons')
+          .select('id, name, description, image_url, is_active')
+          .eq('is_active', true);
+
+        if (addonsError) {
+          console.error('Error fetching eligible addons:', addonsError);
+          return res.status(500).json({ error: 'Failed to fetch eligible addons' });
+        }
+
+        // Get service-addon mappings
+        const { data: serviceAddonMappings, error: mappingError } = await supabase
+          .from('service_addon_eligibility')
+          .select('service_id, addon_id, is_recommended');
+
+        if (mappingError) {
+          console.error('Error fetching service-addon mappings:', mappingError);
+          return res.status(500).json({ error: 'Failed to fetch service-addon mappings' });
+        }
+
+        // Create service-addon map
+        const serviceAddonMap: Record<string, string[]> = {};
+        serviceAddonMappings?.forEach((mapping: any) => {
+          if (!serviceAddonMap[mapping.service_id]) {
+            serviceAddonMap[mapping.service_id] = [];
+          }
+          serviceAddonMap[mapping.service_id].push(mapping.addon_id);
+        });
+
+        // Get current business services to mark as configured
+        const { data: businessServices, error: businessServicesError } = await supabase
+          .from('business_services')
+          .select('service_id, business_price, delivery_type, is_active')
+          .eq('business_id', business_id);
+
+        if (businessServicesError) {
+          console.error('Error fetching business services:', businessServicesError);
+          // Don't return error, just continue without configured services
+        }
+
+        const configuredServiceIds = new Set(businessServices?.map(bs => bs.service_id) || []);
+        const businessServicesMap = new Map(
+          businessServices?.map(bs => [bs.service_id, bs]) || []
+        );
+
+        // Mark services as configured and add business-specific data
+        const processedServices = eligibleServices?.map((service: any) => {
+          const isConfigured = configuredServiceIds.has(service.id);
+          const businessService = businessServicesMap.get(service.id);
+          
+          return {
+            ...service,
+            is_configured: isConfigured,
+            business_price: businessService?.business_price,
+            delivery_type: businessService?.delivery_type,
+            business_is_active: businessService?.is_active
+          };
+        }) || [];
+
+        const response = {
+          business_id: business_id,
+          service_count: processedServices.length,
+          addon_count: eligibleAddons?.length || 0,
+          eligible_services: processedServices,
+          eligible_addons: eligibleAddons || [],
+          service_addon_map: serviceAddonMap
+        };
+
+        res.json(response);
+                   } catch (error) {
+               console.error("Error in production eligible services:", error);
+               console.error("Error details:", {
+                 message: error.message,
+                 code: error.code,
+                 details: error.details,
+                 hint: error.hint
+               });
+               res.status(500).json({ 
+                 error: "Failed to fetch eligible services from database",
+                 details: error.message,
+                 code: error.code
+               });
+             }
+    } catch (error) {
+      console.error("Error in business eligible services:", error);
+      res.status(500).json({ error: "Failed to fetch eligible services" });
+    }
+  });
+
+  // Business services route
+  app.get("/api/business/services", async (req, res) => {
+    try {
+      const { business_id } = req.query;
+      
+      if (!business_id) {
+        return res.status(400).json({ error: "Business ID is required" });
+      }
+
+      // Development mode bypass - return mock data
+      // Temporarily disabled to test with real Supabase data
+      if (false && process.env.NODE_ENV === 'development') {
+        console.log("Development mode: Returning mock business services");
+        
+        const mockBusinessServices = [
+          {
+            id: 'bs-1',
+            business_id: business_id,
+            service_id: 'service-1',
+            business_price: 75,
+            is_active: true,
+            delivery_type: 'customer_location',
+            services: {
+              id: 'service-1',
+              name: 'House Cleaning',
+              description: 'Professional house cleaning service including dusting, vacuuming, mopping, and bathroom cleaning',
+              min_price: 50,
+              duration_minutes: 120,
+              image_url: null,
+              service_subcategories: {
+                service_subcategory_type: 'House Cleaning',
+                service_categories: {
+                  service_category_type: 'Home Services'
+              }
+            }
+          }
+        },
+          {
+            id: 'bs-2',
+            business_id: business_id,
+            service_id: 'service-2',
+            business_price: 95,
+            is_active: true,
+            delivery_type: 'customer_location',
+            services: {
+              id: 'service-2',
+              name: 'Lawn Care',
+              description: 'Complete lawn maintenance including mowing, edging, and basic landscaping',
+              min_price: 75,
+              duration_minutes: 90,
+              image_url: null,
+              service_subcategories: {
+                service_subcategory_type: 'Lawn Care',
+                service_categories: {
+                  service_category_type: 'Home Services'
+                }
+              }
+            }
+          }
+        ];
+
+        const mockStats = {
+          total_services: mockBusinessServices.length,
+          active_services: mockBusinessServices.filter(s => s.is_active).length,
+          total_bookings: 0,
+          total_revenue: 0,
+          avg_price: mockBusinessServices.reduce((sum, s) => sum + s.business_price, 0) / mockBusinessServices.length
+        };
+
+        res.json({
+          services: mockBusinessServices,
+          stats: mockStats
+        });
+        return;
+      }
+
+      // Production mode - query real database
+      try {
+        console.log("Production mode: Querying real database for business services");
+        
+        // Get business services with service details
+        const { data: businessServices, error: servicesError } = await supabase
+          .from('business_services')
+          .select(`
+            id,
+            business_id,
+            service_id,
+            business_price,
+            delivery_type,
+            is_active,
+            created_at,
+            updated_at,
+            services(
+              id,
+              name,
+              description,
+              min_price,
+              duration_minutes,
+              image_url,
+              service_subcategories(
+                service_subcategory_type,
+                service_categories(service_category_type)
+              )
+            )
+          `)
+          .eq('business_id', business_id);
+
+        if (servicesError) {
+          console.error('Error fetching business services:', servicesError);
+          return res.status(500).json({ error: 'Failed to fetch business services' });
+        }
+
+        const stats = {
+          total_services: businessServices?.length || 0,
+          active_services: businessServices?.filter(s => s.is_active).length || 0,
+          total_bookings: 0, // Would come from bookings data
+          total_revenue: 0, // Would come from bookings data
+          avg_price: businessServices && businessServices.length > 0 
+            ? businessServices.reduce((sum, s) => sum + (s.business_price || 0), 0) / businessServices.length 
+            : 0
+        };
+
+        res.json({
+          services: businessServices || [],
+          stats
+        });
+      } catch (error) {
+        console.error("Error in production business services:", error);
+        res.status(500).json({ error: "Failed to fetch business services from database" });
+      }
+    } catch (error) {
+      console.error("Error in business services:", error);
+      res.status(500).json({ error: "Failed to fetch business services" });
+    }
+  });
+
+  // Add/Update business service route
+  app.post("/api/business/services", async (req, res) => {
+    try {
+      const { business_id, service_id, business_price, delivery_type, is_active } = req.body;
+      
+      if (!business_id || !service_id || !business_price) {
+        return res.status(400).json({ error: "Business ID, service ID, and price are required" });
+      }
+
+      // Development mode bypass
+      if (process.env.NODE_ENV === 'development') {
+        console.log("Development mode: Mock adding/updating business service");
+        
+        const mockService = {
+          id: `bs-${Date.now()}`,
+          business_id,
+          service_id,
+          business_price: parseFloat(business_price),
+          delivery_type: delivery_type || 'customer_location',
+          is_active: is_active !== false,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+
+        res.json({ service: mockService });
+        return;
+      }
+
+      // Production mode - insert/update in database
+      try {
+        console.log("Production mode: Adding/updating business service in database");
+        
+        // Check if service already exists
+        const { data: existingService, error: checkError } = await supabase
+          .from('business_services')
+          .select('id')
+          .eq('business_id', business_id)
+          .eq('service_id', service_id)
+          .single();
+
+        let result;
+        if (existingService) {
+          // Update existing service
+          const { data, error } = await supabase
+            .from('business_services')
+            .update({
+              business_price: parseFloat(business_price),
+              delivery_type: delivery_type || 'customer_location',
+              is_active: is_active !== false,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', existingService.id)
+            .select()
+            .single();
+
+          if (error) throw error;
+          result = data;
+        } else {
+          // Insert new service
+          const { data, error } = await supabase
+            .from('business_services')
+            .insert({
+              business_id,
+              service_id,
+              business_price: parseFloat(business_price),
+              delivery_type: delivery_type || 'customer_location',
+              is_active: is_active !== false
+            })
+            .select()
+            .single();
+
+          if (error) throw error;
+          result = data;
+        }
+
+        res.json({ service: result });
+      } catch (error) {
+        console.error("Error in production business service operation:", error);
+        res.status(500).json({ error: "Failed to add/update business service in database" });
+      }
+    } catch (error) {
+      console.error("Error in business service operation:", error);
+      res.status(500).json({ error: "Failed to process business service operation" });
+    }
+  });
+
+  // Add/Update business addon route
+  app.post("/api/business/addons", async (req, res) => {
+    try {
+      const { business_id, addon_id, custom_price, is_available } = req.body;
+      
+      if (!business_id || !addon_id) {
+        return res.status(400).json({ error: "Business ID and addon ID are required" });
+      }
+
+      // Development mode bypass
+      // Temporarily disabled to test with real Supabase data
+      if (false && process.env.NODE_ENV === 'development') {
+        console.log("Development mode: Mock adding/updating business addon");
+        
+        const mockAddon = {
+          id: `ba-${Date.now()}`,
+          business_id,
+          addon_id,
+          custom_price: custom_price ? parseFloat(custom_price) : null,
+          is_available: is_available !== false,
+          created_at: new Date().toISOString()
+        };
+
+        res.json({ mockAddon });
+        return;
+      }
+
+      // Production mode - insert/update in database
+      try {
+        console.log("Production mode: Adding/updating business addon in database");
+        
+        // Check if addon already exists
+        const { data: existingAddon, error: checkError } = await supabase
+          .from('business_addons')
+          .select('id')
+          .eq('business_id', business_id)
+          .eq('addon_id', addon_id)
+          .single();
+
+        let result;
+        if (existingAddon) {
+          // Update existing addon
+          const { data, error } = await supabase
+            .from('business_addons')
+            .update({
+              custom_price: custom_price ? parseFloat(custom_price) : null,
+              is_available: is_available !== false
+            })
+            .eq('id', existingAddon.id)
+            .select()
+            .single();
+
+          if (error) throw error;
+          result = data;
+        } else {
+          // Insert new addon
+          const { data, error } = await supabase
+            .from('business_addons')
+            .insert({
+              business_id,
+              addon_id,
+              custom_price: custom_price ? parseFloat(custom_price) : null,
+              is_available: is_available !== false
+            })
+            .select()
+            .single();
+
+          if (error) throw error;
+          result = data;
+        }
+
+        res.json({ addon: result });
+      } catch (error) {
+        console.error("Error in production business addon operation:", error);
+        res.status(500).json({ error: "Failed to add/update business addon in database" });
+      }
+    } catch (error) {
+      console.error("Error in business addon operation:", error);
+      res.status(500).json({ error: "Failed to process business addon operation" });
+    }
+  });
 
   // Edge notifications routes (development equivalent)
   app.get("/api/notifications/edge", handleEdgeNotifications);

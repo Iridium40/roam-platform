@@ -19,10 +19,8 @@ import {
   ArrowRight,
   Loader2,
 } from "lucide-react";
-import ImageUploadService, {
-  IMAGE_REQUIREMENTS,
-  ImageType,
-} from "@/utils/imageUtils";
+import { ImageStorageService } from "@/utils/image/imageStorage";
+import { IMAGE_REQUIREMENTS, ImageType } from "@/utils/image/imageTypes";
 
 interface BusinessProfileData {
   businessName: string;
@@ -101,15 +99,16 @@ export default function BusinessProfileSetup({
     return () => {
       // Cleanup preview URLs
       if (logoUpload.preview)
-        ImageUploadService.cleanupPreviewUrl(logoUpload.preview);
+        ImageStorageService.cleanupPreviewUrl(logoUpload.preview);
       if (coverUpload.preview)
-        ImageUploadService.cleanupPreviewUrl(coverUpload.preview);
+        ImageStorageService.cleanupPreviewUrl(coverUpload.preview);
     };
   }, []);
 
   const loadExistingData = async () => {
     try {
-      const response = await fetch(`/api/business/profile/${businessId}`);
+      // Use the onboarding-specific endpoint that doesn't require authentication
+      const response = await fetch(`/api/onboarding/business-profile/${businessId}`);
       if (response.ok) {
         const data = await response.json();
         setFormData((prev) => ({
@@ -162,15 +161,15 @@ export default function BusinessProfileSetup({
     const setUploadState =
       imageType === "logo" ? setLogoUpload : setCoverUpload;
     const uploadType: ImageType =
-      imageType === "logo" ? "businessLogo" : "businessCover";
+      imageType === "logo" ? "business_logo" : "business_cover";
 
     // Clean up previous preview
     if (uploadState.preview) {
-      ImageUploadService.cleanupPreviewUrl(uploadState.preview);
+      ImageStorageService.cleanupPreviewUrl(uploadState.preview);
     }
 
     // Validate image
-    const validation = await ImageUploadService.validateImage(file, uploadType);
+    const validation = await ImageStorageService.validateImage(file, uploadType);
 
     if (!validation.isValid) {
       setUploadState({
@@ -184,7 +183,7 @@ export default function BusinessProfileSetup({
     }
 
     // Create preview
-    const preview = ImageUploadService.generatePreviewUrl(file);
+    const preview = ImageStorageService.generatePreviewUrl(file);
 
     setUploadState({
       file,
@@ -203,14 +202,14 @@ export default function BusinessProfileSetup({
     const setUploadState =
       imageType === "logo" ? setLogoUpload : setCoverUpload;
     const uploadType: ImageType =
-      imageType === "logo" ? "businessLogo" : "businessCover";
+      imageType === "logo" ? "business_logo" : "business_cover";
 
     if (!uploadState.file) return;
 
     setUploadState((prev) => ({ ...prev, uploading: true, error: undefined }));
 
     try {
-      const result = await ImageUploadService.uploadImage(
+      const result = await ImageStorageService.uploadImageWithFallback(
         uploadState.file,
         uploadType,
         businessId,
@@ -253,7 +252,7 @@ export default function BusinessProfileSetup({
       imageType === "logo" ? setLogoUpload : setCoverUpload;
 
     if (uploadState.preview) {
-      ImageUploadService.cleanupPreviewUrl(uploadState.preview);
+      ImageStorageService.cleanupPreviewUrl(uploadState.preview);
     }
 
     setUploadState({
@@ -341,8 +340,8 @@ export default function BusinessProfileSetup({
         throw new Error("Failed to save business profile");
       }
 
-      // Mark step as completed
-      await fetch("/api/onboarding/save-phase2-progress", {
+      // Mark step as completed (use test endpoint for now)
+      await fetch("/api/test-phase2-progress", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

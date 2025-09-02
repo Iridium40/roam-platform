@@ -45,8 +45,37 @@ export default function Phase2Entry() {
 
     const token = searchParams.get("token");
     const testMode = searchParams.get("test");
+    const directAccess = searchParams.get("direct");
     console.log("Token from URL:", token ? "Token present" : "No token found");
     console.log("Test mode:", testMode);
+    console.log("Direct access:", directAccess);
+
+    // Allow direct access to bypass token validation for development/testing
+    if (directAccess === "true") {
+      console.log("Direct access enabled - bypassing token validation");
+      const testSessionData: Phase2SessionData = {
+        business_id: "direct-access-business-id",
+        user_id: "direct-access-user-id",
+        application_id: "direct-access-application-id",
+        business_name: "Direct Access Business",
+        validated_at: Date.now(),
+        progress: {}
+      };
+      
+      sessionStorage.setItem("phase2_session", JSON.stringify(testSessionData));
+      
+      // Redirect to welcome step
+      setTimeout(() => {
+        navigate(`/provider-onboarding/phase2/welcome`, {
+          replace: true,
+          state: {
+            validated: true,
+            businessName: "Direct Access Business",
+          },
+        });
+      }, 1000);
+      return;
+    }
 
     // Allow test mode to bypass token validation
     if (testMode === "true") {

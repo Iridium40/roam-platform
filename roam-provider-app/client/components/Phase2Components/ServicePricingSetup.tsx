@@ -106,7 +106,6 @@ interface ServicePricingData {
   pricingModel: 'fixed'; // Fixed to 'fixed' only
   currency: 'USD'; // Fixed to 'USD' only
   taxRate: number;
-  cancellationPolicy: string; // Will be set to platform policy
 }
 
 interface ServicePricingSetupProps {
@@ -121,7 +120,6 @@ interface ServicePricingSetupProps {
 // Platform defaults - no longer configurable
 const PLATFORM_PRICING_MODEL = 'fixed';
 const PLATFORM_CURRENCY = 'USD';
-const PLATFORM_CANCELLATION_POLICY = 'By using our platform, you agree to our cancellation policy. For details, visit our Terms of Service.';
 
 // Initialize Supabase client
 const supabase = createClient(
@@ -147,7 +145,6 @@ export default function ServicePricingSetup({
       pricingModel: PLATFORM_PRICING_MODEL,
       currency: PLATFORM_CURRENCY,
       taxRate: 0,
-      cancellationPolicy: PLATFORM_CANCELLATION_POLICY,
     }
   );
   const [loading, setLoading] = useState(false);
@@ -171,26 +168,15 @@ export default function ServicePricingSetup({
       setLoading(true);
       setError(null);
 
-      // Call the edge function to get eligible services and addons
-      const supabaseUrl = 'https://vssomyuyhicaxsgiaupo.supabase.co';
-      const anonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzc29teXV5aGljYXhzZ2lhdXBvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTM3MTUsImV4cCI6MjA2OTAyOTcxNX0.c4JrNgMGsrCaFP2VrF4pL6iUG8Ub8Hkcrm5345r7KHs';
-
-      const response = await fetch(
-        `${supabaseUrl}/functions/v1/get-business-eligible-services?business_id=${businessId}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${anonKey}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
+      // Use the same API endpoint as ServicesTab.tsx
+      const response = await fetch(`/api/business-eligible-services?business_id=${businessId}`);
 
       if (!response.ok) {
         throw new Error(`Failed to fetch eligible services: ${response.statusText}`);
       }
 
-      const edgeData = await response.json();
-      console.log('Eligible services data:', edgeData);
+      const { eligible_services, eligible_addons } = await response.json();
+      console.log('Eligible services data:', { eligible_services, eligible_addons });
 
       // Get current business services and addons
       const { data: currentBusinessServices } = await supabase
@@ -206,9 +192,9 @@ export default function ServicePricingSetup({
       // Update pricing data with fetched information
       setPricingData(prev => ({
         ...prev,
-        eligible_services: edgeData.eligible_services || [],
-        eligible_addons: edgeData.eligible_addons || [],
-        service_addon_map: edgeData.service_addon_map || {},
+        eligible_services: eligible_services || [],
+        eligible_addons: eligible_addons || [],
+        service_addon_map: {}, // Initialize empty for now
         business_services: currentBusinessServices || [],
         business_addons: currentBusinessAddons || [],
       }));
@@ -227,6 +213,71 @@ export default function ServicePricingSetup({
   }, [businessId]);
 
   // Add a service to business_services
+  const handleAddService = async (eligibleService: EligibleService) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Prompt user for price and delivery type
+      const price = prompt(`Enter your price for ${eligibleService.name} (minimum: $${eligibleService.min_price}):`);
+      if (!price) return;
+
+      const businessPrice = parseFloat(price);
+      if (isNaN(businessPrice) || businessPrice < eligibleService.min_price) {
+        setError(`Price must be at least $${eligibleService.min_price}`);
+        return;
+      }
+
+      const deliveryType = prompt(`Select delivery type for ${eligibleService.name}:\n1. Customer Location\n2. Business Location\n3. Mobile Service\n\nEnter 1, 2, or 3:`) || '1';
+      
+      let deliveryTypeValue: string;
+      switch (deliveryType) {
+        case '1': deliveryTypeValue = 'customer_location'; break;
+        case '2': deliveryTypeValue = 'business_location'; break;
+        case '3': deliveryTypeValue = 'mobile'; break;
+        default: deliveryTypeValue = 'customer_location';
+      }
+
+      // Use the same API endpoint as ServicesTab.tsx
+      const response = await fetch('/api/business/services', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          business_id: businessId,
+          service_id: eligibleService.id,
+          business_price: businessPrice,
+          delivery_type: deliveryTypeValue,
+          is_active: true
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to add service');
+      }
+
+      const { service } = await response.json();
+
+      // Update local state
+      setPricingData(prev => ({
+        ...prev,
+        business_services: [...prev.business_services, service]
+      }));
+
+      // Refresh eligible services to update the list
+      await fetchEligibleServices();
+
+    } catch (error) {
+      console.error('Error adding business service:', error);
+      setError(error instanceof Error ? error.message : 'Failed to add service');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Legacy function for backward compatibility
   const addBusinessService = async (serviceId: string, businessPrice: number, deliveryType: string = 'customer_location') => {
     try {
       const { data, error } = await supabase
@@ -310,6 +361,63 @@ export default function ServicePricingSetup({
   };
 
   // Add an addon to business_addons
+  const handleAddAddon = async (eligibleAddon: EligibleAddon) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Prompt user for custom price (optional)
+      const price = prompt(`Enter custom price for ${eligibleAddon.name} (leave empty for variable pricing):`);
+      let customPrice: number | null = null;
+      
+      if (price && price.trim() !== '') {
+        const parsedPrice = parseFloat(price);
+        if (isNaN(parsedPrice) || parsedPrice < 0) {
+          setError('Please enter a valid price');
+          return;
+        }
+        customPrice = parsedPrice;
+      }
+
+      // Use the new API endpoint
+      const response = await fetch('/api/business/addons', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          business_id: businessId,
+          addon_id: eligibleAddon.id,
+          custom_price: customPrice,
+          is_available: true
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to add addon');
+      }
+
+      const { addon } = await response.json();
+
+      // Update local state
+      setPricingData(prev => ({
+        ...prev,
+        business_addons: [...prev.business_addons, addon]
+      }));
+
+      // Refresh eligible addons to update the list
+      await fetchEligibleServices();
+
+    } catch (error) {
+      console.error('Error adding business addon:', error);
+      setError(error instanceof Error ? error.message : 'Failed to add addon');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Legacy function for backward compatibility
   const addBusinessAddon = async (addonId: string, customPrice: number | null = null) => {
     try {
       const { data, error } = await supabase
@@ -486,49 +594,7 @@ export default function ServicePricingSetup({
             </Alert>
           )}
 
-          {/* Platform Settings */}
-          <div className="space-y-4">
-            <Label className="text-lg font-semibold">Platform Settings</Label>
-            <div className="grid gap-4 md:grid-cols-3">
-              <Card className="p-4 border-blue-200 bg-blue-50">
-                <div className="flex items-center gap-3 mb-2">
-                  <DollarSign className="w-5 h-5 text-blue-600" />
-                  <h4 className="font-semibold text-blue-900">Pricing Model</h4>
-                </div>
-                <p className="text-sm text-blue-800">Fixed Price</p>
-                <p className="text-xs text-blue-700 mt-1">Platform Default</p>
-              </Card>
-              
-              <Card className="p-4 border-blue-200 bg-blue-50">
-                <div className="flex items-center gap-3 mb-2">
-                  <DollarSign className="w-5 h-5 text-blue-600" />
-                  <h4 className="font-semibold text-blue-900">Currency</h4>
-                </div>
-                <p className="text-sm text-blue-800">USD ($)</p>
-                <p className="text-xs text-blue-700 mt-1">Platform Default</p>
-              </Card>
 
-              <Card className="p-4 border-blue-200 bg-blue-50">
-                <div className="flex items-center gap-3 mb-2">
-                  <Settings className="w-5 h-5 text-blue-600" />
-                  <h4 className="font-semibold text-blue-900">Tax Rate</h4>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="number"
-                    value={pricingData.taxRate}
-                    onChange={(e) => updatePricingData('taxRate', parseFloat(e.target.value) || 0)}
-                    placeholder="0"
-                    min="0"
-                    max="100"
-                    step="0.1"
-                    className="w-20"
-                  />
-                  <span className="text-sm text-blue-800">%</span>
-                </div>
-              </Card>
-            </div>
-          </div>
 
           {/* My Services */}
           <div className="space-y-4">
@@ -641,10 +707,7 @@ export default function ServicePricingSetup({
                       </div>
                       <Button
                         size="sm"
-                        onClick={() => {
-                          setEditingService(eligibleService);
-                          setShowAddServiceModal(true);
-                        }}
+                        onClick={() => handleAddService(eligibleService)}
                         className="bg-roam-blue hover:bg-roam-blue/90"
                       >
                         <Plus className="w-4 h-4 mr-2" />
@@ -753,10 +816,7 @@ export default function ServicePricingSetup({
                       </div>
                       <Button
                         size="sm"
-                        onClick={() => {
-                          setEditingAddon(eligibleAddon);
-                          setShowAddonModal(true);
-                        }}
+                        onClick={() => handleAddAddon(eligibleAddon)}
                         className="bg-roam-blue hover:bg-roam-blue/90"
                       >
                         <Plus className="w-4 h-4 mr-2" />
@@ -768,30 +828,7 @@ export default function ServicePricingSetup({
             </div>
           </div>
 
-          {/* Platform Cancellation Policy */}
-          <div className="space-y-4">
-            <Label className="text-lg font-semibold">Cancellation Policy</Label>
-            <Card className="p-4 border-blue-200 bg-blue-50">
-              <div className="flex items-start gap-3">
-                <Info className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-                <div>
-                  <h4 className="font-semibold text-blue-900 mb-2">Platform Cancellation Policy</h4>
-                  <p className="text-sm text-blue-800 mb-3">
-                    By using our platform, you agree to our cancellation policy. For detailed terms and conditions, 
-                    please review our platform's cancellation policy.
-                  </p>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="text-blue-700 border-blue-300 hover:bg-blue-100"
-                    onClick={() => window.open('/terms-of-service', '_blank')}
-                  >
-                    View Platform Policy
-                  </Button>
-                </div>
-              </div>
-            </Card>
-          </div>
+
 
           {/* Information Alert */}
           <Alert>

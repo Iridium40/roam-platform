@@ -8,7 +8,7 @@ export const uuidSchema = z.string().uuid('Invalid UUID format');
 
 // Business validation schemas
 export const businessNameSchema = z.string().min(2, 'Business name must be at least 2 characters').max(100);
-export const businessTypeSchema = z.enum(['sole_proprietorship', 'llc', 'corporation', 'partnership'] as const);
+export const businessTypeSchema = z.enum(['independent', 'small_business', 'franchise', 'enterprise', 'other'] as const);
 export const businessDescriptionSchema = z.string().max(500, 'Description must be less than 500 characters').optional();
 
 export const createBusinessSchema = z.object({
@@ -16,7 +16,14 @@ export const createBusinessSchema = z.object({
   businessType: businessTypeSchema,
   contactEmail: emailSchema,
   phone: phoneSchema,
-  businessDescription: businessDescriptionSchema,
+  serviceCategories: z.array(z.string()).min(1, 'At least one service category is required'),
+  businessDescription: businessDescriptionSchema.optional(),
+});
+
+// Schema for the business info API request
+export const businessInfoRequestSchema = z.object({
+  userId: uuidSchema,
+  businessData: createBusinessSchema,
 });
 
 // Export all schemas as a single object for convenience
@@ -28,6 +35,7 @@ export const schemas = {
   createBusiness: createBusinessSchema,
   businessInfo: createBusinessSchema, // Alias for server compatibility
   businessProfile: createBusinessSchema, // Alias for server compatibility
+  businessInfoRequest: businessInfoRequestSchema, // For API request validation
   
   // Additional schemas for server compatibility
   applicationSubmission: z.object({

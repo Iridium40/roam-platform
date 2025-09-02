@@ -1,6 +1,6 @@
 import { createServer } from './index.js';
 
-const port = 3003;
+const port = 3004;
 const app = createServer();
 
 app.listen(port, () => {

@@ -133,8 +133,16 @@ export default function ProviderOnboardingPhase1() {
       console.log("Starting signup process for:", signupData.email);
       console.log("Signup data keys:", Object.keys(signupData));
 
+      // Add role field for provider signup
+      const signupDataWithRole = {
+        ...signupData,
+        role: 'provider'
+      };
+
+      console.log("Enhanced signup data keys:", Object.keys(signupDataWithRole));
+
       // Create user account using the safe API utility
-      const response = await postJson("/api/auth/signup", signupData);
+      const response = await postJson("/api/auth/signup", signupDataWithRole);
 
       console.log("Signup API response:", {
         success: response.success,
@@ -212,13 +220,25 @@ export default function ProviderOnboardingPhase1() {
         );
       }
 
+      // Log the data being sent for debugging
+      const requestData = {
+        userId: onboardingState.userId,
+        businessData,
+      };
+      console.log("Sending business info request:", requestData);
+      console.log("Business data keys:", Object.keys(businessData));
+      console.log("Required fields check:", {
+        businessName: !!businessData.businessName,
+        businessType: !!businessData.businessType,
+        contactEmail: !!businessData.contactEmail,
+        phone: !!businessData.phone,
+        serviceCategories: !!businessData.serviceCategories && businessData.serviceCategories.length > 0,
+      });
+
       const response = await fetch("/api/onboarding/business-info", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: onboardingState.userId,
-          businessData,
-        }),
+        body: JSON.stringify(requestData),
       });
 
       // Clone the response immediately to avoid any body stream issues

@@ -39,12 +39,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
+    console.log("Received business info request body:", req.body);
+    console.log("Request body keys:", Object.keys(req.body));
+    
     const {
       userId,
       businessData,
     }: { userId: string; businessData: BusinessInfoData } = req.body;
 
+    console.log("Extracted userId:", userId);
+    console.log("Extracted businessData keys:", businessData ? Object.keys(businessData) : "No businessData");
+
     if (!userId || !businessData) {
+      console.log("Missing required fields - userId:", !!userId, "businessData:", !!businessData);
       return res.status(400).json({ error: "Missing required fields" });
     }
 

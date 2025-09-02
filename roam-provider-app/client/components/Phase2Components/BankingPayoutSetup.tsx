@@ -126,7 +126,18 @@ export default function BankingPayoutSetup({
 
       const result = await response.json();
       
-      // Redirect to Stripe Connect onboarding
+      // Check if this is development mode (mock response)
+      if (result.testMode) {
+        console.log('Development mode: Stripe Connect account created successfully');
+        setBankingData(prev => ({
+          ...prev,
+          stripeConnected: true,
+          stripeAccountId: result.account_id || 'mock-account'
+        }));
+        return;
+      }
+      
+      // Production mode: Redirect to Stripe Connect onboarding
       if (result.onboarding_url) {
         window.location.href = result.onboarding_url;
       } else {
@@ -336,17 +347,28 @@ export default function BankingPayoutSetup({
                       businessId={businessId}
                       businessType="llc"
                       onConnectionComplete={(connectionData) => {
-                        setBankingData(prev => ({
-                          ...prev,
-                          plaidConnected: true,
-                          bankAccount: {
-                            account_id: connectionData.accounts[0]?.account_id || '',
-                            mask: connectionData.accounts[0]?.mask || '',
-                            name: connectionData.accounts[0]?.name || '',
-                            type: connectionData.accounts[0]?.type || '',
-                            institution_name: connectionData.institution.name,
-                          }
-                        }));
+                        console.log('Plaid connection completed:', connectionData);
+                        
+                        // Handle both direct data structure and nested connection structure
+                        const accounts = connectionData.accounts || connectionData.connection?.accounts;
+                        const institution = connectionData.institution || connectionData.connection?.institution;
+                        
+                        if (accounts && accounts[0] && institution) {
+                          setBankingData(prev => ({
+                            ...prev,
+                            plaidConnected: true,
+                            bankAccount: {
+                              account_id: accounts[0].account_id || '',
+                              mask: accounts[0].mask || '',
+                              name: accounts[0].name || '',
+                              type: accounts[0].type || '',
+                              institution_name: institution.name || 'Unknown Bank',
+                            }
+                          }));
+                        } else {
+                          console.error('Invalid connection data structure:', connectionData);
+                          setError('Invalid bank connection data received');
+                        }
                       }}
                       onConnectionError={(error) => {
                         setError(error);
@@ -380,35 +402,7 @@ export default function BankingPayoutSetup({
             )}
           </div>
 
-          {/* Platform Payout Settings */}
-          <div className="space-y-4">
-            <Label className="text-lg font-semibold">Platform Payout Settings</Label>
-            <Card className="p-4 border-blue-200 bg-blue-50">
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                    <Info className="w-4 h-4 text-blue-600" />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-blue-900">Weekly Payouts</h4>
-                    <p className="text-sm text-blue-800">Payouts are processed every Friday</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                    <Info className="w-4 h-4 text-blue-600" />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-blue-900">Minimum Payout Amount</h4>
-                    <p className="text-sm text-blue-800">Set by platform (typically $25 minimum)</p>
-                  </div>
-                </div>
-              </div>
-            </Card>
-            <p className="text-sm text-gray-600">
-              These settings are controlled at the platform level to ensure consistent payout processing for all providers.
-            </p>
-          </div>
+
 
           {/* Automatic Payouts Information */}
           <div className="space-y-4">
@@ -445,6 +439,27 @@ export default function BankingPayoutSetup({
               The first payout may take 7-14 days to process for new accounts.
             </AlertDescription>
           </Alert>
+
+          {/* Development Mode Skip Button */}
+          {process.env.NODE_ENV === 'development' && (
+            <div className="pt-4 border-t border-dashed border-orange-300">
+              <Alert className="border-orange-200 bg-orange-50">
+                <Info className="h-4 w-4 text-orange-600" />
+                <AlertDescription className="text-orange-800">
+                  <strong>Development Mode:</strong> Click the button below to skip to the next step for testing purposes.
+                </AlertDescription>
+              </Alert>
+              <div className="mt-3 flex justify-center">
+                <Button
+                  variant="outline"
+                  onClick={() => onComplete({ stripeConnected: true, plaidConnected: true })}
+                  className="border-orange-300 text-orange-700 hover:bg-orange-50"
+                >
+                  🚀 Skip to Service Pricing (Dev Mode)
+                </Button>
+              </div>
+            </div>
+          )}
 
           {/* Action Buttons */}
           <div className="flex justify-between pt-6">

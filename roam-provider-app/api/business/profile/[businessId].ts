@@ -49,7 +49,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       const { data: business, error } = await supabase
-        .from('business_profiles')
+        .from('businesses')
         .select('*')
         .eq('id', businessId)
         .single();
@@ -106,7 +106,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // Check if business profile exists
       const { data: existingBusiness } = await supabase
-        .from('business_profiles')
+        .from('businesses')
         .select('id')
         .eq('id', businessId)
         .single();
@@ -117,7 +117,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // Update business profile
       const { error: updateError } = await supabase
-        .from('business_profiles')
+        .from('businesses')
         .update({
           business_name: businessName,
           business_description: detailedDescription, // Use existing column name

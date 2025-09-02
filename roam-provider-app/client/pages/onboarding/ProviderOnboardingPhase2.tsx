@@ -19,6 +19,8 @@ import {
 
 // Import components
 import WelcomeBackStep from "@/components/WelcomeBackStep";
+import BusinessProfileSetup from "@/components/Phase2Components/BusinessProfileSetup";
+import PersonalProfileSetup from "@/components/Phase2Components/PersonalProfileSetup";
 import BusinessHoursSetup from "@/components/Phase2Components/BusinessHoursSetup";
 import StaffManagementSetup from "@/components/Phase2Components/StaffManagementSetup";
 import BankingPayoutSetup from "@/components/Phase2Components/BankingPayoutSetup";
@@ -26,7 +28,7 @@ import ServicePricingSetup from "@/components/Phase2Components/ServicePricingSet
 import FinalReviewSetup from "@/components/Phase2Components/FinalReviewSetup";
 import StripeIdentityVerification from "@/components/StripeIdentityVerification";
 import { PlaidBankConnection } from "@/components/PlaidBankConnection";
-import { StripeConnectSetup } from "@/components/StripeConnectSetup";
+import StripeConnectSetup from "@/components/StripeConnectSetup";
 
 type Phase2Step =
   | "welcome"
@@ -114,6 +116,27 @@ export default function ProviderOnboardingPhase2() {
       }
     }
 
+    // Check if this is a development/test environment
+    const isDevelopment = process.env.NODE_ENV === 'development' || 
+                         window.location.hostname === 'localhost' ||
+                         window.location.hostname === '127.0.0.1';
+    
+    if (isDevelopment) {
+      // Allow access to any Phase 2 step in development
+      console.log('Development mode: Allowing access to Phase 2 step:', params.step);
+      setOnboardingState(prev => ({
+        ...prev,
+        businessId: '123e4567-e89b-12d3-a456-426614174000',
+        userId: '987fcdeb-51a2-43d1-9f12-345678901234',
+        phase2Step: (params.step as Phase2Step) || 'welcome',
+        businessData: { 
+          businessName: 'Development Business',
+          business_type: 'independent' // Set to independent to test staff management skip
+        }
+      }));
+      return;
+    }
+
     // Invalid or expired session - redirect to portal
     console.log('No valid Phase 2 session, redirecting to portal');
     navigate('/provider-portal');
@@ -121,6 +144,10 @@ export default function ProviderOnboardingPhase2() {
 
   const handlePhase2Welcome = () => {
     navigate('/provider-onboarding/phase2/business_profile');
+  };
+
+  const handleStepClick = (stepId: string) => {
+    navigate(`/provider-onboarding/phase2/${stepId}`);
   };
 
   const handlePhase2StepComplete = (nextStep: Phase2Step) => {
@@ -210,36 +237,23 @@ export default function ProviderOnboardingPhase2() {
 
       case "business_profile":
         return (
-          <Card className="max-w-2xl mx-auto text-center">
-            <CardHeader>
-              <CardTitle className="text-2xl text-roam-blue">
-                Business Profile Setup
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p>Business profile component coming soon...</p>
-              <Button onClick={() => handlePhase2StepComplete("personal_profile")} className="mt-4">
-                Continue
-              </Button>
-            </CardContent>
-          </Card>
+          <BusinessProfileSetup
+            businessId={onboardingState.businessId || ""}
+            userId={onboardingState.userId || ""}
+            onComplete={() => handlePhase2StepComplete("personal_profile")}
+            onBack={() => handlePhase2StepComplete("welcome")}
+          />
         );
 
       case "personal_profile":
         return (
-          <Card className="max-w-2xl mx-auto text-center">
-            <CardHeader>
-              <CardTitle className="text-2xl text-roam-blue">
-                Personal Profile Setup
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p>Personal profile component coming soon...</p>
-              <Button onClick={() => handlePhase2StepComplete("business_hours")} className="mt-4">
-                Continue
-              </Button>
-            </CardContent>
-          </Card>
+          <PersonalProfileSetup
+            businessId={onboardingState.businessId || ""}
+            userId={onboardingState.userId || ""}
+            onComplete={() => handlePhase2StepComplete("business_hours")}
+            onBack={() => handlePhase2StepComplete("business_profile")}
+            initialData={onboardingState.businessData?.personal_profile}
+          />
         );
 
       case "business_hours":

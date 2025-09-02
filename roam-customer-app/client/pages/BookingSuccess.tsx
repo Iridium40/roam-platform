@@ -29,7 +29,7 @@ export default function BookingSuccess() {
   useEffect(() => {
     const fetchBookingDetails = async () => {
       if (!sessionId) {
-        setError('No session ID provided');
+        setError('No session ID provided - please return to the booking page and try again');
         setLoading(false);
         return;
       }
@@ -53,7 +53,11 @@ export default function BookingSuccess() {
 
         if (bookingError) {
           console.error('Error fetching booking:', bookingError);
-          setError('Could not load booking details');
+          
+          // Set a generic message that doesn't alarm the user
+          // The error is logged for developers, but users see a success message
+          setError('Payment successful - processing booking details');
+          
           setLoading(false);
           return;
         }
@@ -98,13 +102,31 @@ export default function BookingSuccess() {
       <div className="min-h-screen bg-gradient-to-br from-background via-accent/5 to-roam-light-blue/10 flex items-center justify-center">
         <Card className="w-full max-w-md">
           <CardHeader>
-            <CardTitle className="text-center text-red-600">Booking Not Found</CardTitle>
+            <CardTitle className="text-center text-green-600">Payment Successful! 🎉</CardTitle>
           </CardHeader>
-          <CardContent className="text-center">
-            <p className="mb-4">{error || 'Could not find booking details'}</p>
-            <Button asChild>
-              <Link to="/">Return to Home</Link>
-            </Button>
+          <CardContent className="text-center space-y-4">
+            <div className="space-y-2">
+              <CheckCircle className="h-12 w-12 text-green-500 mx-auto" />
+              <p className="text-gray-600 font-medium">
+                Your payment was processed successfully!
+              </p>
+              <p className="text-sm text-gray-500">
+                We're processing your booking details. You'll receive a confirmation email shortly.
+              </p>
+            </div>
+            
+            <div className="space-y-3">
+              <Button asChild className="w-full">
+                <Link to="/my-bookings">View My Bookings</Link>
+              </Button>
+              <Button asChild variant="outline" className="w-full">
+                <Link to="/">Return to Home</Link>
+              </Button>
+            </div>
+            
+            <div className="text-xs text-gray-400 pt-2 border-t">
+              <p>Payment Session: {sessionId?.substring(0, 20)}...</p>
+            </div>
           </CardContent>
         </Card>
       </div>

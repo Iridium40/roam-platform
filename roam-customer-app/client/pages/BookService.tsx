@@ -107,6 +107,8 @@ const getDeliveryTypeIcon = (type: string) => {
   return icons[type] || Smartphone;
 };
 
+
+
 // Business sorting and filtering logic
 const sortAndFilterBusinesses = (businesses: Business[], sortBy: string, sortOrder: string): Business[] => {
   try {
@@ -196,6 +198,27 @@ export default function BookService() {
   const [clientSecret, setClientSecret] = useState<string>('');
   const [paymentBreakdown, setPaymentBreakdown] = useState<any>(null);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
+
+  // Calculate total amount for booking (including any promotions)
+  const calculateTotalAmount = (): number => {
+    if (!service || !selectedBusiness) return 0;
+    
+    // Use business service price if available, otherwise fall back to service min_price
+    let basePrice = selectedBusiness.service_price || service.min_price || 0;
+    
+    // Apply promotion discount if available
+    if (promotion) {
+      if (promotion.savingsType === 'percentage') {
+        const discountAmount = basePrice * (promotion.savingsAmount / 100);
+        const maxDiscount = promotion.savingsMaxAmount || discountAmount;
+        basePrice = Math.max(0, basePrice - Math.min(discountAmount, maxDiscount));
+      } else if (promotion.savingsType === 'fixed_amount') {
+        basePrice = Math.max(0, basePrice - promotion.savingsAmount);
+      }
+    }
+    
+    return basePrice;
+  };
 
   // Time slots data
   const timeSlots = [

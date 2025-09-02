@@ -156,8 +156,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             custom: 'Booking Date'
           },
           type: 'text',
-          optional: true,
-          default: bookingDate || ''
+          optional: true
         },
         {
           key: 'start_time',
@@ -166,8 +165,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             custom: 'Start Time'
           },
           type: 'text',
-          optional: true,
-          default: startTime || ''
+          optional: true
         }
       ],
       // Apply branding
@@ -176,10 +174,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         address: 'auto',
         name: 'auto'
       },
-      // Enable automatic tax calculation if needed
-      automatic_tax: {
-        enabled: true
-      }
+      // Disable automatic tax calculation for now (requires Stripe tax configuration)
+      // automatic_tax: {
+      //   enabled: true
+      // }
     });
 
     // If bookingId provided, update booking with checkout session
