@@ -37,7 +37,6 @@ import {
   AlertTriangle,
   Eye,
   Edit,
-  Trash2,
   MoreHorizontal,
   TrendingUp,
   FileText,
@@ -60,7 +59,6 @@ import {
   Plus,
   Settings,
   DollarSign,
-  Package,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
@@ -947,38 +945,7 @@ export default function AdminBusinesses() {
   });
 
   // Service management states
-  const [businessServiceCategories, setBusinessServiceCategories] = useState<
-    BusinessServiceCategory[]
-  >([]);
-  const [businessServiceSubcategories, setBusinessServiceSubcategories] =
-    useState<BusinessServiceSubcategory[]>([]);
-  const [isServiceManagementOpen, setIsServiceManagementOpen] = useState(false);
-  const [selectedBusinessForServices, setSelectedBusinessForServices] =
-    useState<BusinessProfile | null>(null);
 
-  // Available service categories and subcategories for dropdowns
-  const [availableServiceCategories, setAvailableServiceCategories] = useState<
-    Array<{
-      id: string;
-      service_category_type: string;
-      description: string | null;
-    }>
-  >([]);
-  const [availableServiceSubcategories, setAvailableServiceSubcategories] =
-    useState<
-      Array<{
-        id: string;
-        category_id: string;
-        service_subcategory_type: string;
-        description: string | null;
-      }>
-    >([]);
-
-  // Service form states
-  const [selectedServiceCategoryId, setSelectedServiceCategoryId] =
-    useState<string>("");
-  const [selectedServiceSubcategoryId, setSelectedServiceSubcategoryId] =
-    useState<string>("");
 
   // Fetch businesses, business locations, and providers from Supabase
   useEffect(() => {
@@ -986,8 +953,6 @@ export default function AdminBusinesses() {
     fetchBusinessLocations();
     fetchBusinessServices();
     fetchProviders();
-    fetchAvailableServiceCategories();
-    fetchAvailableServiceSubcategories();
   }, []);
 
   const fetchBusinesses = async () => {
@@ -995,40 +960,43 @@ export default function AdminBusinesses() {
       setLoading(true);
       setError(null);
 
-      console.log("Fetching businesses from Supabase...");
+      console.log("Fetching businesses from API...");
 
-      const { data, error } = await supabase
-        .from("business_profiles")
-        .select("*")
-        .order("created_at", { ascending: false });
+      const response = await fetch('/api/businesses');
+      const result = await response.json();
 
-      console.log("Business query response:", { data, error });
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to fetch businesses');
+      }
 
-      if (error) {
-        console.error("Query error:", error);
-        setError(`Query Error: ${error.message} (Code: ${error.code})`);
-        setBusinesses([]);
-      } else {
+      console.log("Business API response:", result);
+
+      if (result.data) {
         console.log(
-          `Successfully fetched ${data?.length || 0} businesses from database`,
+          `Successfully fetched ${result.data.length || 0} businesses from API`,
         );
         // Debug business hours data
-        if (data && data.length > 0) {
+        if (result.data && result.data.length > 0) {
           console.log(
             "Business hours debug:",
-            data.map((b) => ({
+            result.data.map((b: any) => ({
               name: b.business_name,
               business_hours: b.business_hours,
               business_hours_type: typeof b.business_hours,
+              service_categories: b.service_categories,
+              service_subcategories: b.service_subcategories,
             })),
           );
         }
-        setBusinesses(data || []);
-        if (data?.length === 0) {
+        setBusinesses(result.data || []);
+        if (result.data.length === 0) {
           setError(
-            "Database connected successfully but no business records found.",
+            "API connected successfully but no business records found.",
           );
         }
+      } else {
+        setError("No data received from API");
+        setBusinesses([]);
       }
     } catch (err) {
       console.error("Unexpected error:", err);
@@ -1458,149 +1426,7 @@ export default function AdminBusinesses() {
     }
   };
 
-  // Service management functions
-  const openServiceManagement = async (business: BusinessProfile) => {
-    setSelectedBusinessForServices(business);
-    setIsServiceManagementOpen(true);
-    await fetchBusinessServiceCategories(business.id);
-    await fetchBusinessServiceSubcategories(business.id);
-  };
 
-
-
-  const addServiceCategoryAndSubcategory = async () => {
-    if (!selectedBusinessForServices || !selectedServiceCategoryId) {
-      toast({
-        title: "Error",
-        description: "Please select a service category",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      // Add the service category first
-      const { error: categoryError } = await supabase
-        .from("business_service_categories")
-        .insert([
-          {
-            business_id: selectedBusinessForServices.id,
-            category_id: selectedServiceCategoryId,
-            is_active: true,
-          },
-        ]);
-
-      if (categoryError) throw categoryError;
-
-      // If a subcategory is selected, add it as well
-      if (selectedServiceSubcategoryId) {
-        const subcategoryData: any = {
-          business_id: selectedBusinessForServices.id,
-          category_id: selectedServiceCategoryId,
-          subcategory_id: selectedServiceSubcategoryId,
-          is_active: true,
-        };
-
-        const response = await fetch('/api/business-service-subcategories', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ subcategoryData }),
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Failed to add service subcategory');
-        }
-      }
-
-      toast({
-        title: "Success",
-        description: selectedServiceSubcategoryId 
-          ? "Service category and subcategory added successfully"
-          : "Service category added successfully",
-      });
-
-      setSelectedServiceSubcategoryId("");
-      setSelectedServiceCategoryId("");
-      await fetchBusinessServiceCategories(selectedBusinessForServices.id);
-      await fetchBusinessServiceSubcategories(selectedBusinessForServices.id);
-    } catch (error: any) {
-      console.error("Error adding service category and subcategory:", error);
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error occurred";
-      toast({
-        title: "Error",
-        description: `Failed to add service subcategory: ${errorMessage}`,
-        variant: "destructive",
-      });
-    }
-  };
-
-  const removeServiceCategory = async (categoryId: string) => {
-    try {
-      const { error } = await supabase
-        .from("business_service_categories")
-        .delete()
-        .eq("id", categoryId);
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "Service category removed successfully",
-      });
-
-      if (selectedBusinessForServices) {
-        await fetchBusinessServiceCategories(selectedBusinessForServices.id);
-      }
-    } catch (error: any) {
-      console.error("Error removing service category:", error);
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error occurred";
-      toast({
-        title: "Error",
-        description: `Failed to remove service category: ${errorMessage}`,
-        variant: "destructive",
-      });
-    }
-  };
-
-  const removeServiceSubcategory = async (subcategoryId: string) => {
-    try {
-      const response = await fetch('/api/business-service-subcategories', {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ subcategoryId }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to remove service subcategory');
-      }
-
-      toast({
-        title: "Success",
-        description: "Service subcategory removed successfully",
-      });
-
-      if (selectedBusinessForServices) {
-        await fetchBusinessServiceSubcategories(selectedBusinessForServices.id);
-      }
-    } catch (error: any) {
-      console.error("Error removing service subcategory:", error);
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error occurred";
-      toast({
-        title: "Error",
-        description: `Failed to remove service subcategory: ${errorMessage}`,
-        variant: "destructive",
-      });
-    }
-  };
 
   // Toggle business active status
   const toggleBusinessStatus = async (
@@ -1789,7 +1615,8 @@ export default function AdminBusinesses() {
         service_subcategories: editFormData.service_subcategories,
       });
 
-      const { error } = await supabase
+      // First update the business profile
+      const { error: profileError } = await supabase
         .from("business_profiles")
         .update({
           business_name: editFormData.business_name,
@@ -1800,18 +1627,106 @@ export default function AdminBusinesses() {
           is_active: editFormData.is_active,
           is_featured: editFormData.is_featured,
           business_type: editFormData.business_type,
-          service_categories: editFormData.service_categories,
-          service_subcategories: editFormData.service_subcategories,
         })
         .eq("id", editingBusiness.id);
 
-      if (error) {
-        console.error("Error updating business:", error);
-        console.error("Full error object:", JSON.stringify(error, null, 2));
+      if (profileError) {
+        console.error("Error updating business profile:", profileError);
         alert(
-          `Error updating business: ${error.message || error.details || error.hint || JSON.stringify(error)}`,
+          `Error updating business profile: ${profileError.message || profileError.details || profileError.hint || JSON.stringify(profileError)}`,
         );
         return;
+      }
+
+      // Update service categories
+      if (editFormData.service_categories) {
+        // First, delete existing categories
+        const deleteCategoriesResponse = await fetch('/api/business-service-categories', {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ businessId: editingBusiness.id }),
+        });
+
+        if (!deleteCategoriesResponse.ok) {
+          const errorData = await deleteCategoriesResponse.json();
+          throw new Error(errorData.error || 'Failed to delete existing service categories');
+        }
+
+        // Then insert new ones
+        for (const categoryType of editFormData.service_categories) {
+          // Get the category ID from the service_categories table
+          const { data: categoryData } = await supabase
+            .from("service_categories")
+            .select("id")
+            .eq("service_category_type", categoryType)
+            .single();
+
+          if (categoryData) {
+            const insertCategoryResponse = await fetch('/api/business-service-categories', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                businessId: editingBusiness.id,
+                categoryId: categoryData.id,
+              }),
+            });
+
+            if (!insertCategoryResponse.ok) {
+              const errorData = await insertCategoryResponse.json();
+              throw new Error(errorData.error || 'Failed to insert service category');
+            }
+          }
+        }
+      }
+
+      // Update service subcategories
+      if (editFormData.service_subcategories) {
+        // First, delete existing subcategories
+        const deleteSubcategoriesResponse = await fetch('/api/business-service-subcategories', {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ businessId: editingBusiness.id }),
+        });
+
+        if (!deleteSubcategoriesResponse.ok) {
+          const errorData = await deleteSubcategoriesResponse.json();
+          throw new Error(errorData.error || 'Failed to delete existing service subcategories');
+        }
+
+        // Then insert new ones
+        for (const subcategoryType of editFormData.service_subcategories) {
+          // Get the subcategory ID from the service_subcategories table
+          const { data: subcategoryData } = await supabase
+            .from("service_subcategories")
+            .select("id")
+            .eq("service_subcategory_type", subcategoryType)
+            .single();
+
+          if (subcategoryData) {
+            const insertSubcategoryResponse = await fetch('/api/business-service-subcategories', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                businessId: editingBusiness.id,
+                categoryId: subcategoryData.category_id,
+                subcategoryId: subcategoryData.id,
+              }),
+            });
+
+            if (!insertSubcategoryResponse.ok) {
+              const errorData = await insertSubcategoryResponse.json();
+              throw new Error(errorData.error || 'Failed to insert service subcategory');
+            }
+          }
+        }
       }
 
       setIsEditBusinessOpen(false);
@@ -2287,17 +2202,6 @@ export default function AdminBusinesses() {
             title="Edit Business"
           >
             <Edit className="h-4 w-4" />
-          </Button>
-
-          {/* Manage Services */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-green-600 hover:text-green-800"
-            onClick={() => openServiceManagement(row)}
-            title="Manage Services"
-          >
-            <Package className="h-4 w-4" />
           </Button>
         </div>
       ),
@@ -2838,7 +2742,7 @@ export default function AdminBusinesses() {
                 <ROAMCard>
                   <ROAMCardHeader>
                     <ROAMCardTitle className="text-base flex items-center gap-2">
-                      <Package className="w-4 h-4" />
+                      <CheckCircle className="w-4 h-4" />
                       Approved Service Categories
                     </ROAMCardTitle>
                   </ROAMCardHeader>
@@ -3188,7 +3092,7 @@ export default function AdminBusinesses() {
               <ROAMCard>
                 <ROAMCardHeader>
                   <ROAMCardTitle className="text-base flex items-center gap-2">
-                    <Package className="w-4 h-4" />
+                    <Settings className="w-4 h-4" />
                     Business Services
                   </ROAMCardTitle>
                 </ROAMCardHeader>
@@ -3303,7 +3207,7 @@ export default function AdminBusinesses() {
                         </div>
                       ) : (
                         <div className="text-center py-8 text-muted-foreground">
-                          <Package className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+                          <Settings className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
                           <p>No services configured for this business</p>
                         </div>
                       );
@@ -4113,164 +4017,6 @@ export default function AdminBusinesses() {
               <Button onClick={handleSaveBusinessEdit}>Save Changes</Button>
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Service Management Dialog */}
-      <Dialog
-        open={isServiceManagementOpen}
-        onOpenChange={setIsServiceManagementOpen}
-      >
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Package className="w-6 h-6 text-roam-blue" />
-              Manage Services - {selectedBusinessForServices?.business_name}
-            </DialogTitle>
-            <DialogDescription>
-              Assign service categories and subcategories to this business
-            </DialogDescription>
-          </DialogHeader>
-
-          {selectedBusinessForServices && (
-            <div className="space-y-6">
-              {/* Service Categories Section */}
-              <ROAMCard>
-                <ROAMCardHeader>
-                  <ROAMCardTitle>Service Categories</ROAMCardTitle>
-                </ROAMCardHeader>
-                <ROAMCardContent>
-                  <div className="space-y-4">
-                    {/* Add New Category and Subcategory */}
-                    <div className="space-y-3">
-                      <div className="flex gap-3">
-                        <div className="flex-1">
-                          <Label>Service Category</Label>
-                          <Select
-                            value={selectedServiceCategoryId}
-                            onValueChange={setSelectedServiceCategoryId}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select a service category" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {availableServiceCategories.map((category) => (
-                                <SelectItem key={category.id} value={category.id}>
-                                  {formatServiceCategoryType(
-                                    category.service_category_type as ServiceCategoryType,
-                                  )}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                      
-                      {selectedServiceCategoryId && (
-                        <div className="flex gap-3">
-                          <div className="flex-1">
-                            <Label>Service Subcategory (Optional)</Label>
-                            <Select
-                              value={selectedServiceSubcategoryId}
-                              onValueChange={setSelectedServiceSubcategoryId}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select subcategory (optional)" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {availableServiceSubcategories
-                                  .filter(
-                                    (sub) =>
-                                      sub.category_id === selectedServiceCategoryId,
-                                  )
-                                  .map((subcategory) => (
-                                    <SelectItem
-                                      key={subcategory.id}
-                                      value={subcategory.id}
-                                    >
-                                      {formatEnumDisplay(
-                                        subcategory.service_subcategory_type,
-                                      )}
-                                    </SelectItem>
-                                  ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="flex items-end">
-                            <Button
-                              onClick={addServiceCategoryAndSubcategory}
-                              disabled={!selectedServiceCategoryId}
-                              className="bg-roam-blue hover:bg-blue-700"
-                            >
-                              Add Category & Subcategory
-                            </Button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Current Categories */}
-                    <div className="space-y-2">
-                      {businessServiceCategories.length === 0 ? (
-                        <p className="text-muted-foreground text-center py-4">
-                          No service categories assigned
-                        </p>
-                      ) : (
-                        businessServiceCategories.map((category) => (
-                          <div
-                            key={category.id}
-                            className="flex items-center justify-between p-3 border rounded-lg"
-                          >
-                            <div className="flex items-center gap-2">
-                              <ROAMBadge
-                                variant={
-                                  category.is_active ? "success" : "secondary"
-                                }
-                              >
-                                {category.service_categories
-                                  ?.service_category_type
-                                  ? formatServiceCategoryType(
-                                      category.service_categories
-                                        .service_category_type as ServiceCategoryType,
-                                    )
-                                  : "Unknown Category"}
-                              </ROAMBadge>
-                              <span className="text-sm text-muted-foreground">
-                                Added{" "}
-                                {new Date(
-                                  category.created_at,
-                                ).toLocaleDateString()}
-                              </span>
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => removeServiceCategory(category.id)}
-                              className="text-red-600 hover:text-red-700"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                </ROAMCardContent>
-              </ROAMCard>
-
-
-
-              {/* Action Buttons */}
-              <div className="flex justify-end gap-3 pt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => setIsServiceManagementOpen(false)}
-                >
-                  Close
-                </Button>
-              </div>
-            </div>
-          )}
         </DialogContent>
       </Dialog>
     </AdminLayout>

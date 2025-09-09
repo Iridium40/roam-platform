@@ -12,6 +12,7 @@ const roamBadgeVariants = cva(
         success: "bg-roam-success text-white",
         warning: "bg-roam-warning text-foreground",
         danger: "bg-destructive text-destructive-foreground",
+        neutral: "bg-muted text-muted-foreground",
         outline: "border border-border bg-transparent text-foreground",
       },
       size: {

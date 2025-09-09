@@ -35,8 +35,9 @@ export interface ROAMStatCardProps
     VariantProps<typeof roamStatCardVariants> {
   title: string;
   value: string | number;
+  subtitle?: string;
   icon?: React.ReactNode;
-  changeText?: string;
+  change?: number;
   changeType?: "positive" | "negative" | "neutral";
   changeIcon?: React.ReactNode;
 }
@@ -48,8 +49,9 @@ const ROAMStatCard = React.forwardRef<HTMLDivElement, ROAMStatCardProps>(
       variant,
       title,
       value,
+      subtitle,
       icon,
-      changeText,
+      change,
       changeType = "neutral",
       changeIcon,
       ...props
@@ -67,11 +69,15 @@ const ROAMStatCard = React.forwardRef<HTMLDivElement, ROAMStatCardProps>(
       </div>
 
       <div className="text-2xl font-bold text-foreground">{value}</div>
+      
+      {subtitle && (
+        <div className="text-sm text-muted-foreground">{subtitle}</div>
+      )}
 
-      {changeText && (
+      {change !== undefined && (
         <div className={cn(changeVariants({ type: changeType }))}>
           {changeIcon && <span className="text-xs">{changeIcon}</span>}
-          <span>{changeText}</span>
+          <span>{change >= 0 ? '+' : ''}{change.toFixed(1)}%</span>
         </div>
       )}
     </div>

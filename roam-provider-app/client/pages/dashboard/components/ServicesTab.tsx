@@ -116,7 +116,15 @@ const supabase = createClient(
   import.meta.env.VITE_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-export default function ServicesTab() {
+interface ServicesTabProps {
+  providerData: any;
+  business: any;
+}
+
+export default function ServicesTab({
+  providerData,
+  business,
+}: ServicesTabProps) {
   const { provider } = useAuth();
   const [businessServices, setBusinessServices] = useState<BusinessService[]>([]);
   const [eligibleServices, setEligibleServices] = useState<EligibleService[]>([]);
@@ -148,17 +156,28 @@ export default function ServicesTab() {
   });
 
   useEffect(() => {
-    if (provider?.business_id) {
+    console.log('🔍 ServicesTab useEffect - providerData:', providerData);
+    console.log('🔍 ServicesTab useEffect - business:', business);
+    console.log('🔍 ServicesTab useEffect - provider:', provider);
+    
+    const businessId = business?.id || providerData?.business_id || provider?.business_id;
+    console.log('🔍 ServicesTab useEffect - businessId:', businessId);
+    
+    if (businessId) {
       loadServicesData();
+    } else {
+      console.log('🔍 No business_id found, setting loading to false');
+      setLoading(false);
     }
-  }, [provider?.business_id, page, filterStatus]);
+  }, [providerData, business, provider?.business_id, page, filterStatus]);
 
   const loadServicesData = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const businessId = provider?.business_id;
+      const businessId = business?.id || providerData?.business_id || provider?.business_id;
+      console.log('🔍 loadServicesData - businessId:', businessId);
       if (!businessId) throw new Error('Business ID not found');
 
       const statusParam = filterStatus === 'all' ? '' : `&status=${filterStatus}`;
@@ -235,7 +254,8 @@ export default function ServicesTab() {
       setSubmitting(true);
       setError(null);
 
-      const businessId = provider?.business_id;
+      const businessId = business?.id || providerData?.business_id || provider?.business_id;
+      console.log('🔍 handleAddService - businessId:', businessId);
       if (!businessId) throw new Error('Business ID not found');
 
       if (!serviceForm.service_id || !serviceForm.business_price) {
@@ -297,7 +317,8 @@ export default function ServicesTab() {
       setSubmitting(true);
       setError(null);
 
-      const businessId = provider?.business_id;
+      const businessId = business?.id || providerData?.business_id || provider?.business_id;
+      console.log('🔍 handleUpdateService - businessId:', businessId);
       if (!businessId) throw new Error('Business ID not found');
 
       if (updates.business_price && updates.business_price <= 0) {
@@ -345,7 +366,8 @@ export default function ServicesTab() {
       setSubmitting(true);
       setError(null);
 
-      const businessId = provider?.business_id;
+      const businessId = business?.id || providerData?.business_id || provider?.business_id;
+      console.log('🔍 handleDeleteService - businessId:', businessId);
       if (!businessId) throw new Error('Business ID not found');
 
       // Use API endpoint to delete service

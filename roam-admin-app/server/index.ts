@@ -7,6 +7,21 @@ import { handleSendApprovalEmail } from "./routes/send-approval-email";
 import { handleValidatePhase2Token } from "./routes/validate-phase2-token";
 import { handleBusinessServiceCategories } from "./routes/business-service-categories";
 import { handleBusinessServiceSubcategories } from "./routes/business-service-subcategories";
+import { handleBusinesses } from "./routes/businesses";
+import { 
+  handleFinancialStats, 
+  handleTransactions, 
+  handlePayoutRequests, 
+  handleUpdatePayoutStatus, 
+  handleRevenueData 
+} from "./routes/financial";
+import { 
+  handleReportMetrics,
+  handleUserReports,
+  handleBookingReports,
+  handleBusinessReports,
+  handleServiceReports
+} from "./routes/reports";
 
 export function createServer() {
   const app = express();
@@ -30,6 +45,9 @@ export function createServer() {
   app.post("/api/send-approval-email", handleSendApprovalEmail);
   app.post("/api/validate-phase2-token", handleValidatePhase2Token);
   
+  // Business management routes
+  app.get("/api/businesses", handleBusinesses);
+  
   // Business service management routes
   app.get("/api/business-service-categories", handleBusinessServiceCategories);
   app.post("/api/business-service-categories", handleBusinessServiceCategories);
@@ -38,6 +56,20 @@ export function createServer() {
   app.get("/api/business-service-subcategories", handleBusinessServiceSubcategories);
   app.post("/api/business-service-subcategories", handleBusinessServiceSubcategories);
   app.delete("/api/business-service-subcategories", handleBusinessServiceSubcategories);
+  
+  // Financial management routes
+  app.get("/api/financial/stats", handleFinancialStats);
+  app.get("/api/financial/transactions", handleTransactions);
+  app.get("/api/financial/payouts", handlePayoutRequests);
+  app.post("/api/financial/payouts/update-status", handleUpdatePayoutStatus);
+  app.get("/api/financial/revenue-data", handleRevenueData);
+  
+  // Reports and analytics routes
+  app.get("/api/reports/metrics", handleReportMetrics);
+  app.get("/api/reports/users", handleUserReports);
+  app.get("/api/reports/bookings", handleBookingReports);
+  app.get("/api/reports/businesses", handleBusinessReports);
+  app.get("/api/reports/services", handleServiceReports);
 
   return app;
 }

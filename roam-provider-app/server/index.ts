@@ -9,6 +9,7 @@ import {
 } from "./routes/edge-notifications";
 import { createLinkToken, exchangePublicToken, checkConnection } from "./routes/plaid";
 import { getServiceEligibility } from "./routes/service-eligibility";
+import { sendStaffInvite, validateStaffInvitation, completeStaffOnboarding } from "./routes/staff";
 import { requireAuth, requireBusinessAccess, requirePhase2Access, AuthenticatedRequest } from "./middleware/auth";
 import { validateRequest } from "./middleware/validation";
 import { schemas } from "../shared";
@@ -678,8 +679,10 @@ export function createServer() {
                  });
                }
        
-               // Extract subcategory IDs
-               const subcategoryIds = business.map((bs: any) => bs.subcategory_id);
+               // Extract subcategory IDs, filtering out null values
+               const subcategoryIds = business
+                 .map((bs: any) => bs.subcategory_id)
+                 .filter((id: string) => id !== null && id !== undefined);
 
         // Get eligible services based on business subcategories
         const { data: eligibleServices, error: servicesError } = await supabase
@@ -703,7 +706,11 @@ export function createServer() {
 
         if (servicesError) {
           console.error('Error fetching eligible services:', servicesError);
-          return res.status(500).json({ error: 'Failed to fetch eligible services' });
+          console.error('Error details:', JSON.stringify(servicesError, null, 2));
+          return res.status(500).json({ 
+            error: 'Failed to fetch eligible services',
+            details: servicesError.message || 'Unknown database error'
+          });
         }
 
         // Get service addons
@@ -887,7 +894,6 @@ export function createServer() {
             delivery_type,
             is_active,
             created_at,
-            updated_at,
             services(
               id,
               name,
@@ -905,7 +911,11 @@ export function createServer() {
 
         if (servicesError) {
           console.error('Error fetching business services:', servicesError);
-          return res.status(500).json({ error: 'Failed to fetch business services' });
+          console.error('Error details:', JSON.stringify(servicesError, null, 2));
+          return res.status(500).json({ 
+            error: 'Failed to fetch business services',
+            details: servicesError.message || 'Unknown database error'
+          });
         }
 
         const stats = {
@@ -1018,6 +1028,73 @@ export function createServer() {
     }
   });
 
+  // Update business service route (PUT)
+  app.put("/api/business/services", async (req, res) => {
+    try {
+      const { business_id, service_id, business_price, delivery_type, is_active } = req.body;
+      
+      if (!business_id || !service_id) {
+        return res.status(400).json({ error: "Business ID and service ID are required" });
+      }
+
+      // Development mode bypass
+      if (false && process.env.NODE_ENV === 'development') {
+        console.log("Development mode: Mock updating business service");
+        
+        const mockService = {
+          id: `bs-${Date.now()}`,
+          business_id,
+          service_id,
+          business_price: business_price ? parseFloat(business_price) : null,
+          delivery_type: delivery_type || null,
+          is_active: is_active !== undefined ? is_active : true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+
+        res.json({ service: mockService });
+        return;
+      }
+
+      // Production mode - update in database
+      try {
+        console.log("Production mode: Updating business service in database");
+        
+        // Build update object with only provided fields
+        const updateData: any = {};
+        if (business_price !== undefined) updateData.business_price = parseFloat(business_price);
+        if (delivery_type !== undefined) updateData.delivery_type = delivery_type;
+        if (is_active !== undefined) updateData.is_active = is_active;
+
+        // Update the service
+        const { data, error } = await supabase
+          .from('business_services')
+          .update(updateData)
+          .eq('business_id', business_id)
+          .eq('service_id', service_id)
+          .select()
+          .single();
+
+        if (error) {
+          console.error('Error updating business service:', error);
+          return res.status(500).json({ error: 'Failed to update business service' });
+        }
+
+        if (!data) {
+          return res.status(404).json({ error: 'Business service not found' });
+        }
+
+        res.json({ service: data });
+      } catch (error) {
+        console.error("Error in production business service update:", error);
+        res.status(500).json({ error: "Failed to update business service in database" });
+      }
+    } catch (error) {
+      console.error("Error in business service update:", error);
+      res.status(500).json({ error: "Failed to process business service update" });
+    }
+  });
+
   // Add/Update business addon route
   app.post("/api/business/addons", async (req, res) => {
     try {
@@ -1103,6 +1180,11 @@ export function createServer() {
   // Edge notifications routes (development equivalent)
   app.get("/api/notifications/edge", handleEdgeNotifications);
   app.patch("/api/notifications/edge", handleNotificationUpdates);
+
+  // Staff management routes
+  app.post("/api/staff/invite", sendStaffInvite);
+  app.post("/api/staff/validate-invitation", validateStaffInvitation);
+  app.post("/api/staff/complete-onboarding", completeStaffOnboarding);
 
   // Error handling middleware
   app.use((error: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

@@ -13,6 +13,13 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
   Calendar,
   Clock,
   MapPin,
@@ -30,6 +37,7 @@ import {
   DollarSign,
   TrendingUp,
   Activity,
+  X,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
@@ -54,6 +62,9 @@ export default function BookingsTab({
   const [presentPage, setPresentPage] = useState(1);
   const [futurePage, setFuturePage] = useState(1);
   const [pastPage, setPastPage] = useState(1);
+  const [selectedBooking, setSelectedBooking] = useState<any>(null);
+  const [isBookingDetailsOpen, setIsBookingDetailsOpen] = useState(false);
+  const [businessServices, setBusinessServices] = useState<any[]>([]);
   const pageSize = 20;
 
   // Filter bookings based on search and status
@@ -205,6 +216,19 @@ export default function BookingsTab({
       if (bookingsError) throw bookingsError;
       setBookings(bookingsData || []);
 
+      // Load business services for pricing information
+      const { data: businessServicesData, error: businessServicesError } = await supabase
+        .from('business_services')
+        .select('*')
+        .eq('business_id', providerData.business_id);
+
+      if (businessServicesError) {
+        console.warn('Error loading business services:', businessServicesError);
+        setBusinessServices([]);
+      } else {
+        setBusinessServices(businessServicesData || []);
+      }
+
       // Load staff members for assignment
       const { data: staffData, error: staffError } = await supabase
         .from('providers')
@@ -235,8 +259,7 @@ export default function BookingsTab({
       const { error } = await supabase
         .from('bookings')
         .update({ 
-          booking_status: 'confirmed',
-          updated_at: new Date().toISOString()
+          booking_status: 'confirmed'
         })
         .eq('id', bookingId);
 
@@ -266,8 +289,7 @@ export default function BookingsTab({
         .from('bookings')
         .update({ 
           booking_status: 'declined',
-          decline_reason: reason || 'Provider declined',
-          updated_at: new Date().toISOString()
+          decline_reason: reason || 'Provider declined'
         })
         .eq('id', bookingId);
 
@@ -318,6 +340,16 @@ export default function BookingsTab({
         variant: "destructive",
       });
     }
+  };
+
+  const onOpenBookingDetails = (booking: any) => {
+    setSelectedBooking(booking);
+    setIsBookingDetailsOpen(true);
+  };
+
+  const getBusinessPrice = (serviceId: string) => {
+    const businessService = businessServices.find(bs => bs.service_id === serviceId);
+    return businessService?.business_price || null;
   };
 
   const getMapUrl = (booking: any) => {
@@ -519,7 +551,7 @@ export default function BookingsTab({
                             </div>
                           </div>
                           <div className="flex items-center justify-between sm:justify-end space-x-2 sm:space-x-3 flex-shrink-0">
-                            <BookingStatusIndicator status={booking.booking_status} size="sm" showProgress={false} />
+                            <BookingStatusIndicator status={booking.booking_status || 'unknown'} size="sm" showProgress={false} />
                             <div className="text-right">
                               <p className="text-base sm:text-lg font-bold text-gray-900">
                                 ${booking.total_amount || "115"}
@@ -567,7 +599,6 @@ export default function BookingsTab({
                               variant="ghost"
                               size="sm"
                               className="h-6 w-6 sm:h-7 sm:w-7 p-0 text-blue-600"
-                              onClick={() => onOpenMessageFromBooking(booking.id, booking.customer_profiles?.id || booking.guest_name)}
                             >
                               <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4" />
                             </Button>
@@ -725,7 +756,7 @@ export default function BookingsTab({
                             </div>
                           </div>
                           <div className="flex items-center justify-between sm:justify-end space-x-2 sm:space-x-3 flex-shrink-0">
-                            <BookingStatusIndicator status={booking.booking_status} size="sm" showProgress={false} />
+                            <BookingStatusIndicator status={booking.booking_status || 'unknown'} size="sm" showProgress={false} />
                             <div className="text-right">
                               <p className="text-base sm:text-lg font-bold text-gray-900">
                                 ${booking.total_amount || "115"}
@@ -773,7 +804,6 @@ export default function BookingsTab({
                               variant="ghost"
                               size="sm"
                               className="h-6 w-6 sm:h-7 sm:w-7 p-0 text-blue-600"
-                              onClick={() => onOpenMessageFromBooking(booking.id, booking.customer_profiles?.id || booking.guest_name)}
                             >
                               <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4" />
                             </Button>
@@ -931,7 +961,7 @@ export default function BookingsTab({
                             </div>
                           </div>
                           <div className="flex items-center justify-between sm:justify-end space-x-2 sm:space-x-3 flex-shrink-0">
-                            <BookingStatusIndicator status={booking.booking_status} size="sm" showProgress={false} />
+                            <BookingStatusIndicator status={booking.booking_status || 'unknown'} size="sm" showProgress={false} />
                             <div className="text-right">
                               <p className="text-base sm:text-lg font-bold text-gray-900">
                                 ${booking.total_amount || "115"}
@@ -974,14 +1004,6 @@ export default function BookingsTab({
                             >
                               <span className="hidden sm:inline">More Details</span>
                               <span className="sm:hidden">Details</span>
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 w-6 sm:h-7 sm:w-7 p-0 text-blue-600"
-                              onClick={() => onOpenMessageFromBooking(booking.id, booking.customer_profiles?.id || booking.guest_name)}
-                            >
-                              <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4" />
                             </Button>
                           </div>
                         </div>
@@ -1126,6 +1148,140 @@ export default function BookingsTab({
           </div>
         )}
       </Tabs>
+
+      {/* Booking Details Modal */}
+      <Dialog open={isBookingDetailsOpen} onOpenChange={setIsBookingDetailsOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between">
+              <span>Booking Details</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsBookingDetailsOpen(false)}
+                className="h-6 w-6 p-0"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedBooking && (
+            <div className="space-y-6">
+              {/* Booking Status */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <BookingStatusIndicator status={selectedBooking.booking_status || 'unknown'} />
+                  <span className="font-medium">#{selectedBooking.booking_reference || 'N/A'}</span>
+                </div>
+                <Badge variant="outline" className="text-xs">
+                  {selectedBooking.booking_status || 'unknown'}
+                </Badge>
+              </div>
+
+              {/* Customer Information */}
+              <div className="space-y-3">
+                <h3 className="font-semibold text-lg">Customer Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Name</label>
+                    <p className="text-sm">{selectedBooking.customer_profiles?.first_name} {selectedBooking.customer_profiles?.last_name}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Email</label>
+                    <p className="text-sm">{selectedBooking.customer_profiles?.email}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Phone</label>
+                    <p className="text-sm">{selectedBooking.customer_profiles?.phone || 'Not provided'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Service Information */}
+              <div className="space-y-3">
+                <h3 className="font-semibold text-lg">Service Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Service Name</label>
+                    <p className="text-sm">{selectedBooking.services?.service_name || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Business Price</label>
+                    <p className="text-sm font-medium">${getBusinessPrice(selectedBooking.service_id) || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Duration</label>
+                    <p className="text-sm">{selectedBooking.services?.duration_minutes || 'N/A'} minutes</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Delivery Type</label>
+                    <p className="text-sm capitalize">{selectedBooking.delivery_type?.replace('_', ' ') || 'N/A'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Appointment Details */}
+              <div className="space-y-3">
+                <h3 className="font-semibold text-lg">Appointment Details</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex items-center space-x-2">
+                    <Calendar className="h-4 w-4 text-gray-500" />
+                    <div>
+                      <label className="text-sm font-medium text-gray-600">Booking Date</label>
+                      <p className="text-sm">{selectedBooking.booking_date ? new Date(selectedBooking.booking_date).toLocaleDateString() : 'N/A'}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Clock className="h-4 w-4 text-gray-500" />
+                    <div>
+                      <label className="text-sm font-medium text-gray-600">Start Time</label>
+                      <p className="text-sm">{selectedBooking.start_time || 'N/A'}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Location Information */}
+              <div className="space-y-3">
+                <h3 className="font-semibold text-lg">Location</h3>
+                <div className="flex items-start space-x-2">
+                  <MapPin className="h-4 w-4 text-gray-500 mt-0.5" />
+                  <div>
+                    <p className="text-sm">
+                      {selectedBooking.customer_locations
+                        ? `${selectedBooking.customer_locations.address_line1 || ""} ${selectedBooking.customer_locations.address_line2 || ""}, ${selectedBooking.customer_locations.city || ""}, ${selectedBooking.customer_locations.state || ""} ${selectedBooking.customer_locations.postal_code || ""}`
+                        : selectedBooking.business_locations
+                        ? `${selectedBooking.business_locations.location_name || ""} ${selectedBooking.business_locations.address_line1 || ""}, ${selectedBooking.business_locations.city || ""}, ${selectedBooking.business_locations.state || ""}`
+                        : "Location not specified"
+                      }
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Special Instructions */}
+              {selectedBooking.special_instructions && (
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-lg">Special Instructions</h3>
+                  <p className="text-sm bg-gray-50 p-3 rounded-md">{selectedBooking.special_instructions}</p>
+                </div>
+              )}
+
+              {/* Assigned Provider */}
+              {selectedBooking.providers && (
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-lg">Assigned Provider</h3>
+                  <div className="flex items-center space-x-2">
+                    <Users className="h-4 w-4 text-gray-500" />
+                    <p className="text-sm">{selectedBooking.providers.first_name} {selectedBooking.providers.last_name}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

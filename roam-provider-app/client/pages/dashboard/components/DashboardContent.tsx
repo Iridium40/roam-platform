@@ -58,7 +58,7 @@ export const DashboardContent: React.FC<DashboardContentProps> = ({
       case "locations":
         return <LocationWidget data={data.locations} onRefresh={onRefresh} />;
       case "services":
-        return <ServicesTab />;
+        return <ServicesTab providerData={data.provider} business={data.business} />;
       case "notifications":
         return <NotificationWidget onRefresh={onRefresh} />;
       case "settings":

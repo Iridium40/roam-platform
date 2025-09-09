@@ -44,7 +44,6 @@ import {
   Search,
   Filter,
   RefreshCw,
-  Download,
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
@@ -1195,10 +1194,6 @@ export default function AdminVerification() {
             >
               <RefreshCw className="w-4 h-4 mr-2" />
               Refresh
-            </Button>
-            <Button size="sm">
-              <Download className="w-4 h-4 mr-2" />
-              Export
             </Button>
           </div>
         </div>

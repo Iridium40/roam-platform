@@ -1,13 +1,5 @@
 import { Request, Response } from 'express';
-import { createClient } from '@supabase/supabase-js';
-
-// Use the correct Supabase URL and service role key
-const supabaseUrl = 'https://vssomyuyhicaxsgiaupo.supabase.co';
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzc29teXV5aGljYXhzZ2lhdXBvIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MzQ1MzcxNSwiZXhwIjoyMDY5MDI5NzE1fQ.54i9VPExknTktnWbyT9Z9rZKvSJOjs9fG60wncLhLlA';
-
-
-
-const supabase = createClient(supabaseUrl, supabaseKey);
+import { supabase } from '../lib/supabase';
 
 export async function handleBusinessServiceSubcategories(req: Request, res: Response) {
   try {
@@ -47,15 +39,20 @@ export async function handleBusinessServiceSubcategories(req: Request, res: Resp
 
       case 'POST':
         // Add new business service subcategory
-        const { subcategoryData } = req.body;
+        const { businessId: postBusinessId, categoryId: postCategoryId, subcategoryId: postSubcategoryId } = req.body;
         
-        if (!subcategoryData) {
-          return res.status(400).json({ error: 'subcategoryData is required' });
+        if (!postBusinessId || !postCategoryId || !postSubcategoryId) {
+          return res.status(400).json({ error: 'businessId, categoryId, and subcategoryId are required' });
         }
 
         const { data: newSubcategory, error: insertError } = await supabase
           .from('business_service_subcategories')
-          .insert(subcategoryData)
+          .insert({
+            business_id: postBusinessId,
+            category_id: postCategoryId,
+            subcategory_id: postSubcategoryId,
+            is_active: true
+          })
           .select(`
             *,
             service_categories (
@@ -79,24 +76,40 @@ export async function handleBusinessServiceSubcategories(req: Request, res: Resp
         return res.status(201).json({ data: newSubcategory });
 
       case 'DELETE':
-        // Remove business service subcategory
-        const { subcategoryId } = req.body;
+        // Remove business service subcategory or all subcategories for a business
+        const { subcategoryId: deleteSubcategoryId, businessId: deleteBusinessId } = req.body;
         
-        if (!subcategoryId) {
-          return res.status(400).json({ error: 'subcategoryId is required' });
+        if (!deleteSubcategoryId && !deleteBusinessId) {
+          return res.status(400).json({ error: 'Either subcategoryId or businessId is required' });
         }
 
-        const { error: deleteError } = await supabase
-          .from('business_service_subcategories')
-          .delete()
-          .eq('id', subcategoryId);
+        let deleteError;
+        if (deleteBusinessId) {
+          // Delete all subcategories for a business
+          const { error } = await supabase
+            .from('business_service_subcategories')
+            .delete()
+            .eq('business_id', deleteBusinessId);
+          deleteError = error;
+        } else {
+          // Delete a specific subcategory
+          const { error } = await supabase
+            .from('business_service_subcategories')
+            .delete()
+            .eq('id', deleteSubcategoryId);
+          deleteError = error;
+        }
 
         if (deleteError) {
           console.error('Error removing business service subcategory:', deleteError);
           return res.status(500).json({ error: deleteError.message });
         }
 
-        return res.status(200).json({ message: 'Subcategory deleted successfully' });
+        return res.status(200).json({ 
+          message: deleteBusinessId 
+            ? 'All subcategories deleted successfully for business' 
+            : 'Subcategory deleted successfully' 
+        });
 
       default:
         return res.status(405).json({ error: 'Method not allowed' });

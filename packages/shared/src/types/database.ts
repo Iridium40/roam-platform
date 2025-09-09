@@ -25,7 +25,7 @@ export type UserStatus = 'active' | 'inactive' | 'suspended' | 'pending_verifica
 export type ServiceStatus = 'active' | 'inactive' | 'draft';
 export type ServiceCategoryType = "beauty" | "fitness" | "therapy" | "healthcare";
 export type ServiceSubcategoryType = "hair_and_makeup" | "spray_tan" | "esthetician" | "massage_therapy" | "iv_therapy" | "physical_therapy" | "nurse_practitioner" | "physician" | "chiropractor" | "yoga_instructor" | "pilates_instructor" | "personal_trainer" | "injectables" | "health_coach";
-export type CustomerLocationType = "home" | "condo" | "hotel" | "oatasse popnops ther" | null;
+export type CustomerLocationType = "home" | "condo" | "hotel" | "other" | null;
 
 // Notification Types
   export type NotificationType = 'booking_status_update' | 'new_message' | 'booking_reminder' | 'system_alert' | 'payment_received';

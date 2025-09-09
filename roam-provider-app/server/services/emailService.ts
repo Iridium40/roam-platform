@@ -1,7 +1,7 @@
 import { Resend } from "resend";
 
 // Initialize Resend with API key
-const resend = new Resend("re_Dpiy6s8h_BbVinwM12HVgicrsr7o6uxAV");
+const resend = new Resend(process.env.RESEND_API_KEY || "re_Dpiy6s8h_BbVinwM12HVgicrsr7o6uxAV");
 
 interface EmailOptions {
   to: string;

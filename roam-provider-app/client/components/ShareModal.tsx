@@ -121,20 +121,6 @@ export default function ShareModal({
     );
   };
 
-  const handleNativeShare = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: shareTitle,
-          text: shareText,
-          url: pageUrl,
-        });
-      } catch (err) {
-        console.debug("Error sharing:", err);
-      }
-    }
-  };
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-lg">
@@ -210,16 +196,6 @@ export default function ShareModal({
                   <MessageSquare className="w-4 h-4 mr-2" />
                   Send SMS
                 </Button>
-                {navigator.share && (
-                  <Button
-                    onClick={handleNativeShare}
-                    variant="outline"
-                    className="flex-1"
-                  >
-                    <Share2 className="w-4 h-4 mr-2" />
-                    More Options
-                  </Button>
-                )}
               </div>
             </div>
           </TabsContent>

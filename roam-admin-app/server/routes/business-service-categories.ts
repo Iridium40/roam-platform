@@ -1,13 +1,5 @@
 import { Request, Response } from 'express';
-import { createClient } from '@supabase/supabase-js';
-
-// Use the correct Supabase URL and service role key
-const supabaseUrl = 'https://vssomyuyhicaxsgiaupo.supabase.co';
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzc29teXV5aGljYXhzZ2lhdXBvIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MzQ1MzcxNSwiZXhwIjoyMDY5MDI5NzE1fQ.54i9VPExknTktnWbyT9Z9rZKvSJOjs9fG60wncLhLlA';
-
-
-
-const supabase = createClient(supabaseUrl, supabaseKey);
+import { supabase } from '../lib/supabase';
 
 export async function handleBusinessServiceCategories(req: Request, res: Response) {
   try {
@@ -42,15 +34,19 @@ export async function handleBusinessServiceCategories(req: Request, res: Respons
 
       case 'POST':
         // Add new business service category
-        const { categoryData } = req.body;
+        const { businessId: postBusinessId, categoryId: postCategoryId } = req.body;
         
-        if (!categoryData) {
-          return res.status(400).json({ error: 'categoryData is required' });
+        if (!postBusinessId || !postCategoryId) {
+          return res.status(400).json({ error: 'businessId and categoryId are required' });
         }
 
         const { data: newCategory, error: insertError } = await supabase
           .from('business_service_categories')
-          .insert(categoryData)
+          .insert({
+            business_id: postBusinessId,
+            category_id: postCategoryId,
+            is_active: true
+          })
           .select(`
             *,
             service_categories (
@@ -69,24 +65,40 @@ export async function handleBusinessServiceCategories(req: Request, res: Respons
         return res.status(201).json({ data: newCategory });
 
       case 'DELETE':
-        // Remove business service category
-        const { categoryId } = req.body;
+        // Remove business service category or all categories for a business
+        const { categoryId: deleteCategoryId, businessId: deleteBusinessId } = req.body;
         
-        if (!categoryId) {
-          return res.status(400).json({ error: 'categoryId is required' });
+        if (!deleteCategoryId && !deleteBusinessId) {
+          return res.status(400).json({ error: 'Either categoryId or businessId is required' });
         }
 
-        const { error: deleteError } = await supabase
-          .from('business_service_categories')
-          .delete()
-          .eq('id', categoryId);
+        let deleteError;
+        if (deleteBusinessId) {
+          // Delete all categories for a business
+          const { error } = await supabase
+            .from('business_service_categories')
+            .delete()
+            .eq('business_id', deleteBusinessId);
+          deleteError = error;
+        } else {
+          // Delete a specific category
+          const { error } = await supabase
+            .from('business_service_categories')
+            .delete()
+            .eq('id', deleteCategoryId);
+          deleteError = error;
+        }
 
         if (deleteError) {
           console.error('Error removing business service category:', deleteError);
           return res.status(500).json({ error: deleteError.message });
         }
 
-        return res.status(200).json({ message: 'Category deleted successfully' });
+        return res.status(200).json({ 
+          message: deleteBusinessId 
+            ? 'All categories deleted successfully for business' 
+            : 'Category deleted successfully' 
+        });
 
       default:
         return res.status(405).json({ error: 'Method not allowed' });

@@ -47,6 +47,16 @@ export default function BookingStatusIndicator({
   className,
 }: BookingStatusIndicatorProps) {
   const getStatusConfig = (status: string) => {
+    if (!status) {
+      return {
+        label: "Unknown",
+        icon: AlertCircle,
+        color: "bg-gray-100 text-gray-700 border-gray-200",
+        progressColor: "bg-gray-500",
+        description: "Unknown status",
+      };
+    }
+
     const configs = {
       pending: {
         label: "Pending",
@@ -116,7 +126,7 @@ export default function BookingStatusIndicator({
 
     return (
       configs[status as keyof typeof configs] || {
-        label: status.replace("_", " "),
+        label: status ? status.replace("_", " ") : "Unknown",
         icon: AlertCircle,
         color: "bg-gray-100 text-gray-700 border-gray-200",
         progressColor: "bg-gray-500",

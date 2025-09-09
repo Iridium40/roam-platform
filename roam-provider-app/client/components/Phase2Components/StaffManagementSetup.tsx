@@ -42,7 +42,7 @@ import {
   Info,
   Trash2
 } from 'lucide-react';
-import type { ProviderRole, ProviderVerificationStatus } from '@roam/shared';
+import type { UserRole, VerificationStatus } from '@roam/shared';
 
 interface StaffMember {
   id: string;
@@ -50,10 +50,10 @@ interface StaffMember {
   last_name: string;
   email: string;
   phone: string;
-  provider_role: ProviderRole;
+  provider_role: UserRole;
   bio?: string;
   experience_years?: number;
-  verification_status: ProviderVerificationStatus;
+  verification_status: VerificationStatus;
   is_active: boolean;
 }
 
@@ -69,19 +69,19 @@ interface StaffManagementSetupProps {
 
 const roleOptions = [
   {
-    value: "provider" as ProviderRole,
+    value: "provider" as UserRole,
     label: "Provider",
     description: "Delivers services to customers",
     icon: User,
   },
   {
-    value: "dispatcher" as ProviderRole,
+    value: "dispatcher" as UserRole,
     label: "Dispatcher",
     description: "Manages bookings and schedules",
     icon: Shield,
   },
   {
-    value: "owner" as ProviderRole,
+    value: "owner" as UserRole,
     label: "Owner",
     description: "Full business access and control",
     icon: Crown,
@@ -106,7 +106,7 @@ export default function StaffManagementSetup({
     last_name: '',
     email: '',
     phone: '',
-    provider_role: 'provider' as ProviderRole,
+    provider_role: 'provider' as UserRole,
     bio: '',
     experience_years: 0,
   });
@@ -326,7 +326,7 @@ export default function StaffManagementSetup({
                       <Label htmlFor="role">Role</Label>
                       <Select
                         value={newStaffMember.provider_role}
-                        onValueChange={(value: ProviderRole) => setNewStaffMember(prev => ({ ...prev, provider_role: value }))}
+                        onValueChange={(value: UserRole) => setNewStaffMember(prev => ({ ...prev, provider_role: value }))}
                       >
                         <SelectTrigger>
                           <SelectValue />
@@ -453,9 +453,26 @@ export default function StaffManagementSetup({
             <Info className="h-4 w-4" />
             <AlertDescription>
               <strong>Note:</strong> Team members will receive an email invitation to join your business. 
-              You can manage their roles and permissions from your dashboard after setup.
+              You can always manage their roles and permissions from your dashboard after setup.
             </AlertDescription>
           </Alert>
+
+          {/* Skip Option */}
+          <div className="text-center py-4">
+            <p className="text-sm text-gray-600 mb-3">
+              Don't need to add staff members right now?
+            </p>
+            <p className="text-xs text-gray-500 mb-3">
+              You can always add team members later from your business dashboard.
+            </p>
+            <Button
+              variant="outline"
+              onClick={() => onComplete([])}
+              className="text-gray-600 hover:text-gray-700 border-gray-300 hover:border-gray-400"
+            >
+              Skip This Step
+            </Button>
+          </div>
 
           {/* Action Buttons */}
           <div className="flex justify-between pt-6">
