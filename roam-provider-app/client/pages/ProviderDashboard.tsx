@@ -165,45 +165,6 @@ export default function ProviderDashboard() {
         return 'staff';
       case 'financials':
         return 'financials';
-      default:
-        return 'dashboard';
-    }
-  };
-
-  const activeTab = getCurrentTab();
-
-  // Get the base path for navigation (depends on user role)
-  const getBasePath = () => {
-    if (isOwner) return '/owner';
-    if (isDispatcher) return '/dispatcher';
-    return '/provider';
-  };
-
-  const basePath = getBasePath();
-
-  // Navigation helper
-  const navigateToTab = (tab: string) => {
-    navigate(`${basePath}/${tab}`);
-  };
-  // Determine current tab from URL
-  const getCurrentTab = () => {
-    const pathParts = location.pathname.split('/');
-    const section = pathParts[pathParts.length - 1]; // Get the last part of the path
-    
-    // Handle various tab names
-    switch (section) {
-      case 'dashboard':
-        return 'dashboard';
-      case 'bookings':
-        return 'bookings';
-      case 'messages':
-        return 'messages';
-      case 'services':
-        return 'services';
-      case 'staff':
-        return 'staff';
-      case 'financials':
-        return 'financials';
       case 'profile':
         return 'profile';
       case 'business-settings':

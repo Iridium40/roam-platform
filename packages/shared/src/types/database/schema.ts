@@ -22,8 +22,7 @@ import {
   CustomerLocationsTable,
   ProvidersTable,
   ProviderAvailabilityTable,
-  UserRolesTable,
-  AdminUsersTable
+  UserRolesTable
 } from './tables/user';
 
 import {
