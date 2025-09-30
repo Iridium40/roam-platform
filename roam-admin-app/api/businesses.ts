@@ -1,11 +1,30 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import { supabase } from '../server/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
+    // Check environment variables first
+    const supabaseUrl = process.env.VITE_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !supabaseKey) {
+      console.error('Missing environment variables:', {
+        supabaseUrl: !!supabaseUrl,
+        serviceRoleKey: !!supabaseKey,
+        allEnvKeys: Object.keys(process.env).filter(k => k.includes('SUPABASE'))
+      });
+      return res.status(500).json({ 
+        error: 'Server configuration error',
+        details: 'Missing required Supabase environment variables'
+      });
+    }
+
+    // Create Supabase client directly
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
     switch (req.method) {
       case 'GET':
-        // Fetch businesses with their service categories and subcategories
+        // Fetch businesses with basic data first, then add joins if this works
         const { data: businesses, error: fetchError } = await supabase
           .from('business_profiles')
           .select(`
@@ -38,39 +57,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             approved_at,
             approved_by,
             approval_notes,
-            business_description,
-            business_service_categories (
-              id,
-              business_id,
-              category_id,
-              is_active,
-              created_at,
-              updated_at,
-              service_categories (
-                id,
-                description,
-                service_category_type
-              )
-            ),
-            business_service_subcategories (
-              id,
-              business_id,
-              category_id,
-              subcategory_id,
-              is_active,
-              created_at,
-              updated_at,
-              service_categories (
-                id,
-                description,
-                service_category_type
-              ),
-              service_subcategories (
-                id,
-                description,
-                service_subcategory_type
-              )
-            )
+            business_description
           `)
           .order('created_at', { ascending: false });
 
@@ -88,32 +75,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           });
         }
 
-        // Transform the data to match the expected format
-        const transformedBusinesses = businesses?.map((business: any) => {
-          // Handle service categories - prefer database array over joined data
-          const serviceCategories = business.service_categories || 
-            business.business_service_categories?.map((cat: any) => cat.service_categories?.service_category_type).filter(Boolean) || 
-            [];
-          
-          // Handle service subcategories - prefer database array over joined data  
-          const serviceSubcategories = business.service_subcategories ||
-            business.business_service_subcategories?.map((subcat: any) => subcat.service_subcategories?.service_subcategory_type).filter(Boolean) || 
-            [];
-
-          return {
-            ...business,
-            service_categories: serviceCategories,
-            service_subcategories: serviceSubcategories,
-            // Ensure numeric fields are properly typed
-            setup_step: business.setup_step ? Number(business.setup_step) : null,
-            // Ensure boolean fields have defaults
-            setup_completed: business.setup_completed ?? null,
-            is_featured: business.is_featured ?? false,
-            identity_verified: business.identity_verified ?? false,
-            bank_connected: business.bank_connected ?? false,
-            is_active: business.is_active ?? true
-          };
-        }) || [];
+        // Transform the data to ensure proper types
+        const transformedBusinesses = businesses?.map((business: any) => ({
+          ...business,
+          // Ensure arrays are properly handled
+          service_categories: Array.isArray(business.service_categories) ? business.service_categories : [],
+          service_subcategories: Array.isArray(business.service_subcategories) ? business.service_subcategories : [],
+          // Ensure numeric fields are properly typed
+          setup_step: business.setup_step ? Number(business.setup_step) : null,
+          // Ensure boolean fields have defaults
+          setup_completed: business.setup_completed ?? null,
+          is_featured: business.is_featured ?? false,
+          identity_verified: business.identity_verified ?? false,
+          bank_connected: business.bank_connected ?? false,
+          is_active: business.is_active ?? true
+        })) || [];
 
         return res.status(200).json({ data: transformedBusinesses });
 
