@@ -19,6 +19,14 @@ const supabaseAdmin = createClient(
   }
 );
 
+// Validate environment variables
+if (!process.env.VITE_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  console.error('Missing required environment variables:', {
+    VITE_PUBLIC_SUPABASE_URL: !!process.env.VITE_PUBLIC_SUPABASE_URL,
+    SUPABASE_SERVICE_ROLE_KEY: !!process.env.SUPABASE_SERVICE_ROLE_KEY
+  });
+}
+
 // GET /api/business/services - Get all business services for a business (paginated and optimized)
 export async function GET(request: NextRequest) {
   try {
@@ -119,8 +127,18 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('Error in GET /api/business/services:', error);
+    console.error('Request URL:', request.url);
+    console.error('Environment check:', {
+      supabase_url: !!process.env.VITE_PUBLIC_SUPABASE_URL,
+      service_role_key: !!process.env.SUPABASE_SERVICE_ROLE_KEY
+    });
     return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
+      { 
+        error: 'Internal server error', 
+        details: error instanceof Error ? error.message : 'Unknown error',
+        api_endpoint: '/api/business/services',
+        timestamp: new Date().toISOString()
+      },
       { status: 500, headers: corsHeaders }
     );
   }

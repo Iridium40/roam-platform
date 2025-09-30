@@ -108,6 +108,30 @@
       "destination": "/api/business-eligible-services.ts"
     },
     {
+      "source": "/api/diagnostic",
+      "destination": "/api/diagnostic.ts"
+    },
+    {
+      "source": "/api/business/services",
+      "destination": "/api/business/services.ts"
+    },
+    {
+      "source": "/api/business/upload-documents",
+      "destination": "/api/business/upload-documents.ts"
+    },
+    {
+      "source": "/api/staff/invite",
+      "destination": "/api/staff/invite.ts"
+    },
+    {
+      "source": "/api/staff/validate-invitation",
+      "destination": "/api/staff/validate-invitation.ts"
+    },
+    {
+      "source": "/api/staff/complete-onboarding",
+      "destination": "/api/staff/complete-onboarding.ts"
+    },
+    {
       "source": "/api/business/tax-info",
       "destination": "/api/business/tax-info.ts"
     },
