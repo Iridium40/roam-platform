@@ -126,6 +126,7 @@ export default function AdminContactSubmissions() {
   const [selectedSubmission, setSelectedSubmission] = useState<ContactSubmission | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isReplyDialogOpen, setIsReplyDialogOpen] = useState(false);
   
   // Filter states
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -135,6 +136,11 @@ export default function AdminContactSubmissions() {
   // Edit form states
   const [editStatus, setEditStatus] = useState<SubmissionStatus>("received");
   const [editNotes, setEditNotes] = useState("");
+
+  // Reply form states
+  const [replySubject, setReplySubject] = useState("");
+  const [replyMessage, setReplyMessage] = useState("");
+  const [isReplySending, setIsReplySending] = useState(false);
 
   const { toast } = useToast();
   const { user } = useAuth();
@@ -317,6 +323,69 @@ export default function AdminContactSubmissions() {
     }
   };
 
+  // Handle sending reply
+  const sendReply = async () => {
+    if (!selectedSubmission) {
+      toast({
+        title: "Error",
+        description: "No submission selected",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!replySubject.trim() || !replyMessage.trim()) {
+      toast({
+        title: "Error", 
+        description: "Please fill in both subject and message",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setIsReplySending(true);
+
+      const response = await fetch("/api/send-contact-reply", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          submissionId: selectedSubmission.id,
+          replySubject: replySubject,
+          replyMessage: replyMessage,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to send reply");
+      }
+
+      toast({
+        title: "Success",
+        description: "Reply sent successfully",
+      });
+
+      // Update submission status to responded
+      await updateSubmissionStatus(selectedSubmission.id, "responded");
+      
+      // Close dialog and clear form
+      setIsReplyDialogOpen(false);
+      setReplySubject("");
+      setReplyMessage("");
+    } catch (error) {
+      console.error("Error sending reply:", error);
+      toast({
+        title: "Error",
+        description: "Failed to send reply",
+        variant: "destructive",
+      });
+    } finally {
+      setIsReplySending(false);
+    }
+  };
+
   // Handle view submission
   const handleViewSubmission = (submission: ContactSubmission | undefined | null) => {
     if (!submission) {
@@ -349,6 +418,23 @@ export default function AdminContactSubmissions() {
     setEditStatus(submission.status || "received");
     setEditNotes(submission.notes || "");
     setIsEditDialogOpen(true);
+  };
+
+  const handleReplyToSubmission = (submission: ContactSubmission | undefined | null) => {
+    if (!submission) {
+      console.error("Cannot reply to submission: submission is undefined or null");
+      toast({
+        title: "Error",
+        description: "Cannot reply to submission: invalid data",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSelectedSubmission(submission);
+    setReplySubject(`Re: ${submission.subject}`);
+    setReplyMessage("");
+    setIsReplyDialogOpen(true);
   };
 
   // Get status badge variant
@@ -459,6 +545,15 @@ export default function AdminContactSubmissions() {
           >
             <Edit className="w-4 h-4" />
           </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleReplyToSubmission(submission)}
+            disabled={!submission}
+            className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+          >
+            <Send className="w-4 h-4" />
+          </Button>
         </div>
       ),
     },
@@ -476,31 +571,26 @@ export default function AdminContactSubmissions() {
           title="Total Submissions"
           value={stats.total.toString()}
           icon={<MessageSquare className="w-6 h-6" />}
-          trend="neutral"
         />
         <ROAMStatCard
           title="New/Received"
           value={stats.received.toString()}
           icon={<AlertTriangle className="w-6 h-6" />}
-          trend="neutral"
         />
         <ROAMStatCard
           title="In Progress"
           value={stats.in_progress.toString()}
           icon={<Clock className="w-6 h-6" />}
-          trend="neutral"
         />
         <ROAMStatCard
           title="Responded"
           value={stats.responded.toString()}
           icon={<CheckCircle className="w-6 h-6" />}
-          trend="neutral"
         />
         <ROAMStatCard
           title="Closed"
           value={stats.closed.toString()}
           icon={<FileText className="w-6 h-6" />}
-          trend="neutral"
         />
       </div>
 
@@ -586,8 +676,6 @@ export default function AdminContactSubmissions() {
           <ROAMDataTable
             data={filteredSubmissions || []}
             columns={columns}
-            loading={loading}
-            searchPlaceholder="Search submissions..."
           />
         </ROAMCardContent>
       </ROAMCard>
@@ -734,6 +822,82 @@ export default function AdminContactSubmissions() {
                   onClick={() => updateSubmissionStatus(selectedSubmission.id, editStatus, editNotes)}
                 >
                   Update Submission
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Reply Dialog */}
+      <Dialog open={isReplyDialogOpen} onOpenChange={setIsReplyDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Reply to Contact Submission</DialogTitle>
+          </DialogHeader>
+          {selectedSubmission && (
+            <div className="space-y-4">
+              {/* Original Message Info */}
+              <div className="bg-gray-50 p-4 rounded-md">
+                <h4 className="font-medium mb-2">Original Message:</h4>
+                <div className="space-y-1 text-sm">
+                  <p><strong>From:</strong> {selectedSubmission.full_name || 'Unknown'} ({selectedSubmission.from_email})</p>
+                  <p><strong>Subject:</strong> {selectedSubmission.subject}</p>
+                  <p><strong>Message:</strong></p>
+                  <div className="bg-white p-2 rounded border">
+                    {selectedSubmission.message}
+                  </div>
+                </div>
+              </div>
+
+              {/* Reply Form */}
+              <div className="space-y-4">
+                <div>
+                  <label htmlFor="reply-subject" className="block text-sm font-medium mb-2">
+                    Subject
+                  </label>
+                  <input
+                    id="reply-subject"
+                    type="text"
+                    value={replySubject}
+                    onChange={(e) => setReplySubject(e.target.value)}
+                    placeholder={`Re: ${selectedSubmission.subject}`}
+                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="reply-message" className="block text-sm font-medium mb-2">
+                    Message
+                  </label>
+                  <textarea
+                    id="reply-message"
+                    value={replyMessage}
+                    onChange={(e) => setReplyMessage(e.target.value)}
+                    rows={6}
+                    placeholder="Type your reply here..."
+                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsReplyDialogOpen(false);
+                    setReplySubject("");
+                    setReplyMessage("");
+                  }}
+                  disabled={isReplySending}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={sendReply}
+                  disabled={isReplySending || !replySubject.trim() || !replyMessage.trim()}
+                >
+                  {isReplySending ? "Sending..." : "Send Reply"}
                 </Button>
               </div>
             </div>

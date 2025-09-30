@@ -4,6 +4,7 @@ import cors from "cors";
 import { handleDemo } from "./routes/demo";
 import { handleSystemConfig } from "./routes/system-config";
 import { handleSendApprovalEmail } from "./routes/send-approval-email";
+import { handleSendContactReply } from "./routes/send-contact-reply";
 import { handleValidatePhase2Token } from "./routes/validate-phase2-token";
 import { handleBusinessServiceCategories } from "./routes/business-service-categories";
 import { handleBusinessServiceSubcategories } from "./routes/business-service-subcategories";
@@ -43,6 +44,7 @@ export function createServer() {
   app.get("/api/demo", handleDemo);
   app.get("/api/system-config", handleSystemConfig);
   app.post("/api/send-approval-email", handleSendApprovalEmail);
+  app.post("/api/send-contact-reply", handleSendContactReply);
   app.post("/api/validate-phase2-token", handleValidatePhase2Token);
   
   // Business management routes
