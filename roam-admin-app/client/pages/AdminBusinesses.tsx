@@ -140,6 +140,17 @@ interface BusinessProfile {
   service_categories: ServiceCategoryType[] | null;
   service_subcategories: ServiceSubcategoryType[] | null;
   is_featured: boolean | null;
+  setup_completed: boolean | null;
+  setup_step: number | null;
+  identity_verified: boolean | null;
+  identity_verified_at: string | null;
+  bank_connected: boolean | null;
+  bank_connected_at: string | null;
+  application_submitted_at: string | null;
+  approved_at: string | null;
+  approved_by: string | null;
+  approval_notes: string | null;
+  business_description: string | null;
 }
 
 interface BusinessLocation {
