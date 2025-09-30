@@ -8,7 +8,9 @@ import { handleSendContactReply } from "./routes/send-contact-reply";
 import { handleValidatePhase2Token } from "./routes/validate-phase2-token";
 import { handleBusinessServiceCategories } from "./routes/business-service-categories";
 import { handleBusinessServiceSubcategories } from "./routes/business-service-subcategories";
-import { handleBusinesses } from "./routes/businesses";
+import { handleBusinesses, handleVerificationStats } from "./routes/businesses";
+import { handleUsers, handleUserActivity } from "./routes/users";
+import { handleBookings, handleBookingStats, handleBookingTrends } from "./routes/bookings";
 import { 
   handleFinancialStats, 
   handleTransactions, 
@@ -64,6 +66,17 @@ export function createServer() {
   
   // Business management routes
   app.get("/api/businesses", handleBusinesses);
+  app.put("/api/businesses", handleBusinesses);
+  app.get("/api/verification/stats", handleVerificationStats);
+  
+  // User management routes (monitoring only)
+  app.get("/api/users", handleUsers);
+  app.get("/api/users/activity", handleUserActivity);
+  
+  // Booking management routes (monitoring only)
+  app.get("/api/bookings", handleBookings);
+  app.get("/api/bookings/stats", handleBookingStats);
+  app.get("/api/bookings/trends", handleBookingTrends);
   
   // Business service management routes
   app.get("/api/business-service-categories", handleBusinessServiceCategories);
