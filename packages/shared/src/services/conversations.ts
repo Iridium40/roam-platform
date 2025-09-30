@@ -4,9 +4,22 @@ import { createClient } from '@supabase/supabase-js';
 const isBrowser = typeof window !== 'undefined';
 const envSource = isBrowser ? (import.meta as any).env : process.env;
 
-const supabaseUrl = envSource.VITE_PUBLIC_SUPABASE_URL || envSource.SUPABASE_URL || 'https://vssomyuyhicaxsgiaupo.supabase.co';
-const supabaseAnonKey = envSource.VITE_PUBLIC_SUPABASE_ANON_KEY || envSource.SUPABASE_ANON_KEY || '';
+// Validate required environment variables
+function validateEnvironment() {
+  const supabaseUrl = envSource.VITE_PUBLIC_SUPABASE_URL || envSource.SUPABASE_URL;
+  const supabaseAnonKey = envSource.VITE_PUBLIC_SUPABASE_ANON_KEY || envSource.SUPABASE_ANON_KEY;
+  
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error(
+      'Missing required Supabase environment variables. ' +
+      'Please ensure VITE_PUBLIC_SUPABASE_URL and VITE_PUBLIC_SUPABASE_ANON_KEY are set.'
+    );
+  }
+  
+  return { supabaseUrl, supabaseAnonKey };
+}
 
+const { supabaseUrl, supabaseAnonKey } = validateEnvironment();
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 import { 
   Conversation, 

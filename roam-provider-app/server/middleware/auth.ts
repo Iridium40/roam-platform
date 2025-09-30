@@ -2,10 +2,31 @@ import { Request, Response, NextFunction } from 'express';
 import { createClient } from '@supabase/supabase-js';
 import jwt from 'jsonwebtoken';
 
+// Validate required environment variables
+function validateEnvironment() {
+  const requiredVars = [
+    'VITE_PUBLIC_SUPABASE_URL',
+    'SUPABASE_SERVICE_ROLE_KEY',
+    'VITE_PUBLIC_SUPABASE_ANON_KEY'
+  ];
+  
+  const missing = requiredVars.filter(varName => !process.env[varName]);
+  
+  if (missing.length > 0) {
+    throw new Error(
+      `Missing required environment variables: ${missing.join(', ')}. ` +
+      'Please check your .env file and ensure all required variables are set.'
+    );
+  }
+}
+
+// Validate environment on startup
+validateEnvironment();
+
 // Create admin client with service role key to bypass RLS
 const supabaseAdmin = createClient(
-  process.env.VITE_PUBLIC_SUPABASE_URL || 'https://vssomyuyhicaxsgiaupo.supabase.co',
-  process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzc29teXV5aGljYXhzZ2lhdXBvIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MzQ1MzcxNSwiZXhwIjoyMDY5MDI5NzE1fQ.54i9VPExknTktnWbyT9Z9rZKvSJOjs9fG60wncLhLlA',
+  process.env.VITE_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
   {
     auth: {
       autoRefreshToken: false,
@@ -19,8 +40,8 @@ const supabaseAdmin = createClient(
 
 // Create regular client for auth verification
 const supabase = createClient(
-  process.env.VITE_PUBLIC_SUPABASE_URL || 'https://vssomyuyhicaxsgiaupo.supabase.co',
-  process.env.VITE_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzc29teXV5aGljYXhzZ2lhdXBvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTM3MTUsImV4cCI6MjA2OTAyOTcxNX0.5vJy3zWFOqn1AobrIWYJVY4JQx8o2WjCPgD_xAY-fvE',
+  process.env.VITE_PUBLIC_SUPABASE_URL!,
+  process.env.VITE_PUBLIC_SUPABASE_ANON_KEY!,
   {
     auth: {
       autoRefreshToken: false,

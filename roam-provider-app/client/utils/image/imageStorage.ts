@@ -8,7 +8,9 @@ import {
 
 // Create service role client for admin operations
 const createServiceRoleClient = () => {
-  const supabaseUrl = process.env.VITE_PUBLIC_SUPABASE_URL || 'https://vssomyuyhicaxsgiaupo.supabase.co';
+  // In the browser environment, we can't directly use service role key for security reasons
+  // Instead, we'll use a server endpoint that handles the upload with service role
+  // The service role operations should be handled on the server side
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   
   if (!serviceRoleKey) {
@@ -16,8 +18,7 @@ const createServiceRoleClient = () => {
     return supabase;
   }
   
-  // Note: In the browser, we can't directly use service role key for security reasons
-  // Instead, we'll use a server endpoint that handles the upload with service role
+  // Note: In production, service role operations should be handled server-side
   return supabase;
 };
 
