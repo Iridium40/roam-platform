@@ -23,6 +23,21 @@ import {
   handleBusinessReports,
   handleServiceReports
 } from "./routes/reports";
+import { 
+  handleReviews, 
+  handleReviewModeration, 
+  handleFlaggedReviews 
+} from "./routes/reviews";
+import { 
+  handlePromotions, 
+  handlePromotionUsage, 
+  handlePromotionActivation 
+} from "./routes/promotions";
+import { 
+  handleAnnouncements, 
+  handleAnnouncementPublication, 
+  handleActiveAnnouncements 
+} from "./routes/announcements";
 
 export function createServer() {
   const app = express();
@@ -72,6 +87,32 @@ export function createServer() {
   app.get("/api/reports/bookings", handleBookingReports);
   app.get("/api/reports/businesses", handleBusinessReports);
   app.get("/api/reports/services", handleServiceReports);
+
+  // Reviews management routes
+  app.get("/api/reviews", handleReviews);
+  app.post("/api/reviews", handleReviews);
+  app.put("/api/reviews/:id", handleReviews);
+  app.delete("/api/reviews/:id", handleReviews);
+  app.post("/api/reviews/:id/moderate", handleReviewModeration);
+  app.get("/api/reviews/flagged", handleFlaggedReviews);
+
+  // Promotions management routes
+  app.get("/api/promotions", handlePromotions);
+  app.post("/api/promotions", handlePromotions);
+  app.put("/api/promotions/:id", handlePromotions);
+  app.delete("/api/promotions/:id", handlePromotions);
+  app.get("/api/promotions/:id/usage", handlePromotionUsage);
+  app.post("/api/promotions/:id/activate", handlePromotionActivation);
+  app.post("/api/promotions/:id/deactivate", handlePromotionActivation);
+
+  // Announcements management routes
+  app.get("/api/announcements", handleAnnouncements);
+  app.post("/api/announcements", handleAnnouncements);
+  app.put("/api/announcements/:id", handleAnnouncements);
+  app.delete("/api/announcements/:id", handleAnnouncements);
+  app.post("/api/announcements/:id/publish", handleAnnouncementPublication);
+  app.post("/api/announcements/:id/unpublish", handleAnnouncementPublication);
+  app.get("/api/announcements/active", handleActiveAnnouncements);
 
   return app;
 }
