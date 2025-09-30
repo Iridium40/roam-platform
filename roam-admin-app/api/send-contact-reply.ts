@@ -76,7 +76,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Prepare email content
     const emailPayload = {
-      from: process.env.RESEND_FROM_EMAIL || 'ROAM Support <support@roamyourbestlife.com>',
+      from: process.env.RESEND_FROM_EMAIL || 'ROAM Support <contactus@roamyourbestlife.com>',
       to: [submission.from_email],
       subject: replySubject,
       html: `

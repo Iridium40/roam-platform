@@ -72,7 +72,7 @@ export async function handleSendContactReply(req: Request, res: Response) {
 
     // Prepare email content
     const emailPayload = {
-      from: process.env.RESEND_FROM_EMAIL || 'ROAM Support <support@roamyourbestlife.com>',
+      from: process.env.RESEND_FROM_EMAIL || 'ROAM Support <contactus@roamyourbestlife.com>',
       to: [submission.from_email],
       subject: replySubject,
       html: `
