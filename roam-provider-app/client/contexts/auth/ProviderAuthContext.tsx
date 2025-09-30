@@ -222,6 +222,14 @@ export const ProviderAuthProvider: React.FC<ProviderAuthProviderProps> = ({ chil
           } else {
             console.log(" Same user sign-in, skipping");
           }
+        } else if (event === 'TOKEN_REFRESHED' && session?.user) {
+          // For token refresh, only update if we don't have current provider data
+          if (!provider && lastProcessedUserRef.current === session.user.id) {
+            console.log(" Token refreshed, updating provider data");
+            await processUserAuth(session.user.id, session.access_token);
+          } else {
+            console.log(" Token refreshed, but already have current data");
+          }
         } else if (event === 'SIGNED_OUT') {
           console.log(" Sign-out detected");
           setProvider(null);
@@ -242,7 +250,7 @@ export const ProviderAuthProvider: React.FC<ProviderAuthProviderProps> = ({ chil
         authSubscription.unsubscribe();
       }
     };
-  }, [authInitialized, processUserAuth, clearStoredData]);
+  }, [authInitialized, processUserAuth, clearStoredData, provider]); // Added provider to dependencies
 
   const signOut = async () => {
     setLoading(true);

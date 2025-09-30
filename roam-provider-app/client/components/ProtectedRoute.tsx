@@ -6,12 +6,14 @@ interface ProtectedRouteProps {
   children: React.ReactNode;
   redirectTo?: string;
   fallback?: React.ReactNode;
+  allowedRoles?: string[];
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children,
   redirectTo = "/sign-in",
   fallback = null,
+  allowedRoles,
 }) => {
   const { customer, provider, loading, isAuthenticated } = useAuth();
 
@@ -39,6 +41,15 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to={redirectTo} replace />;
   }
 
+  // Check role-based access if allowedRoles is specified
+  if (allowedRoles && provider?.provider) {
+    const userRole = provider.provider.provider_role;
+    if (!allowedRoles.includes(userRole)) {
+      // Redirect to appropriate dashboard for their role
+      return <RoleBasedRedirect />;
+    }
+  }
+
   return <>{children}</>;
 };
 
@@ -46,12 +57,12 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 export const RoleBasedRedirect: React.FC = () => {
   const { provider } = useAuth();
   
-  if (!provider) {
+  if (!provider?.provider) {
     return <Navigate to="/sign-in" replace />;
   }
 
   // Redirect based on provider role
-  switch (provider.provider_role) {
+  switch (provider.provider.provider_role) {
     case "owner":
       return <Navigate to="/owner/dashboard" replace />;
     case "dispatcher":

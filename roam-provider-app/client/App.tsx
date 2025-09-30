@@ -85,6 +85,62 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/owner/bookings"
+              element={
+                <ProtectedRoute allowedRoles={["owner"]}>
+                  <ProviderDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/owner/messages"
+              element={
+                <ProtectedRoute allowedRoles={["owner"]}>
+                  <ProviderDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/owner/services"
+              element={
+                <ProtectedRoute allowedRoles={["owner"]}>
+                  <ProviderDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/owner/staff"
+              element={
+                <ProtectedRoute allowedRoles={["owner"]}>
+                  <ProviderDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/owner/financials"
+              element={
+                <ProtectedRoute allowedRoles={["owner"]}>
+                  <ProviderDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/owner/profile"
+              element={
+                <ProtectedRoute allowedRoles={["owner"]}>
+                  <ProviderDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/owner/business-settings"
+              element={
+                <ProtectedRoute allowedRoles={["owner"]}>
+                  <ProviderDashboard />
+                </ProtectedRoute>
+              }
+            />
 
             {/* Dispatcher-specific routes */}
             <Route
@@ -95,10 +151,136 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/dispatcher/bookings"
+              element={
+                <ProtectedRoute allowedRoles={["owner", "dispatcher"]}>
+                  <ProviderDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dispatcher/messages"
+              element={
+                <ProtectedRoute allowedRoles={["owner", "dispatcher"]}>
+                  <ProviderDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dispatcher/services"
+              element={
+                <ProtectedRoute allowedRoles={["owner", "dispatcher"]}>
+                  <ProviderDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dispatcher/staff"
+              element={
+                <ProtectedRoute allowedRoles={["owner", "dispatcher"]}>
+                  <ProviderDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dispatcher/financials"
+              element={
+                <ProtectedRoute allowedRoles={["owner", "dispatcher"]}>
+                  <ProviderDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dispatcher/profile"
+              element={
+                <ProtectedRoute allowedRoles={["owner", "dispatcher"]}>
+                  <ProviderDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dispatcher/business-settings"
+              element={
+                <ProtectedRoute allowedRoles={["owner", "dispatcher"]}>
+                  <ProviderDashboard />
+                </ProtectedRoute>
+              }
+            />
 
             {/* Provider-specific routes */}
             <Route
               path="/provider/dashboard"
+              element={
+                <ProtectedRoute
+                  allowedRoles={["owner", "dispatcher", "provider"]}
+                >
+                  <ProviderDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/provider/bookings"
+              element={
+                <ProtectedRoute
+                  allowedRoles={["owner", "dispatcher", "provider"]}
+                >
+                  <ProviderDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/provider/messages"
+              element={
+                <ProtectedRoute
+                  allowedRoles={["owner", "dispatcher", "provider"]}
+                >
+                  <ProviderDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/provider/services"
+              element={
+                <ProtectedRoute
+                  allowedRoles={["owner", "dispatcher", "provider"]}
+                >
+                  <ProviderDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/provider/staff"
+              element={
+                <ProtectedRoute
+                  allowedRoles={["owner", "dispatcher", "provider"]}
+                >
+                  <ProviderDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/provider/financials"
+              element={
+                <ProtectedRoute
+                  allowedRoles={["owner", "dispatcher", "provider"]}
+                >
+                  <ProviderDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/provider/profile"
+              element={
+                <ProtectedRoute
+                  allowedRoles={["owner", "dispatcher", "provider"]}
+                >
+                  <ProviderDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/provider/business-settings"
               element={
                 <ProtectedRoute
                   allowedRoles={["owner", "dispatcher", "provider"]}

@@ -92,7 +92,7 @@ import {
   User,
   Menu,
 } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { useProviderAuth } from "@/contexts/auth/ProviderAuthContext";
@@ -143,6 +143,92 @@ export default function ProviderDashboard() {
   const user = provider; // Map provider to user for compatibility
   const userId = provider?.user_id; // Get the user ID from the provider record
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Determine current tab from URL
+  const getCurrentTab = () => {
+    const pathParts = location.pathname.split('/');
+    const section = pathParts[pathParts.length - 1]; // Get the last part of the path
+    
+    // Handle various tab names
+    switch (section) {
+      case 'dashboard':
+        return 'dashboard';
+      case 'bookings':
+        return 'bookings';
+      case 'messages':
+        return 'messages';
+      case 'services':
+        return 'services';
+      case 'staff':
+        return 'staff';
+      case 'financials':
+        return 'financials';
+      default:
+        return 'dashboard';
+    }
+  };
+
+  const activeTab = getCurrentTab();
+
+  // Get the base path for navigation (depends on user role)
+  const getBasePath = () => {
+    if (isOwner) return '/owner';
+    if (isDispatcher) return '/dispatcher';
+    return '/provider';
+  };
+
+  const basePath = getBasePath();
+
+  // Navigation helper
+  const navigateToTab = (tab: string) => {
+    navigate(`${basePath}/${tab}`);
+  };
+  // Determine current tab from URL
+  const getCurrentTab = () => {
+    const pathParts = location.pathname.split('/');
+    const section = pathParts[pathParts.length - 1]; // Get the last part of the path
+    
+    // Handle various tab names
+    switch (section) {
+      case 'dashboard':
+        return 'dashboard';
+      case 'bookings':
+        return 'bookings';
+      case 'messages':
+        return 'messages';
+      case 'services':
+        return 'services';
+      case 'staff':
+        return 'staff';
+      case 'financials':
+        return 'financials';
+      case 'profile':
+        return 'profile';
+      case 'business-settings':
+        return 'business-settings';
+      default:
+        return 'dashboard';
+    }
+  };
+
+  const activeTab = getCurrentTab();
+
+  // Get the base path for navigation (depends on user role)
+  const getBasePath = () => {
+    if (isOwner) return '/owner';
+    if (isDispatcher) return '/dispatcher';
+    return '/provider';
+  };
+
+  const basePath = getBasePath();
+
+  // Navigation helper
+  const navigateToTab = (tab: string) => {
+    navigate(`${basePath}/${tab}`);
+  };
+
   const [isAvailable, setIsAvailable] = useState(true);
   const [providerData, setProviderData] = useState<Provider | null>(null);
   const [business, setBusiness] = useState<BusinessProfile | null>(null);
@@ -152,7 +238,6 @@ export default function ProviderDashboard() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [activeTab, setActiveTab] = useState("dashboard");
   const [activeBookingTab, setActiveBookingTab] = useState("today");
   const [selectedLocationFilter, setSelectedLocationFilter] = useState<string>("all");
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>("all");
@@ -642,37 +727,37 @@ export default function ProviderDashboard() {
             {/* Desktop Navigation */}
             <div className="hidden lg:flex items-center space-x-8">
               <button
-                onClick={() => setActiveTab("dashboard")}
+                onClick={() => navigateToTab("dashboard")}
                 className={`text-sm font-medium px-3 py-2 rounded-lg ${activeTab === "dashboard" ? "bg-gray-100 text-gray-900" : "text-gray-600 hover:text-gray-900"}`}
               >
                 Dashboard
               </button>
               <button
-                onClick={() => setActiveTab("bookings")}
+                onClick={() => navigateToTab("bookings")}
                 className={`text-sm font-medium px-3 py-2 rounded-lg ${activeTab === "bookings" ? "bg-gray-100 text-gray-900" : "text-gray-600 hover:text-gray-900"}`}
               >
                 Bookings
               </button>
               <button
-                onClick={() => setActiveTab("messages")}
+                onClick={() => navigateToTab("messages")}
                 className={`text-sm font-medium px-3 py-2 rounded-lg ${activeTab === "messages" ? "bg-gray-100 text-gray-900" : "text-gray-600 hover:text-gray-900"}`}
               >
                 Messages
               </button>
               <button
-                onClick={() => setActiveTab("services")}
+                onClick={() => navigateToTab("services")}
                 className={`text-sm font-medium px-3 py-2 rounded-lg ${activeTab === "services" ? "bg-gray-100 text-gray-900" : "text-gray-600 hover:text-gray-900"}`}
               >
                 Services
               </button>
                 <button
-                  onClick={() => setActiveTab("staff")}
+                  onClick={() => navigateToTab("staff")}
                   className={`text-sm font-medium px-3 py-2 rounded-lg ${activeTab === "staff" ? "bg-gray-100 text-gray-900" : "text-gray-600 hover:text-gray-900"}`}
                 >
                   Staff
                 </button>
               <button
-                onClick={() => setActiveTab("financials")}
+                onClick={() => navigateToTab("financials")}
                 className={`text-sm font-medium px-3 py-2 rounded-lg ${activeTab === "financials" ? "bg-gray-100 text-gray-900" : "text-gray-600 hover:text-gray-900"}`}
               >
                 Financials
@@ -692,11 +777,11 @@ export default function ProviderDashboard() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setActiveTab("profile")}>
+                <DropdownMenuItem onClick={() => navigateToTab("profile")}>
                   <User className="w-4 h-4 mr-2" />
                   Profile
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setActiveTab("business-settings")}>
+                <DropdownMenuItem onClick={() => navigateToTab("business-settings")}>
                   <Building className="w-4 h-4 mr-2" />
                   Business Settings
                 </DropdownMenuItem>
