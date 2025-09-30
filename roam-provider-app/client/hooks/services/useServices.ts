@@ -15,6 +15,28 @@ export function useServices() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Helper to check if provider data is ready for API calls
+  const isProviderReady = (): boolean => {
+    if (!provider?.provider) {
+      console.log('Provider context not yet loaded');
+      return false;
+    }
+    
+    if (!provider.provider.business_id) {
+      console.log('Provider has no business_id');
+      return false;
+    }
+
+    // Validate business_id is a valid UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(provider.provider.business_id)) {
+      console.log('Provider business_id is not a valid UUID:', provider.provider.business_id);
+      return false;
+    }
+
+    return true;
+  };
+
   // Safe JSON parsing helper
   const safeJsonParse = async (response: Response, context: string) => {
     try {
@@ -30,8 +52,8 @@ export function useServices() {
   };
 
   const loadServicesData = async () => {
-    if (!provider?.provider?.business_id) {
-      setError('Business ID not found');
+    if (!isProviderReady()) {
+      setError('Business profile setup required. Please complete your business registration.');
       setLoading(false);
       return;
     }
@@ -40,11 +62,12 @@ export function useServices() {
       setLoading(true);
       setError(null);
 
-      const businessId = provider.provider.business_id;
+      const businessId = provider!.provider!.business_id!;
+      console.log('Loading services for business:', businessId);
       
       const [servicesRes, eligibleRes] = await Promise.all([
-        fetch(`/api/business-services?business_id=${businessId}&page=1&limit=50`),
-        fetch(`/api/eligible-services?business_id=${businessId}`)
+        fetch(`/api/business/services?business_id=${businessId}&page=1&limit=50`),
+        fetch(`/api/business-eligible-services?business_id=${businessId}`)
       ]);
 
       if (!servicesRes.ok) {
@@ -69,6 +92,11 @@ export function useServices() {
           (svc: EligibleService) => !existingServiceIds.includes(svc.id)
         );
         setEligibleServices(eligible);
+      } else {
+        console.warn('Failed to load eligible services, but continuing with business services');
+        // Don't fail the entire load if eligible services fail
+        const errorData = await safeJsonParse(eligibleRes, 'eligible services');
+        console.warn('Eligible services error:', errorData);
       }
 
     } catch (error) {
@@ -81,7 +109,7 @@ export function useServices() {
 
   const loadEligibleServices = async (businessId: string) => {
     try {
-      const response = await fetch(`/api/eligible-services?business_id=${businessId}`);
+      const response = await fetch(`/api/business-eligible-services?business_id=${businessId}`);
       
       if (!response.ok) {
         const errorData = await safeJsonParse(response, 'eligible services');
@@ -103,18 +131,18 @@ export function useServices() {
   };
 
   const addService = async (serviceForm: ServiceFormData): Promise<BusinessService> => {
-    if (!provider?.provider?.business_id) {
-      throw new Error('Business ID not found');
+    if (!isProviderReady()) {
+      throw new Error('Business profile setup required. Please complete your business registration.');
     }
 
     try {
-      const response = await fetch('/api/business-services', {
+      const response = await fetch('/api/business/services', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          business_id: provider.provider.business_id,
+          business_id: provider!.provider!.business_id!,
           service_id: serviceForm.service_id,
           business_price: parseFloat(serviceForm.business_price),
           delivery_type: serviceForm.delivery_type,
@@ -144,13 +172,19 @@ export function useServices() {
   };
 
   const updateService = async (serviceId: string, updates: Partial<BusinessService>): Promise<BusinessService> => {
+    if (!isProviderReady()) {
+      throw new Error('Business profile setup required. Please complete your business registration.');
+    }
+
     try {
-      const response = await fetch(`/api/business-services/${serviceId}`, {
+      const response = await fetch(`/api/business/services`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          business_id: provider!.provider!.business_id!,
+          service_id: serviceId,
           business_price: updates.business_price,
           delivery_type: updates.delivery_type,
           is_active: updates.is_active
@@ -165,7 +199,7 @@ export function useServices() {
       const { service } = await safeJsonParse(response, 'update service');
 
       // Update local state
-      setBusinessServices(prev => prev.map(s => s.id === serviceId ? service : s));
+      setBusinessServices(prev => prev.map(s => s.service_id === serviceId ? service : s));
 
       return service;
 
@@ -177,7 +211,13 @@ export function useServices() {
 
   const deleteService = async (serviceId: string): Promise<void> => {
     try {
-      const response = await fetch(`/api/business-services/${serviceId}`, {
+      // Find the business service to get both business_id and service_id
+      const businessService = businessServices.find(s => s.service_id === serviceId);
+      if (!businessService) {
+        throw new Error('Business service not found');
+      }
+
+      const response = await fetch(`/api/business/services?business_id=${businessService.business_id}&service_id=${serviceId}`, {
         method: 'DELETE',
       });
 
@@ -187,7 +227,7 @@ export function useServices() {
       }
 
       // Update local state
-      setBusinessServices(prev => prev.filter(s => s.id !== serviceId));
+      setBusinessServices(prev => prev.filter(s => s.service_id !== serviceId));
 
     } catch (error) {
       console.error('Error deleting service:', error);
@@ -205,8 +245,18 @@ export function useServices() {
   };
 
   useEffect(() => {
-    loadServicesData();
-  }, [provider?.provider?.business_id]);
+    // Only load services data if the provider is ready
+    if (isProviderReady()) {
+      loadServicesData();
+    } else if (provider?.provider && !provider.provider.business_id) {
+      // Provider is loaded but has no business_id
+      setError('Business profile setup required. Please complete your business registration.');
+      setLoading(false);
+    } else {
+      // Provider context is still loading
+      console.log('Waiting for provider context to load...');
+    }
+  }, [provider?.provider?.business_id, provider?.provider]);
 
   return {
     businessServices,
