@@ -51,12 +51,18 @@ export function useBookings(providerData: any, business: any) {
           ),
           customer_locations (
             id,
-            address_line1,
-            address_line2,
+            location_name,
+            street_address,
+            unit_number,
             city,
             state,
-            postal_code,
-            country
+            zip_code,
+            latitude,
+            longitude,
+            is_primary,
+            is_active,
+            access_instructions,
+            location_type
           ),
           business_locations (
             id,
