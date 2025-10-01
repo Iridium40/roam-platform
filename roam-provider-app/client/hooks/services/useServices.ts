@@ -70,9 +70,16 @@ export function useServices() {
         fetch(`/api/business-eligible-services?business_id=${businessId}`)
       ]);
 
+      // Handle services response
       if (!servicesRes.ok) {
-        const errorData = await safeJsonParse(servicesRes, 'business services');
-        throw new Error(errorData.error || 'Failed to load services');
+        let errorMessage = 'Failed to load services';
+        try {
+          const errorData = await safeJsonParse(servicesRes, 'business services error');
+          errorMessage = errorData.error || errorMessage;
+        } catch (parseError) {
+          console.warn('Could not parse error response from services API');
+        }
+        throw new Error(errorMessage);
       }
 
       const servicesJson = await safeJsonParse(servicesRes, 'business services');
@@ -86,17 +93,26 @@ export function useServices() {
       });
 
       if (eligibleRes.ok) {
-        const eligibleJson = await safeJsonParse(eligibleRes, 'eligible services');
-        const existingServiceIds = (services || []).map((bs: BusinessService) => bs.service_id);
-        const eligible = (eligibleJson.eligible_services || []).filter(
-          (svc: EligibleService) => !existingServiceIds.includes(svc.id)
-        );
-        setEligibleServices(eligible);
+        try {
+          const eligibleJson = await safeJsonParse(eligibleRes, 'eligible services');
+          const existingServiceIds = (services || []).map((bs: BusinessService) => bs.service_id);
+          const eligible = (eligibleJson.eligible_services || []).filter(
+            (svc: EligibleService) => !existingServiceIds.includes(svc.id)
+          );
+          setEligibleServices(eligible);
+        } catch (eligibleError) {
+          console.warn('Failed to parse eligible services, but continuing with business services:', eligibleError);
+          setEligibleServices([]); // Set to empty array instead of failing
+        }
       } else {
         console.warn('Failed to load eligible services, but continuing with business services');
-        // Don't fail the entire load if eligible services fail
-        const errorData = await safeJsonParse(eligibleRes, 'eligible services');
-        console.warn('Eligible services error:', errorData);
+        try {
+          const errorData = await safeJsonParse(eligibleRes, 'eligible services error');
+          console.warn('Eligible services error:', errorData);
+        } catch (parseError) {
+          console.warn('Could not parse eligible services error response');
+        }
+        setEligibleServices([]); // Set to empty array instead of failing
       }
 
     } catch (error) {
@@ -151,8 +167,14 @@ export function useServices() {
       });
 
       if (!response.ok) {
-        const errorData = await safeJsonParse(response, 'add service');
-        throw new Error(errorData.error || 'Failed to add service');
+        let errorMessage = 'Failed to add service';
+        try {
+          const errorData = await safeJsonParse(response, 'add service error');
+          errorMessage = errorData.error || errorMessage;
+        } catch (parseError) {
+          console.warn('Could not parse error response from add service API');
+        }
+        throw new Error(errorMessage);
       }
 
       const { service } = await safeJsonParse(response, 'add service');
@@ -192,8 +214,14 @@ export function useServices() {
       });
 
       if (!response.ok) {
-        const errorData = await safeJsonParse(response, 'update service');
-        throw new Error(errorData.error || 'Failed to update service');
+        let errorMessage = 'Failed to update service';
+        try {
+          const errorData = await safeJsonParse(response, 'update service error');
+          errorMessage = errorData.error || errorMessage;
+        } catch (parseError) {
+          console.warn('Could not parse error response from update service API');
+        }
+        throw new Error(errorMessage);
       }
 
       const { service } = await safeJsonParse(response, 'update service');
@@ -222,8 +250,14 @@ export function useServices() {
       });
 
       if (!response.ok) {
-        const errorData = await safeJsonParse(response, 'delete service');
-        throw new Error(errorData.error || 'Failed to delete service');
+        let errorMessage = 'Failed to delete service';
+        try {
+          const errorData = await safeJsonParse(response, 'delete service error');
+          errorMessage = errorData.error || errorMessage;
+        } catch (parseError) {
+          console.warn('Could not parse error response from delete service API');
+        }
+        throw new Error(errorMessage);
       }
 
       // Update local state

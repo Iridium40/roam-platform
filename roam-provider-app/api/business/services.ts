@@ -129,7 +129,11 @@ export async function GET(request: NextRequest) {
       total_services: totalCount || 0,
       active_services: activeCount || 0,
       total_revenue: 0,
-      avg_price: services.length > 0 ? services.reduce((sum: number, s: any) => sum + (s.business_price || 0), 0) / services.length : 0
+      avg_price: services.length > 0 ? 
+        services.reduce((sum: number, s: any) => {
+          const price = parseFloat(s.business_price) || 0;
+          return sum + price;
+        }, 0) / services.length : 0
     };
 
     return NextResponse.json({
@@ -170,7 +174,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const body = await request.json();
+    // Safe JSON parsing
+    let body;
+    try {
+      body = await request.json();
+    } catch (jsonError) {
+      console.error('Invalid JSON in request body:', jsonError);
+      return NextResponse.json(
+        { error: 'Invalid JSON in request body', details: 'Please ensure request body contains valid JSON' },
+        { status: 400, headers: corsHeaders }
+      );
+    }
+
     const { business_id, service_id, business_price, delivery_type = 'customer_location', is_active = true } = body;
 
     // Validate required fields
@@ -289,7 +304,18 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const body = await request.json();
+    // Safe JSON parsing
+    let body;
+    try {
+      body = await request.json();
+    } catch (jsonError) {
+      console.error('Invalid JSON in request body:', jsonError);
+      return NextResponse.json(
+        { error: 'Invalid JSON in request body', details: 'Please ensure request body contains valid JSON' },
+        { status: 400, headers: corsHeaders }
+      );
+    }
+
     const { business_id, service_id, business_price, delivery_type, is_active } = body;
 
     // Validate required fields
