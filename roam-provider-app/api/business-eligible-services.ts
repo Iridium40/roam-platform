@@ -13,6 +13,18 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    // Validate environment variables
+    if (!process.env.VITE_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      console.error('Missing required environment variables:', {
+        VITE_PUBLIC_SUPABASE_URL: !!process.env.VITE_PUBLIC_SUPABASE_URL,
+        SUPABASE_SERVICE_ROLE_KEY: !!process.env.SUPABASE_SERVICE_ROLE_KEY
+      });
+      return NextResponse.json(
+        { error: 'Server configuration error', details: 'Missing required environment variables' },
+        { status: 500, headers: corsHeaders }
+      );
+    }
+
     // Get business_id from query parameters
     const { searchParams } = new URL(request.url);
     const businessId = searchParams.get('business_id');

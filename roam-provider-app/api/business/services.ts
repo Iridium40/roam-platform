@@ -7,29 +7,43 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
 };
 
-// Initialize Supabase admin client
-const supabaseAdmin = createClient(
-  process.env.VITE_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
+// Initialize Supabase admin client with error handling
+let supabaseAdmin: any;
+try {
+  if (!process.env.VITE_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    console.error('Missing required environment variables:', {
+      VITE_PUBLIC_SUPABASE_URL: !!process.env.VITE_PUBLIC_SUPABASE_URL,
+      SUPABASE_SERVICE_ROLE_KEY: !!process.env.SUPABASE_SERVICE_ROLE_KEY
+    });
+    throw new Error('Missing required environment variables');
   }
-);
-
-// Validate environment variables
-if (!process.env.VITE_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-  console.error('Missing required environment variables:', {
-    VITE_PUBLIC_SUPABASE_URL: !!process.env.VITE_PUBLIC_SUPABASE_URL,
-    SUPABASE_SERVICE_ROLE_KEY: !!process.env.SUPABASE_SERVICE_ROLE_KEY
-  });
+  
+  supabaseAdmin = createClient(
+    process.env.VITE_PUBLIC_SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    }
+  );
+} catch (error) {
+  console.error('Failed to initialize Supabase client:', error);
 }
 
 // GET /api/business/services - Get all business services for a business (paginated and optimized)
 export async function GET(request: NextRequest) {
   try {
+    // Check if Supabase client is initialized
+    if (!supabaseAdmin) {
+      console.error('Supabase client not initialized');
+      return NextResponse.json(
+        { error: 'Server configuration error', details: 'Database connection failed' },
+        { status: 500, headers: corsHeaders }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const businessId = searchParams.get('business_id');
     const page = Math.max(parseInt(searchParams.get('page') || '1', 10), 1);
@@ -147,6 +161,15 @@ export async function GET(request: NextRequest) {
 // POST /api/business/services - Add a new business service
 export async function POST(request: NextRequest) {
   try {
+    // Check if Supabase client is initialized
+    if (!supabaseAdmin) {
+      console.error('Supabase client not initialized');
+      return NextResponse.json(
+        { error: 'Server configuration error', details: 'Database connection failed' },
+        { status: 500, headers: corsHeaders }
+      );
+    }
+
     const body = await request.json();
     const { business_id, service_id, business_price, delivery_type = 'customer_location', is_active = true } = body;
 
@@ -257,6 +280,15 @@ export async function POST(request: NextRequest) {
 // PUT /api/business/services - Update an existing business service
 export async function PUT(request: NextRequest) {
   try {
+    // Check if Supabase client is initialized
+    if (!supabaseAdmin) {
+      console.error('Supabase client not initialized');
+      return NextResponse.json(
+        { error: 'Server configuration error', details: 'Database connection failed' },
+        { status: 500, headers: corsHeaders }
+      );
+    }
+
     const body = await request.json();
     const { business_id, service_id, business_price, delivery_type, is_active } = body;
 
@@ -369,6 +401,15 @@ export async function PUT(request: NextRequest) {
 // DELETE /api/business/services - Remove a business service
 export async function DELETE(request: NextRequest) {
   try {
+    // Check if Supabase client is initialized
+    if (!supabaseAdmin) {
+      console.error('Supabase client not initialized');
+      return NextResponse.json(
+        { error: 'Server configuration error', details: 'Database connection failed' },
+        { status: 500, headers: corsHeaders }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const businessId = searchParams.get('business_id');
     const serviceId = searchParams.get('service_id');
