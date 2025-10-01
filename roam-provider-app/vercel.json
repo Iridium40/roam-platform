@@ -60,6 +60,10 @@
       "destination": "/api/notifications/edge.ts"
     },
     {
+      "source": "/api/bookings",
+      "destination": "/api/bookings.ts"
+    },
+    {
       "source": "/api/bookings/status-update",
       "destination": "/api/bookings/status-update.ts"
     },

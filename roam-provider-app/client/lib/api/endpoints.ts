@@ -233,6 +233,23 @@ export const notificationsAPI = {
 
 // Bookings API endpoints
 export const bookingsAPI = {
+  // Get bookings for a business
+  getBookings: (params: {
+    business_id: string;
+    provider_id?: string;
+    limit?: number;
+    offset?: number;
+    status?: string;
+  }) => {
+    const searchParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        searchParams.append(key, value.toString());
+      }
+    });
+    return apiClient.get(`/bookings?${searchParams.toString()}`);
+  },
+  
   // Update booking status
   updateStatus: (data: { bookingId: string; status: string }) =>
     apiClient.post("/bookings/status-update", data),

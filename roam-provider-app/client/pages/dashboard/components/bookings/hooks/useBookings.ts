@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
+import { api } from "@/lib/api/endpoints";
 
 interface BookingStats {
   totalBookings: number;
@@ -38,77 +39,89 @@ export function useBookings(providerData: any, business: any) {
 
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("bookings")
-        .select(`
-          *,
-          customer_profiles (
-            id,
-            first_name,
-            last_name,
-            email,
-            phone
-          ),
-          customer_locations (
-            id,
-            location_name,
-            street_address,
-            unit_number,
-            city,
-            state,
-            zip_code,
-            latitude,
-            longitude,
-            is_primary,
-            is_active,
-            access_instructions,
-            location_type
-          ),
-          business_locations (
-            id,
-            location_name,
-            address_line1,
-            address_line2,
-            city,
-            state,
-            postal_code
-          ),
-          services (
-            id,
-            service_name,
-            description,
-            duration_minutes,
-            min_price,
-            max_price
-          ),
-          providers (
-            id,
-            first_name,
-            last_name
-          )
-        `)
-        .eq("business_id", business.id)
-        .order("booking_date", { ascending: false })
-        .order("start_time", { ascending: false });
+      // Use API endpoint instead of direct Supabase call
+      const response = await api.bookings.getBookings({
+        business_id: business.id,
+        limit: 1000 // Load all bookings for now
+      });
 
-      if (error) {
-        console.error("Error loading bookings:", error);
+      if (response.data && typeof response.data === 'object' && 'bookings' in response.data) {
+        const apiData = response.data as { bookings: any[]; stats?: any };
+        setBookings(apiData.bookings || []);
+      } else {
+        throw new Error('No data received from API');
+      }
+    } catch (error: any) {
+      console.error("Error loading bookings:", error);
+      
+      // Fallback to direct Supabase call if API fails
+      try {
+        const { data, error: supabaseError } = await supabase
+          .from("bookings")
+          .select(`
+            *,
+            customer_profiles (
+              id,
+              first_name,
+              last_name,
+              email,
+              phone
+            ),
+            customer_locations (
+              id,
+              location_name,
+              street_address,
+              unit_number,
+              city,
+              state,
+              zip_code,
+              latitude,
+              longitude,
+              is_primary,
+              is_active,
+              access_instructions,
+              location_type
+            ),
+            business_locations (
+              id,
+              location_name,
+              address_line1,
+              address_line2,
+              city,
+              state,
+              postal_code
+            ),
+            services (
+              id,
+              name,
+              description,
+              duration_minutes,
+              min_price,
+              max_price
+            ),
+            providers (
+              id,
+              first_name,
+              last_name
+            )
+          `)
+          .eq("business_id", business.id)
+          .order("booking_date", { ascending: false })
+          .order("start_time", { ascending: false });
+
+        if (supabaseError) {
+          throw supabaseError;
+        }
+
+        setBookings(data || []);
+      } catch (fallbackError) {
+        console.error("Fallback error loading bookings:", fallbackError);
         toast({
           title: "Error",
           description: "Failed to load bookings. Please try again.",
           variant: "destructive",
         });
-        return;
       }
-
-      setBookings(data || []);
-    } catch (error) {
-      console.error("Error loading bookings:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load bookings. Please try again.",
-        variant: "destructive",
-      });
     } finally {
       setLoading(false);
     }
@@ -142,7 +155,7 @@ export function useBookings(providerData: any, business: any) {
         const customerName = booking.customer_profiles 
           ? `${booking.customer_profiles.first_name || ""} ${booking.customer_profiles.last_name || ""}`.toLowerCase()
           : "";
-        const serviceName = booking.services?.service_name?.toLowerCase() || "";
+        const serviceName = booking.services?.name?.toLowerCase() || "";
         const reference = booking.booking_reference?.toLowerCase() || "";
         
         return customerName.includes(query) || serviceName.includes(query) || reference.includes(query);
@@ -240,39 +253,60 @@ export function useBookings(providerData: any, business: any) {
   // Update booking status
   const updateBookingStatus = async (bookingId: string, newStatus: string) => {
     try {
-      const { error } = await (supabase as any)
-        .from("bookings")
-        .update({ booking_status: newStatus })
-        .eq("id", bookingId);
+      // Use API endpoint instead of direct Supabase call
+      const response = await api.bookings.updateStatus({
+        bookingId,
+        status: newStatus
+      });
 
-      if (error) {
-        console.error("Error updating booking status:", error);
+      if (response.data) {
+        // Update local state
+        setBookings(prev => prev.map(booking => 
+          booking.id === bookingId 
+            ? { ...booking, booking_status: newStatus }
+            : booking
+        ));
+
+        toast({
+          title: "Success",
+          description: "Booking status updated successfully.",
+        });
+      } else {
+        throw new Error('Failed to update booking status');
+      }
+    } catch (error: any) {
+      console.error("Error updating booking status:", error);
+      
+      // Fallback to direct Supabase call if API fails
+      try {
+        const { error: supabaseError } = await (supabase as any)
+          .from("bookings")
+          .update({ booking_status: newStatus })
+          .eq("id", bookingId);
+
+        if (supabaseError) {
+          throw supabaseError;
+        }
+
+        // Update local state
+        setBookings(prev => prev.map(booking => 
+          booking.id === bookingId 
+            ? { ...booking, booking_status: newStatus }
+            : booking
+        ));
+
+        toast({
+          title: "Success",
+          description: "Booking status updated successfully.",
+        });
+      } catch (fallbackError) {
+        console.error("Fallback error updating booking status:", fallbackError);
         toast({
           title: "Error",
           description: "Failed to update booking status. Please try again.",
           variant: "destructive",
         });
-        return;
       }
-
-      // Update local state
-      setBookings(prev => prev.map(booking => 
-        booking.id === bookingId 
-          ? { ...booking, booking_status: newStatus }
-          : booking
-      ));
-
-      toast({
-        title: "Success",
-        description: "Booking status updated successfully.",
-      });
-    } catch (error) {
-      console.error("Error updating booking status:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update booking status. Please try again.",
-        variant: "destructive",
-      });
     }
   };
 

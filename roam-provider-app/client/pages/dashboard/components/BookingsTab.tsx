@@ -200,7 +200,7 @@ export default function BookingsTab({
       setLoading(true);
       
       // Load bookings with all related data
-      const { data: bookingsData, error: bookingsError } = await supabase
+      const { data: bookingsData, error: bookingsError } = await (supabase as any)
         .from('bookings')
         .select(`
           *,
@@ -217,7 +217,7 @@ export default function BookingsTab({
       setBookings(bookingsData || []);
 
       // Load business services for pricing information
-      const { data: businessServicesData, error: businessServicesError } = await supabase
+      const { data: businessServicesData, error: businessServicesError } = await (supabase as any)
         .from('business_services')
         .select('*')
         .eq('business_id', providerData.business_id);
@@ -230,7 +230,7 @@ export default function BookingsTab({
       }
 
       // Load staff members for assignment
-      const { data: staffData, error: staffError } = await supabase
+      const { data: staffData, error: staffError } = await (supabase as any)
         .from('providers')
         .select('*')
         .eq('business_id', providerData.business_id);
@@ -239,7 +239,7 @@ export default function BookingsTab({
       setStaffMembers(staffData || []);
 
       // Set available providers (only those with provider_role = "provider")
-      const availableProviders = staffData?.filter(provider => provider.provider_role === "provider") || [];
+      const availableProviders = staffData?.filter((provider: any) => provider.provider_role === "provider") || [];
       setAllProviders(availableProviders);
 
     } catch (error: any) {
@@ -256,7 +256,7 @@ export default function BookingsTab({
 
   const handleAcceptBooking = async (bookingId: string) => {
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('bookings')
         .update({ 
           booking_status: 'confirmed'
@@ -285,7 +285,7 @@ export default function BookingsTab({
 
   const handleDeclineBooking = async (bookingId: string, reason?: string) => {
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('bookings')
         .update({ 
           booking_status: 'declined',
@@ -315,7 +315,7 @@ export default function BookingsTab({
 
   const handleAssignProvider = async (bookingId: string, providerId: string) => {
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('bookings')
         .update({ 
           provider_id: providerId === 'unassigned' ? null : providerId
@@ -1204,7 +1204,7 @@ export default function BookingsTab({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm font-medium text-gray-600">Service Name</label>
-                    <p className="text-sm">{selectedBooking.services?.service_name || 'N/A'}</p>
+                    <p className="text-sm">{selectedBooking.services?.name || 'N/A'}</p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-600">Business Price</label>
