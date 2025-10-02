@@ -6,7 +6,25 @@ The ROAM Platform has been restructured into a monorepo with shared services to 
 
 - **ROAM Admin App** - Platform administration
 - **ROAM Provider App** - Provider management and onboarding ✅ **Active Development**
-- **ROAM Customer App** - Customer booking and service discovery
+- **ROAM Customer App** - Customer booking ## � **Development Standards**
+
+### **API Development**
+- ✅ Use Vercel Serverless Functions (not Edge Runtime)
+- ✅ Follow patterns in `API_ARCHITECTURE.md`
+- ✅ Safe JSON parsing with try-catch blocks
+- ✅ Consistent error response format
+- ✅ Proper CORS headers for all endpoints
+- ✅ Always use `VercelRequest`/`VercelResponse` types
+
+### **Database Queries**
+- ✅ Always reference `DATABASE_SCHEMA_REFERENCE.md` for field names
+- ✅ Use confirmed working query patterns
+- ✅ Implement comprehensive error handling
+
+### **Frontend Development**
+- ✅ Use shared types from `@roam/shared`
+- ✅ Implement proper error boundaries
+- ✅ Follow component refactoring guidelinesovery
 
 ## 🎯 **Current Progress (October 2025)**
 
@@ -371,10 +389,13 @@ import type { EmailService } from '@roam/shared/services';
 
 ## 📚 **Key Documentation**
 
-### **Active Development Documents**
-- **[Provider App Integration Progress](./PROVIDER_APP_INTEGRATION_PROGRESS.md)** - Current integration fixes and progress
+### **Core Architecture**
+- **[API Architecture](./API_ARCHITECTURE.md)** - ⭐ **NEW** Complete API implementation guide and patterns
 - **[Database Schema Reference](./DATABASE_SCHEMA_REFERENCE.md)** - Confirmed working database schemas (60+ tables)
 - **[Unified Service Architecture Analysis](./UNIFIED_SERVICE_ARCHITECTURE_ANALYSIS.md)** - Platform-wide service standardization plan
+
+### **Active Development Documents**
+- **[Provider App Integration Progress](./PROVIDER_APP_INTEGRATION_PROGRESS.md)** - Current integration fixes and progress
 
 ### **Completed Implementations**
 - **[MFA Implementation Summary](./MFA_IMPLEMENTATION_SUMMARY.md)** - Multi-Factor Authentication framework

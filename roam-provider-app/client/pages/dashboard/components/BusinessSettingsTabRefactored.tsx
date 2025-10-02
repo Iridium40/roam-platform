@@ -3,6 +3,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Save, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { supabase } from "@/lib/supabase";
+import { useToast } from "@/hooks/use-toast";
 
 // Import our modular components
 import BasicInfoSection from "./business-settings/BasicInfoSection";
@@ -21,6 +23,7 @@ interface BusinessSettingsTabProps {
 }
 
 export function BusinessSettingsTab({ providerData, business, onBusinessUpdate }: BusinessSettingsTabProps) {
+  const { toast } = useToast();
   const {
     // Business data
     businessData,
@@ -46,11 +49,54 @@ export function BusinessSettingsTab({ providerData, business, onBusinessUpdate }
     handleCoverUpload,
   } = useBusinessSettings(business);
 
-  // Mock data for documents and locations - these would come from API calls
+  // State for documents and locations
   const [documents, setDocuments] = React.useState([]);
   const [locations, setLocations] = React.useState([]);
   const [documentsLoading, setDocumentsLoading] = React.useState(false);
-  const [locationsLoading, setLocationsLoading] = React.useState(false);
+  const [locationsLoading, setLocationsLoading] = React.useState(true);
+
+  // Load business locations on mount
+  React.useEffect(() => {
+    if (business?.id) {
+      loadBusinessLocations();
+    }
+  }, [business?.id]);
+
+  // Load business locations
+  const loadBusinessLocations = async () => {
+    if (!business?.id) return;
+
+    setLocationsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('business_locations')
+        .select('*')
+        .eq('business_id', business.id)
+        .order('is_primary', { ascending: false })
+        .order('location_name', { ascending: true });
+
+      if (error) {
+        console.error('Error loading business locations:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load business locations",
+          variant: "destructive",
+        });
+      } else {
+        setLocations(data || []);
+        console.log(`Loaded ${data?.length || 0} business locations`);
+      }
+    } catch (err) {
+      console.error('Unexpected error loading locations:', err);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred while loading locations",
+        variant: "destructive",
+      });
+    } finally {
+      setLocationsLoading(false);
+    }
+  };
 
   // Document handlers
   const handleDocumentUpload = async (file: File, documentType: string) => {
@@ -65,23 +111,139 @@ export function BusinessSettingsTab({ providerData, business, onBusinessUpdate }
 
   // Location handlers  
   const handleLocationAdd = async (locationData: any) => {
-    // Implementation would create location in DB
-    console.log("Adding location:", locationData);
+    if (!business?.id) return;
+
+    try {
+      // Check if this will be the first location (make it primary by default)
+      const isPrimary = locations.length === 0;
+
+      const { data, error } = await supabase
+        .from('business_locations')
+        .insert({
+          business_id: business.id,
+          ...locationData,
+          is_primary: isPrimary,
+          is_active: true,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Location added successfully",
+      });
+
+      await loadBusinessLocations(); // Reload locations
+    } catch (err) {
+      console.error('Error adding location:', err);
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to add location",
+        variant: "destructive",
+      });
+      throw err;
+    }
   };
 
   const handleLocationUpdate = async (locationId: string, locationData: any) => {
-    // Implementation would update location in DB
-    console.log("Updating location:", locationId, locationData);
+    try {
+      const { error } = await supabase
+        .from('business_locations')
+        .update(locationData)
+        .eq('id', locationId)
+        .eq('business_id', business.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Location updated successfully",
+      });
+
+      await loadBusinessLocations(); // Reload locations
+    } catch (err) {
+      console.error('Error updating location:', err);
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to update location",
+        variant: "destructive",
+      });
+      throw err;
+    }
   };
 
   const handleLocationDelete = async (locationId: string) => {
-    // Implementation would delete location from DB
-    console.log("Deleting location:", locationId);
+    try {
+      // Check if this is the primary location
+      const location = locations.find(loc => loc.id === locationId);
+      if (location?.is_primary && locations.length > 1) {
+        toast({
+          title: "Cannot Delete",
+          description: "Cannot delete primary location. Set another location as primary first.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const { error } = await supabase
+        .from('business_locations')
+        .delete()
+        .eq('id', locationId)
+        .eq('business_id', business.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Location deleted successfully",
+      });
+
+      await loadBusinessLocations(); // Reload locations
+    } catch (err) {
+      console.error('Error deleting location:', err);
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to delete location",
+        variant: "destructive",
+      });
+      throw err;
+    }
   };
 
   const handleLocationSetPrimary = async (locationId: string) => {
-    // Implementation would set location as primary
-    console.log("Setting primary location:", locationId);
+    try {
+      // First, unset all primary flags for this business
+      await supabase
+        .from('business_locations')
+        .update({ is_primary: false })
+        .eq('business_id', business.id);
+
+      // Then set the selected location as primary
+      const { error } = await supabase
+        .from('business_locations')
+        .update({ is_primary: true })
+        .eq('id', locationId)
+        .eq('business_id', business.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Primary location updated successfully",
+      });
+
+      await loadBusinessLocations(); // Reload locations
+    } catch (err) {
+      console.error('Error setting primary location:', err);
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to set primary location",
+        variant: "destructive",
+      });
+      throw err;
+    }
   };
 
   const hasUnsavedChanges = isEditing;
