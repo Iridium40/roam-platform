@@ -4,7 +4,7 @@ export interface BusinessService {
   service_id: string;
   business_price: number;
   is_active: boolean;
-  delivery_type: 'customer_location' | 'business_location' | 'mobile' | null;
+  delivery_type: 'customer_location' | 'business_location' | 'virtual' | 'both_locations' | null;
   created_at: string;
   services?: {
     id: string;
@@ -49,7 +49,7 @@ export interface ServiceStats {
 export interface ServiceFormData {
   service_id: string;
   business_price: string;
-  delivery_type: 'customer_location' | 'business_location' | 'mobile';
+  delivery_type: 'customer_location' | 'business_location' | 'virtual' | 'both_locations';
   is_active: boolean;
 }
 

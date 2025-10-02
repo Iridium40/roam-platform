@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import BookingStatusIndicator from "@/components/BookingStatusIndicator";
 import { Input } from "@/components/ui/input";
+import { getDeliveryTypeLabel } from '@/utils/deliveryTypeHelpers';
 import {
   Select,
   SelectContent,
@@ -1216,7 +1217,7 @@ export default function BookingsTab({
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-600">Delivery Type</label>
-                    <p className="text-sm capitalize">{selectedBooking.delivery_type?.replace('_', ' ') || 'N/A'}</p>
+                    <p className="text-sm">{getDeliveryTypeLabel(selectedBooking.delivery_type)}</p>
                   </div>
                 </div>
               </div>

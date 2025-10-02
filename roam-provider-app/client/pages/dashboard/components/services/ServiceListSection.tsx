@@ -23,13 +23,11 @@ import {
   Edit,
   Trash2,
   MoreHorizontal,
-  MapPin,
-  Home,
-  Car,
   Clock,
   DollarSign,
 } from 'lucide-react';
 import { BusinessService } from '@/types/services';
+import { getDeliveryTypeIcon, getDeliveryTypeLabel } from '@/utils/deliveryTypeHelpers';
 
 interface ServiceListSectionProps {
   services: BusinessService[];
@@ -46,31 +44,6 @@ export function ServiceListSection({
   onEdit,
   onDelete,
 }: ServiceListSectionProps) {
-  const getDeliveryTypeIcon = (type: string | null) => {
-    switch (type) {
-      case 'customer_location':
-        return <MapPin className="h-4 w-4" />;
-      case 'business_location':
-        return <Home className="h-4 w-4" />;
-      case 'mobile':
-        return <Car className="h-4 w-4" />;
-      default:
-        return <MapPin className="h-4 w-4" />;
-    }
-  };
-
-  const getDeliveryTypeLabel = (type: string | null) => {
-    switch (type) {
-      case 'customer_location':
-        return 'Customer Location';
-      case 'business_location':
-        return 'Business Location';
-      case 'mobile':
-        return 'Mobile Service';
-      default:
-        return 'Customer Location';
-    }
-  };
 
   if (loading) {
     return (

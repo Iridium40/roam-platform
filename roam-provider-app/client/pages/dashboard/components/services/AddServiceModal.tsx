@@ -205,7 +205,7 @@ export function AddServiceModal({
             <Label htmlFor="delivery">Delivery Type</Label>
             <Select
               value={serviceForm.delivery_type}
-              onValueChange={(value: 'customer_location' | 'business_location' | 'mobile') =>
+              onValueChange={(value: 'customer_location' | 'business_location' | 'virtual' | 'both_locations') =>
                 setServiceForm(prev => ({ ...prev, delivery_type: value }))
               }
             >
@@ -213,9 +213,10 @@ export function AddServiceModal({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="customer_location">Customer Location</SelectItem>
-                <SelectItem value="business_location">Business Location</SelectItem>
-                <SelectItem value="mobile">Mobile Service</SelectItem>
+                <SelectItem value="business_location">Business</SelectItem>
+                <SelectItem value="customer_location">Mobile</SelectItem>
+                <SelectItem value="virtual">Virtual</SelectItem>
+                <SelectItem value="both_locations">Both (Business or Mobile)</SelectItem>
               </SelectContent>
             </Select>
           </div>
