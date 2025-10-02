@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { AdminLayout } from "@/components/layout/admin-layout";
 import { ROAMDataTable, Column } from "@/components/ui/roam-data-table";
 import {
@@ -17,6 +17,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import { getDeliveryTypeLabel, getDeliveryTypeIcon } from '@/utils/deliveryTypeHelpers';
 import {
   Calendar,
   Clock,
@@ -43,7 +44,7 @@ import {
 import { supabase } from "@/lib/supabase";
 
 // Enum types based on database schema
-type DeliveryType = "business" | "customer" | "mobile";
+type DeliveryType = "business_location" | "customer_location" | "virtual" | "both_locations";
 type PaymentStatus =
   | "pending"
   | "paid"
@@ -779,16 +780,12 @@ export default function AdminBookings() {
             <span className="font-medium">{getProviderName(row)}</span>
           </div>
           <ROAMBadge
-            variant={row.delivery_type === "mobile" ? "success" : "outline"}
+            variant={row.delivery_type === "customer_location" ? "success" : "outline"}
             size="sm"
             className="flex items-center gap-1 w-fit"
           >
-            {row.delivery_type === "mobile" ? (
-              <Truck className="w-3 h-3" />
-            ) : (
-              <Building2 className="w-3 h-3" />
-            )}
-            {formatEnumDisplay(row.delivery_type)}
+            {React.createElement(getDeliveryTypeIcon(row.delivery_type) as any, { className: "w-3 h-3" })}
+            {getDeliveryTypeLabel(row.delivery_type)}
           </ROAMBadge>
         </div>
       ),

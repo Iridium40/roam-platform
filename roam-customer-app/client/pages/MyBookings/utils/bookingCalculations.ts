@@ -57,6 +57,8 @@ export const formatBookingDate = (dateString: string) => {
   });
 };
 
+import { getDeliveryTypeLabel as getDeliveryLabel, getDeliveryTypeIcon as getDeliveryIcon } from '@/utils/deliveryTypeHelpers';
+
 // Check if booking is within 24 hours
 export const isWithin24Hours = (booking: BookingWithDetails) => {
   const bookingDateTime = new Date(`${booking.booking_date} ${booking.booking_time}`);
@@ -67,24 +69,12 @@ export const isWithin24Hours = (booking: BookingWithDetails) => {
   return hoursUntilBooking <= 24 && hoursUntilBooking > 0;
 };
 
-// Get delivery type label
+// Get delivery type label (using centralized helper)
 export const getDeliveryTypeLabel = (type: string) => {
-  const labels: Record<string, string> = {
-    mobile: "Mobile",
-    business_location: "Business Location",
-    virtual: "Virtual",
-    both: "Mobile & Business",
-  };
-  return labels[type] || type;
+  return getDeliveryLabel(type);
 };
 
-// Get delivery type icon
+// Get delivery type icon (using centralized helper)
 export const getDeliveryTypeIcon = (type: string) => {
-  const icons: Record<string, any> = {
-    mobile: "🚗",
-    business_location: "🏢",
-    virtual: "💻",
-    both: "🔄",
-  };
-  return icons[type] || "📍";
+  return getDeliveryIcon(type);
 };

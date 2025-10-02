@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { Elements } from '@stripe/react-stripe-js';
 import { stripePromise } from '../lib/stripe-client';
 import { CheckoutForm } from '../components/CheckoutForm';
+import { getDeliveryTypeLabel, getDeliveryTypeIcon } from '@/utils/deliveryTypeHelpers';
 
 type BookingStep = 'datetime' | 'business' | 'provider' | 'summary' | 'checkout';
 
@@ -87,25 +88,7 @@ const getDeliveryTypes = (business: Business): string[] => {
   return ['business_location', 'mobile'];
 };
 
-const getDeliveryTypeLabel = (type: string): string => {
-  const labels: Record<string, string> = {
-    mobile: 'Mobile Service',
-    business_location: 'Business Location',
-    virtual: 'Virtual/Online',
-    both: 'Mobile & Business'
-  };
-  return labels[type] || type;
-};
-
-const getDeliveryTypeIcon = (type: string) => {
-  const icons: Record<string, any> = {
-    mobile: Truck,
-    business_location: Building,
-    virtual: Video,
-    both: Smartphone
-  };
-  return icons[type] || Smartphone;
-};
+// Note: getDeliveryTypeLabel and getDeliveryTypeIcon are now imported from utils/deliveryTypeHelpers.tsx
 
 
 
