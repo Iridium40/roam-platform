@@ -1,4 +1,4 @@
-import { UPLOAD_CONFIG } from "../middleware/multerConfig";
+import { UPLOAD_CONFIG, ALLOWED_MIME_TYPES, AllowedMimeType } from "../middleware/multerConfig";
 
 export interface DocumentValidationResult {
   isValid: boolean;
@@ -28,8 +28,8 @@ export class DocumentValidationService {
     }
 
     // Check file type
-    if (!UPLOAD_CONFIG.allowedTypes.includes(file.mimetype)) {
-      errors.push(`File type ${file.mimetype} is not allowed. Allowed types: ${UPLOAD_CONFIG.allowedTypes.join(", ")}`);
+    if (!ALLOWED_MIME_TYPES.includes(file.mimetype as AllowedMimeType)) {
+      errors.push(`File type ${file.mimetype} is not allowed. Allowed types: ${ALLOWED_MIME_TYPES.join(", ")}`);
     }
 
     // Check file name

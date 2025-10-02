@@ -8,8 +8,7 @@ export const upload = multer({
   },
   fileFilter: (req, file, cb) => {
     // Allow specific file types
-    const allowedTypes = ["image/jpeg", "image/png", "application/pdf"];
-    if (allowedTypes.includes(file.mimetype)) {
+    if (ALLOWED_MIME_TYPES.includes(file.mimetype as AllowedMimeType)) {
       cb(null, true);
     } else {
       cb(
@@ -33,10 +32,14 @@ export function runMiddleware(req: any, res: any, fn: any) {
   });
 }
 
+// Define allowed MIME types as a constant
+export const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "application/pdf"] as const;
+export type AllowedMimeType = typeof ALLOWED_MIME_TYPES[number];
+
 // File upload configuration
 export const UPLOAD_CONFIG = {
   maxFileSize: 10 * 1024 * 1024, // 10MB
-  allowedTypes: ["image/jpeg", "image/png", "application/pdf"],
+  allowedTypes: ALLOWED_MIME_TYPES,
   maxFiles: 10,
   storageBucket: "provider-documents",
 } as const;
