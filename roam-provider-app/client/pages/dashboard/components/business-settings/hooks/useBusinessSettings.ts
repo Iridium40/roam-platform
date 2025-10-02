@@ -125,6 +125,36 @@ export function useBusinessSettings(business: any) {
     loadServiceEligibility();
   }, [business?.id]);
 
+  // Load business hours from API
+  const loadBusinessHours = async () => {
+    if (!business?.id) return;
+
+    try {
+      const response = await fetch(`/api/business/hours?business_id=${business.id}`);
+      
+      if (!response.ok) {
+        console.error('Failed to load business hours:', response.statusText);
+        return;
+      }
+
+      const data = await response.json();
+      
+      if (data.business_hours) {
+        setBusinessData(prev => ({
+          ...prev,
+          business_hours: data.business_hours,
+        }));
+      }
+    } catch (error: any) {
+      console.error("Error loading business hours:", error);
+    }
+  };
+
+  // Load business hours on mount
+  useEffect(() => {
+    loadBusinessHours();
+  }, [business?.id]);
+
   // Save business settings
   const saveBusinessSettings = async () => {
     if (!business?.id) return false;
@@ -132,7 +162,8 @@ export function useBusinessSettings(business: any) {
     setLoading(true);
     
     try {
-      const { error } = await (supabase as any)
+      // Update basic business profile fields
+      const { error: profileError } = await (supabase as any)
         .from("business_profiles")
         .update({
           business_name: businessData.business_name,
@@ -143,15 +174,37 @@ export function useBusinessSettings(business: any) {
           business_description: businessData.business_description,
           logo_url: businessData.logo_url,
           cover_image_url: businessData.cover_image_url,
-          business_hours: businessData.business_hours,
         })
         .eq("id", business.id);
 
-      if (error) {
-        console.error("Error updating business settings:", error);
+      if (profileError) {
+        console.error("Error updating business profile:", profileError);
         toast({
           title: "Error",
           description: "Failed to update business settings. Please try again.",
+          variant: "destructive",
+        });
+        return false;
+      }
+
+      // Update business hours using dedicated API endpoint
+      const hoursResponse = await fetch('/api/business/hours', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          business_id: business.id,
+          business_hours: businessData.business_hours,
+        }),
+      });
+
+      if (!hoursResponse.ok) {
+        const errorData = await hoursResponse.json();
+        console.error("Error updating business hours:", errorData);
+        toast({
+          title: "Warning",
+          description: "Business settings updated, but failed to update hours. Please try again.",
           variant: "destructive",
         });
         return false;
@@ -295,6 +348,9 @@ export function useBusinessSettings(business: any) {
     eligibilityLoading,
     eligibilityError,
     loadServiceEligibility,
+    
+    // Business hours
+    loadBusinessHours,
     
     // Actions
     saveBusinessSettings,
