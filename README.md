@@ -5,8 +5,17 @@
 The ROAM Platform has been restructured into a monorepo with shared services to eliminate code duplication and improve maintainability across the three applications:
 
 - **ROAM Admin App** - Platform administration
-- **ROAM Provider App** - Provider management and onboarding
+- **ROAM Provider App** - Provider management and onboarding ✅ **Active Development**
 - **ROAM Customer App** - Customer booking and service discovery
+
+## 🎯 **Current Progress (October 2025)**
+
+**Active Focus**: Provider App Integration Fixes
+- ✅ **Bookings Tab** - Integration complete, production-ready
+- ✅ **Services Tab** - JSON errors resolved, production-ready
+- 🔄 **Next**: Availability, Analytics, Settings, and Staff Management tabs
+
+**Latest Achievement**: Resolved JSON parsing errors across provider app services, ensuring production deployment stability.
 
 ## 🏗️ Architecture
 
@@ -360,22 +369,53 @@ import { EmailService } from '../services/email';
 import type { EmailService } from '@roam/shared/services';
 ```
 
+## 📚 **Key Documentation**
+
+### **Active Development Documents**
+- **[Provider App Integration Progress](./PROVIDER_APP_INTEGRATION_PROGRESS.md)** - Current integration fixes and progress
+- **[Database Schema Reference](./DATABASE_SCHEMA_REFERENCE.md)** - Confirmed working database schemas (60+ tables)
+- **[Unified Service Architecture Analysis](./UNIFIED_SERVICE_ARCHITECTURE_ANALYSIS.md)** - Platform-wide service standardization plan
+
+### **Completed Implementations**
+- **[MFA Implementation Summary](./MFA_IMPLEMENTATION_SUMMARY.md)** - Multi-Factor Authentication framework
+- **[Security Fixes Documentation](./SECURITY_FIXES.md)** - Security enhancements and compliance measures
+- **[Component Refactoring Guide](./COMPONENT_REFACTORING_GUIDE.md)** - Frontend component organization
+
 ## 🤝 Contributing
 
 1. **Create feature branch** from main
 2. **Update shared packages** first if needed
-3. **Update apps** to use new shared functionality
-4. **Add tests** for new functionality
-5. **Update documentation** as needed
-6. **Submit pull request**
+3. **Use DATABASE_SCHEMA_REFERENCE.md** for all database queries
+4. **Update apps** to use new shared functionality
+5. **Add tests** for new functionality
+6. **Update documentation** as needed
+7. **Submit pull request**
 
-## 📝 License
+## � **Development Standards**
+
+### **Database Queries**
+- ✅ Always reference `DATABASE_SCHEMA_REFERENCE.md` for field names
+- ✅ Use confirmed working query patterns
+- ✅ Implement comprehensive error handling
+
+### **API Development**
+- ✅ Safe JSON parsing with try-catch blocks
+- ✅ Consistent error response format
+- ✅ Proper CORS headers for all endpoints
+
+### **Frontend Development**
+- ✅ Use shared types from `@roam/shared`
+- ✅ Implement proper error boundaries
+- ✅ Follow component refactoring guidelines
+
+## �📝 License
 
 This project is proprietary to ROAM Platform.
 
 ## 🆘 Support
 
 For questions or issues:
+- Check **[Provider App Integration Progress](./PROVIDER_APP_INTEGRATION_PROGRESS.md)** for current status
+- Reference **[Database Schema Reference](./DATABASE_SCHEMA_REFERENCE.md)** for database queries
 - Create an issue in the repository
 - Contact the development team
-- Check the documentation in each package
