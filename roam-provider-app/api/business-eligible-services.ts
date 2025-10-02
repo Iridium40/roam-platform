@@ -107,6 +107,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Step 4: Fetch eligible services based on approved subcategories
+    // Filter out any null or invalid UUIDs from validSubcategoryIds
+    const cleanSubcategoryIds = validSubcategoryIds.filter(id => {
+      // Check if it's a valid UUID format
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      return id && typeof id === 'string' && uuidRegex.test(id);
+    });
+
+    if (cleanSubcategoryIds.length === 0) {
+      return res.status(200).json({
+        business_id,
+        service_count: 0,
+        eligible_services: [],
+        message: 'No valid approved subcategories found'
+      });
+    }
+
     const { data: eligibleServices, error: servicesError } = await supabase
       .from('services')
       .select(`
@@ -117,22 +133,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         duration_minutes, 
         image_url,
         subcategory_id,
-        service_subcategories!inner (
+        service_subcategories (
           id,
           service_subcategory_type,
           category_id,
-          service_categories!inner (
+          service_categories (
             id,
             service_category_type
           )
         )
       `)
-      .in('subcategory_id', validSubcategoryIds)
+      .in('subcategory_id', cleanSubcategoryIds)
       .eq('is_active', true);
 
     if (servicesError) {
       console.error('Error fetching eligible services:', servicesError);
-      return res.status(500).json({ error: 'Failed to fetch eligible services' });
+      return res.status(500).json({ 
+        error: 'Failed to fetch eligible services',
+        details: servicesError.message,
+        hint: servicesError.hint,
+        code: servicesError.code
+      });
     }
 
     // Step 5: Get currently configured business services
