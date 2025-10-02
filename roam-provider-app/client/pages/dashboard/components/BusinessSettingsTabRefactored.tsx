@@ -52,12 +52,13 @@ export function BusinessSettingsTab({ providerData, business, onBusinessUpdate }
   // State for documents and locations
   const [documents, setDocuments] = React.useState([]);
   const [locations, setLocations] = React.useState([]);
-  const [documentsLoading, setDocumentsLoading] = React.useState(false);
+  const [documentsLoading, setDocumentsLoading] = React.useState(true);
   const [locationsLoading, setLocationsLoading] = React.useState(true);
 
-  // Load business locations on mount
+  // Load business documents and locations on mount
   React.useEffect(() => {
     if (business?.id) {
+      loadBusinessDocuments();
       loadBusinessLocations();
     }
   }, [business?.id]);
@@ -98,15 +99,130 @@ export function BusinessSettingsTab({ providerData, business, onBusinessUpdate }
     }
   };
 
+  // Load business documents
+  const loadBusinessDocuments = async () => {
+    if (!business?.id) return;
+
+    setDocumentsLoading(true);
+    try {
+      const response = await fetch(`/api/business/documents?business_id=${business.id}`);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to load documents: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      setDocuments(data.documents || []);
+      console.log(`Loaded ${data.documents?.length || 0} business documents`);
+    } catch (err) {
+      console.error('Error loading business documents:', err);
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to load business documents",
+        variant: "destructive",
+      });
+    } finally {
+      setDocumentsLoading(false);
+    }
+  };
+
   // Document handlers
   const handleDocumentUpload = async (file: File, documentType: string) => {
-    // Implementation would upload to Supabase storage and create DB record
-    console.log("Uploading document:", file.name, "Type:", documentType);
+    if (!business?.id) return;
+
+    setDocumentsLoading(true);
+    try {
+      // Step 1: Upload file to Supabase storage
+      const fileExt = file.name.split('.').pop();
+      const timestamp = Date.now();
+      const fileName = `${documentType}_${timestamp}.${fileExt}`;
+      const filePath = `provider-documents/${business.id}/${fileName}`;
+
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('provider-documents')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (uploadError) {
+        throw new Error(`Upload failed: ${uploadError.message}`);
+      }
+
+      // Step 2: Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('provider-documents')
+        .getPublicUrl(filePath);
+
+      // Step 3: Save document metadata to database via API
+      const response = await fetch('/api/business/documents', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          business_id: business.id,
+          document_type: documentType,
+          document_name: file.name,
+          file_url: publicUrl,
+          file_size_bytes: file.size,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to save document metadata');
+      }
+
+      toast({
+        title: "Success",
+        description: "Document uploaded successfully",
+      });
+
+      // Reload documents
+      await loadBusinessDocuments();
+    } catch (err) {
+      console.error('Error uploading document:', err);
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to upload document",
+        variant: "destructive",
+      });
+      throw err;
+    } finally {
+      setDocumentsLoading(false);
+    }
   };
 
   const handleDocumentDelete = async (documentId: string) => {
-    // Implementation would delete from storage and DB
-    console.log("Deleting document:", documentId);
+    if (!business?.id) return;
+
+    try {
+      const response = await fetch(`/api/business/documents?business_id=${business.id}&document_id=${documentId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete document');
+      }
+
+      toast({
+        title: "Success",
+        description: "Document deleted successfully",
+      });
+
+      // Reload documents
+      await loadBusinessDocuments();
+    } catch (err) {
+      console.error('Error deleting document:', err);
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to delete document",
+        variant: "destructive",
+      });
+      throw err;
+    }
   };
 
   // Location handlers  
