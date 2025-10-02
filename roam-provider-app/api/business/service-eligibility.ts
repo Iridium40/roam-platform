@@ -52,6 +52,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'Business ID is required' });
     }
 
+    console.log('🔍 service-eligibility API - Querying business_id:', business_id);
+
+    // Verify business exists
+    const { data: businessExists, error: businessCheckError } = await supabase
+      .from('business_profiles')
+      .select('id, business_name')
+      .eq('id', business_id)
+      .maybeSingle();
+
+    console.log('🔍 Business lookup result:', {
+      found: !!businessExists,
+      business_name: businessExists?.business_name,
+      error: businessCheckError
+    });
+
+    if (businessCheckError) {
+      console.error('Error checking business existence:', businessCheckError);
+      return res.status(500).json({ error: 'Error checking business' });
+    }
+
+    if (!businessExists) {
+      return res.status(404).json({ 
+        error: 'Business not found',
+        business_id,
+        message: 'The business ID does not exist in business_profiles table'
+      });
+    }
+
     // Fetch approved categories for this business with full category details
     const { data: approvedCategories, error: categoriesError } = await supabase
       .from('business_service_categories')
@@ -79,6 +107,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       console.error('Error fetching business service categories:', categoriesError);
       return res.status(500).json({ error: 'Failed to fetch service categories' });
     }
+
+    console.log('🔍 Approved categories found:', {
+      count: approvedCategories?.length || 0,
+      categories: approvedCategories?.map((c: any) => ({
+        category_id: c.category_id,
+        category_name: c.service_categories?.service_category_type
+      }))
+    });
 
     // Fetch approved subcategories for this business with full details
     const { data: approvedSubcategories, error: subcategoriesError } = await supabase
@@ -108,6 +144,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       console.error('Error fetching business service subcategories:', subcategoriesError);
       return res.status(500).json({ error: 'Failed to fetch service subcategories' });
     }
+
+    console.log('🔍 Approved subcategories found:', {
+      count: approvedSubcategories?.length || 0,
+      subcategories: approvedSubcategories?.map((s: any) => ({
+        subcategory_id: s.subcategory_id,
+        category_id: s.category_id,
+        subcategory_name: s.service_subcategories?.service_subcategory_type
+      }))
+    });
 
     // Organize the data: group subcategories under their parent categories
     const categoryMap = new Map();
