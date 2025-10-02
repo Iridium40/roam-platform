@@ -1,6 +1,26 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 
+/**
+ * /api/business/services
+ * 
+ * Manages business services - services that a business offers to customers.
+ * All operations validate that the business is approved for the service's
+ * category and subcategory before allowing modifications.
+ * 
+ * Authorization Flow (for POST):
+ * 1. Service must exist and be active
+ * 2. Business must be approved for the service's subcategory (business_service_subcategories)
+ * 3. Business must be approved for the service's parent category (business_service_categories)
+ * 4. Service cannot already be added to the business
+ * 
+ * Methods:
+ * - GET: Fetch business services with pagination and filtering
+ * - POST: Add a new service to business (with eligibility validation)
+ * - PUT: Update existing business service (price, delivery_type, status)
+ * - DELETE: Remove service from business
+ */
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Headers', 'authorization, x-client-info, apikey, content-type');
@@ -78,6 +98,197 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             services.reduce((sum: number, s: any) => sum + (parseFloat(s.business_price) || 0), 0) / services.length : 0
         },
         pagination: { page: pageNum, limit: limitNum, total: count || 0 }
+      });
+    }
+
+    // POST - Add a new service to business
+    if (req.method === 'POST') {
+      const { business_id, service_id, business_price, delivery_type = 'both', is_active = true } = req.body;
+
+      if (!business_id || !service_id) {
+        return res.status(400).json({ error: 'business_id and service_id are required' });
+      }
+
+      if (!business_price || parseFloat(business_price) <= 0) {
+        return res.status(400).json({ error: 'business_price must be greater than 0' });
+      }
+
+      // CRITICAL: Validate that the service is eligible for this business
+      // Step 1: Get the service's subcategory
+      const { data: service, error: serviceError } = await supabase
+        .from('services')
+        .select('id, subcategory_id, name')
+        .eq('id', service_id)
+        .eq('is_active', true)
+        .single();
+
+      if (serviceError || !service) {
+        return res.status(404).json({ error: 'Service not found or inactive' });
+      }
+
+      // Step 2: Check if business is approved for this subcategory
+      const { data: subcategoryApproval, error: subcategoryError } = await supabase
+        .from('business_service_subcategories')
+        .select('id, category_id')
+        .eq('business_id', business_id)
+        .eq('subcategory_id', service.subcategory_id)
+        .eq('is_active', true)
+        .single();
+
+      if (subcategoryError || !subcategoryApproval) {
+        return res.status(403).json({ 
+          error: 'Business is not approved for this service subcategory',
+          details: 'Contact platform administration to get approved for this service category'
+        });
+      }
+
+      // Step 3: Verify parent category is also approved
+      const { data: categoryApproval, error: categoryError } = await supabase
+        .from('business_service_categories')
+        .select('id')
+        .eq('business_id', business_id)
+        .eq('category_id', subcategoryApproval.category_id)
+        .eq('is_active', true)
+        .single();
+
+      if (categoryError || !categoryApproval) {
+        return res.status(403).json({ 
+          error: 'Business is not approved for the parent service category',
+          details: 'Contact platform administration to get approved for this service category'
+        });
+      }
+
+      // Step 4: Check if service already added
+      const { data: existingService } = await supabase
+        .from('business_services')
+        .select('id')
+        .eq('business_id', business_id)
+        .eq('service_id', service_id)
+        .single();
+
+      if (existingService) {
+        return res.status(409).json({ error: 'Service already added to business' });
+      }
+
+      // Step 5: Add the service
+      const { data: newService, error: insertError } = await supabase
+        .from('business_services')
+        .insert({
+          business_id,
+          service_id,
+          business_price: parseFloat(business_price),
+          delivery_type,
+          is_active
+        })
+        .select(`
+          id,
+          business_id,
+          service_id,
+          business_price,
+          delivery_type,
+          is_active,
+          created_at,
+          services (
+            id,
+            name,
+            description,
+            min_price,
+            duration_minutes,
+            image_url
+          )
+        `)
+        .single();
+
+      if (insertError) {
+        console.error('Error inserting business service:', insertError);
+        return res.status(500).json({ error: 'Failed to add service', details: insertError.message });
+      }
+
+      return res.status(201).json({
+        message: 'Service added successfully',
+        service: newService
+      });
+    }
+
+    // PUT - Update an existing business service
+    if (req.method === 'PUT') {
+      const { business_id, service_id, business_price, delivery_type, is_active } = req.body;
+
+      if (!business_id || !service_id) {
+        return res.status(400).json({ error: 'business_id and service_id are required' });
+      }
+
+      const updates: any = {};
+      if (business_price !== undefined) {
+        const price = parseFloat(business_price);
+        if (price <= 0) {
+          return res.status(400).json({ error: 'business_price must be greater than 0' });
+        }
+        updates.business_price = price;
+      }
+      if (delivery_type !== undefined) updates.delivery_type = delivery_type;
+      if (is_active !== undefined) updates.is_active = is_active;
+
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ error: 'No updates provided' });
+      }
+
+      const { data: updatedService, error: updateError } = await supabase
+        .from('business_services')
+        .update(updates)
+        .eq('business_id', business_id)
+        .eq('service_id', service_id)
+        .select(`
+          id,
+          business_id,
+          service_id,
+          business_price,
+          delivery_type,
+          is_active,
+          created_at,
+          services (
+            id,
+            name,
+            description,
+            min_price,
+            duration_minutes,
+            image_url
+          )
+        `)
+        .single();
+
+      if (updateError) {
+        console.error('Error updating business service:', updateError);
+        return res.status(500).json({ error: 'Failed to update service', details: updateError.message });
+      }
+
+      return res.status(200).json({
+        message: 'Service updated successfully',
+        service: updatedService
+      });
+    }
+
+    // DELETE - Remove a service from business
+    if (req.method === 'DELETE') {
+      const { business_id, service_id } = req.query;
+
+      if (!business_id || !service_id) {
+        return res.status(400).json({ error: 'business_id and service_id query parameters are required' });
+      }
+
+      const { error: deleteError } = await supabase
+        .from('business_services')
+        .delete()
+        .eq('business_id', business_id)
+        .eq('service_id', service_id);
+
+      if (deleteError) {
+        console.error('Error deleting business service:', deleteError);
+        return res.status(500).json({ error: 'Failed to delete service', details: deleteError.message });
+      }
+
+      return res.status(200).json({
+        message: 'Service removed successfully'
       });
     }
 

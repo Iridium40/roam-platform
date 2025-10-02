@@ -1,6 +1,30 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 
+/**
+ * GET /api/business-eligible-services
+ * 
+ * Fetches services that a business is eligible to offer based on their
+ * approved service categories and subcategories.
+ * 
+ * Authorization Flow:
+ * 1. Platform admins approve businesses for specific service categories
+ *    (stored in business_service_categories table)
+ * 2. Platform admins approve businesses for specific service subcategories
+ *    (stored in business_service_subcategories table)
+ * 3. This endpoint returns only services from approved subcategories
+ *    whose parent category is also approved
+ * 
+ * Query params:
+ * - business_id: UUID of the business
+ * 
+ * Returns:
+ * - business_id: UUID
+ * - service_count: Number of eligible services
+ * - eligible_services: Array of services with configuration status
+ * - approved_categories_count: Number of approved categories
+ * - approved_subcategories_count: Number of approved subcategories
+ */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Headers', 'authorization, x-client-info, apikey, content-type');
@@ -28,9 +52,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
+    // Step 1: Verify business exists
     const { data: business, error: businessError } = await supabase
       .from('business_profiles')
-      .select('id, business_service_subcategories!inner(subcategory_id)')
+      .select('id')
       .eq('id', business_id)
       .single();
 
@@ -38,41 +63,119 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(404).json({ error: 'Business not found' });
     }
 
-    const subcategoryIds = business.business_service_subcategories?.map((bs: any) => bs.subcategory_id) || [];
+    // Step 2: Get approved subcategories for this business
+    const { data: approvedSubcategories, error: subcategoriesError } = await supabase
+      .from('business_service_subcategories')
+      .select('subcategory_id, category_id')
+      .eq('business_id', business_id)
+      .eq('is_active', true);
 
-    if (subcategoryIds.length === 0) {
+    if (subcategoriesError) {
+      console.error('Error fetching approved subcategories:', subcategoriesError);
+      return res.status(500).json({ error: 'Failed to fetch approved subcategories' });
+    }
+
+    // Step 3: Get approved categories for this business (for validation)
+    const { data: approvedCategories, error: categoriesError } = await supabase
+      .from('business_service_categories')
+      .select('category_id')
+      .eq('business_id', business_id)
+      .eq('is_active', true);
+
+    if (categoriesError) {
+      console.error('Error fetching approved categories:', categoriesError);
+      return res.status(500).json({ error: 'Failed to fetch approved categories' });
+    }
+
+    // Create sets for efficient lookup
+    const approvedCategoryIds = new Set(
+      (approvedCategories || []).map((ac: any) => ac.category_id)
+    );
+    
+    // Only include subcategories whose parent category is also approved
+    const validSubcategoryIds = (approvedSubcategories || [])
+      .filter((sub: any) => approvedCategoryIds.has(sub.category_id))
+      .map((sub: any) => sub.subcategory_id);
+
+    if (validSubcategoryIds.length === 0) {
       return res.status(200).json({
         business_id,
         service_count: 0,
-        eligible_services: []
+        eligible_services: [],
+        message: 'No approved service categories or subcategories. Contact platform administration for service approval.'
       });
     }
 
-    const { data: eligibleServices } = await supabase
+    // Step 4: Fetch eligible services based on approved subcategories
+    const { data: eligibleServices, error: servicesError } = await supabase
       .from('services')
-      .select('id, name, description, min_price, duration_minutes, image_url')
-      .in('subcategory_id', subcategoryIds)
+      .select(`
+        id, 
+        name, 
+        description, 
+        min_price, 
+        duration_minutes, 
+        image_url,
+        subcategory_id,
+        service_subcategories!inner (
+          id,
+          service_subcategory_type,
+          category_id,
+          service_categories!inner (
+            id,
+            service_category_type
+          )
+        )
+      `)
+      .in('subcategory_id', validSubcategoryIds)
       .eq('is_active', true);
 
-    const { data: businessServices } = await supabase
+    if (servicesError) {
+      console.error('Error fetching eligible services:', servicesError);
+      return res.status(500).json({ error: 'Failed to fetch eligible services' });
+    }
+
+    // Step 5: Get currently configured business services
+    const { data: businessServices, error: businessServicesError } = await supabase
       .from('business_services')
       .select('service_id, business_price, is_active')
       .eq('business_id', business_id);
 
+    if (businessServicesError) {
+      console.error('Error fetching business services:', businessServicesError);
+      // Continue without business services data (won't show is_configured status)
+    }
+
+    // Step 6: Process and enrich services with configuration status
     const configuredIds = new Set((businessServices || []).map((bs: any) => bs.service_id));
     const businessServicesMap = new Map((businessServices || []).map((bs: any) => [bs.service_id, bs]));
 
-    const processedServices = (eligibleServices || []).map((service: any) => ({
-      ...service,
-      is_configured: configuredIds.has(service.id),
-      business_price: businessServicesMap.get(service.id)?.business_price,
-      business_is_active: businessServicesMap.get(service.id)?.is_active
-    }));
+    const processedServices = (eligibleServices || []).map((service: any) => {
+      const subcategoryName = service.service_subcategories?.service_subcategory_type || 'Unknown';
+      const categoryName = service.service_subcategories?.service_categories?.service_category_type || 'Unknown';
+      
+      return {
+        id: service.id,
+        name: service.name,
+        description: service.description,
+        min_price: service.min_price,
+        duration_minutes: service.duration_minutes,
+        image_url: service.image_url,
+        subcategory_id: service.subcategory_id,
+        subcategory_name: subcategoryName,
+        category_name: categoryName,
+        is_configured: configuredIds.has(service.id),
+        business_price: businessServicesMap.get(service.id)?.business_price,
+        business_is_active: businessServicesMap.get(service.id)?.is_active
+      };
+    });
 
     return res.status(200).json({
       business_id,
       service_count: processedServices.length,
-      eligible_services: processedServices
+      eligible_services: processedServices,
+      approved_categories_count: approvedCategoryIds.size,
+      approved_subcategories_count: validSubcategoryIds.length
     });
 
   } catch (error) {
