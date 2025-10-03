@@ -1665,14 +1665,17 @@ export default function AdminBusinesses() {
           throw new Error(errorData.error || 'Failed to delete existing service categories');
         }
 
+        // Fetch all categories once to avoid enum casting issues
+        const { data: allCategories } = await supabase
+          .from("service_categories")
+          .select("id, service_category_type");
+
         // Then insert new ones
         for (const categoryType of editFormData.service_categories) {
-          // Get the category ID from the service_categories table
-          const { data: categoryData } = await supabase
-            .from("service_categories")
-            .select("id")
-            .eq("service_category_type", categoryType)
-            .single();
+          // Find the category by filtering client-side (avoids PostgREST enum casting issues)
+          const categoryData = allCategories?.find(
+            (cat: any) => cat.service_category_type === categoryType
+          );
 
           if (categoryData) {
             const insertCategoryResponse = await fetch('/api/business-service-categories', {
