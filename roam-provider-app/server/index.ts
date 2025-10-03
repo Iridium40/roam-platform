@@ -1299,8 +1299,16 @@ export function createServer() {
 
         if (servicesError) {
           console.error('Error fetching business services:', servicesError);
-          return res.status(500).json({ error: 'Failed to fetch business services' });
+          console.error('Supabase error details:', JSON.stringify(servicesError, null, 2));
+          return res.status(500).json({ 
+            error: 'Failed to fetch business services',
+            details: servicesError.message,
+            code: servicesError.code
+          });
         }
+
+        console.log(`Found ${businessServices?.length || 0} active services for business`)
+        console.log(`Found ${businessServices?.length || 0} active services for business`);
 
         if (!businessServices || businessServices.length === 0) {
           console.log('No active services found for business:', business_id);
@@ -1312,6 +1320,7 @@ export function createServer() {
         }
 
         const serviceIds = businessServices.map((bs: any) => bs.service_id);
+        console.log('Service IDs:', serviceIds);
 
         // Get eligible addons for these services
         const { data: addonEligibility, error: eligibilityError } = await supabase
@@ -1325,13 +1334,22 @@ export function createServer() {
 
         if (eligibilityError) {
           console.error('Error fetching addon eligibility:', eligibilityError);
-          return res.status(500).json({ error: 'Failed to fetch addon eligibility' });
+          console.error('Supabase eligibility error details:', JSON.stringify(eligibilityError, null, 2));
+          return res.status(500).json({ 
+            error: 'Failed to fetch addon eligibility',
+            details: eligibilityError.message,
+            code: eligibilityError.code
+          });
         }
+
+        console.log(`Found ${addonEligibility?.length || 0} addon eligibility records`);
 
         // Get unique addon IDs
         const addonIds = [...new Set(addonEligibility?.map((ae: any) => ae.addon_id) || [])];
+        console.log('Unique addon IDs:', addonIds);
 
         if (addonIds.length === 0) {
+          console.log('No eligible addons found for this business services');
           return res.json({
             business_id: business_id,
             addon_count: 0,
@@ -1348,8 +1366,15 @@ export function createServer() {
 
         if (addonsError) {
           console.error('Error fetching addons:', addonsError);
-          return res.status(500).json({ error: 'Failed to fetch addons' });
+          console.error('Supabase addons error details:', JSON.stringify(addonsError, null, 2));
+          return res.status(500).json({ 
+            error: 'Failed to fetch addons',
+            details: addonsError.message,
+            code: addonsError.code
+          });
         }
+
+        console.log(`Found ${addons?.length || 0} active addons`);
 
         // Get current business addon configurations
         const { data: businessAddons, error: businessAddonsError } = await supabase
@@ -1359,7 +1384,12 @@ export function createServer() {
 
         if (businessAddonsError) {
           console.error('Error fetching business addons:', businessAddonsError);
+          console.error('Supabase business addons error details:', JSON.stringify(businessAddonsError, null, 2));
+          // Don't fail the request if business addons fetch fails - just log it
         }
+
+        console.log(`Found ${businessAddons?.length || 0} business addon configurations`);
+        console.log(`Found ${businessAddons?.length || 0} business addon configurations`);
 
         const businessAddonsMap = new Map(
           businessAddons?.map((ba: any) => [ba.addon_id, ba]) || []
@@ -1386,6 +1416,8 @@ export function createServer() {
           };
         }) || [];
 
+        console.log(`Returning ${processedAddons.length} processed addons`);
+
         res.json({
           business_id: business_id,
           addon_count: processedAddons.length,
@@ -1393,14 +1425,20 @@ export function createServer() {
         });
       } catch (error) {
         console.error("Error in eligible addons:", error);
+        console.error("Stack trace:", error instanceof Error ? error.stack : 'No stack trace');
         res.status(500).json({ 
           error: "Failed to fetch eligible addons from database",
-          details: error.message
+          details: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : undefined
         });
       }
     } catch (error) {
-      console.error("Error in business eligible addons:", error);
-      res.status(500).json({ error: "Failed to fetch eligible addons" });
+      console.error("Error in business eligible addons (outer):", error);
+      console.error("Stack trace (outer):", error instanceof Error ? error.stack : 'No stack trace');
+      res.status(500).json({ 
+        error: "Failed to fetch eligible addons",
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   });
 
