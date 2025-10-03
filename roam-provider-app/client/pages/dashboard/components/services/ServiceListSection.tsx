@@ -29,6 +29,16 @@ import {
 import { BusinessService } from '@/types/services';
 import { getDeliveryTypeIcon, getDeliveryTypeLabel } from '@/utils/deliveryTypeHelpers';
 
+// Helper function to format subcategory names (e.g., "iv_therapy" -> "IV Therapy")
+const formatSubcategoryName = (name: string | undefined): string => {
+  if (!name) return '';
+  
+  return name
+    .split('_')
+    .map(word => word.toUpperCase())
+    .join(' ');
+};
+
 interface ServiceListSectionProps {
   services: BusinessService[];
   loading: boolean;
@@ -126,10 +136,10 @@ export function ServiceListSection({
                   <TableCell>
                     <div className="space-y-1">
                       <Badge variant="secondary">
-                        {service.services?.service_subcategories?.service_categories?.service_category_type}
+                        {formatSubcategoryName(service.services?.service_subcategories?.service_categories?.service_category_type)}
                       </Badge>
                       <p className="text-xs text-muted-foreground">
-                        {service.services?.service_subcategories?.service_subcategory_type}
+                        {formatSubcategoryName(service.services?.service_subcategories?.service_subcategory_type)}
                       </p>
                     </div>
                   </TableCell>
