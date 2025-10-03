@@ -632,7 +632,6 @@ export default function ProviderDashboard() {
               country,
               latitude,
               longitude,
-              phone,
               is_primary,
               is_active
             )
