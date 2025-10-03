@@ -273,13 +273,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
 
     // Convert map to array and sort by sort_order
-    const approved_categories = Array.from(categoryMap.values())
+    const approved_categories_display = Array.from(categoryMap.values())
       .sort((a, b) => (a.sort_order || 999) - (b.sort_order || 999));
+
+    // Group subcategories by category for easy lookup
+    const subcategories_by_category: Record<string, any[]> = {};
+    approvedSubcategories?.forEach((item: any) => {
+      if (item.category_id) {
+        if (!subcategories_by_category[item.category_id]) {
+          subcategories_by_category[item.category_id] = [];
+        }
+        subcategories_by_category[item.category_id].push(item);
+      }
+    });
 
     // Calculate stats
     const stats = {
       total_categories: categoryMap.size,
       total_subcategories: approvedSubcategories?.length || 0,
+      categories_with_subcategories: Object.keys(subcategories_by_category).length,
+      available_services_count: 0, // This would need a separate query to count services
+      last_updated: null as number | null,
     };
 
     // Find most recent update
@@ -288,17 +302,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ...(approvedSubcategories?.map((s: any) => s.updated_at) || []),
     ].filter(Boolean);
     
-    const last_updated = allDates.length > 0 
-      ? allDates.sort().reverse()[0] 
-      : null;
+    if (allDates.length > 0) {
+      const mostRecent = allDates.sort().reverse()[0];
+      stats.last_updated = new Date(mostRecent).getTime();
+    }
 
-    // Return organized data
+    // Return data in the format frontend expects
     return res.status(200).json({
       business_id,
-      approved_categories,
+      approved_categories: approvedCategories || [], // Return original structure with nested relations
+      approved_subcategories: approvedSubcategories || [], // Return original structure
+      subcategories_by_category, // Grouped for easy lookup
       stats,
-      last_updated,
-      additional_info: approved_categories.length === 0 
+      last_fetched: new Date().toISOString(),
+      // For display/debugging
+      _display: {
+        categories: approved_categories_display, // The transformed display format
+      },
+      additional_info: (approvedCategories?.length || 0) === 0 
         ? 'No service categories have been approved for this business yet. Contact platform administration for approval.'
         : null,
     });
