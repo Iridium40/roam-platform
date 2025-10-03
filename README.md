@@ -392,7 +392,8 @@ import type { EmailService } from '@roam/shared/services';
 ### **Core Architecture**
 - **[API Architecture](./API_ARCHITECTURE.md)** - ⭐ Complete API implementation guide and patterns
 - **[Database Schema Reference](./DATABASE_SCHEMA_REFERENCE.md)** - Confirmed working database schemas (60+ tables)
-- **[Enum Types Reference](./ENUM_TYPES_REFERENCE.md)** - ⭐ **NEW** PostgreSQL enum types and Supabase query guide
+- **[Business Service Relationships](./BUSINESS_SERVICE_RELATIONSHIPS.md)** - ⭐ **NEW** Junction table architecture explained
+- **[Enum Types Reference](./ENUM_TYPES_REFERENCE.md)** - ⭐ PostgreSQL enum types and Supabase query guide
 - **[Unified Service Architecture Analysis](./UNIFIED_SERVICE_ARCHITECTURE_ANALYSIS.md)** - Platform-wide service standardization plan
 
 ### **Active Development Documents**
