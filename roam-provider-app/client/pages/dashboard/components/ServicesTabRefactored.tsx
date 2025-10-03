@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Package, Puzzle } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useServices } from '@/hooks/services/useServices';
 import { ServiceFilters, BusinessService } from '@/types/services';
 import { ServiceStatsSection } from './services/ServiceStatsSection';
@@ -26,6 +27,7 @@ export default function ServicesTabRefactored({
     actions
   } = useServices();
 
+  const [activeTab, setActiveTab] = useState<'services' | 'addons'>('services');
   const [filters, setFilters] = useState<ServiceFilters>({
     searchQuery: '',
     filterStatus: 'all',
@@ -101,32 +103,65 @@ export default function ServicesTabRefactored({
       {/* Service Stats */}
       <ServiceStatsSection stats={serviceStats} />
 
-      {/* Filters and Actions */}
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-end justify-between">
-        <div className="flex-1 w-full sm:w-auto">
-          <ServiceFiltersSection
-            filters={filters}
-            onFiltersChange={setFilters}
-            onRefresh={actions.loadServicesData}
-          />
-        </div>
-        <div className="shrink-0">
-          <AddServiceModal
-            eligibleServices={eligibleServices}
-            onAddService={handleAddService}
-            loading={loading}
-          />
-        </div>
-      </div>
+      {/* Tabs for Services and Add-ons */}
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'services' | 'addons')} className="w-full">
+        <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsTrigger value="services" className="flex items-center gap-2">
+            <Package className="h-4 w-4" />
+            Services
+          </TabsTrigger>
+          <TabsTrigger value="addons" className="flex items-center gap-2">
+            <Puzzle className="h-4 w-4" />
+            Add-ons
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Service List */}
-      <ServiceListSection
-        services={filteredServices}
-        loading={loading}
-        onToggleStatus={handleToggleStatus}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-      />
+        {/* Services Tab Content */}
+        <TabsContent value="services" className="space-y-4 mt-6">
+          {/* Filters and Actions */}
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-end justify-between">
+            <div className="flex-1 w-full sm:w-auto">
+              <ServiceFiltersSection
+                filters={filters}
+                onFiltersChange={setFilters}
+                onRefresh={actions.loadServicesData}
+              />
+            </div>
+            <div className="shrink-0">
+              <AddServiceModal
+                eligibleServices={eligibleServices}
+                onAddService={handleAddService}
+                loading={loading}
+              />
+            </div>
+          </div>
+
+          {/* Service List */}
+          <ServiceListSection
+            services={filteredServices}
+            loading={loading}
+            onToggleStatus={handleToggleStatus}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+          />
+        </TabsContent>
+
+        {/* Add-ons Tab Content */}
+        <TabsContent value="addons" className="space-y-4 mt-6">
+          <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+            <Puzzle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              Add-ons Management
+            </h3>
+            <p className="text-gray-600 mb-6 max-w-md mx-auto">
+              Manage service add-ons and enhancements for your business. Add-ons can be added to services to increase revenue and provide more options for customers.
+            </p>
+            <div className="text-sm text-gray-500">
+              Coming soon: Add-on creation, pricing, and assignment to services
+            </div>
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
