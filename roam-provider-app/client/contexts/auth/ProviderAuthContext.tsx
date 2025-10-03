@@ -3,7 +3,7 @@ import { AuthAPI } from "@/lib/supabase/auth";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "@/hooks/use-toast";
 
-// Provider type - v3 auth fix
+// Provider type - v3 auth fix with nested relations support
 interface Provider {
   id: string;
   user_id: string;
@@ -20,6 +20,37 @@ interface Provider {
   bio: string | null;
   verification_status: string | null;
   business_managed: boolean | null;
+  
+  // Nested relations (for dashboard optimization)
+  business_profiles?: {
+    id: string;
+    business_name: string;
+    business_type: string;
+    phone: string;
+    email: string;
+    website: string | null;
+    description: string | null;
+    logo_url: string | null;
+    banner_image_url: string | null;
+    is_active: boolean;
+    created_at: string;
+  };
+  
+  business_locations?: Array<{
+    id: string;
+    location_name: string;
+    address_line1: string;
+    address_line2: string | null;
+    city: string;
+    state: string;
+    postal_code: string;
+    country: string;
+    latitude: number | null;
+    longitude: number | null;
+    phone: string | null;
+    is_primary: boolean;
+    is_active: boolean;
+  }>;
 }
 
 interface ProviderAuthContextType {

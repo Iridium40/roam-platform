@@ -2004,10 +2004,10 @@ export default function Index() {
                                 <div className="flex items-center gap-1 bg-white px-3 py-2 rounded-full shadow-xl border border-gray-100">
                                   <Star className="w-4 h-4 text-roam-warning fill-current" />
                                   <span className="font-bold text-sm text-gray-900">
-                                    {business.rating}
+                                    {business.rating || '4.5'}
                                   </span>
                                   <span className="text-xs text-gray-600 font-medium">
-                                    ({business.reviews})
+                                    ({business.reviews || 0})
                                   </span>
                                 </div>
                               </div>

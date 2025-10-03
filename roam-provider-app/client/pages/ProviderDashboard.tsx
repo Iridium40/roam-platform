@@ -118,6 +118,39 @@ import {
   BusinessSettingsTab,
 } from "./dashboard/components";
 
+// Extended Provider type with nested relations for dashboard optimization
+interface ProviderWithRelations extends Provider {
+  business_profiles?: {
+    id: string;
+    business_name: string;
+    business_type: string;
+    phone: string;
+    email: string;
+    website: string | null;
+    description: string | null;
+    logo_url: string | null;
+    banner_image_url: string | null;
+    is_active: boolean;
+    created_at: string;
+  };
+  
+  business_locations?: Array<{
+    id: string;
+    location_name: string;
+    address_line1: string;
+    address_line2: string | null;
+    city: string;
+    state: string;
+    postal_code: string;
+    country: string;
+    latitude: number | null;
+    longitude: number | null;
+    phone: string | null;
+    is_primary: boolean;
+    is_active: boolean;
+  }>;
+}
+
 // Service category and subcategory types for database integration
 interface ServiceCategory {
   id: string;
@@ -191,7 +224,8 @@ export default function ProviderDashboard() {
   };
 
   const [isAvailable, setIsAvailable] = useState(true);
-  const [providerData, setProviderData] = useState<Provider | null>(null);
+    // State management
+  const [providerData, setProviderData] = useState<ProviderWithRelations | null>(null);
   const [business, setBusiness] = useState<BusinessProfile | null>(null);
   // Note: bookings and businessMetrics are now handled by individual tab components
 
@@ -569,10 +603,42 @@ export default function ProviderDashboard() {
         console.log('🔍 Provider object:', provider);
         console.log('🔍 User ID from provider:', userId);
         
+        // ✅ Optimized: Single query with nested relations (admin app pattern)
         const { data: providerData, error: providerError } = await supabase
           .from('providers')
-          .select('*')
+          .select(`
+            *,
+            business_profiles!business_id (
+              id,
+              business_name,
+              business_type,
+              phone,
+              email,
+              website,
+              description,
+              logo_url,
+              banner_image_url,
+              is_active,
+              created_at
+            ),
+            business_locations!inner (
+              id,
+              location_name,
+              address_line1,
+              address_line2,
+              city,
+              state,
+              postal_code,
+              country,
+              latitude,
+              longitude,
+              phone,
+              is_primary,
+              is_active
+            )
+          `)
           .eq('user_id', userId)
+          .eq('is_active', true)
           .maybeSingle();
 
         console.log('🔍 Provider query result:', { providerData, providerError });
@@ -594,37 +660,29 @@ export default function ProviderDashboard() {
           
           // For now, let's not redirect and just show the error
           setError(`Provider profile not found for user ID: ${userId}. Please check the database.`);
-        return;
-      }
-
-        setProviderData(providerData);
-
-        // Load business profile if provider has one
-        if (providerData.business_id) {
-      const { data: businessData, error: businessError } = await supabase
-        .from('business_profiles')
-            .select('*')
-            .eq('id', providerData.business_id)
-            .maybeSingle();
-
-          if (businessError) throw businessError;
-          if (businessData) {
-            setBusiness(businessData);
-
-            // Load business locations
-            const { data: locationsData, error: locationsError } = await supabase
-              .from('business_locations')
-              .select('*')
-              .eq('business_id', providerData.business_id)
-              .order('location_name');
-
-            if (locationsError) {
-              console.error('Error loading locations:', locationsError);
-            } else {
-              setLocations(locationsData || []);
-            }
-          }
+          return;
         }
+
+        // ✅ Set all data from single query (no additional queries needed)
+        // Type assertion since we've already checked providerData is not null above
+        const typedProviderData = providerData as ProviderWithRelations;
+        setProviderData(typedProviderData);
+        
+        if (typedProviderData.business_profiles) {
+          // Cast to partial since nested query doesn't return all fields
+          setBusiness(typedProviderData.business_profiles as any);
+        }
+        
+        if (typedProviderData.business_locations) {
+          setLocations(typedProviderData.business_locations as any[]);
+        }
+
+        console.log('✅ Provider data loaded successfully:', {
+          provider_id: typedProviderData.id,
+          business_id: typedProviderData.business_id,
+          business_name: typedProviderData.business_profiles?.business_name,
+          locations_count: typedProviderData.business_locations?.length || 0
+        });
 
         // Note: Staff data and bookings are now loaded by their respective tab components
 

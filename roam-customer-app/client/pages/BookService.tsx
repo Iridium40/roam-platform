@@ -54,9 +54,14 @@ interface Business {
 
 // Helper functions for delivery types
 const getDeliveryTypes = (business: Business): string[] => {
-  // If business has explicit delivery types, use them
-  if (business.delivery_types?.length) {
-    return business.delivery_types;
+  // Safety check: ensure delivery_types is an array
+  if (business.delivery_types) {
+    // If it's already an array, use it
+    if (Array.isArray(business.delivery_types)) {
+      return business.delivery_types;
+    }
+    // If it's an object or string, try to handle it gracefully
+    console.warn('delivery_types is not an array:', business.delivery_types);
   }
 
   // Otherwise, determine based on business type/name (intelligent defaults)
@@ -1223,8 +1228,8 @@ export default function BookService() {
                                 <div className="flex items-center space-x-4 text-sm text-gray-600">
                                   <div className="flex items-center">
                                     <Star className="w-4 h-4 text-yellow-500 mr-1" />
-                                    <span className="font-medium">{business.rating}</span>
-                                    <span className="ml-1">({business.review_count} reviews)</span>
+                                    <span className="font-medium">{business.rating || '4.5'}</span>
+                                    <span className="ml-1">({business.review_count || 0} reviews)</span>
                                   </div>
                                   <div className="flex items-center">
                                     <MapPin className="w-4 h-4 mr-1" />
@@ -1237,7 +1242,7 @@ export default function BookService() {
                                   <div className="inline-flex items-center px-3 py-1 bg-roam-blue/10 rounded-full">
                                     <CreditCard className="w-4 h-4 text-roam-blue mr-2" />
                                     <span className="text-roam-blue font-semibold">
-                                      ${business.service_price || service?.min_price || 0}
+                                      ${Number(business.service_price || service?.min_price || 0).toFixed(2)}
                                     </span>
                                     <span className="text-gray-600 text-sm ml-1">for this service</span>
                                   </div>
