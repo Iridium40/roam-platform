@@ -390,14 +390,16 @@ import type { EmailService } from '@roam/shared/services';
 ## 📚 **Key Documentation**
 
 ### **Core Architecture**
-- **[API Architecture](./API_ARCHITECTURE.md)** - ⭐ **NEW** Complete API implementation guide and patterns
+- **[API Architecture](./API_ARCHITECTURE.md)** - ⭐ Complete API implementation guide and patterns
 - **[Database Schema Reference](./DATABASE_SCHEMA_REFERENCE.md)** - Confirmed working database schemas (60+ tables)
+- **[Enum Types Reference](./ENUM_TYPES_REFERENCE.md)** - ⭐ **NEW** PostgreSQL enum types and Supabase query guide
 - **[Unified Service Architecture Analysis](./UNIFIED_SERVICE_ARCHITECTURE_ANALYSIS.md)** - Platform-wide service standardization plan
 
 ### **Active Development Documents**
 - **[Provider App Integration Progress](./PROVIDER_APP_INTEGRATION_PROGRESS.md)** - Current integration fixes and progress
 
 ### **Completed Implementations**
+- **[Enum Query Fix Summary](./ENUM_QUERY_FIX_SUMMARY.md)** - ⭐ **NEW** 406 error fix for PostgreSQL enum queries
 - **[MFA Implementation Summary](./MFA_IMPLEMENTATION_SUMMARY.md)** - Multi-Factor Authentication framework
 - **[Security Fixes Documentation](./SECURITY_FIXES.md)** - Security enhancements and compliance measures
 - **[Component Refactoring Guide](./COMPONENT_REFACTORING_GUIDE.md)** - Frontend component organization
