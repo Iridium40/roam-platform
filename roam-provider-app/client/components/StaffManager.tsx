@@ -132,6 +132,9 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
   const [inviteRole, setInviteRole] = useState<ProviderRole>("provider");
   const [inviteLocation, setInviteLocation] = useState("no-location");
 
+  // Safely handle locations prop - ensure it's always an array
+  const safeLocations = Array.isArray(locations) ? locations : [];
+
 
   useEffect(() => {
     fetchStaff();
@@ -356,7 +359,7 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
   });
 
   const getLocationName = (locationId: string) => {
-    const location = locations.find((l) => l.id === locationId);
+    const location = safeLocations.find((l) => l.id === locationId);
     return location?.location_name || "Unknown Location";
   };
 
@@ -422,7 +425,7 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="no-location">No specific location</SelectItem>
-                  {locations.map((location) => (
+                  {safeLocations.map((location) => (
                     <SelectItem key={location.id} value={location.id}>
                       {location.location_name}
                     </SelectItem>
@@ -721,7 +724,7 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {locations.map((location) => (
+                      {safeLocations.map((location) => (
                         <SelectItem key={location.id} value={location.id}>
                           {location.location_name}
                         </SelectItem>
