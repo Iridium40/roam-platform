@@ -297,6 +297,87 @@ export function createServer() {
     }
   );
 
+  // Business hours routes
+  app.get("/api/business/hours",
+    requireAuth(['owner', 'dispatcher', 'admin']),
+    async (req, res) => {
+      try {
+        const { business_id } = req.query;
+
+        if (!business_id || typeof business_id !== 'string') {
+          return res.status(400).json({
+            error: 'Business ID is required',
+            code: 'INVALID_REQUEST'
+          });
+        }
+
+        const { data, error } = await supabase
+          .from('business_profiles')
+          .select('business_hours')
+          .eq('id', business_id)
+          .single();
+
+        if (error) {
+          console.error('Error fetching business hours:', error);
+          return res.status(500).json({
+            error: 'Failed to fetch business hours',
+            code: 'DATABASE_ERROR'
+          });
+        }
+
+        return res.json({
+          business_hours: data.business_hours || {}
+        });
+      } catch (error: any) {
+        console.error('Error in GET /api/business/hours:', error);
+        return res.status(500).json({
+          error: 'Internal server error',
+          code: 'INTERNAL_ERROR'
+        });
+      }
+    }
+  );
+
+  app.put("/api/business/hours",
+    requireAuth(['owner', 'dispatcher', 'admin']),
+    async (req, res) => {
+      try {
+        const { business_id, business_hours } = req.body;
+
+        if (!business_id || !business_hours) {
+          return res.status(400).json({
+            error: 'Business ID and business hours are required',
+            code: 'INVALID_REQUEST'
+          });
+        }
+
+        const { error } = await supabase
+          .from('business_profiles')
+          .update({ business_hours })
+          .eq('id', business_id);
+
+        if (error) {
+          console.error('Error updating business hours:', error);
+          return res.status(500).json({
+            error: 'Failed to update business hours',
+            code: 'DATABASE_ERROR'
+          });
+        }
+
+        return res.json({
+          success: true,
+          message: 'Business hours updated successfully'
+        });
+      } catch (error: any) {
+        console.error('Error in PUT /api/business/hours:', error);
+        return res.status(500).json({
+          error: 'Internal server error',
+          code: 'INTERNAL_ERROR'
+        });
+      }
+    }
+  );
+
   // Business profile routes with auth and business access
   app.get("/api/business/profile/:businessId",
     requireAuth(['owner', 'dispatcher', 'admin']),
