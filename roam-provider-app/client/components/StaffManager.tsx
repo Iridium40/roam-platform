@@ -81,14 +81,15 @@ interface StaffMemberWithStats extends Provider {
 
 const roleOptions = [
   {
-    value: "provider" as ProviderRole,
-    label: "Provider",
-    description: "Delivers services to customers",
-    icon: User,
+    value: "owner" as ProviderRole,
+    label: "Owner",
+    description: "Full business management access",
+    icon: Crown,
     permissions: [
-      "View own bookings",
-      "Update own profile",
-      "Manage own schedule",
+      "All dispatcher permissions",
+      "Manage staff",
+      "Business settings",
+      "Financial reports",
     ],
   },
   {
@@ -103,15 +104,14 @@ const roleOptions = [
     ],
   },
   {
-    value: "owner" as ProviderRole,
-    label: "Owner",
-    description: "Full business management access",
-    icon: Crown,
+    value: "provider" as ProviderRole,
+    label: "Provider",
+    description: "Delivers services to customers",
+    icon: User,
     permissions: [
-      "All dispatcher permissions",
-      "Manage staff",
-      "Business settings",
-      "Financial reports",
+      "View own bookings",
+      "Update own profile",
+      "Manage own schedule",
     ],
   },
 ];
