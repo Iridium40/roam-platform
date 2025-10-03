@@ -149,6 +149,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Fetch approved categories for this business with full category details
+    // Using the same approach as admin app for consistency
     const { data: approvedCategories, error: categoriesError } = await supabase
       .from('business_service_categories')
       .select(`
@@ -185,6 +186,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
 
     // Fetch approved subcategories for this business with full details
+    // Using the same approach as admin app for consistency
     const { data: approvedSubcategories, error: subcategoriesError } = await supabase
       .from('business_service_subcategories')
       .select(`
@@ -195,9 +197,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         is_active,
         created_at,
         updated_at,
+        service_categories (
+          id,
+          service_category_type,
+          description
+        ),
         service_subcategories (
           id,
-          category_id,
           service_subcategory_type,
           description,
           image_url,
@@ -222,60 +228,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }))
     });
 
-    // Organize the data: group subcategories under their parent categories
-    const categoryMap = new Map();
-    
-    // First, add all approved categories
-    approvedCategories?.forEach((item: any) => {
-      const category = item.service_categories;
-      if (category) {
-        categoryMap.set(category.id, {
-          category_id: category.id,
-          category_name: category.service_category_type,
-          description: category.description,
-          image_url: category.image_url,
-          sort_order: category.sort_order,
-          is_active: category.is_active,
-          approved_at: item.created_at,
-          subcategories: [],
-        });
-      }
-    });
-
-    // Then, add subcategories to their parent categories
-    approvedSubcategories?.forEach((item: any) => {
-      const subcategory = item.service_subcategories;
-      if (subcategory && item.category_id) {
-        // Ensure parent category exists in map (in case subcategory was approved but not the parent)
-        if (!categoryMap.has(item.category_id)) {
-          categoryMap.set(item.category_id, {
-            category_id: item.category_id,
-            category_name: 'Unknown Category',
-            description: null,
-            image_url: null,
-            sort_order: 999,
-            is_active: true,
-            approved_at: null,
-            subcategories: [],
-          });
-        }
-
-        const parentCategory = categoryMap.get(item.category_id);
-        parentCategory.subcategories.push({
-          subcategory_id: subcategory.id,
-          subcategory_name: subcategory.service_subcategory_type,
-          description: subcategory.description,
-          image_url: subcategory.image_url,
-          is_active: subcategory.is_active,
-          approved_at: item.created_at,
-        });
-      }
-    });
-
-    // Convert map to array and sort by sort_order
-    const approved_categories_display = Array.from(categoryMap.values())
-      .sort((a, b) => (a.sort_order || 999) - (b.sort_order || 999));
-
     // Group subcategories by category for easy lookup
     const subcategories_by_category: Record<string, any[]> = {};
     approvedSubcategories?.forEach((item: any) => {
@@ -289,7 +241,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Calculate stats
     const stats = {
-      total_categories: categoryMap.size,
+      total_categories: approvedCategories?.length || 0,
       total_subcategories: approvedSubcategories?.length || 0,
       categories_with_subcategories: Object.keys(subcategories_by_category).length,
       available_services_count: 0, // This would need a separate query to count services
@@ -307,21 +259,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       stats.last_updated = new Date(mostRecent).getTime();
     }
 
-    // Return data in the format frontend expects
+    // Return data in the exact format admin app uses, which matches frontend expectations
     return res.status(200).json({
       business_id,
-      approved_categories: approvedCategories || [], // Return original structure with nested relations
-      approved_subcategories: approvedSubcategories || [], // Return original structure
+      approved_categories: approvedCategories || [], // Direct from database with nested relations
+      approved_subcategories: approvedSubcategories || [], // Direct from database with nested relations
       subcategories_by_category, // Grouped for easy lookup
       stats,
       last_fetched: new Date().toISOString(),
-      // For display/debugging
-      _display: {
-        categories: approved_categories_display, // The transformed display format
-      },
-      additional_info: (approvedCategories?.length || 0) === 0 
-        ? 'No service categories have been approved for this business yet. Contact platform administration for approval.'
-        : null,
     });
 
   } catch (error: any) {
