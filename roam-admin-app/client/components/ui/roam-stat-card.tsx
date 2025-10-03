@@ -40,6 +40,7 @@ export interface ROAMStatCardProps
   change?: number;
   changeType?: "positive" | "negative" | "neutral";
   changeIcon?: React.ReactNode;
+  changeText?: string;
 }
 
 const ROAMStatCard = React.forwardRef<HTMLDivElement, ROAMStatCardProps>(
@@ -54,6 +55,7 @@ const ROAMStatCard = React.forwardRef<HTMLDivElement, ROAMStatCardProps>(
       change,
       changeType = "neutral",
       changeIcon,
+      changeText,
       ...props
     },
     ref,
@@ -72,6 +74,10 @@ const ROAMStatCard = React.forwardRef<HTMLDivElement, ROAMStatCardProps>(
       
       {subtitle && (
         <div className="text-sm text-muted-foreground">{subtitle}</div>
+      )}
+
+      {changeText && (
+        <div className="text-sm text-muted-foreground">{changeText}</div>
       )}
 
       {change !== undefined && (
