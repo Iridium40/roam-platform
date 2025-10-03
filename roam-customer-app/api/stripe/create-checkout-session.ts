@@ -40,6 +40,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       guestEmail,
       guestPhone,
       deliveryType,
+      businessLocationId,
+      customerLocationId,
       specialInstructions,
       promotionId,
       totalAmount,
@@ -169,6 +171,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         booking_date: bookingDate || '',
         start_time: startTime || '',
         delivery_type: deliveryType || '',
+        business_location_id: businessLocationId || '',
+        customer_location_id: customerLocationId || '',
         special_instructions: specialInstructions || '',
         promotion_id: promotionId || '',
         guest_phone: guestPhone || ''

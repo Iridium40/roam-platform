@@ -63,6 +63,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             booking_date: metadata.booking_date,
             start_time: metadata.start_time,
             delivery_type: metadata.delivery_type,
+            business_location_id: metadata.business_location_id || null,
+            customer_location_id: metadata.customer_location_id || null,
             special_instructions: metadata.special_instructions || '',
             promotion_id: metadata.promotion_id || null,
             guest_phone: metadata.guest_phone || '',

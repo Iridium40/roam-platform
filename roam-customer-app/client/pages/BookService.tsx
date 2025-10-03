@@ -19,7 +19,7 @@ import { stripePromise } from '../lib/stripe-client';
 import { CheckoutForm } from '../components/CheckoutForm';
 import { getDeliveryTypeLabel, getDeliveryTypeIcon } from '@/utils/deliveryTypeHelpers';
 
-type BookingStep = 'datetime' | 'business' | 'provider' | 'summary' | 'checkout';
+type BookingStep = 'datetime' | 'business' | 'provider' | 'delivery' | 'location' | 'summary' | 'checkout';
 
 interface Promotion {
   id: string;
@@ -50,6 +50,32 @@ interface Business {
   business_type?: string;
   service_price?: number;
   business_hours?: any;
+}
+
+interface BusinessLocation {
+  id: string;
+  location_name: string | null;
+  address_line1: string;
+  address_line2: string | null;
+  city: string;
+  state: string;
+  postal_code: string;
+  country: string | null;
+  is_primary: boolean;
+  is_active: boolean;
+}
+
+interface CustomerLocation {
+  id: string;
+  location_name: string;
+  street_address: string;
+  unit_number: string | null;
+  city: string;
+  state: string;
+  zip_code: string;
+  is_primary: boolean;
+  is_active: boolean;
+  location_type: string;
 }
 
 // Helper functions for delivery types
@@ -172,6 +198,23 @@ export default function BookService() {
   const [selectedTime, setSelectedTime] = useState<string>('');
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
   const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null);
+  
+  // Delivery type and location selection
+  const [selectedDeliveryType, setSelectedDeliveryType] = useState<string>('');
+  const [businessLocations, setBusinessLocations] = useState<BusinessLocation[]>([]);
+  const [selectedBusinessLocation, setSelectedBusinessLocation] = useState<BusinessLocation | null>(null);
+  const [customerLocations, setCustomerLocations] = useState<CustomerLocation[]>([]);
+  const [selectedCustomerLocation, setSelectedCustomerLocation] = useState<CustomerLocation | null>(null);
+  const [newCustomerLocation, setNewCustomerLocation] = useState({
+    location_name: '',
+    street_address: '',
+    unit_number: '',
+    city: '',
+    state: '',
+    zip_code: '',
+    is_primary: false,
+    location_type: 'home' as 'home' | 'work' | 'other'
+  });
 
   // Business sorting and filtering
   const [sortBy, setSortBy] = useState<'price' | 'rating' | 'delivery_type'>('price');
@@ -679,6 +722,111 @@ export default function BookService() {
     }
   };
 
+  // Load business locations
+  const loadBusinessLocations = async (businessId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('business_locations')
+        .select('*')
+        .eq('business_id', businessId)
+        .eq('is_active', true)
+        .order('is_primary', { ascending: false });
+
+      if (error) throw error;
+
+      const locations = data || [];
+      setBusinessLocations(locations);
+
+      // Auto-select if only one location
+      if (locations.length === 1) {
+        setSelectedBusinessLocation(locations[0]);
+      } else if (locations.length > 0) {
+        // Auto-select primary location
+        const primaryLocation = locations.find(loc => loc.is_primary);
+        if (primaryLocation) {
+          setSelectedBusinessLocation(primaryLocation);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading business locations:', error);
+      toast({
+        title: "Error loading business locations",
+        description: "Unable to load business addresses",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Load customer locations
+  const loadCustomerLocations = async () => {
+    if (!customer) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('customer_locations')
+        .select('*')
+        .eq('customer_id', customer.user_id)
+        .eq('is_active', true)
+        .order('is_primary', { ascending: false });
+
+      if (error) throw error;
+
+      const locations = data || [];
+      setCustomerLocations(locations);
+
+      // Auto-select primary location
+      if (locations.length > 0) {
+        const primaryLocation = locations.find(loc => loc.is_primary);
+        if (primaryLocation) {
+          setSelectedCustomerLocation(primaryLocation);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading customer locations:', error);
+      toast({
+        title: "Error loading your locations",
+        description: "Unable to load your saved addresses",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Save new customer location
+  const saveNewCustomerLocation = async (): Promise<CustomerLocation | null> => {
+    if (!customer) return null;
+
+    try {
+      const { data, error } = await supabase
+        .from('customer_locations')
+        .insert({
+          customer_id: customer.user_id,
+          ...newCustomerLocation,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast({
+        title: "Location saved",
+        description: "Your new location has been saved successfully",
+      });
+
+      // Refresh customer locations
+      await loadCustomerLocations();
+
+      return data;
+    } catch (error) {
+      console.error('Error saving customer location:', error);
+      toast({
+        title: "Error saving location",
+        description: "Unable to save your location. Please try again.",
+        variant: "destructive",
+      });
+      return null;
+    }
+  };
+
   const handleNext = () => {
     switch (currentStep) {
       case 'datetime':
@@ -703,7 +851,26 @@ export default function BookService() {
       case 'business':
         if (selectedBusiness) {
           loadProviders(selectedBusiness.id);
-          setCurrentStep('provider');
+          
+          // Check delivery types for the selected business
+          const deliveryTypes = getDeliveryTypes(selectedBusiness);
+          
+          // If only one delivery type, auto-select and skip delivery step
+          if (deliveryTypes.length === 1) {
+            setSelectedDeliveryType(deliveryTypes[0]);
+            
+            // Load locations if needed
+            if (deliveryTypes[0] === 'business_location') {
+              loadBusinessLocations(selectedBusiness.id);
+            } else if (deliveryTypes[0] === 'customer_location') {
+              loadCustomerLocations();
+            }
+            
+            setCurrentStep('provider');
+          } else {
+            // Multiple delivery types available, go to delivery selection
+            setCurrentStep('delivery');
+          }
         } else {
           toast({
             title: "Please select a business",
@@ -711,6 +878,74 @@ export default function BookService() {
             variant: "destructive",
           });
         }
+        break;
+      case 'delivery':
+        if (selectedDeliveryType) {
+          // Load appropriate locations based on delivery type
+          if (selectedDeliveryType === 'business_location') {
+            if (selectedBusiness) {
+              loadBusinessLocations(selectedBusiness.id);
+            }
+          } else if (selectedDeliveryType === 'customer_location') {
+            loadCustomerLocations();
+          }
+          
+          // Go to location step if needed, otherwise go to provider
+          if (selectedDeliveryType === 'virtual') {
+            setCurrentStep('provider');
+          } else {
+            setCurrentStep('location');
+          }
+        } else {
+          toast({
+            title: "Please select delivery type",
+            description: "Choose how you'd like to receive the service",
+            variant: "destructive",
+          });
+        }
+        break;
+      case 'location':
+        // Validate location selection based on delivery type
+        if (selectedDeliveryType === 'business_location') {
+          if (!selectedBusinessLocation && businessLocations.length > 1) {
+            toast({
+              title: "Please select a location",
+              description: "Choose which business location you'd like to visit",
+              variant: "destructive",
+            });
+            return;
+          }
+        } else if (selectedDeliveryType === 'customer_location') {
+          if (!selectedCustomerLocation && customerLocations.length === 0) {
+            // Need to create a new location
+            if (!newCustomerLocation.street_address || !newCustomerLocation.city || 
+                !newCustomerLocation.state || !newCustomerLocation.zip_code) {
+              toast({
+                title: "Please complete the address",
+                description: "All address fields are required",
+                variant: "destructive",
+              });
+              return;
+            }
+            
+            // Save the new location
+            const savedLocation = await saveNewCustomerLocation();
+            if (savedLocation) {
+              setSelectedCustomerLocation(savedLocation);
+            } else {
+              return; // Don't proceed if save failed
+            }
+          } else if (!selectedCustomerLocation && customerLocations.length > 0) {
+            toast({
+              title: "Please select a location",
+              description: "Choose an address or add a new one",
+              variant: "destructive",
+            });
+            return;
+          }
+        }
+        
+        setCurrentStep('provider');
         break;
       case 'provider':
         if (selectedProvider) {
@@ -731,9 +966,26 @@ export default function BookService() {
       case 'business':
         setCurrentStep('datetime');
         break;
+      case 'delivery':
+        setCurrentStep('business');
+        break;
+      case 'location':
+        setCurrentStep('delivery');
+        break;
       case 'provider':
-        // If businessId is provided, go back to datetime (skip business selection)
-        if (businessId) {
+        // Determine which step to go back to
+        if (selectedDeliveryType && selectedDeliveryType !== 'virtual') {
+          setCurrentStep('location');
+        } else if (selectedDeliveryType) {
+          const deliveryTypes = selectedBusiness ? getDeliveryTypes(selectedBusiness) : [];
+          if (deliveryTypes.length > 1) {
+            setCurrentStep('delivery');
+          } else if (businessId) {
+            setCurrentStep('datetime');
+          } else {
+            setCurrentStep('business');
+          }
+        } else if (businessId) {
           setCurrentStep('datetime');
         } else {
           setCurrentStep('business');
@@ -786,9 +1038,9 @@ export default function BookService() {
       return;
     }
 
-    // Get the primary delivery type for the selected business
+    // Use selected delivery type or get the primary one for the business
     const businessDeliveryTypes = getDeliveryTypes(selectedBusiness);
-    const primaryDeliveryType = businessDeliveryTypes[0] || 'business_location';
+    const deliveryType = selectedDeliveryType || businessDeliveryTypes[0] || 'business_location';
 
     // Prepare booking details for checkout
     const bookingDetails = {
@@ -801,7 +1053,9 @@ export default function BookService() {
       guestName: `${customer.first_name} ${customer.last_name}`,
       guestEmail: customer.email,
       guestPhone: customer.phone || '',
-      deliveryType: primaryDeliveryType,
+      deliveryType: deliveryType,
+      businessLocationId: selectedBusinessLocation?.id || null,
+      customerLocationId: selectedCustomerLocation?.id || null,
       specialInstructions: '', // Placeholder for now
       promotionId: promotion?.id || null,
       totalAmount: calculateTotalAmount(),
@@ -1334,6 +1588,241 @@ export default function BookService() {
               </div>
             )}
 
+            {currentStep === 'delivery' && selectedBusiness && (
+              <div>
+                <h2 className="text-2xl font-semibold mb-6 flex items-center">
+                  <MapPin className="w-6 h-6 mr-2" />
+                  Select Service Delivery Type
+                </h2>
+                <p className="text-gray-600 mb-6">
+                  Choose how you'd like to receive this service
+                </p>
+                <div className="grid gap-4">
+                  {getDeliveryTypes(selectedBusiness).map((deliveryType) => {
+                    const Icon = getDeliveryTypeIcon(deliveryType);
+                    const label = getDeliveryTypeLabel(deliveryType);
+                    
+                    return (
+                      <Card
+                        key={deliveryType}
+                        className={`cursor-pointer transition-all ${
+                          selectedDeliveryType === deliveryType
+                            ? 'ring-2 ring-roam-blue border-roam-blue bg-roam-blue/5'
+                            : 'hover:shadow-md'
+                        }`}
+                        onClick={() => setSelectedDeliveryType(deliveryType)}
+                      >
+                        <CardContent className="p-6">
+                          <div className="flex items-center space-x-4">
+                            <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                              selectedDeliveryType === deliveryType ? 'bg-roam-blue text-white' : 'bg-gray-100'
+                            }`}>
+                              <Icon className="w-6 h-6" />
+                            </div>
+                            <div className="flex-1">
+                              <h3 className="font-semibold text-lg">{label}</h3>
+                              <p className="text-sm text-gray-600 mt-1">
+                                {deliveryType === 'business_location' && 'Visit the business location'}
+                                {deliveryType === 'customer_location' && 'Service at your location'}
+                                {deliveryType === 'virtual' && 'Online/remote service'}
+                                {deliveryType === 'both_locations' && 'Choose business or your location'}
+                              </p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {currentStep === 'location' && (
+              <div>
+                <h2 className="text-2xl font-semibold mb-6 flex items-center">
+                  <MapPin className="w-6 h-6 mr-2" />
+                  {selectedDeliveryType === 'business_location' ? 'Select Business Location' : 'Select Service Location'}
+                </h2>
+
+                {selectedDeliveryType === 'business_location' && (
+                  <div className="space-y-4">
+                    {businessLocations.length === 0 ? (
+                      <p className="text-gray-600">No business locations available.</p>
+                    ) : (
+                      businessLocations.map((location) => (
+                        <Card
+                          key={location.id}
+                          className={`cursor-pointer transition-all ${
+                            selectedBusinessLocation?.id === location.id
+                              ? 'ring-2 ring-roam-blue border-roam-blue bg-roam-blue/5'
+                              : 'hover:shadow-md'
+                          }`}
+                          onClick={() => setSelectedBusinessLocation(location)}
+                        >
+                          <CardContent className="p-4">
+                            <div className="flex items-start space-x-3">
+                              <Building className="w-5 h-5 text-roam-blue mt-1" />
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <h3 className="font-semibold">
+                                    {location.location_name || 'Main Location'}
+                                  </h3>
+                                  {location.is_primary && (
+                                    <Badge variant="secondary" className="text-xs">Primary</Badge>
+                                  )}
+                                </div>
+                                <p className="text-sm text-gray-600 mt-1">
+                                  {location.address_line1}
+                                  {location.address_line2 && `, ${location.address_line2}`}
+                                </p>
+                                <p className="text-sm text-gray-600">
+                                  {location.city}, {location.state} {location.postal_code}
+                                </p>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))
+                    )}
+                  </div>
+                )}
+
+                {selectedDeliveryType === 'customer_location' && (
+                  <div className="space-y-6">
+                    {customerLocations.length > 0 && (
+                      <div className="space-y-4">
+                        <h3 className="font-medium">Your Saved Locations</h3>
+                        {customerLocations.map((location) => (
+                          <Card
+                            key={location.id}
+                            className={`cursor-pointer transition-all ${
+                              selectedCustomerLocation?.id === location.id
+                                ? 'ring-2 ring-roam-blue border-roam-blue bg-roam-blue/5'
+                                : 'hover:shadow-md'
+                            }`}
+                            onClick={() => setSelectedCustomerLocation(location)}
+                          >
+                            <CardContent className="p-4">
+                              <div className="flex items-start space-x-3">
+                                <MapPin className="w-5 h-5 text-roam-blue mt-1" />
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <h3 className="font-semibold capitalize">
+                                      {location.location_name}
+                                    </h3>
+                                    {location.is_primary && (
+                                      <Badge variant="secondary" className="text-xs">Primary</Badge>
+                                    )}
+                                    <Badge variant="outline" className="text-xs capitalize">
+                                      {location.location_type}
+                                    </Badge>
+                                  </div>
+                                  <p className="text-sm text-gray-600 mt-1">
+                                    {location.street_address}
+                                    {location.unit_number && `, ${location.unit_number}`}
+                                  </p>
+                                  <p className="text-sm text-gray-600">
+                                    {location.city}, {location.state} {location.zip_code}
+                                  </p>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Add New Location Form */}
+                    <div className="border-t pt-6">
+                      <h3 className="font-medium mb-4">
+                        {customerLocations.length > 0 ? 'Or Add a New Location' : 'Add Your Location'}
+                      </h3>
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium mb-2">Location Name</label>
+                          <input
+                            type="text"
+                            className="w-full px-3 py-2 border rounded-md"
+                            placeholder="e.g., Home, Office"
+                            value={newCustomerLocation.location_name}
+                            onChange={(e) => setNewCustomerLocation({ ...newCustomerLocation, location_name: e.target.value })}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-2">Street Address *</label>
+                          <input
+                            type="text"
+                            className="w-full px-3 py-2 border rounded-md"
+                            placeholder="123 Main Street"
+                            value={newCustomerLocation.street_address}
+                            onChange={(e) => setNewCustomerLocation({ ...newCustomerLocation, street_address: e.target.value })}
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-2">Unit/Apt Number</label>
+                          <input
+                            type="text"
+                            className="w-full px-3 py-2 border rounded-md"
+                            placeholder="Apt 2B"
+                            value={newCustomerLocation.unit_number}
+                            onChange={(e) => setNewCustomerLocation({ ...newCustomerLocation, unit_number: e.target.value })}
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium mb-2">City *</label>
+                            <input
+                              type="text"
+                              className="w-full px-3 py-2 border rounded-md"
+                              placeholder="Miami"
+                              value={newCustomerLocation.city}
+                              onChange={(e) => setNewCustomerLocation({ ...newCustomerLocation, city: e.target.value })}
+                              required
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium mb-2">State *</label>
+                            <input
+                              type="text"
+                              className="w-full px-3 py-2 border rounded-md"
+                              placeholder="FL"
+                              value={newCustomerLocation.state}
+                              onChange={(e) => setNewCustomerLocation({ ...newCustomerLocation, state: e.target.value })}
+                              required
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-2">ZIP Code *</label>
+                          <input
+                            type="text"
+                            className="w-full px-3 py-2 border rounded-md"
+                            placeholder="33101"
+                            value={newCustomerLocation.zip_code}
+                            onChange={(e) => setNewCustomerLocation({ ...newCustomerLocation, zip_code: e.target.value })}
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-2">Location Type</label>
+                          <select
+                            className="w-full px-3 py-2 border rounded-md"
+                            value={newCustomerLocation.location_type}
+                            onChange={(e) => setNewCustomerLocation({ ...newCustomerLocation, location_type: e.target.value as 'home' | 'work' | 'other' })}
+                          >
+                            <option value="home">Home</option>
+                            <option value="work">Work</option>
+                            <option value="other">Other</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {currentStep === 'provider' && (
               <div>
                 <h2 className="text-2xl font-semibold mb-6 flex items-center">
@@ -1424,6 +1913,40 @@ export default function BookService() {
                       <span className="text-gray-600">Provider:</span>
                       <span className="font-medium">{selectedProvider?.first_name} {selectedProvider?.last_name}</span>
                     </div>
+                    {selectedDeliveryType && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Service Type:</span>
+                        <span className="font-medium flex items-center gap-2">
+                          {(() => {
+                            const Icon = getDeliveryTypeIcon(selectedDeliveryType);
+                            return <Icon className="w-4 h-4" />;
+                          })()}
+                          {getDeliveryTypeLabel(selectedDeliveryType)}
+                        </span>
+                      </div>
+                    )}
+                    {selectedBusinessLocation && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Location:</span>
+                        <span className="font-medium text-right">
+                          {selectedBusinessLocation.location_name || 'Business Location'}<br />
+                          <span className="text-sm text-gray-500">
+                            {selectedBusinessLocation.address_line1}, {selectedBusinessLocation.city}, {selectedBusinessLocation.state}
+                          </span>
+                        </span>
+                      </div>
+                    )}
+                    {selectedCustomerLocation && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Service Address:</span>
+                        <span className="font-medium text-right">
+                          {selectedCustomerLocation.location_name}<br />
+                          <span className="text-sm text-gray-500">
+                            {selectedCustomerLocation.street_address}, {selectedCustomerLocation.city}, {selectedCustomerLocation.state}
+                          </span>
+                        </span>
+                      </div>
+                    )}
                     <div className="flex justify-between">
                       <span className="text-gray-600">Duration:</span>
                       <span className="font-medium">{service.duration_minutes} minutes</span>
