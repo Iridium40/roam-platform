@@ -511,6 +511,88 @@ export function createServer() {
   //   }
   // );
 
+  // Get bookings for a business
+  app.get("/api/bookings",
+    async (req, res) => {
+      try {
+        const { business_id, limit = '1000', offset = '0', status } = req.query;
+        
+        if (!business_id) {
+          return res.status(400).json({ error: "business_id is required" });
+        }
+
+        let query = supabase
+          .from("bookings")
+          .select(`
+            *,
+            customer_profiles (
+              id,
+              first_name,
+              last_name,
+              email,
+              phone
+            ),
+            customer_locations (
+              id,
+              location_name,
+              street_address,
+              unit_number,
+              city,
+              state,
+              zip_code,
+              latitude,
+              longitude,
+              is_primary,
+              is_active,
+              access_instructions,
+              location_type
+            ),
+            business_locations (
+              id,
+              location_name,
+              address_line1,
+              address_line2,
+              city,
+              state,
+              postal_code
+            ),
+            services (
+              id,
+              name,
+              description,
+              duration_minutes,
+              min_price
+            ),
+            providers (
+              id,
+              first_name,
+              last_name
+            )
+          `)
+          .eq('business_id', business_id)
+          .order('booking_date', { ascending: false })
+          .order('start_time', { ascending: false })
+          .range(parseInt(offset as string), parseInt(offset as string) + parseInt(limit as string) - 1);
+
+        if (status && status !== 'all') {
+          query = query.eq('status', status);
+        }
+
+        const { data, error } = await query;
+
+        if (error) {
+          console.error("Error fetching bookings:", error);
+          return res.status(500).json({ error: error.message });
+        }
+
+        res.json({ bookings: data || [] });
+      } catch (error: any) {
+        console.error("Error in bookings endpoint:", error);
+        res.status(500).json({ error: error.message || "Failed to fetch bookings" });
+      }
+    }
+  );
+
   // Booking status update route - handled by Vercel API routes
   app.patch("/api/bookings/:bookingId/status", 
     requireAuth(['owner', 'dispatcher', 'provider', 'admin']),

@@ -96,8 +96,7 @@ export function useBookings(providerData: any, business: any) {
               name,
               description,
               duration_minutes,
-              min_price,
-              max_price
+              min_price
             ),
             providers (
               id,
