@@ -827,7 +827,7 @@ export default function BookService() {
     }
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     switch (currentStep) {
       case 'datetime':
         if (selectedDate && selectedTime) {
