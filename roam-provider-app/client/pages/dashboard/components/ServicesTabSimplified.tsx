@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Package, Puzzle } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useSimplifiedServices } from '@/hooks/services/useSimplifiedServices';
 import { ServiceFilters, EligibleService } from '@/types/services';
 import { ServiceStatsSection } from './services/ServiceStatsSection';
 import { ServiceFiltersSection } from './services/ServiceFiltersSection';
 import { SimplifiedServiceListSection } from './services/SimplifiedServiceListSection';
 import { EditServiceModal } from './services/EditServiceModal';
+import AddonsTabSimplified from './AddonsTabSimplified';
 
 interface ServicesTabSimplifiedProps {
   providerData?: any;
@@ -33,6 +35,7 @@ export default function ServicesTabSimplified({
   });
 
   const [editingService, setEditingService] = useState<EligibleService | null>(null);
+  const [activeTab, setActiveTab] = useState<'services' | 'addons'>('services');
 
   // Filter services based on current filters
   const filteredServices = eligibleServices.filter(service => {
@@ -98,20 +101,42 @@ export default function ServicesTabSimplified({
       {/* Service Stats */}
       <ServiceStatsSection stats={serviceStats} />
 
-      {/* Filters */}
-      <ServiceFiltersSection
-        filters={filters}
-        onFiltersChange={setFilters}
-        onRefresh={actions.loadServicesData}
-      />
+      {/* Tabs for Services and Add-ons */}
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'services' | 'addons')} className="w-full">
+        <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsTrigger value="services" className="flex items-center gap-2">
+            <Package className="h-4 w-4" />
+            Services
+          </TabsTrigger>
+          <TabsTrigger value="addons" className="flex items-center gap-2">
+            <Puzzle className="h-4 w-4" />
+            Add-ons
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Service List */}
-      <SimplifiedServiceListSection
-        services={filteredServices}
-        loading={loading}
-        onToggleStatus={handleToggleStatus}
-        onEdit={handleEdit}
-      />
+        {/* Services Tab Content */}
+        <TabsContent value="services" className="space-y-4 mt-6">
+          {/* Filters */}
+          <ServiceFiltersSection
+            filters={filters}
+            onFiltersChange={setFilters}
+            onRefresh={actions.loadServicesData}
+          />
+
+          {/* Service List */}
+          <SimplifiedServiceListSection
+            services={filteredServices}
+            loading={loading}
+            onToggleStatus={handleToggleStatus}
+            onEdit={handleEdit}
+          />
+        </TabsContent>
+
+        {/* Add-ons Tab Content */}
+        <TabsContent value="addons" className="space-y-4 mt-6">
+          <AddonsTabSimplified providerData={providerData} business={business} />
+        </TabsContent>
+      </Tabs>
 
       {/* Edit Service Modal */}
       {editingService && (

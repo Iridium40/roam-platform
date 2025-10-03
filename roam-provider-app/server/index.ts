@@ -1278,7 +1278,202 @@ export function createServer() {
     }
   });
 
-  // Add/Update business addon route
+  // Business eligible addons route
+  app.get("/api/business-eligible-addons", async (req, res) => {
+    try {
+      const { business_id } = req.query;
+      
+      if (!business_id) {
+        return res.status(400).json({ error: "Business ID is required" });
+      }
+
+      try {
+        console.log("Loading eligible addons for business:", business_id);
+        
+        // Get all active services for this business
+        const { data: businessServices, error: servicesError } = await supabase
+          .from('business_services')
+          .select('service_id')
+          .eq('business_id', business_id)
+          .eq('is_active', true);
+
+        if (servicesError) {
+          console.error('Error fetching business services:', servicesError);
+          return res.status(500).json({ error: 'Failed to fetch business services' });
+        }
+
+        if (!businessServices || businessServices.length === 0) {
+          console.log('No active services found for business:', business_id);
+          return res.json({
+            business_id: business_id,
+            addon_count: 0,
+            eligible_addons: []
+          });
+        }
+
+        const serviceIds = businessServices.map((bs: any) => bs.service_id);
+
+        // Get eligible addons for these services
+        const { data: addonEligibility, error: eligibilityError } = await supabase
+          .from('service_addon_eligibility')
+          .select(`
+            addon_id,
+            service_id,
+            is_recommended
+          `)
+          .in('service_id', serviceIds);
+
+        if (eligibilityError) {
+          console.error('Error fetching addon eligibility:', eligibilityError);
+          return res.status(500).json({ error: 'Failed to fetch addon eligibility' });
+        }
+
+        // Get unique addon IDs
+        const addonIds = [...new Set(addonEligibility?.map((ae: any) => ae.addon_id) || [])];
+
+        if (addonIds.length === 0) {
+          return res.json({
+            business_id: business_id,
+            addon_count: 0,
+            eligible_addons: []
+          });
+        }
+
+        // Get addon details
+        const { data: addons, error: addonsError } = await supabase
+          .from('service_addons')
+          .select('id, name, description, image_url, is_active')
+          .in('id', addonIds)
+          .eq('is_active', true);
+
+        if (addonsError) {
+          console.error('Error fetching addons:', addonsError);
+          return res.status(500).json({ error: 'Failed to fetch addons' });
+        }
+
+        // Get current business addon configurations
+        const { data: businessAddons, error: businessAddonsError } = await supabase
+          .from('business_addons')
+          .select('addon_id, custom_price, is_available')
+          .eq('business_id', business_id);
+
+        if (businessAddonsError) {
+          console.error('Error fetching business addons:', businessAddonsError);
+        }
+
+        const businessAddonsMap = new Map(
+          businessAddons?.map((ba: any) => [ba.addon_id, ba]) || []
+        );
+
+        // Count compatible services for each addon
+        const addonServiceCountMap = new Map();
+        addonEligibility?.forEach((ae: any) => {
+          const count = addonServiceCountMap.get(ae.addon_id) || 0;
+          addonServiceCountMap.set(ae.addon_id, count + 1);
+        });
+
+        // Merge addon details with business configuration
+        const processedAddons = addons?.map((addon: any) => {
+          const businessAddon = businessAddonsMap.get(addon.id);
+          const isConfigured = !!businessAddon;
+          
+          return {
+            ...addon,
+            is_configured: isConfigured,
+            custom_price: businessAddon?.custom_price,
+            is_available: businessAddon?.is_available,
+            compatible_service_count: addonServiceCountMap.get(addon.id) || 0
+          };
+        }) || [];
+
+        res.json({
+          business_id: business_id,
+          addon_count: processedAddons.length,
+          eligible_addons: processedAddons
+        });
+      } catch (error) {
+        console.error("Error in eligible addons:", error);
+        res.status(500).json({ 
+          error: "Failed to fetch eligible addons from database",
+          details: error.message
+        });
+      }
+    } catch (error) {
+      console.error("Error in business eligible addons:", error);
+      res.status(500).json({ error: "Failed to fetch eligible addons" });
+    }
+  });
+
+  // Update business addon route
+  app.put("/api/business/addons", async (req, res) => {
+    try {
+      const { business_id, addon_id, custom_price, is_available } = req.body;
+      
+      if (!business_id || !addon_id) {
+        return res.status(400).json({ error: "Business ID and addon ID are required" });
+      }
+
+      try {
+        console.log("Updating business addon in database");
+        
+        // Check if addon already exists
+        const { data: existingAddon, error: checkError } = await supabase
+          .from('business_addons')
+          .select('id')
+          .eq('business_id', business_id)
+          .eq('addon_id', addon_id)
+          .single();
+
+        let result;
+        if (existingAddon) {
+          // Update existing addon
+          const { data, error } = await supabase
+            .from('business_addons')
+            .update({
+              custom_price: custom_price !== undefined ? parseFloat(custom_price) : null,
+              is_available: is_available !== undefined ? is_available : true
+            })
+            .eq('id', existingAddon.id)
+            .select()
+            .single();
+
+          if (error) throw error;
+          result = data;
+        } else {
+          // Insert new addon
+          const { data, error } = await supabase
+            .from('business_addons')
+            .insert({
+              business_id,
+              addon_id,
+              custom_price: custom_price !== undefined ? parseFloat(custom_price) : null,
+              is_available: is_available !== undefined ? is_available : true
+            })
+            .select()
+            .single();
+
+          if (error) throw error;
+          result = data;
+        }
+
+        res.json({ 
+          success: true,
+          addon: result 
+        });
+      } catch (error) {
+        console.error("Error updating business addon:", error);
+        res.status(500).json({ 
+          error: "Failed to update business addon in database",
+          details: error.message
+        });
+      }
+    } catch (error) {
+      console.error("Error in business addon update:", error);
+      res.status(500).json({ error: "Failed to update business addon" });
+    }
+  });
+
+  // Add/Update business addon route (legacy POST endpoint, kept for backward compatibility)
   app.post("/api/business/addons", async (req, res) => {
     try {
       const { business_id, addon_id, custom_price, is_available } = req.body;
