@@ -86,15 +86,16 @@ export function useEdgeNotifications() {
         eventSourceRef.current.close();
       }
 
-      // Create new SSE connection
-      const eventSource = new EventSource(
-        `/api/notifications/edge?userId=${currentUser.id}&userType=customer`
-      );
+      // Create new SSE connection with error handling
+      try {
+        const eventSource = new EventSource(
+          `/api/notifications/edge?userId=${currentUser.id}&userType=customer`
+        );
 
-      eventSource.onopen = () => {
-        setIsConnected(true);
-        logger.debug('Connected to notification stream');
-      };
+        eventSource.onopen = () => {
+          setIsConnected(true);
+          logger.debug('Connected to notification stream');
+        };
 
       eventSource.onmessage = (event) => {
         try {
@@ -157,6 +158,17 @@ export function useEdgeNotifications() {
       };
 
       eventSourceRef.current = eventSource;
+      
+      } catch (eventSourceError) {
+        logger.error('Error creating EventSource:', eventSourceError);
+        setIsConnected(false);
+        // Attempt to reconnect after 10 seconds
+        reconnectTimeoutRef.current = setTimeout(() => {
+          if (currentUser?.id) {
+            connect();
+          }
+        }, 10000);
+      }
 
     } catch (error) {
       logger.error('Error connecting to notification stream:', error);

@@ -16,7 +16,13 @@ export default async function handler(request: VercelRequest, response: VercelRe
   }
 
   try {
-    const { searchParams } = new URL(request.url || '');
+    // Handle relative URLs by constructing a full URL
+    const requestUrl = request.url || '';
+    const fullUrl = requestUrl.startsWith('http') 
+      ? requestUrl 
+      : `https://placeholder.com${requestUrl}`;
+    
+    const { searchParams } = new URL(fullUrl);
     const userId = searchParams.get('userId');
     const userType = searchParams.get('userType');
 
