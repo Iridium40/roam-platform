@@ -2,8 +2,9 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 
+// Use the latest stable API version instead of beta
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { 
-  apiVersion: '2025-08-27.basil' 
+  apiVersion: '2024-11-20.acacia' as any
 });
 
 const supabase = createClient(
@@ -134,18 +135,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       success_url: `${process.env.VITE_APP_URL || 'http://localhost:5174'}/booking-success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${process.env.VITE_APP_URL || 'http://localhost:5174'}/book-service?serviceId=${serviceId}&businessId=${businessId}`,
       metadata: {
-        bookingId: bookingId || '',
-        customerId,
-        serviceId,
-        businessId,
-        totalAmount: totalAmount.toString(),
-        platformFee: (platformFee / 100).toString(),
-        bookingDate: bookingDate || '',
-        startTime: startTime || '',
-        deliveryType: deliveryType || '',
-        specialInstructions: specialInstructions || '',
-        promotionId: promotionId || '',
-        guestPhone: guestPhone || ''
+        booking_id: bookingId || '',
+        customer_id: customerId,
+        service_id: serviceId,
+        business_id: businessId,
+        total_amount: totalAmount.toString(),
+        platform_fee: (platformFee / 100).toString(),
+        booking_date: bookingDate || '',
+        start_time: startTime || '',
+        delivery_type: deliveryType || '',
+        special_instructions: specialInstructions || '',
+        promotion_id: promotionId || '',
+        guest_phone: guestPhone || ''
       },
       // Customize appearance
       custom_fields: [

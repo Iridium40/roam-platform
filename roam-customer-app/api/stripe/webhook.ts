@@ -2,7 +2,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { createClient } from "@supabase/supabase-js";
 import Stripe from 'stripe';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2025-08-27.basil' });
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2024-11-20.acacia' as any });
 const supabase = createClient(
   process.env.VITE_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -54,7 +54,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             customer_id: metadata.customer_id,
             service_id: metadata.service_id,
             business_id: metadata.business_id,
-            provider_id: metadata.provider_id,
+            provider_id: metadata.provider_id || null,
             booking_date: metadata.booking_date,
             start_time: metadata.start_time,
             delivery_type: metadata.delivery_type,
@@ -62,11 +62,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             promotion_id: metadata.promotion_id || null,
             guest_phone: metadata.guest_phone || '',
             total_amount: parseFloat(metadata.total_amount),
-            service_price: parseFloat(metadata.service_price),
-            service_fee: parseFloat(metadata.service_fee),
-            discount_applied: parseFloat(metadata.discount_applied),
-            stripe_session_id: session.id,
-            stripe_payment_intent_id: session.payment_intent,
+            service_price: parseFloat(metadata.total_amount), // Use total_amount as service_price for now
+            service_fee: parseFloat(metadata.platform_fee || '0'),
+            discount_applied: 0, // Not passed in metadata yet
+            stripe_checkout_session_id: session.id,
+            stripe_payment_intent_id: session.payment_intent as string,
             payment_status: 'paid',
             booking_status: 'confirmed',
             paid_at: new Date().toISOString()
