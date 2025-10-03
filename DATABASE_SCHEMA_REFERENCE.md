@@ -2491,7 +2491,70 @@ const { data } = await supabase
 
 ---
 
-## 📝 IMPLEMENTATION NOTES
+## � PostgreSQL Enum Types
+
+### Service Category Types
+**Enum Name**: `service_category_types`  
+**Status**: ✅ CONFIRMED WORKING (2025-10-03)  
+**Used in**: `service_categories` table
+
+**Values**:
+- `beauty` - Beauty and personal care services
+- `fitness` - Fitness and training services  
+- `therapy` - Therapy and massage services
+- `healthcare` - Healthcare and medical services
+
+**Important**: When querying enum fields in Supabase/PostgREST, cast to text for equality comparisons:
+```typescript
+// ❌ INCORRECT - Will cause 406 error
+.eq("service_category_type", "beauty")
+
+// ✅ CORRECT - Cast enum to text
+.eq("service_category_type::text", "beauty")
+```
+
+### Service Subcategory Types
+**Enum Name**: `service_subcategory_types`  
+**Status**: ✅ CONFIRMED WORKING (2025-10-03)  
+**Used in**: `service_subcategories` table
+
+**Values**:
+- `hair_and_makeup` - Hair styling and makeup services
+- `spray_tan` - Spray tanning services
+- `esthetician` - Skincare and esthetician services
+- `massage_therapy` - Massage therapy services
+- `iv_therapy` - IV therapy and hydration services
+- `physical_therapy` - Physical therapy services
+- `nurse_practitioner` - Nurse practitioner services
+- `physician` - Physician services
+- `chiropractor` - Chiropractic services
+- `yoga_instructor` - Yoga instruction services
+- `pilates_instructor` - Pilates instruction services
+- `personal_trainer` - Personal training services
+- `injectables` - Injectable treatments (Botox, fillers, etc.)
+- `health_coach` - Health coaching services
+
+**Important**: When querying enum fields in Supabase/PostgREST, cast to text for equality comparisons:
+```typescript
+// ❌ INCORRECT - Will cause 406 error
+.eq("service_subcategory_type", "esthetician")
+
+// ✅ CORRECT - Cast enum to text
+.eq("service_subcategory_type::text", "esthetician")
+```
+
+**Category Mapping**:
+- **beauty**: hair_and_makeup, spray_tan, esthetician, injectables
+- **fitness**: yoga_instructor, pilates_instructor, personal_trainer
+- **therapy**: massage_therapy, physical_therapy, chiropractor
+- **healthcare**: iv_therapy, nurse_practitioner, physician, health_coach
+
+### Other Enum Types
+**Note**: Additional enum types exist in the database. Document them here as they are confirmed.
+
+---
+
+## �📝 IMPLEMENTATION NOTES
 
 ### 🔑 User Role Architecture Rules
 **CRITICAL**: Always query the correct table based on user role:
