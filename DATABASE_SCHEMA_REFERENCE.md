@@ -2504,13 +2504,18 @@ const { data } = await supabase
 - `therapy` - Therapy and massage services
 - `healthcare` - Healthcare and medical services
 
-**Important**: When querying enum fields in Supabase/PostgREST, cast to text for equality comparisons:
+**Important**: When querying enum fields in Supabase/PostgREST, use client-side filtering:
 ```typescript
-// ❌ INCORRECT - Will cause 406 error
+// ❌ INCORRECT - Both cause 406 errors
 .eq("service_category_type", "beauty")
+.eq("service_category_type::text", "beauty")  // PostgREST doesn't support casting in filters
 
-// ✅ CORRECT - Cast enum to text
-.eq("service_category_type::text", "beauty")
+// ✅ CORRECT - Fetch and filter client-side
+const { data: allCategories } = await supabase
+  .from("service_categories")
+  .select("*");
+  
+const beautyCategory = allCategories?.find(cat => cat.service_category_type === "beauty");
 ```
 
 ### Service Subcategory Types
@@ -2534,13 +2539,20 @@ const { data } = await supabase
 - `injectables` - Injectable treatments (Botox, fillers, etc.)
 - `health_coach` - Health coaching services
 
-**Important**: When querying enum fields in Supabase/PostgREST, cast to text for equality comparisons:
+**Important**: When querying enum fields in Supabase/PostgREST, use client-side filtering:
 ```typescript
-// ❌ INCORRECT - Will cause 406 error
+// ❌ INCORRECT - Both cause 406 errors
 .eq("service_subcategory_type", "esthetician")
+.eq("service_subcategory_type::text", "esthetician")  // PostgREST doesn't support this
 
-// ✅ CORRECT - Cast enum to text
-.eq("service_subcategory_type::text", "esthetician")
+// ✅ CORRECT - Fetch and filter client-side
+const { data: allSubcategories } = await supabase
+  .from("service_subcategories")
+  .select("*");
+  
+const estheticianSub = allSubcategories?.find(
+  sub => sub.service_subcategory_type === "esthetician"
+);
 ```
 
 **Category Mapping**:

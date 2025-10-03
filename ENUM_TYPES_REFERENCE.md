@@ -8,22 +8,60 @@
 
 ## 🚨 CRITICAL: Querying Enum Types in Supabase
 
-When using Supabase/PostgREST to query enum columns, you **MUST** cast the enum to text for equality comparisons, otherwise you'll get a **406 (Not Acceptable)** error.
+**Important**: PostgREST does NOT support casting enum columns in filter operations. The syntax `.eq("column::text", value)` does NOT work and will cause 406 errors.
 
-### ❌ INCORRECT (Will fail with 406 error)
+### ❌ INCORRECT Approaches (Both cause 406 errors)
+
 ```typescript
+// ❌ WRONG - Direct enum comparison
 const { data, error } = await supabase
   .from("service_subcategories")
   .select("*")
-  .eq("service_subcategory_type", "esthetician");  // ❌ WRONG
+  .eq("service_subcategory_type", "esthetician");
+
+// ❌ WRONG - Casting in filter (PostgREST doesn't support this)
+const { data, error } = await supabase
+  .from("service_subcategories")
+  .select("*")
+  .eq("service_subcategory_type::text", "esthetician");
 ```
 
-### ✅ CORRECT (Cast to text)
+### ✅ CORRECT Approach (Filter client-side)
+
+```typescript
+// ✅ RIGHT - Fetch all and filter in JavaScript
+const { data: allSubcategories } = await supabase
+  .from("service_subcategories")
+  .select("*");
+
+const estheticianSubcategory = allSubcategories?.find(
+  (sub) => sub.service_subcategory_type === "esthetician"
+);
+```
+
+### Alternative: Use PostgreSQL Functions
+
+For more complex queries, create a PostgreSQL function:
+
+```sql
+CREATE OR REPLACE FUNCTION get_subcategory_by_type(subcat_type text)
+RETURNS TABLE (id uuid, category_id uuid, service_subcategory_type service_subcategory_types)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT s.id, s.category_id, s.service_subcategory_type
+  FROM service_subcategories s
+  WHERE s.service_subcategory_type::text = subcat_type;
+END;
+$$;
+```
+
+Then call via RPC:
+
 ```typescript
 const { data, error } = await supabase
-  .from("service_subcategories")
-  .select("*")
-  .eq("service_subcategory_type::text", "esthetician");  // ✅ RIGHT
+  .rpc('get_subcategory_by_type', { subcat_type: 'esthetician' });
 ```
 
 ---

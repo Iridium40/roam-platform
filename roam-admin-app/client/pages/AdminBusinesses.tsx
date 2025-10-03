@@ -1710,15 +1710,17 @@ export default function AdminBusinesses() {
           throw new Error(errorData.error || 'Failed to delete existing service subcategories');
         }
 
+        // Fetch all subcategories once to avoid enum casting issues
+        const { data: allSubcategories } = await supabase
+          .from("service_subcategories")
+          .select("id, category_id, service_subcategory_type");
+
         // Then insert new ones
         for (const subcategoryType of editFormData.service_subcategories) {
-          // Get the subcategory ID and category_id from the service_subcategories table
-          // Cast the enum value to text for comparison
-          const { data: subcategoryData } = await supabase
-            .from("service_subcategories")
-            .select("id, category_id")
-            .eq("service_subcategory_type::text", subcategoryType)
-            .single();
+          // Find the subcategory by filtering client-side (avoids PostgREST enum casting issues)
+          const subcategoryData = allSubcategories?.find(
+            (sub: any) => sub.service_subcategory_type === subcategoryType
+          );
 
           if (subcategoryData) {
             const insertSubcategoryResponse = await fetch('/api/business-service-subcategories', {
