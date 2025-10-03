@@ -37,6 +37,11 @@ export interface EligibleService {
       service_category_type: string;
     };
   };
+  // Business configuration fields (when service is configured for this business)
+  is_configured?: boolean;
+  business_price?: number | null;
+  delivery_type?: 'customer_location' | 'business_location' | 'virtual' | 'both_locations' | null;
+  business_is_active?: boolean | null;
 }
 
 export interface ServiceStats {
