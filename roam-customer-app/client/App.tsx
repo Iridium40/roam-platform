@@ -17,7 +17,6 @@ import { PageErrorBoundary } from "@/components/ErrorBoundary";
 import AnnouncementPopup from "@/components/AnnouncementPopup";
 import { 
   CustomerFavorites, 
-  CustomerLocations, 
   CustomerTransactions, 
   CustomerProfile, 
   CustomerSettings 
@@ -37,6 +36,7 @@ const Contact = lazy(() => import("./pages/Contact"));
 const HowItWorks = lazy(() => import("./pages/HowItWorks"));
 const SignIn = lazy(() => import("./pages/SignIn"));
 const BecomeProvider = lazy(() => import("./pages/BecomeProvider"));
+const CustomerLocations = lazy(() => import("./pages/CustomerLocations"));
 
 // Loading component for Suspense fallback
 const PageLoader = () => (

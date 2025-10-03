@@ -395,6 +395,17 @@ export default function BookService() {
     fetchPlatformFee();
   }, []);
 
+  // Load locations when location step is reached
+  useEffect(() => {
+    if (currentStep === 'location') {
+      if (selectedDeliveryType === 'customer_location' && customerLocations.length === 0) {
+        loadCustomerLocations();
+      } else if (selectedDeliveryType === 'business_location' && businessLocations.length === 0 && selectedBusiness) {
+        loadBusinessLocations(selectedBusiness.id);
+      }
+    }
+  }, [currentStep, selectedDeliveryType]);
+
   // Load businesses that offer this service with pricing and availability validation
   const loadBusinesses = async () => {
     console.log('🏢 loadBusinesses called with:', {
