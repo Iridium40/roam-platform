@@ -7,6 +7,11 @@ import { createClient } from '@supabase/supabase-js';
  * Fetches services that a business is eligible to offer based on their
  * approved service categories and subcategories.
  * 
+ * PERMISSIONS:
+ * - owner: Can view eligible services for their business
+ * - dispatcher: Can view eligible services for their business  
+ * - provider: Can view eligible services for their business
+ * 
  * Authorization Flow:
  * 1. Platform admins approve businesses for specific service categories
  *    (stored in business_service_categories table)
@@ -51,6 +56,55 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       process.env.VITE_PUBLIC_SUPABASE_URL,
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
+
+    // Get authorization token from header
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ 
+        error: 'Authentication required',
+        message: 'Please sign in to access this resource'
+      });
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+
+    // Verify user and get their provider role
+    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+    
+    if (userError || !user) {
+      console.error('User verification failed:', userError);
+      return res.status(401).json({ 
+        error: 'Invalid or expired token',
+        message: 'Please sign in again'
+      });
+    }
+
+    // Get provider record to check role and business association
+    const { data: providerData, error: providerError } = await supabase
+      .from('providers')
+      .select('id, user_id, business_id, provider_role')
+      .eq('user_id', user.id)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (providerError || !providerData) {
+      console.error('Provider lookup failed:', providerError);
+      return res.status(403).json({ 
+        error: 'Access denied',
+        message: 'Provider profile not found or inactive'
+      });
+    }
+
+    // Verify user has permission to access this business
+    if (providerData.business_id !== business_id) {
+      console.error('Business ID mismatch - Access denied');
+      return res.status(403).json({ 
+        error: 'Access denied',
+        message: 'You do not have permission to access this business'
+      });
+    }
+
+    console.log('Authorization successful - Role:', providerData.provider_role);
 
     // Step 1: Verify business exists
     const { data: business, error: businessError } = await supabase

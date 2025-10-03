@@ -6,6 +6,11 @@ import { createClient } from '@supabase/supabase-js';
  * 
  * Fetches approved service categories and subcategories for a business
  * 
+ * PERMISSIONS:
+ * - owner: Can view their business's service eligibility
+ * - dispatcher: Can view their business's service eligibility
+ * - provider: Can view their business's service eligibility
+ * 
  * Query params:
  * - business_id: UUID of the business
  * 
@@ -51,6 +56,69 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!business_id || typeof business_id !== 'string') {
       return res.status(400).json({ error: 'Business ID is required' });
     }
+
+    // Get authorization token from header
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ 
+        error: 'Authentication required',
+        message: 'Please sign in to access business settings'
+      });
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+
+    // Verify user and get their provider role
+    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+    
+    if (userError || !user) {
+      console.error('🔍 User verification failed:', userError);
+      return res.status(401).json({ 
+        error: 'Invalid or expired token',
+        message: 'Please sign in again'
+      });
+    }
+
+    console.log('🔍 service-eligibility API - User authenticated:', user.id);
+
+    // Get provider record to check role and business association
+    const { data: providerData, error: providerError } = await supabase
+      .from('providers')
+      .select('id, user_id, business_id, provider_role')
+      .eq('user_id', user.id)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (providerError || !providerData) {
+      console.error('🔍 Provider lookup failed:', providerError);
+      return res.status(403).json({ 
+        error: 'Access denied',
+        message: 'Provider profile not found or inactive'
+      });
+    }
+
+    console.log('🔍 Provider role and business:', {
+      provider_role: providerData.provider_role,
+      provider_business_id: providerData.business_id,
+      requested_business_id: business_id
+    });
+
+    // Verify user has permission to access this business
+    if (providerData.business_id !== business_id) {
+      console.error('🔍 Business ID mismatch - Access denied');
+      return res.status(403).json({ 
+        error: 'Access denied',
+        message: 'You do not have permission to access this business',
+        debug: {
+          your_business_id: providerData.business_id,
+          requested_business_id: business_id
+        }
+      });
+    }
+
+    // All roles (owner, dispatcher, provider) can VIEW service eligibility
+    // Only owners can MODIFY (handled in other endpoints)
+    console.log('🔍 Authorization successful - Role:', providerData.provider_role);
 
     console.log('🔍 service-eligibility API - Querying business_id:', business_id);
 
