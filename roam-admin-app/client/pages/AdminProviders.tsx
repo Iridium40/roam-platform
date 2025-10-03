@@ -103,6 +103,27 @@ interface Provider {
   business_profiles?: {
     business_name: string;
   };
+  provider_services?: Array<{
+    id: string;
+    provider_id: string;
+    service_id: string;
+    is_active: boolean;
+    created_at: string;
+    services?: {
+      id: string;
+      name: string;
+      description: string | null;
+      min_price: number;
+      duration_minutes: number;
+      is_active: boolean;
+      service_subcategories?: {
+        service_subcategory_type: string;
+        service_categories?: {
+          service_category_type: string;
+        };
+      };
+    };
+  }>;
 }
 
 interface ProviderService {
@@ -708,6 +729,27 @@ export default function AdminProviders() {
           *,
           business_profiles!business_id (
             business_name
+          ),
+          provider_services (
+            id,
+            provider_id,
+            service_id,
+            is_active,
+            created_at,
+            services (
+              id,
+              name,
+              description,
+              min_price,
+              duration_minutes,
+              is_active,
+              service_subcategories (
+                service_subcategory_type,
+                service_categories (
+                  service_category_type
+                )
+              )
+            )
           )
         `,
         )
