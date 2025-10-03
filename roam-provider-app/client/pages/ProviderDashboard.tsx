@@ -125,11 +125,11 @@ interface ProviderWithRelations extends Provider {
     business_name: string;
     business_type: string;
     phone: string;
-    email: string;
-    website: string | null;
-    description: string | null;
+    contact_email: string;
+    website_url: string | null;
+    business_description: string | null;
     logo_url: string | null;
-    banner_image_url: string | null;
+    cover_image_url: string | null;
     is_active: boolean;
     created_at: string;
   };
