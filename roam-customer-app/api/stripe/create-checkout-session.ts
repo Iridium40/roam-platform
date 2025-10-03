@@ -69,35 +69,58 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     let stripeCustomerId: string | undefined;
     
     // Check if customer already has a Stripe profile (using user_id)
-    const { data: existingProfile } = await supabase
+    const { data: existingProfile, error: profileError } = await supabase
       .from('customer_stripe_profiles')
       .select('stripe_customer_id')
       .eq('user_id', customer.user_id)
       .single();
 
-    if (existingProfile) {
+    if (existingProfile && existingProfile.stripe_customer_id) {
       stripeCustomerId = existingProfile.stripe_customer_id;
-    } else {
-      // Create new Stripe customer
+      
+      // Verify the Stripe customer exists
+      try {
+        await stripe.customers.retrieve(stripeCustomerId);
+        console.log('✅ Using existing Stripe customer:', stripeCustomerId);
+      } catch (error) {
+        console.warn('⚠️ Stripe customer not found, creating new one. Old ID:', stripeCustomerId);
+        stripeCustomerId = undefined; // Will create new customer below
+        
+        // Delete invalid profile
+        await supabase
+          .from('customer_stripe_profiles')
+          .delete()
+          .eq('user_id', customer.user_id);
+      }
+    }
+    
+    // Create new Stripe customer if needed
+    if (!stripeCustomerId) {
+      console.log('Creating new Stripe customer for user:', customer.user_id);
+      
       const stripeCustomer = await stripe.customers.create({
         email: guestEmail || customer.email,
         name: guestName || `${customer.first_name} ${customer.last_name}`,
         phone: guestPhone || customer.phone,
         metadata: {
-          user_id: customerId,
+          user_id: customer.user_id,
+          customer_profile_id: customerId,
           source: 'roam_booking'
         }
       });
 
       stripeCustomerId = stripeCustomer.id;
+      console.log('✅ Created Stripe customer:', stripeCustomerId);
 
       // Save to database (using user_id)
       await supabase
         .from('customer_stripe_profiles')
-        .insert({
+        .upsert({
           user_id: customer.user_id,
           stripe_customer_id: stripeCustomerId,
           stripe_email: guestEmail || customer.email
+        }, {
+          onConflict: 'user_id'
         });
     }
 
