@@ -281,15 +281,23 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || 'Failed to send invitation');
+        throw new Error(result.error || result.details || 'Failed to send invitation');
       }
 
-      // Show success message
+      // Show success message (with warning if email didn't send)
+      const successMessage = result.emailSent 
+        ? `Staff invitation has been sent to ${inviteEmail}`
+        : `Invitation created for ${inviteEmail}. Note: Email may not have been delivered - please check server logs.`;
+      
       toast({
-        title: "Invitation Sent!",
-        description: `Staff invitation has been sent to ${inviteEmail}`,
-        variant: "default",
+        title: result.emailSent ? "Invitation Sent!" : "Invitation Created",
+        description: successMessage,
+        variant: result.emailSent ? "default" : "default",
       });
+
+      if (result.warning) {
+        console.warn('Invitation email warning:', result.warning);
+      }
 
       // Reset form
       setInviteEmail("");

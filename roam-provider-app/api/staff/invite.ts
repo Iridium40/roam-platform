@@ -120,27 +120,39 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const onboardingLink = `${baseUrl}/staff-onboarding?token=${invitationToken}`;
 
     // Send invitation email
-    const emailSent = await EmailService.sendStaffInvitationEmail(
-      email,
-      business.business_name,
-      role,
-      invitedBy,
-      onboardingLink
-    );
+    let emailSent = false;
+    try {
+      emailSent = await EmailService.sendStaffInvitationEmail(
+        email,
+        business.business_name,
+        role,
+        invitedBy,
+        onboardingLink
+      );
 
-    if (!emailSent) {
-      console.error('Failed to send invitation email to:', email);
-      // Still return success as the invitation record was created
+      if (!emailSent) {
+        console.error('Failed to send invitation email to:', email);
+        console.error('Email service returned false. Check Resend API configuration.');
+        // Still return success as the invitation record was created
+        // but warn the user
+      }
+    } catch (emailError) {
+      console.error('Exception while sending invitation email:', emailError);
+      // Continue even if email fails - the invitation record is created
     }
 
     console.log(`Staff invitation sent successfully to ${email} for business ${business.business_name}`);
 
     return res.status(200).json({
       success: true,
-      message: 'Staff invitation sent successfully',
+      message: emailSent 
+        ? 'Staff invitation sent successfully'
+        : 'Staff invitation created (email delivery pending)',
       email: email,
       businessName: business.business_name,
       role: role,
+      emailSent: emailSent,
+      warning: !emailSent ? 'Invitation created but email may not have been delivered' : undefined,
     });
 
   } catch (error) {
