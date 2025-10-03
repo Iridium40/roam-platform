@@ -1713,10 +1713,11 @@ export default function AdminBusinesses() {
         // Then insert new ones
         for (const subcategoryType of editFormData.service_subcategories) {
           // Get the subcategory ID and category_id from the service_subcategories table
+          // Cast the enum value to text for comparison
           const { data: subcategoryData } = await supabase
             .from("service_subcategories")
             .select("id, category_id")
-            .eq("service_subcategory_type", subcategoryType)
+            .eq("service_subcategory_type::text", subcategoryType)
             .single();
 
           if (subcategoryData) {
