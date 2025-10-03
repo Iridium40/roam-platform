@@ -10,20 +10,21 @@ import { MapPin, Home, Video, ArrowLeftRight } from 'lucide-react';
 export type DeliveryType = 'business_location' | 'customer_location' | 'virtual' | 'both_locations';
 
 /**
- * Get icon for delivery type
+ * Get icon component for delivery type
+ * Returns the component itself, not JSX
  */
 export function getDeliveryTypeIcon(type: string | null) {
   switch (type) {
     case 'business_location':
-      return <Home className="h-4 w-4" />;
+      return Home;
     case 'customer_location':
-      return <MapPin className="h-4 w-4" />;
+      return MapPin;
     case 'virtual':
-      return <Video className="h-4 w-4" />;
+      return Video;
     case 'both_locations':
-      return <ArrowLeftRight className="h-4 w-4" />;
+      return ArrowLeftRight;
     default:
-      return <MapPin className="h-4 w-4" />;
+      return MapPin;
   }
 }
 
