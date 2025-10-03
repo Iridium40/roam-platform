@@ -124,6 +124,20 @@ interface Provider {
       };
     };
   }>;
+  provider_addons?: Array<{
+    id: string;
+    provider_id: string;
+    addon_id: string;
+    is_active: boolean;
+    created_at: string;
+    service_addons?: {
+      id: string;
+      name: string;
+      description: string | null;
+      image_url: string | null;
+      is_active: boolean;
+    };
+  }>;
 }
 
 interface ProviderService {
@@ -749,6 +763,20 @@ export default function AdminProviders() {
                   service_category_type
                 )
               )
+            )
+          ),
+          provider_addons (
+            id,
+            provider_id,
+            addon_id,
+            is_active,
+            created_at,
+            service_addons (
+              id,
+              name,
+              description,
+              image_url,
+              is_active
             )
           )
         `,
@@ -2249,10 +2277,8 @@ export default function AdminProviders() {
                 <ROAMCardContent>
                   <div className="space-y-4">
                     {(() => {
-                      const currentProviderServices = providerServices.filter(
-                        (service) =>
-                          service.business_id === selectedProvider.id,
-                      );
+                      // Use the services nested in the provider object
+                      const currentProviderServices = selectedProvider.provider_services || [];
 
                       return currentProviderServices.length > 0 ? (
                         <div className="grid gap-4">
@@ -2350,9 +2376,8 @@ export default function AdminProviders() {
                 <ROAMCardContent>
                   <div className="space-y-4">
                     {(() => {
-                      const currentProviderAddons = providerAddons.filter(
-                        (addon) => addon.business_id === selectedProvider.id,
-                      );
+                      // Use the addons nested in the provider object
+                      const currentProviderAddons = selectedProvider.provider_addons || [];
 
                       return currentProviderAddons.length > 0 ? (
                         <div className="grid gap-4">
