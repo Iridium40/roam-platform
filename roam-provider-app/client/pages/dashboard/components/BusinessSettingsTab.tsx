@@ -396,11 +396,28 @@ export default function BusinessSettingsTab({
 
     try {
       setLogoUploading(true);
-      // TODO: Implement file upload to storage
-      // For now, just show a placeholder
+      
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${business.id}-${Date.now()}.${fileExt}`;
+      const filePath = `business-logo/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('roam-file-storage')
+        .upload(filePath, file);
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('roam-file-storage')
+        .getPublicUrl(filePath);
+
+      setBusinessData(prev => ({ ...prev, logo_url: publicUrl }));
+
       toast({
-        title: "Logo Updated",
-        description: "Logo upload functionality coming soon.",
+        title: "Success",
+        description: "Logo uploaded successfully.",
       });
     } catch (error) {
       console.error('Error uploading logo:', error);
@@ -420,11 +437,28 @@ export default function BusinessSettingsTab({
 
     try {
       setCoverUploading(true);
-      // TODO: Implement file upload to storage
-      // For now, just show a placeholder
+      
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${business.id}-${Date.now()}.${fileExt}`;
+      const filePath = `business-cover-image/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('roam-file-storage')
+        .upload(filePath, file);
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('roam-file-storage')
+        .getPublicUrl(filePath);
+
+      setBusinessData(prev => ({ ...prev, cover_image_url: publicUrl }));
+
       toast({
-        title: "Cover Photo Updated",
-        description: "Cover photo upload functionality coming soon.",
+        title: "Success",
+        description: "Cover photo uploaded successfully.",
       });
     } catch (error) {
       console.error('Error uploading cover photo:', error);
