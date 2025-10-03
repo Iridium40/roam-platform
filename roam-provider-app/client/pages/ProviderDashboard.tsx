@@ -617,7 +617,7 @@ export default function ProviderDashboard() {
               website_url,
               business_description,
               logo_url,
-              banner_image_url,
+              cover_image_url,
               is_active,
               created_at
             ),
