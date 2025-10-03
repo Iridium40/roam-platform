@@ -3,25 +3,23 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { logger } from '@/utils/logger';
 
-export interface Favorite {
+export interface ServiceFavorite {
   id: string;
   customer_id: string;
-  provider_id: string;
+  service_id: string;
   created_at: string;
-  providers: {
+  services: {
     id: string;
-    first_name: string;
-    last_name: string;
-    business_profiles: {
-      business_name: string;
-    };
+    name: string;
+    description: string | null;
+    min_price: number | null;
     image_url: string | null;
   };
 }
 
-export const useFavorites = () => {
+export const useServiceFavorites = () => {
   const { customer } = useAuth();
-  const [favorites, setFavorites] = useState<Favorite[]>([]);
+  const [favorites, setFavorites] = useState<ServiceFavorite[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -37,19 +35,17 @@ export const useFavorites = () => {
       setError(null);
 
       const { data, error: fetchError } = await supabase
-        .from("customer_favorite_providers")
+        .from("customer_favorite_services")
         .select(`
           id,
           customer_id,
-          provider_id,
+          service_id,
           created_at,
-          providers (
+          services (
             id,
-            first_name,
-            last_name,
-            business_profiles (
-              business_name
-            ),
+            name,
+            description,
+            min_price,
             image_url
           )
         `)
@@ -62,24 +58,24 @@ export const useFavorites = () => {
 
       setFavorites(data || []);
     } catch (err) {
-      logger.error("Error loading favorites:", err);
-      setError(err instanceof Error ? err.message : "Failed to load favorites");
+      logger.error("Error loading service favorites:", err);
+      setError(err instanceof Error ? err.message : "Failed to load service favorites");
     } finally {
       setLoading(false);
     }
   };
 
-  const addFavorite = async (providerId: string) => {
+  const addFavorite = async (serviceId: string) => {
     if (!customer) {
       throw new Error("Customer not authenticated");
     }
 
     try {
       const { error: insertError } = await supabase
-        .from("customer_favorite_providers")
+        .from("customer_favorite_services")
         .insert({
           customer_id: customer.id,
-          provider_id: providerId,
+          service_id: serviceId,
         });
 
       if (insertError) {
@@ -88,22 +84,22 @@ export const useFavorites = () => {
 
       await loadFavorites();
     } catch (err) {
-      logger.error("Error adding favorite:", err);
+      logger.error("Error adding service favorite:", err);
       throw err;
     }
   };
 
-  const removeFavorite = async (providerId: string) => {
+  const removeFavorite = async (serviceId: string) => {
     if (!customer) {
       throw new Error("Customer not authenticated");
     }
 
     try {
       const { error: deleteError } = await supabase
-        .from("customer_favorite_providers")
+        .from("customer_favorite_services")
         .delete()
         .eq("customer_id", customer.id)
-        .eq("provider_id", providerId);
+        .eq("service_id", serviceId);
 
       if (deleteError) {
         throw deleteError;
@@ -111,20 +107,20 @@ export const useFavorites = () => {
 
       await loadFavorites();
     } catch (err) {
-      logger.error("Error removing favorite:", err);
+      logger.error("Error removing service favorite:", err);
       throw err;
     }
   };
 
-  const isFavorite = (providerId: string) => {
-    return favorites.some((favorite) => favorite.provider_id === providerId);
+  const isFavorite = (serviceId: string) => {
+    return favorites.some((favorite) => favorite.service_id === serviceId);
   };
 
-  const toggleFavorite = async (providerId: string) => {
-    if (isFavorite(providerId)) {
-      await removeFavorite(providerId);
+  const toggleFavorite = async (serviceId: string) => {
+    if (isFavorite(serviceId)) {
+      await removeFavorite(serviceId);
     } else {
-      await addFavorite(providerId);
+      await addFavorite(serviceId);
     }
   };
 

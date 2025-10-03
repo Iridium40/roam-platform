@@ -2,8 +2,11 @@ import { useState, useEffect } from "react";
 import { Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useFavorites } from "@/hooks/useFavorites";
+import { useServiceFavorites } from "@/hooks/useServiceFavorites";
+import { useBusinessFavorites } from "@/hooks/useBusinessFavorites";
 import { cn } from "@/lib/utils";
 import { logger } from '@/utils/logger';
+import { useToast } from "@/hooks/use-toast";
 
 interface FavoriteButtonProps {
   type: "service" | "business" | "provider";
@@ -22,21 +25,23 @@ export function FavoriteButton({
   variant = "ghost",
   showText = false,
 }: FavoriteButtonProps) {
+  const { toast } = useToast();
   const [isFavorited, setIsFavorited] = useState(false);
   const [isCheckingStatus, setIsCheckingStatus] = useState(true);
+  const [isToggling, setIsToggling] = useState(false);
 
-  const {
-    loading: isLoading,
-    addFavorite,
-    removeFavorite,
-    isFavorite,
-    customer,
-  } = useFavorites();
+  // Use the appropriate hook based on type
+  const providerHook = useFavorites();
+  const serviceHook = useServiceFavorites();
+  const businessHook = useBusinessFavorites();
 
-  // Check if item is favorited on mount - only when customer is authenticated
+  // Select the correct hook based on type
+  const currentHook = type === "provider" ? providerHook : type === "service" ? serviceHook : businessHook;
+  const { loading: isLoading, addFavorite, removeFavorite, isFavorite, customer } = currentHook;
+
+  // Check if item is favorited on mount
   useEffect(() => {
     const checkFavoriteStatus = async () => {
-      // Don't check favorite status if customer is not authenticated
       if (!customer) {
         setIsFavorited(false);
         setIsCheckingStatus(false);
@@ -45,7 +50,6 @@ export function FavoriteButton({
 
       setIsCheckingStatus(true);
       try {
-        // For now, treat all types as provider favorites since that's what the hook supports
         const favorited = isFavorite(itemId);
         setIsFavorited(favorited);
       } catch (error) {
@@ -62,25 +66,44 @@ export function FavoriteButton({
     e.preventDefault();
     e.stopPropagation();
 
-    // Don't allow favoriting if customer is not authenticated
     if (!customer) {
-      // You could show a sign-in prompt here
-      logger.warn("Customer must be authenticated to favorite items");
+      toast({
+        title: "Sign in required",
+        description: "Please sign in to add favorites",
+        variant: "destructive",
+      });
       return;
     }
 
+    if (isToggling) return;
+
     try {
+      setIsToggling(true);
+      
       if (isFavorited) {
-        // Remove from favorites
         await removeFavorite(itemId);
         setIsFavorited(false);
+        toast({
+          title: "Removed from favorites",
+          description: `${type.charAt(0).toUpperCase() + type.slice(1)} removed from your favorites`,
+        });
       } else {
-        // Add to favorites
         await addFavorite(itemId);
         setIsFavorited(true);
+        toast({
+          title: "Added to favorites",
+          description: `${type.charAt(0).toUpperCase() + type.slice(1)} added to your favorites`,
+        });
       }
     } catch (error) {
       logger.error("Error toggling favorite:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update favorites. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsToggling(false);
     }
   };
 
@@ -106,7 +129,7 @@ export function FavoriteButton({
     }
   };
 
-  const isWorking = isLoading || isCheckingStatus;
+  const isWorking = isLoading || isCheckingStatus || isToggling;
   const isAuthenticated = !!customer;
 
   return (
@@ -129,8 +152,8 @@ export function FavoriteButton({
         !isAuthenticated
           ? "Sign in to add favorites"
           : isFavorited
-          ? `Remove from favorites`
-          : `Add to favorites`
+          ? `Remove ${type} from favorites`
+          : `Add ${type} to favorites`
       }
     >
       <Heart
