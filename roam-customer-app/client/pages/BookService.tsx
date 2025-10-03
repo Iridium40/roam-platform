@@ -795,6 +795,7 @@ export default function BookService() {
       serviceId: service.id,
       businessId: selectedBusiness.id,
       customerId: customer.id,
+      providerId: selectedProvider?.id || null,
       bookingDate: selectedDate.toISOString().split('T')[0], // Format as YYYY-MM-DD
       startTime: selectedTime,
       guestName: `${customer.first_name} ${customer.last_name}`,

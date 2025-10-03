@@ -49,6 +49,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const metadata = session.metadata;
 
         if (metadata && metadata.customer_id) {
+          // Generate booking reference (e.g., "BK-2025-001234")
+          const bookingReference = `BK-${new Date().getFullYear()}-${String(
+            Math.floor(Math.random() * 1000000)
+          ).padStart(6, '0')}`;
+
           // Extract booking details from metadata
           const bookingData = {
             customer_id: metadata.customer_id,
@@ -69,6 +74,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             stripe_payment_intent_id: session.payment_intent as string,
             payment_status: 'paid',
             booking_status: 'confirmed',
+            booking_reference: bookingReference,
             paid_at: new Date().toISOString()
           };
 
@@ -84,9 +90,67 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           } else {
             console.log('✅ Booking created successfully:', booking.id);
 
+            // Create payment transaction record
+            const platformFee = parseFloat(metadata.platform_fee || '0');
+            const totalAmount = parseFloat(metadata.total_amount);
+            const businessAmount = totalAmount - platformFee;
+
+            await supabase
+              .from('payment_transactions')
+              .insert({
+                booking_id: booking.id,
+                transaction_type: 'payment',
+                amount: totalAmount,
+                stripe_payment_intent_id: session.payment_intent as string,
+                stripe_charge_id: null,
+                status: 'succeeded',
+                processed_at: new Date().toISOString(),
+                created_at: new Date().toISOString(),
+              });
+
+            // Create financial transaction for audit trail
+            await supabase
+              .from('financial_transactions')
+              .insert({
+                booking_id: booking.id,
+                amount: totalAmount,
+                currency: 'USD',
+                stripe_transaction_id: session.payment_intent as string,
+                payment_method: 'card',
+                description: `Payment for booking ${booking.booking_reference || booking.id}`,
+                transaction_type: 'payment',
+                status: 'completed',
+                processed_at: new Date().toISOString(),
+                metadata: {
+                  platform_fee: platformFee,
+                  business_amount: businessAmount,
+                  session_id: session.id,
+                },
+                created_at: new Date().toISOString(),
+              });
+
+            // Create business payment transaction
+            await supabase
+              .from('business_payment_transactions')
+              .insert({
+                business_id: metadata.business_id,
+                booking_id: booking.id,
+                gross_amount: totalAmount,
+                platform_fee_amount: platformFee,
+                net_amount: businessAmount,
+                stripe_payment_intent_id: session.payment_intent as string,
+                payment_status: 'completed',
+                payment_date: new Date().toISOString(),
+                payout_status: 'pending',
+                created_at: new Date().toISOString(),
+              });
+
             // Update customer Stripe profile with payment method if saved
             if (session.customer && session.setup_intent) {
-              await updateCustomerPaymentMethods(session.customer, session.setup_intent);
+              const customerId = typeof session.customer === 'string' 
+                ? session.customer 
+                : session.customer.id;
+              await updateCustomerPaymentMethods(customerId, session.setup_intent as string);
             }
           }
         }
@@ -109,16 +173,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             })
             .eq('id', bookingId);
 
-          // Create payment record
+          // Create payment transaction record
           await supabase
-            .from('payments')
+            .from('payment_transactions')
             .insert({
               booking_id: bookingId,
+              transaction_type: 'payment',
+              amount: paymentIntent.amount / 100,
               stripe_payment_intent_id: paymentIntent.id,
+              stripe_charge_id: null,
+              status: 'succeeded',
+              processed_at: new Date().toISOString(),
+              created_at: new Date().toISOString(),
+            });
+
+          // Create financial transaction for audit trail
+          await supabase
+            .from('financial_transactions')
+            .insert({
+              booking_id: bookingId,
               amount: paymentIntent.amount / 100,
               currency: paymentIntent.currency,
-              status: 'succeeded',
-              customer_id: paymentIntent.customer,
+              stripe_transaction_id: paymentIntent.id,
+              payment_method: 'card',
+              transaction_type: 'payment',
+              status: 'completed',
+              processed_at: new Date().toISOString(),
               created_at: new Date().toISOString(),
             });
         }
@@ -139,17 +219,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             })
             .eq('id', bookingId);
 
-          // Create payment record
+          // Create payment transaction record
           await supabase
-            .from('payments')
+            .from('payment_transactions')
             .insert({
               booking_id: bookingId,
+              transaction_type: 'payment',
+              amount: paymentIntent.amount / 100,
               stripe_payment_intent_id: paymentIntent.id,
+              stripe_charge_id: null,
+              status: 'failed',
+              created_at: new Date().toISOString(),
+            });
+
+          // Create financial transaction for audit trail
+          await supabase
+            .from('financial_transactions')
+            .insert({
+              booking_id: bookingId,
               amount: paymentIntent.amount / 100,
               currency: paymentIntent.currency,
+              stripe_transaction_id: paymentIntent.id,
+              payment_method: 'card',
+              transaction_type: 'payment',
               status: 'failed',
-              customer_id: paymentIntent.customer,
-              failure_reason: paymentIntent.last_payment_error?.message,
               created_at: new Date().toISOString(),
             });
         }

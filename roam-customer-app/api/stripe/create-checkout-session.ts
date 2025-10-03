@@ -33,6 +33,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       serviceId,
       businessId,
       customerId,
+      providerId,
       bookingDate,
       startTime,
       guestName,
@@ -56,7 +57,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Get customer details from Supabase
     const { data: customer, error: customerError } = await supabase
       .from('customer_profiles')
-      .select('*')
+      .select('id, user_id, email, first_name, last_name, phone')
       .eq('id', customerId)
       .single();
 
@@ -67,11 +68,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Get or create Stripe customer
     let stripeCustomerId: string | undefined;
     
-    // Check if customer already has a Stripe profile
+    // Check if customer already has a Stripe profile (using user_id)
     const { data: existingProfile } = await supabase
       .from('customer_stripe_profiles')
       .select('stripe_customer_id')
-      .eq('user_id', customerId)
+      .eq('user_id', customer.user_id)
       .single();
 
     if (existingProfile) {
@@ -90,11 +91,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       stripeCustomerId = stripeCustomer.id;
 
-      // Save to database
+      // Save to database (using user_id)
       await supabase
         .from('customer_stripe_profiles')
         .insert({
-          user_id: customerId,
+          user_id: customer.user_id,
           stripe_customer_id: stripeCustomerId,
           stripe_email: guestEmail || customer.email
         });
@@ -139,6 +140,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         customer_id: customerId,
         service_id: serviceId,
         business_id: businessId,
+        provider_id: providerId || '',
         total_amount: totalAmount.toString(),
         platform_fee: (platformFee / 100).toString(),
         booking_date: bookingDate || '',
