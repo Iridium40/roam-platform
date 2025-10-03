@@ -16,13 +16,8 @@ import { Loader2 } from "lucide-react";
 import { PageErrorBoundary } from "@/components/ErrorBoundary";
 import AnnouncementPopup from "@/components/AnnouncementPopup";
 import { 
-  CustomerFavorites, 
-  CustomerTransactions, 
-  CustomerProfile, 
-  CustomerSettings 
+  CustomerFavorites 
 } from "@/components/placeholders/PlaceholderPages";
-
-
 
 // Lazy load pages for better performance
 const Index = lazy(() => import("./pages/Index"));
@@ -37,6 +32,9 @@ const HowItWorks = lazy(() => import("./pages/HowItWorks"));
 const SignIn = lazy(() => import("./pages/SignIn"));
 const BecomeProvider = lazy(() => import("./pages/BecomeProvider"));
 const CustomerLocations = lazy(() => import("./pages/CustomerLocations"));
+const CustomerTransactions = lazy(() => import("./pages/CustomerTransactions"));
+const CustomerProfile = lazy(() => import("./pages/CustomerProfile"));
+const CustomerSettings = lazy(() => import("./pages/CustomerSettings"));
 
 // Loading component for Suspense fallback
 const PageLoader = () => (

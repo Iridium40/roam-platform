@@ -20,19 +20,3 @@ const PlaceholderPage: React.FC<PlaceholderPageProps> = ({
 export const CustomerFavorites = () => (
   <PlaceholderPage title="My Favorites" />
 );
-
-export const CustomerLocations = () => (
-  <PlaceholderPage title="My Locations" />
-);
-
-export const CustomerTransactions = () => (
-  <PlaceholderPage title="Transaction History" />
-);
-
-export const CustomerProfile = () => (
-  <PlaceholderPage title="My Profile" />
-);
-
-export const CustomerSettings = () => (
-  <PlaceholderPage title="Settings" />
-);
