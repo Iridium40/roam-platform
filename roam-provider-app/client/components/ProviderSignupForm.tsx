@@ -25,7 +25,6 @@ interface ProviderSignupFormData {
   lastName: string;
   phone: string;
   dateOfBirth: string;
-  agreedToTerms: boolean;
   agreedToBackground: boolean;
 }
 
@@ -50,7 +49,6 @@ export function ProviderSignupForm({
     lastName: "",
     phone: "",
     dateOfBirth: "",
-    agreedToTerms: false,
     agreedToBackground: false,
   });
 
@@ -101,9 +99,6 @@ export function ProviderSignupForm({
           new Date().getFullYear() - new Date(value as string).getFullYear();
         if (age < 18)
           return "You must be at least 18 years old to register as a provider";
-        return null;
-      case "agreedToTerms":
-        if (!value) return "You must agree to the Terms of Service";
         return null;
       case "agreedToBackground":
         if (!value) return "You must consent to background check";
@@ -372,46 +367,6 @@ export function ProviderSignupForm({
 
           {/* Agreements */}
           <div className="space-y-4">
-            <div className="flex items-start space-x-3">
-              <Checkbox
-                id="agreedToTerms"
-                checked={formData.agreedToTerms}
-                onCheckedChange={handleCheckboxChange("agreedToTerms")}
-                disabled={loading}
-              />
-              <div className="space-y-1">
-                <Label
-                  htmlFor="agreedToTerms"
-                  className="text-sm leading-relaxed cursor-pointer"
-                >
-                  I agree to the{" "}
-                  <Button
-                    variant="link"
-                    className="p-0 h-auto text-roam-blue underline"
-                    type="button"
-                    onClick={() => window.open('https://app.termly.io/policy-viewer/policy.html?policyUUID=8bd3c211-2aaa-4626-9910-794dc2d85aff', '_blank')}
-                  >
-                    Terms of Service
-                  </Button>{" "}
-                  and{" "}
-                  <Button
-                    variant="link"
-                    className="p-0 h-auto text-roam-blue underline"
-                    type="button"
-                    onClick={() => window.open('https://app.termly.io/policy-viewer/policy.html?policyUUID=64dec2e3-d030-4421-86ff-a3e7864709d8', '_blank')}
-                  >
-                    Privacy Policy
-                  </Button>
-                  *
-                </Label>
-                {fieldErrors.agreedToTerms && (
-                  <p className="text-sm text-red-600">
-                    {fieldErrors.agreedToTerms}
-                  </p>
-                )}
-              </div>
-            </div>
-
             <div className="flex items-start space-x-3">
               <Checkbox
                 id="agreedToBackground"
