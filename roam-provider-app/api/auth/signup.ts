@@ -14,8 +14,6 @@ interface SignupData {
   lastName: string;
   phone: string;
   dateOfBirth: string;
-  agreedToTerms: boolean;
-  agreedToBackground: boolean;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -56,19 +54,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
-    // Validate agreements
-    if (!signupData.agreedToTerms) {
-      return res
-        .status(400)
-        .json({ error: "You must agree to the Terms of Service" });
-    }
-
-    if (!signupData.agreedToBackground) {
-      return res
-        .status(400)
-        .json({ error: "You must consent to background check" });
-    }
-
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(signupData.email)) {
@@ -104,8 +89,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           last_name: signupData.lastName,
           phone: signupData.phone,
           date_of_birth: signupData.dateOfBirth,
-          agreed_to_terms: signupData.agreedToTerms,
-          agreed_to_background: signupData.agreedToBackground,
           onboarding_step: "business_info",
           created_at: new Date().toISOString(),
         },
