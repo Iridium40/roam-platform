@@ -372,8 +372,8 @@ export class ImageStorageService {
     const errors: string[] = [];
     const warnings: string[] = [];
 
-    // Check file size
-    const maxSize = imageType === 'business_logo' ? 2 * 1024 * 1024 : 5 * 1024 * 1024; // 2MB for logo, 5MB for cover
+    // Check file size - use 50MB for all types
+    const maxSize = 50 * 1024 * 1024; // 50MB for all images
     if (file.size > maxSize) {
       errors.push(`File size must be less than ${maxSize / (1024 * 1024)}MB`);
     }

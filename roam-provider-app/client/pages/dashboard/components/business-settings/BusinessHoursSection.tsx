@@ -8,6 +8,9 @@ interface BusinessHoursSectionProps {
   businessData: any;
   setBusinessData: (data: any) => void;
   isEditing: boolean;
+  onSave: () => void;
+  onCancel: () => void;
+  onEdit: () => void;
 }
 
 interface DayHours {
@@ -30,6 +33,9 @@ export default function BusinessHoursSection({
   businessData,
   setBusinessData,
   isEditing,
+  onSave,
+  onCancel,
+  onEdit,
 }: BusinessHoursSectionProps) {
   
   const defaultHours: BusinessHours = {

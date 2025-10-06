@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
+import { ImageStorageService } from "@/utils/image/imageStorage";
+import type { ImageType } from "@/utils/image/imageTypes";
 
 interface BusinessData {
   id?: string;
@@ -237,23 +239,24 @@ export function useBusinessSettings(business: any) {
     setLogoUploading(true);
 
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${business.id}-logo-${Date.now()}.${fileExt}`;
-      const filePath = `business-assets/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('business-images')
-        .upload(filePath, file);
-
-      if (uploadError) {
-        throw uploadError;
+      // Validate file using ImageStorageService
+      const validation = await ImageStorageService.validateImage(file, 'business_logo');
+      if (!validation.isValid) {
+        throw new Error(validation.errors.join(', '));
       }
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('business-images')
-        .getPublicUrl(filePath);
+      // Upload using ImageStorageService with fallback (same as ProfileTab)
+      const result = await ImageStorageService.uploadImageWithFallback(
+        file,
+        'business_logo',
+        business.id
+      );
 
-      setBusinessData(prev => ({ ...prev, logo_url: publicUrl }));
+      if (!result.success || !result.publicUrl) {
+        throw new Error(result.error || 'Upload failed');
+      }
+
+      setBusinessData(prev => ({ ...prev, logo_url: result.publicUrl! }));
 
       toast({
         title: "Success",
@@ -263,7 +266,7 @@ export function useBusinessSettings(business: any) {
       console.error("Error uploading logo:", error);
       toast({
         title: "Error",
-        description: "Failed to upload logo. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to upload logo. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -278,23 +281,24 @@ export function useBusinessSettings(business: any) {
     setCoverUploading(true);
 
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${business.id}-cover-${Date.now()}.${fileExt}`;
-      const filePath = `business-assets/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('business-images')
-        .upload(filePath, file);
-
-      if (uploadError) {
-        throw uploadError;
+      // Validate file using ImageStorageService
+      const validation = await ImageStorageService.validateImage(file, 'business_cover');
+      if (!validation.isValid) {
+        throw new Error(validation.errors.join(', '));
       }
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('business-images')
-        .getPublicUrl(filePath);
+      // Upload using ImageStorageService with fallback (same as ProfileTab)
+      const result = await ImageStorageService.uploadImageWithFallback(
+        file,
+        'business_cover',
+        business.id
+      );
 
-      setBusinessData(prev => ({ ...prev, cover_image_url: publicUrl }));
+      if (!result.success || !result.publicUrl) {
+        throw new Error(result.error || 'Upload failed');
+      }
+
+      setBusinessData(prev => ({ ...prev, cover_image_url: result.publicUrl! }));
 
       toast({
         title: "Success",
@@ -304,7 +308,7 @@ export function useBusinessSettings(business: any) {
       console.error("Error uploading cover photo:", error);
       toast({
         title: "Error",
-        description: "Failed to upload cover photo. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to upload cover photo. Please try again.",
         variant: "destructive",
       });
     } finally {

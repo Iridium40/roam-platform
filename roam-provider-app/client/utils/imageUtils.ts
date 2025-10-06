@@ -19,7 +19,7 @@ export const IMAGE_REQUIREMENTS = {
     maxWidth: 512,
     maxHeight: 512,
     aspectRatio: 1, // Square
-    maxSize: 2 * 1024 * 1024, // 2MB
+    maxSize: 50 * 1024 * 1024, // 50MB
     formats: ['jpg', 'jpeg', 'png', 'webp'],
     purpose: 'Square logo for profile and search results'
   },
@@ -27,7 +27,7 @@ export const IMAGE_REQUIREMENTS = {
     maxWidth: 1200,
     maxHeight: 400,
     aspectRatio: 3, // 3:1 ratio
-    maxSize: 5 * 1024 * 1024, // 5MB
+    maxSize: 50 * 1024 * 1024, // 50MB
     formats: ['jpg', 'jpeg', 'png', 'webp'],
     purpose: 'Banner image for business profile page'
   },
@@ -35,7 +35,7 @@ export const IMAGE_REQUIREMENTS = {
     maxWidth: 400,
     maxHeight: 400,
     aspectRatio: 1, // Square
-    maxSize: 1 * 1024 * 1024, // 1MB
+    maxSize: 50 * 1024 * 1024, // 50MB
     formats: ['jpg', 'jpeg', 'png', 'webp'],
     purpose: 'Provider headshot for booking interface'
   },
@@ -43,7 +43,7 @@ export const IMAGE_REQUIREMENTS = {
     maxWidth: 1200,
     maxHeight: 400,
     aspectRatio: 3, // 3:1 ratio
-    maxSize: 3 * 1024 * 1024, // 3MB
+    maxSize: 50 * 1024 * 1024, // 50MB
     formats: ['jpg', 'jpeg', 'png', 'webp'],
     purpose: 'Personal profile banner'
   },
@@ -51,7 +51,7 @@ export const IMAGE_REQUIREMENTS = {
     maxWidth: 300,
     maxHeight: 300,
     aspectRatio: 1, // Square
-    maxSize: 1 * 1024 * 1024, // 1MB
+    maxSize: 50 * 1024 * 1024, // 50MB
     formats: ['jpg', 'jpeg', 'png', 'webp'],
     purpose: 'Staff member photo'
   }

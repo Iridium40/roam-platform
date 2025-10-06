@@ -117,7 +117,7 @@ export const sendNotificationSchema = z.object({
 // File upload validation schemas
 export const fileUploadSchema = z.object({
   file: z.instanceof(File),
-  maxSize: z.number().optional().default(5 * 1024 * 1024), // 5MB default
+  maxSize: z.number().optional().default(50 * 1024 * 1024), // 50MB default
   allowedTypes: z.array(z.string()).optional().default(['image/jpeg', 'image/png', 'image/webp', 'application/pdf']),
 });
 

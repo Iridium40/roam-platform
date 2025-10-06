@@ -87,7 +87,7 @@ export default function ServiceCategoriesSection({
             Approved Service Categories
           </CardTitle>
           <p className="text-sm text-gray-600">
-            Service categories and subcategories approved by platform administration for your business
+            Service categories and subcategories are approved by the ROAM Platform Administrator. Contact the ROAM Team for new requests or questions.
           </p>
         </CardHeader>
         <CardContent>
@@ -97,7 +97,7 @@ export default function ServiceCategoriesSection({
             </div>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">No Service Categories Approved</h3>
             <p className="text-gray-600 mb-4">
-              Your business doesn't have any approved service categories yet. Contact platform administration to get approved for specific service categories.
+              Your business doesn't have any approved service categories yet. Contact the ROAM Platform Administrator to get approved for specific service categories.
             </p>
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
               <div className="flex items-start space-x-3">
@@ -122,13 +122,13 @@ export default function ServiceCategoriesSection({
           Approved Service Categories
         </CardTitle>
         <p className="text-sm text-gray-600">
-          Service categories and subcategories approved by platform administration for your business
+          Service categories and subcategories are approved by the ROAM Platform Administrator. Contact the ROAM Team for new requests or questions.
         </p>
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
           {/* Summary Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <div className="flex items-center space-x-3">
                 <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
@@ -152,20 +152,6 @@ export default function ServiceCategoriesSection({
                   <p className="text-sm text-green-600 font-medium">Subcategories</p>
                   <p className="text-2xl font-bold text-green-900">
                     {serviceEligibility.stats?.total_subcategories || 0}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
-                  <Building className="w-5 h-5 text-purple-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-purple-600 font-medium">Business ID</p>
-                  <p className="text-xs font-mono text-purple-900 truncate">
-                    {serviceEligibility.business_id?.substring(0, 8)}...
                   </p>
                 </div>
               </div>

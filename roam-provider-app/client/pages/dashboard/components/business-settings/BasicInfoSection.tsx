@@ -15,8 +15,6 @@ import {
   Building,
   Camera,
   Trash2,
-  Edit,
-  Save,
 } from "lucide-react";
 
 interface BasicInfoSectionProps {
@@ -42,29 +40,11 @@ export default function BasicInfoSection({
 }: BasicInfoSectionProps) {
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
+      <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Building className="w-5 h-5" />
           Business Information
         </CardTitle>
-        <div className="flex gap-2">
-          {isEditing ? (
-            <>
-              <Button onClick={onSave} size="sm">
-                <Save className="w-4 h-4 mr-1" />
-                Save
-              </Button>
-              <Button onClick={onCancel} variant="outline" size="sm">
-                Cancel
-              </Button>
-            </>
-          ) : (
-            <Button onClick={onEdit} variant="outline" size="sm">
-              <Edit className="w-4 h-4 mr-1" />
-              Edit
-            </Button>
-          )}
-        </div>
       </CardHeader>
       <CardContent>
         <div className="space-y-6">

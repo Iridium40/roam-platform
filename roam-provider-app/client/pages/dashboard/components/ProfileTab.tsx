@@ -368,35 +368,43 @@ export default function ProfileTab({
                     alt="Cover"
                     className="w-full h-32 object-cover rounded-lg"
                   />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="absolute top-2 right-2"
-                    disabled={coverPhotoUploading}
-                    onClick={() => document.getElementById('cover-upload')?.click()}
-                  >
-                    <Camera className="w-4 h-4 mr-1" />
-                    Change
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="absolute top-2 right-20"
-                    onClick={() => setProfileData({...profileData, cover_image_url: ""})}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+                  {isEditing && (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="absolute top-2 right-2"
+                        disabled={coverPhotoUploading}
+                        onClick={() => document.getElementById('cover-upload')?.click()}
+                      >
+                        <Camera className="w-4 h-4 mr-1" />
+                        Change
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="absolute top-2 right-20"
+                        onClick={() => setProfileData({...profileData, cover_image_url: ""})}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </>
+                  )}
                 </div>
               ) : (
                 <div className="w-full h-32 bg-gray-100 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-300">
-                  <Button
-                    variant="outline"
-                    onClick={() => document.getElementById('cover-upload')?.click()}
-                    disabled={coverPhotoUploading}
-                  >
-                    <Upload className="w-4 h-4 mr-2" />
-                    Upload Cover Photo
-                  </Button>
+                  {isEditing ? (
+                    <Button
+                      variant="outline"
+                      onClick={() => document.getElementById('cover-upload')?.click()}
+                      disabled={coverPhotoUploading}
+                    >
+                      <Upload className="w-4 h-4 mr-2" />
+                      Upload Cover Photo
+                    </Button>
+                  ) : (
+                    <p className="text-sm text-gray-500">No cover photo uploaded</p>
+                  )}
                 </div>
               )}
               <input
@@ -404,6 +412,7 @@ export default function ProfileTab({
                 type="file"
                 accept="image/*"
                 className="hidden"
+                disabled={!isEditing}
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (file) handleCoverPhotoUpload(file);
@@ -411,7 +420,10 @@ export default function ProfileTab({
               />
             </div>
             <p className="text-xs text-gray-500 mt-1">
-              Upload a cover image for your profile (max 10MB). Recommended size: 800x200px
+              {isEditing 
+                ? "Upload a cover image for your profile (max 50MB). Recommended size: 1200x400px"
+                : "Click 'Edit Profile' to change your cover photo"
+              }
             </p>
           </div>
 
@@ -427,36 +439,44 @@ export default function ProfileTab({
                     {profileData.first_name?.[0]}{profileData.last_name?.[0]}
                   </AvatarFallback>
                 </Avatar>
-                <div className="space-y-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={profilePhotoUploading}
-                    onClick={() => document.getElementById('profile-upload')?.click()}
-                  >
-                    <Camera className="w-4 h-4 mr-1" />
-                    Change Photo
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setProfileData({...profileData, profile_image_url: ""})}
-                  >
-                    <Trash2 className="w-4 h-4 mr-1" />
-                    Remove
-                  </Button>
-                </div>
+                {isEditing && (
+                  <div className="space-y-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={profilePhotoUploading}
+                      onClick={() => document.getElementById('profile-upload')?.click()}
+                    >
+                      <Camera className="w-4 h-4 mr-1" />
+                      Change Photo
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setProfileData({...profileData, profile_image_url: ""})}
+                    >
+                      <Trash2 className="w-4 h-4 mr-1" />
+                      Remove
+                    </Button>
+                  </div>
+                )}
                 <input
                   id="profile-upload"
                   type="file"
                   accept="image/*"
                   className="hidden"
+                  disabled={!isEditing}
                   onChange={(e) => {
                     const file = e.target.files?.[0];
                     if (file) handleProfilePhotoUpload(file);
                   }}
                 />
               </div>
+              {!isEditing && (
+                <p className="text-xs text-gray-500 mt-2">
+                  Click 'Edit Profile' to change your photo
+                </p>
+              )}
             </div>
 
             {/* Basic Information */}

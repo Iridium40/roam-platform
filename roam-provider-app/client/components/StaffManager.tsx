@@ -8,6 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -55,6 +56,7 @@ import {
   DollarSign,
   Settings,
   Send,
+  Package,
 } from "lucide-react";
 import { useProviderAuth } from "@/contexts/auth/ProviderAuthContext";
 import { supabase } from "@/lib/supabase";
@@ -65,6 +67,7 @@ import type {
   ProviderRole,
   ProviderVerificationStatus,
 } from "@roam/shared";
+import type { BusinessService } from "@/types/services";
 
 interface StaffManagerProps {
   businessId: string;
@@ -132,13 +135,194 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
   const [inviteRole, setInviteRole] = useState<ProviderRole>("provider");
   const [inviteLocation, setInviteLocation] = useState("no-location");
 
+  // Service assignment state
+  const [businessServices, setBusinessServices] = useState<BusinessService[]>([]);
+  const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const [businessAddons, setBusinessAddons] = useState<any[]>([]);
+  const [loadingServices, setLoadingServices] = useState(false);
+  const [editDialogTab, setEditDialogTab] = useState("details");
+
   // Safely handle locations prop - ensure it's always an array
   const safeLocations = Array.isArray(locations) ? locations : [];
 
 
   useEffect(() => {
     fetchStaff();
+    fetchBusinessServices();
   }, [businessId]);
+
+  useEffect(() => {
+    if (selectedStaff && isEditDialogOpen && selectedStaff.provider_role === 'provider') {
+      fetchProviderServices(selectedStaff.id);
+    }
+  }, [selectedStaff, isEditDialogOpen]);
+
+  const fetchBusinessServices = async () => {
+    try {
+      const response = await fetch(
+        `/api/business/services?business_id=${businessId}`
+      );
+      
+      if (!response.ok) {
+        throw new Error("Failed to fetch business services");
+      }
+
+      const data = await response.json();
+      
+      // Filter only active services
+      const activeServices = (data.services || []).filter(
+        (service: BusinessService) => service.is_active
+      );
+      
+      setBusinessServices(activeServices);
+
+      // Also fetch business addons for these services
+      await fetchBusinessAddons();
+    } catch (error: any) {
+      console.error("Error fetching business services:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load business services",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const fetchBusinessAddons = async () => {
+    try {
+      const response = await fetch(
+        `/api/business-eligible-addons?business_id=${businessId}`
+      );
+      
+      if (!response.ok) {
+        console.warn("Could not fetch business addons, continuing without them");
+        setBusinessAddons([]);
+        return;
+      }
+
+      const data = await response.json();
+      setBusinessAddons(data.eligible_addons || []);
+    } catch (error: any) {
+      console.warn("Error fetching business addons, continuing without them:", error);
+      setBusinessAddons([]);
+    }
+  };
+
+  const fetchProviderServices = async (providerId: string) => {
+    setLoadingServices(true);
+    try {
+      const response = await fetch(`/api/provider/services/${providerId}`);
+      
+      if (!response.ok) {
+        throw new Error("Failed to fetch provider services");
+      }
+
+      const data = await response.json();
+      const activeServiceIds = (data.services || [])
+        .filter((ps: any) => ps.is_active)
+        .map((ps: any) => ps.service_id);
+      
+      setSelectedServices(activeServiceIds);
+    } catch (error: any) {
+      console.error("Error fetching provider services:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load provider services",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingServices(false);
+    }
+  };
+
+  const handleServiceToggle = (serviceId: string) => {
+    setSelectedServices(prev => 
+      prev.includes(serviceId)
+        ? prev.filter(id => id !== serviceId)
+        : [...prev, serviceId]
+    );
+  };
+
+  const handleUpdateProviderServices = async () => {
+    if (!selectedStaff) return;
+
+    try {
+      // Update provider services
+      const servicesResponse = await fetch("/api/provider/services", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          provider_id: selectedStaff.id,
+          service_ids: selectedServices,
+        }),
+      });
+
+      if (!servicesResponse.ok) {
+        throw new Error("Failed to update provider services");
+      }
+
+      // Auto-assign eligible addons based on selected services
+      await handleAutoAssignAddons();
+
+      toast({
+        title: "Success",
+        description: "Provider services updated successfully",
+      });
+    } catch (error: any) {
+      console.error("Error updating provider services:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update provider services",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleAutoAssignAddons = async () => {
+    if (!selectedStaff || selectedServices.length === 0) return;
+
+    try {
+      // Find all eligible addons for the selected services
+      const eligibleAddonIds = new Set<string>();
+      
+      // Get addon eligibility from service_addon_eligibility
+      const { data: addonEligibility, error } = await supabase
+        .from('service_addon_eligibility')
+        .select('addon_id')
+        .in('service_id', selectedServices);
+
+      if (error) {
+        console.error('Error fetching addon eligibility:', error);
+        return;
+      }
+
+      addonEligibility?.forEach((ae: any) => eligibleAddonIds.add(ae.addon_id));
+
+      // Filter to only business-available addons
+      const businessAddonIds = businessAddons.map((ba: any) => ba.id);
+      const addonsToAssign = Array.from(eligibleAddonIds).filter(
+        addonId => businessAddonIds.includes(addonId)
+      );
+
+      // Assign addons to provider
+      if (addonsToAssign.length > 0) {
+        const addonsResponse = await fetch("/api/provider/addons", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            provider_id: selectedStaff.id,
+            addon_ids: addonsToAssign,
+          }),
+        });
+
+        if (!addonsResponse.ok) {
+          console.error("Failed to auto-assign addons");
+        }
+      }
+    } catch (error: any) {
+      console.error("Error auto-assigning addons:", error);
+    }
+  };
 
   const fetchStaff = async () => {
     try {
@@ -200,7 +384,7 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
   };
 
 
-  const handleUpdateStaff = async () => {
+    const handleUpdateStaff = async () => {
     if (!selectedStaff) return;
 
     try {
@@ -220,11 +404,24 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
 
       if (error) throw error;
 
+      // If provider role, also update services
+      if (selectedStaff.provider_role === 'provider') {
+        await handleUpdateProviderServices();
+      }
+
+      toast({
+        title: "Success",
+        description: "Staff member updated successfully",
+      });
+
       setIsEditDialogOpen(false);
-      setSelectedStaff(null);
-      await fetchStaff();
-    } catch (error) {
-      console.error("Error updating staff member:", error);
+      fetchStaff();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
     }
   };
 
@@ -629,8 +826,14 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
 
       {/* Edit Staff Dialog */}
       {selectedStaff && (
-        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent className="max-w-2xl">
+        <Dialog open={isEditDialogOpen} onOpenChange={(open) => {
+          setIsEditDialogOpen(open);
+          if (!open) {
+            setEditDialogTab("details");
+            setSelectedServices([]);
+          }
+        }}>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Edit Staff Member</DialogTitle>
               <DialogDescription>
@@ -639,101 +842,191 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
               </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+            <Tabs value={editDialogTab} onValueChange={setEditDialogTab}>
+              <TabsList className="grid w-full grid-cols-1">
+                <TabsTrigger value="details">Details</TabsTrigger>
+                {/* Services tab temporarily disabled - will be enabled after server restart */}
+                {/* {selectedStaff.provider_role === 'provider' && (
+                  <TabsTrigger value="services">Services</TabsTrigger>
+                )} */}
+              </TabsList>
+
+              <TabsContent value="details" className="space-y-4 mt-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="editFirstName">First Name *</Label>
+                    <Input
+                      id="editFirstName"
+                      value={selectedStaff.first_name}
+                      onChange={(e) =>
+                        setSelectedStaff({
+                          ...selectedStaff,
+                          first_name: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="editLastName">Last Name *</Label>
+                    <Input
+                      id="editLastName"
+                      value={selectedStaff.last_name}
+                      onChange={(e) =>
+                        setSelectedStaff({
+                          ...selectedStaff,
+                          last_name: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+                </div>
+
                 <div className="space-y-2">
-                  <Label htmlFor="editFirstName">First Name *</Label>
+                  <Label htmlFor="editEmail">Email Address *</Label>
                   <Input
-                    id="editFirstName"
-                    value={selectedStaff.first_name}
+                    id="editEmail"
+                    type="email"
+                    value={selectedStaff.email}
                     onChange={(e) =>
                       setSelectedStaff({
                         ...selectedStaff,
-                        first_name: e.target.value,
+                        email: e.target.value,
                       })
                     }
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="editLastName">Last Name *</Label>
-                  <Input
-                    id="editLastName"
-                    value={selectedStaff.last_name}
-                    onChange={(e) =>
-                      setSelectedStaff({
-                        ...selectedStaff,
-                        last_name: e.target.value,
-                      })
-                    }
-                  />
-                </div>
-              </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="editEmail">Email Address *</Label>
-                <Input
-                  id="editEmail"
-                  type="email"
-                  value={selectedStaff.email}
-                  onChange={(e) =>
-                    setSelectedStaff({
-                      ...selectedStaff,
-                      email: e.target.value,
-                    })
-                  }
-                />
-              </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="editRole">Role *</Label>
+                    <Select
+                      value={selectedStaff.provider_role}
+                      onValueChange={(value) =>
+                        setSelectedStaff({
+                          ...selectedStaff,
+                          provider_role: value as ProviderRole,
+                        })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a role" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {roleOptions.map((role) => (
+                          <SelectItem key={role.value} value={role.value}>
+                            <div className="flex items-center gap-2">
+                              <role.icon className="w-4 h-4" />
+                              {role.label}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="editRole">Role *</Label>
-                  <Select
-                    value={selectedStaff.provider_role}
-                    onValueChange={(value) =>
-                      setSelectedStaff({
-                        ...selectedStaff,
-                        provider_role: value as ProviderRole,
-                      })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {roleOptions.map((role) => (
-                        <SelectItem key={role.value} value={role.value}>
-                          <div className="flex items-center gap-2">
-                            <role.icon className="w-4 h-4" />
-                            {role.label}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="space-y-2">
+                    <Label htmlFor="editLocation">Location *</Label>
+                    <Select
+                      value={selectedStaff.location_id || ""}
+                      onValueChange={(value) =>
+                        setSelectedStaff({ ...selectedStaff, location_id: value })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a location" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {safeLocations.map((location) => (
+                          <SelectItem key={location.id} value={location.id}>
+                            {location.location_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
+              </TabsContent>
 
-                <div className="space-y-2">
-                  <Label htmlFor="editLocation">Location *</Label>
-                  <Select
-                    value={selectedStaff.location_id}
-                    onValueChange={(value) =>
-                      setSelectedStaff({ ...selectedStaff, location_id: value })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {safeLocations.map((location) => (
-                        <SelectItem key={location.id} value={location.id}>
-                          {location.location_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </div>
+              <TabsContent value="services" className="space-y-4 mt-4">
+                {loadingServices ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-roam-blue"></div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-lg font-medium">Assign Services</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Select services this provider can offer. Only active business services are shown.
+                        </p>
+                      </div>
+                      <Badge variant="secondary">
+                        {selectedServices.length} selected
+                      </Badge>
+                    </div>
+
+                    {businessServices.length === 0 ? (
+                      <Alert>
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertDescription>
+                          No active services available. Please add and activate services in the Business Services tab first.
+                        </AlertDescription>
+                      </Alert>
+                    ) : (
+                      <div className="grid gap-3 max-h-[400px] overflow-y-auto pr-2">
+                        {businessServices.map((service) => (
+                          <Card key={service.id} className="p-4">
+                            <div className="flex items-start gap-3">
+                              <Checkbox
+                                id={`service-${service.id}`}
+                                checked={selectedServices.includes(service.service_id)}
+                                onCheckedChange={() => handleServiceToggle(service.service_id)}
+                              />
+                              <div className="flex-1 space-y-1">
+                                <label
+                                  htmlFor={`service-${service.id}`}
+                                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                                >
+                                  {service.services?.name || 'Unknown Service'}
+                                </label>
+                                <p className="text-sm text-muted-foreground line-clamp-2">
+                                  {service.services?.description}
+                                </p>
+                                <div className="flex items-center gap-4 mt-2">
+                                  <Badge variant="outline" className="text-xs">
+                                    <DollarSign className="w-3 h-3 mr-1" />
+                                    ${service.business_price}
+                                  </Badge>
+                                  <Badge variant="outline" className="text-xs">
+                                    <Calendar className="w-3 h-3 mr-1" />
+                                    {service.services?.duration_minutes} min
+                                  </Badge>
+                                  {service.delivery_type && (
+                                    <Badge variant="outline" className="text-xs">
+                                      <MapPin className="w-3 h-3 mr-1" />
+                                      {service.delivery_type.replace(/_/g, ' ')}
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </Card>
+                        ))}
+                      </div>
+                    )}
+
+                    <Alert>
+                      <Package className="h-4 w-4" />
+                      <AlertDescription>
+                        <strong>Add-ons will be auto-assigned:</strong> When you assign services, 
+                        compatible add-ons from your business will automatically be assigned to this provider.
+                      </AlertDescription>
+                    </Alert>
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
 
             <DialogFooter>
               <Button

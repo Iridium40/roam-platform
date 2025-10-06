@@ -47,7 +47,7 @@ export interface StorageConfig {
 // Image requirements configuration
 export const IMAGE_REQUIREMENTS: Record<ImageType, ImageRequirements> = {
   business_logo: {
-    maxSize: 5 * 1024 * 1024, // 5MB
+    maxSize: 50 * 1024 * 1024, // 50MB
     maxWidth: 800,
     maxHeight: 800,
     formats: ["jpg", "jpeg", "png", "webp"],
@@ -55,7 +55,7 @@ export const IMAGE_REQUIREMENTS: Record<ImageType, ImageRequirements> = {
     quality: 85,
   },
   business_cover: {
-    maxSize: 10 * 1024 * 1024, // 10MB
+    maxSize: 50 * 1024 * 1024, // 50MB
     maxWidth: 1920,
     maxHeight: 1080,
     formats: ["jpg", "jpeg", "png", "webp"],
@@ -63,7 +63,7 @@ export const IMAGE_REQUIREMENTS: Record<ImageType, ImageRequirements> = {
     quality: 80,
   },
   provider_avatar: {
-    maxSize: 2 * 1024 * 1024, // 2MB
+    maxSize: 50 * 1024 * 1024, // 50MB
     maxWidth: 400,
     maxHeight: 400,
     formats: ["jpg", "jpeg", "png", "webp"],
@@ -71,7 +71,7 @@ export const IMAGE_REQUIREMENTS: Record<ImageType, ImageRequirements> = {
     quality: 90,
   },
   provider_cover: {
-    maxSize: 10 * 1024 * 1024, // 10MB
+    maxSize: 50 * 1024 * 1024, // 50MB
     maxWidth: 1200,
     maxHeight: 400,
     formats: ["jpg", "jpeg", "png", "webp"],
@@ -79,7 +79,7 @@ export const IMAGE_REQUIREMENTS: Record<ImageType, ImageRequirements> = {
     quality: 85,
   },
   customer_avatar: {
-    maxSize: 2 * 1024 * 1024, // 2MB
+    maxSize: 50 * 1024 * 1024, // 50MB
     maxWidth: 400,
     maxHeight: 400,
     formats: ["jpg", "jpeg", "png", "webp"],
@@ -87,14 +87,14 @@ export const IMAGE_REQUIREMENTS: Record<ImageType, ImageRequirements> = {
     quality: 90,
   },
   document_image: {
-    maxSize: 10 * 1024 * 1024, // 10MB
+    maxSize: 50 * 1024 * 1024, // 50MB
     maxWidth: 2048,
     maxHeight: 2048,
     formats: ["jpg", "jpeg", "png", "pdf"],
     quality: 85,
   },
   service_image: {
-    maxSize: 5 * 1024 * 1024, // 5MB
+    maxSize: 50 * 1024 * 1024, // 50MB
     maxWidth: 1200,
     maxHeight: 800,
     formats: ["jpg", "jpeg", "png", "webp"],

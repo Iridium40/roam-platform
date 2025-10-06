@@ -297,6 +297,46 @@ export function createServer() {
     }
   );
 
+  // Business documents routes
+  app.get("/api/business/documents",
+    requireAuth(['owner', 'dispatcher', 'admin']),
+    async (req, res) => {
+      try {
+        const documentsHandler = await import("../api/business/documents");
+        await documentsHandler.default(req, res);
+      } catch (error) {
+        console.error("Error importing business documents handler:", error);
+        res.status(500).json({ error: "Failed to load business documents handler" });
+      }
+    }
+  );
+  
+  app.post("/api/business/documents",
+    requireAuth(['owner', 'dispatcher', 'admin']),
+    async (req, res) => {
+      try {
+        const documentsHandler = await import("../api/business/documents");
+        await documentsHandler.default(req, res);
+      } catch (error) {
+        console.error("Error importing business documents handler:", error);
+        res.status(500).json({ error: "Failed to load business documents handler" });
+      }
+    }
+  );
+  
+  app.delete("/api/business/documents",
+    requireAuth(['owner', 'dispatcher', 'admin']),
+    async (req, res) => {
+      try {
+        const documentsHandler = await import("../api/business/documents");
+        await documentsHandler.default(req, res);
+      } catch (error) {
+        console.error("Error importing business documents handler:", error);
+        res.status(500).json({ error: "Failed to load business documents handler" });
+      }
+    }
+  );
+
   // Business hours routes
   app.get("/api/business/hours",
     requireAuth(['owner', 'dispatcher', 'admin']),
@@ -1601,6 +1641,222 @@ export function createServer() {
   app.post("/api/staff/invite", sendStaffInvite);
   app.post("/api/staff/validate-invitation", validateStaffInvitation);
   app.post("/api/staff/complete-onboarding", completeStaffOnboarding);
+
+  // ==================== Provider Services Management ====================
+  
+  // Get provider services
+  app.get("/api/provider/services/:providerId", requireAuth, async (req, res) => {
+    try {
+      const { providerId } = req.params;
+
+      if (!providerId) {
+        return res.status(400).json({ error: "Provider ID is required" });
+      }
+
+      // Get provider services with service details
+      const { data: providerServices, error: servicesError } = await supabase
+        .from('provider_services')
+        .select(`
+          id,
+          provider_id,
+          service_id,
+          is_active,
+          created_at,
+          services (
+            id,
+            name,
+            description,
+            min_price,
+            duration_minutes,
+            image_url
+          )
+        `)
+        .eq('provider_id', providerId);
+
+      if (servicesError) {
+        console.error('Error fetching provider services:', servicesError);
+        return res.status(500).json({ 
+          error: 'Failed to fetch provider services',
+          details: servicesError.message 
+        });
+      }
+
+      res.json({
+        provider_id: providerId,
+        services: providerServices || []
+      });
+    } catch (error: any) {
+      console.error('Error in /api/provider/services/:providerId:', error);
+      res.status(500).json({ error: 'Internal server error', details: error.message });
+    }
+  });
+
+  // Assign services to provider (bulk operation)
+  app.post("/api/provider/services", requireAuth, async (req, res) => {
+    try {
+      const { provider_id, service_ids } = req.body;
+
+      if (!provider_id || !Array.isArray(service_ids)) {
+        return res.status(400).json({ 
+          error: "Provider ID and service IDs array are required" 
+        });
+      }
+
+      // First, deactivate all existing provider services
+      const { error: deactivateError } = await supabase
+        .from('provider_services')
+        .update({ is_active: false })
+        .eq('provider_id', provider_id);
+
+      if (deactivateError) {
+        console.error('Error deactivating provider services:', deactivateError);
+        return res.status(500).json({ 
+          error: 'Failed to update provider services',
+          details: deactivateError.message 
+        });
+      }
+
+      // Then, upsert the new service assignments
+      if (service_ids.length > 0) {
+        const providerServices = service_ids.map(service_id => ({
+          provider_id,
+          service_id,
+          is_active: true
+        }));
+
+        const { error: upsertError } = await supabase
+          .from('provider_services')
+          .upsert(providerServices, { 
+            onConflict: 'provider_id,service_id',
+            ignoreDuplicates: false 
+          });
+
+        if (upsertError) {
+          console.error('Error upserting provider services:', upsertError);
+          return res.status(500).json({ 
+            error: 'Failed to assign services',
+            details: upsertError.message 
+          });
+        }
+      }
+
+      res.json({
+        success: true,
+        message: 'Provider services updated successfully',
+        assigned_count: service_ids.length
+      });
+    } catch (error: any) {
+      console.error('Error in /api/provider/services POST:', error);
+      res.status(500).json({ error: 'Internal server error', details: error.message });
+    }
+  });
+
+  // Get provider addons
+  app.get("/api/provider/addons/:providerId", requireAuth, async (req, res) => {
+    try {
+      const { providerId } = req.params;
+
+      if (!providerId) {
+        return res.status(400).json({ error: "Provider ID is required" });
+      }
+
+      // Get provider addons with addon details
+      const { data: providerAddons, error: addonsError } = await supabase
+        .from('provider_addons')
+        .select(`
+          id,
+          provider_id,
+          addon_id,
+          is_active,
+          created_at,
+          service_addons (
+            id,
+            name,
+            description,
+            image_url
+          )
+        `)
+        .eq('provider_id', providerId);
+
+      if (addonsError) {
+        console.error('Error fetching provider addons:', addonsError);
+        return res.status(500).json({ 
+          error: 'Failed to fetch provider addons',
+          details: addonsError.message 
+        });
+      }
+
+      res.json({
+        provider_id: providerId,
+        addons: providerAddons || []
+      });
+    } catch (error: any) {
+      console.error('Error in /api/provider/addons/:providerId:', error);
+      res.status(500).json({ error: 'Internal server error', details: error.message });
+    }
+  });
+
+  // Assign addons to provider (bulk operation)
+  app.post("/api/provider/addons", requireAuth, async (req, res) => {
+    try {
+      const { provider_id, addon_ids } = req.body;
+
+      if (!provider_id || !Array.isArray(addon_ids)) {
+        return res.status(400).json({ 
+          error: "Provider ID and addon IDs array are required" 
+        });
+      }
+
+      // First, deactivate all existing provider addons
+      const { error: deactivateError } = await supabase
+        .from('provider_addons')
+        .update({ is_active: false })
+        .eq('provider_id', provider_id);
+
+      if (deactivateError) {
+        console.error('Error deactivating provider addons:', deactivateError);
+        return res.status(500).json({ 
+          error: 'Failed to update provider addons',
+          details: deactivateError.message 
+        });
+      }
+
+      // Then, upsert the new addon assignments
+      if (addon_ids.length > 0) {
+        const providerAddons = addon_ids.map(addon_id => ({
+          provider_id,
+          addon_id,
+          is_active: true
+        }));
+
+        const { error: upsertError } = await supabase
+          .from('provider_addons')
+          .upsert(providerAddons, { 
+            onConflict: 'provider_id,addon_id',
+            ignoreDuplicates: false 
+          });
+
+        if (upsertError) {
+          console.error('Error upserting provider addons:', upsertError);
+          return res.status(500).json({ 
+            error: 'Failed to assign addons',
+            details: upsertError.message 
+          });
+        }
+      }
+
+      res.json({
+        success: true,
+        message: 'Provider addons updated successfully',
+        assigned_count: addon_ids.length
+      });
+    } catch (error: any) {
+      console.error('Error in /api/provider/addons POST:', error);
+      res.status(500).json({ error: 'Internal server error', details: error.message });
+    }
+  });
+
+  // ==================== End Provider Services Management ====================
 
   // Error handling middleware
   app.use((error: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
