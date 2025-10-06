@@ -2,6 +2,7 @@ export type ImageType =
   | "business_logo"
   | "business_cover"
   | "provider_avatar"
+  | "provider_cover"
   | "customer_avatar"
   | "document_image"
   | "service_image";
@@ -69,6 +70,14 @@ export const IMAGE_REQUIREMENTS: Record<ImageType, ImageRequirements> = {
     aspectRatio: 1, // Square
     quality: 90,
   },
+  provider_cover: {
+    maxSize: 10 * 1024 * 1024, // 10MB
+    maxWidth: 1200,
+    maxHeight: 400,
+    formats: ["jpg", "jpeg", "png", "webp"],
+    aspectRatio: 3, // 3:1
+    quality: 85,
+  },
   customer_avatar: {
     maxSize: 2 * 1024 * 1024, // 2MB
     maxWidth: 400,
@@ -99,6 +108,7 @@ export const STORAGE_BUCKETS: Record<ImageType, string> = {
   business_logo: "roam-file-storage",
   business_cover: "roam-file-storage",
   provider_avatar: "roam-file-storage",
+  provider_cover: "roam-file-storage",
   customer_avatar: "roam-file-storage",
   document_image: "provider-documents",
   service_image: "roam-file-storage",

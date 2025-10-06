@@ -245,6 +245,8 @@ export class ImageStorageService {
         return `businesses/${businessId}/cover`;
       case 'provider_avatar':
         return `avatar-provider-user/${userId || businessId}`;
+      case 'provider_cover':
+        return `cover-provider-user/${userId || businessId}`;
       case 'customer_avatar':
         return `avatar-customer-user/${userId || businessId}`;
       case 'document_image':

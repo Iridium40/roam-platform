@@ -85,19 +85,6 @@ export default function AddonsTabSimplified({
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="bg-primary/10 rounded-lg p-3">
-          <Puzzle className="h-6 w-6 text-primary" />
-        </div>
-        <div>
-          <h2 className="text-2xl font-bold">Service Add-ons</h2>
-          <p className="text-muted-foreground">
-            Manage add-ons available for your services
-          </p>
-        </div>
-      </div>
-
       {/* Error Alert */}
       {error && (
         <Alert variant="destructive">

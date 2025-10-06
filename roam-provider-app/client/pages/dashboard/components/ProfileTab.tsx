@@ -12,9 +12,13 @@ import {
   Trash2,
   Save,
   Edit,
+  Loader2,
+  CheckCircle,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
+import { ImageStorageService } from "@/utils/image/imageStorage";
+import type { ImageType } from "@/utils/image/imageTypes";
 
 interface ProfileTabProps {
   providerData: any;
@@ -39,6 +43,15 @@ export default function ProfileTab({
   const [isEditing, setIsEditing] = useState(false);
   const [profilePhotoUploading, setProfilePhotoUploading] = useState(false);
   const [coverPhotoUploading, setCoverPhotoUploading] = useState(false);
+  const [profilePhotoPreview, setProfilePhotoPreview] = useState<string | null>(null);
+  const [coverPhotoPreview, setCoverPhotoPreview] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<{
+    profile: { uploading: boolean; uploaded: boolean; error?: string };
+    cover: { uploading: boolean; uploaded: boolean; error?: string };
+  }>({
+    profile: { uploading: false, uploaded: false },
+    cover: { uploading: false, uploaded: false },
+  });
 
   // Load profile data
   const loadProfileData = async () => {
@@ -107,21 +120,73 @@ export default function ProfileTab({
 
   // Handle profile photo upload
   const handleProfilePhotoUpload = async (file: File) => {
-    if (!providerData?.id) return;
+    if (!providerData?.id || !providerData?.user_id) return;
 
     try {
       setProfilePhotoUploading(true);
-      // TODO: Implement file upload to storage
-      // For now, just show a placeholder
+      setUploadProgress(prev => ({
+        ...prev,
+        profile: { uploading: true, uploaded: false, error: undefined }
+      }));
+
+      // Validate file
+      const validation = await ImageStorageService.validateImage(file, 'provider_avatar');
+      if (!validation.isValid) {
+        throw new Error(validation.errors.join(', '));
+      }
+
+      // Create preview
+      const preview = ImageStorageService.generatePreviewUrl(file);
+      setProfilePhotoPreview(preview);
+
+      // Upload to storage
+      const result = await ImageStorageService.uploadImageWithFallback(
+        file,
+        'provider_avatar',
+        providerData.business_id || providerData.id,
+        providerData.user_id
+      );
+
+      if (!result.success || !result.publicUrl) {
+        throw new Error(result.error || 'Upload failed');
+      }
+
+      // Update profile data in state
+      setProfileData(prev => ({
+        ...prev,
+        profile_image_url: result.publicUrl!
+      }));
+
+      // Update database
+      const { error } = await supabase
+        .from('providers')
+        .update({ image_url: result.publicUrl })
+        .eq('id', providerData.id);
+
+      if (error) throw error;
+
+      setUploadProgress(prev => ({
+        ...prev,
+        profile: { uploading: false, uploaded: true }
+      }));
+
       toast({
         title: "Profile Photo Updated",
-        description: "Profile photo upload functionality coming soon.",
+        description: "Your profile photo has been uploaded successfully.",
       });
     } catch (error) {
       console.error('Error uploading profile photo:', error);
+      setUploadProgress(prev => ({
+        ...prev,
+        profile: { 
+          uploading: false, 
+          uploaded: false, 
+          error: error instanceof Error ? error.message : 'Upload failed'
+        }
+      }));
       toast({
         title: "Error",
-        description: "Failed to upload profile photo. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to upload profile photo. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -131,26 +196,104 @@ export default function ProfileTab({
 
   // Handle cover photo upload
   const handleCoverPhotoUpload = async (file: File) => {
-    if (!providerData?.id) return;
+    if (!providerData?.id || !providerData?.user_id) return;
 
     try {
       setCoverPhotoUploading(true);
-      // TODO: Implement file upload to storage
-      // For now, just show a placeholder
+      setUploadProgress(prev => ({
+        ...prev,
+        cover: { uploading: true, uploaded: false, error: undefined }
+      }));
+
+      // Validate file
+      const validation = await ImageStorageService.validateImage(file, 'provider_cover');
+      if (!validation.isValid) {
+        throw new Error(validation.errors.join(', '));
+      }
+
+      // Create preview
+      const preview = ImageStorageService.generatePreviewUrl(file);
+      setCoverPhotoPreview(preview);
+
+      // Upload to storage
+      const result = await ImageStorageService.uploadImageWithFallback(
+        file,
+        'provider_cover',
+        providerData.business_id || providerData.id,
+        providerData.user_id
+      );
+
+      if (!result.success || !result.publicUrl) {
+        throw new Error(result.error || 'Upload failed');
+      }
+
+      // Update profile data in state
+      setProfileData(prev => ({
+        ...prev,
+        cover_image_url: result.publicUrl!
+      }));
+
+      // Update database
+      const { error } = await supabase
+        .from('providers')
+        .update({ cover_image_url: result.publicUrl })
+        .eq('id', providerData.id);
+
+      if (error) throw error;
+
+      setUploadProgress(prev => ({
+        ...prev,
+        cover: { uploading: false, uploaded: true }
+      }));
+
       toast({
         title: "Cover Photo Updated",
-        description: "Cover photo upload functionality coming soon.",
+        description: "Your cover photo has been uploaded successfully.",
       });
     } catch (error) {
       console.error('Error uploading cover photo:', error);
+      setUploadProgress(prev => ({
+        ...prev,
+        cover: { 
+          uploading: false, 
+          uploaded: false, 
+          error: error instanceof Error ? error.message : 'Upload failed'
+        }
+      }));
       toast({
         title: "Error",
-        description: "Failed to upload cover photo. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to upload cover photo. Please try again.",
         variant: "destructive",
       });
     } finally {
       setCoverPhotoUploading(false);
     }
+  };
+
+  // Handle removing profile photo
+  const handleRemoveProfilePhoto = () => {
+    if (profilePhotoPreview) {
+      ImageStorageService.cleanupPreviewUrl(profilePhotoPreview);
+      setProfilePhotoPreview(null);
+    }
+    setProfileData(prev => ({ ...prev, profile_image_url: "" }));
+    setUploadProgress(prev => ({
+      ...prev,
+      profile: { uploading: false, uploaded: false }
+    }));
+  };
+
+  // Handle removing cover photo
+  const handleRemoveCoverPhoto = () => {
+    if (coverPhotoPreview) {
+      ImageStorageService.cleanupPreviewUrl(coverPhotoPreview);
+      setCoverPhotoPreview(null);
+    }
+    setProfileData(prev => ({ ...prev, cover_image_url: "" }));
+    setUploadProgress(prev => ({
+      ...prev,
+      cover: { uploading: false, uploaded: false }
+    }));
   };
 
   useEffect(() => {

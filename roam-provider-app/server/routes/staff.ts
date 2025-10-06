@@ -118,11 +118,15 @@ export const completeStaffOnboarding = async (req: Request, res: Response) => {
   try {
     const { token, firstName, lastName, phone, bio, password, confirmPassword } = req.body;
 
+    console.log('[Staff Onboarding] Starting onboarding process');
+
     if (!token || !firstName || !lastName || !phone || !password) {
+      console.log('[Staff Onboarding] Missing required fields');
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
     if (password !== confirmPassword) {
+      console.log('[Staff Onboarding] Passwords do not match');
       return res.status(400).json({ error: 'Passwords do not match' });
     }
 
@@ -130,10 +134,48 @@ export const completeStaffOnboarding = async (req: Request, res: Response) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as any;
 
     if (decoded.type !== 'staff_invitation') {
+      console.log('[Staff Onboarding] Invalid invitation token type');
       return res.status(400).json({ error: 'Invalid invitation token' });
     }
 
-    // Check if provider record already exists
+    console.log(`[Staff Onboarding] Creating auth user for email: ${decoded.email}`);
+
+    // Step 1: Create Supabase auth user
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      email: decoded.email,
+      password: password,
+      email_confirm: true, // Auto-confirm email since they were invited
+      user_metadata: {
+        first_name: firstName,
+        last_name: lastName,
+        phone: phone,
+      }
+    });
+
+    if (authError) {
+      console.error('[Staff Onboarding] Error creating auth user:', authError);
+      
+      // Check if user already exists
+      if (authError.message.includes('already registered') || authError.message.includes('already exists')) {
+        return res.status(400).json({ 
+          error: 'An account with this email already exists. Please use the login page.' 
+        });
+      }
+      
+      return res.status(500).json({ 
+        error: 'Failed to create user account',
+        details: authError.message 
+      });
+    }
+
+    if (!authData.user) {
+      console.error('[Staff Onboarding] No user data returned from auth creation');
+      return res.status(500).json({ error: 'Failed to create user account' });
+    }
+
+    console.log(`[Staff Onboarding] Auth user created with ID: ${authData.user.id}`);
+
+    // Step 2: Check if provider record already exists
     const { data: existingProvider, error: providerCheckError } = await supabase
       .from('providers')
       .select('*')
@@ -142,10 +184,13 @@ export const completeStaffOnboarding = async (req: Request, res: Response) => {
       .single();
 
     if (existingProvider && !providerCheckError) {
-      // Provider record exists, update it
-      const { error: updateError } = await supabase
+      // Provider record exists, update it with the auth user ID
+      console.log(`[Staff Onboarding] Updating existing provider record`);
+      
+      const { data: updatedProvider, error: updateError } = await supabase
         .from('providers')
         .update({
+          id: authData.user.id, // Link to auth user
           first_name: firstName,
           last_name: lastName,
           phone: phone,
@@ -154,33 +199,63 @@ export const completeStaffOnboarding = async (req: Request, res: Response) => {
           is_active: true,
         })
         .eq('email', decoded.email)
-        .eq('business_id', decoded.businessId);
+        .eq('business_id', decoded.businessId)
+        .select()
+        .single();
 
       if (updateError) {
-        console.error('Error updating provider record:', updateError);
+        console.error('[Staff Onboarding] Error updating provider record:', updateError);
         return res.status(500).json({ error: 'Failed to update provider record' });
       }
 
+      console.log(`[Staff Onboarding] Provider record updated successfully`);
+
       return res.status(200).json({
         success: true,
         message: 'Staff onboarding completed successfully',
-        provider: existingProvider,
+        provider: updatedProvider,
       });
     } else {
-      // Provider record doesn't exist
-      // For now, just return success - the provider record will be created when the user logs in
-      console.log(`Staff onboarding completed for ${decoded.email} - provider record will be created on first login`);
+      // Provider record doesn't exist, create it
+      console.log(`[Staff Onboarding] Creating new provider record`);
       
+      const { data: newProvider, error: insertError } = await supabase
+        .from('providers')
+        .insert({
+          id: authData.user.id,
+          business_id: decoded.businessId,
+          email: decoded.email,
+          first_name: firstName,
+          last_name: lastName,
+          phone: phone,
+          bio: bio || null,
+          role: decoded.role,
+          location_id: decoded.locationId || null,
+          verification_status: 'approved',
+          is_active: true,
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error('[Staff Onboarding] Error creating provider record:', insertError);
+        return res.status(500).json({ 
+          error: 'Failed to create provider record',
+          details: insertError.message 
+        });
+      }
+
+      console.log(`[Staff Onboarding] Provider record created successfully`);
+
       return res.status(200).json({
         success: true,
         message: 'Staff onboarding completed successfully',
-        email: decoded.email,
-        note: 'Provider record will be created when you first log in'
+        provider: newProvider,
       });
     }
 
   } catch (error) {
-    console.error('Error in completeStaffOnboarding:', error);
+    console.error('[Staff Onboarding] Error in completeStaffOnboarding:', error);
     
     if (error instanceof jwt.JsonWebTokenError) {
       return res.status(400).json({ error: 'Invalid or expired invitation token' });

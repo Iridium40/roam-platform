@@ -1,6 +1,9 @@
 import type {
-  UserRole as UserRoleEnum,
+  UserRoleType,
   CustomerLocationType,
+  ProviderRole,
+  ProviderVerificationStatus,
+  BackgroundCheckStatus,
 } from '../enums';
 
 // Customer Profiles Table
@@ -73,52 +76,85 @@ export interface ProvidersTable {
     id: string;
     user_id: string;
     business_id: string | null;
-    first_name: string | null;
-    last_name: string | null;
-    email: string | null;
-    phone: string | null;
-    date_of_birth: string | null;
-    is_active: boolean | null;
-    created_at: string | null;
-    updated_at: string | null;
-    image_url: string | null;
+    location_id: string | null;
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone: string;
     bio: string | null;
-    verification_status: string | null;
-    business_managed: boolean | null;
+    image_url: string | null;
+    cover_image_url: string | null;
+    date_of_birth: string | null;
+    experience_years: number | null;
+    verification_status: ProviderVerificationStatus | null;
+    background_check_status: BackgroundCheckStatus | null;
+    identity_verification_status: string | null;
+    provider_role: ProviderRole | null;
+    business_managed: boolean;
+    is_active: boolean | null;
+    total_bookings: number | null;
+    completed_bookings: number | null;
+    average_rating: number | null;
+    total_reviews: number | null;
+    notification_email: string | null;
+    notification_phone: string | null;
+    created_at: string | null;
   };
   Insert: {
     id?: string;
     user_id: string;
     business_id?: string | null;
-    first_name?: string | null;
-    last_name?: string | null;
-    email?: string | null;
-    phone?: string | null;
-    date_of_birth?: string | null;
-    is_active?: boolean | null;
-    created_at?: string | null;
-    updated_at?: string | null;
-    image_url?: string | null;
+    location_id?: string | null;
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone: string;
     bio?: string | null;
-    verification_status?: string | null;
-    business_managed?: boolean | null;
+    image_url?: string | null;
+    cover_image_url?: string | null;
+    date_of_birth?: string | null;
+    experience_years?: number | null;
+    verification_status?: ProviderVerificationStatus | null;
+    background_check_status?: BackgroundCheckStatus | null;
+    identity_verification_status?: string | null;
+    provider_role?: ProviderRole | null;
+    business_managed: boolean;
+    is_active?: boolean | null;
+    total_bookings?: number | null;
+    completed_bookings?: number | null;
+    average_rating?: number | null;
+    total_reviews?: number | null;
+    notification_email?: string | null;
+    notification_phone?: string | null;
+    created_at?: string | null;
   };
   Update: {
     id?: string;
     user_id?: string;
     business_id?: string | null;
-    first_name?: string | null;
-    last_name?: string | null;
-    email?: string | null;
-    phone?: string | null;
-    date_of_birth?: string | null;
-    is_active?: boolean | null;
-    created_at?: string | null;
-    updated_at?: string | null;
-    image_url?: string | null;
+    location_id?: string | null;
+    first_name?: string;
+    last_name?: string;
+    email?: string;
+    phone?: string;
     bio?: string | null;
-    verification_status?: string | null;
-    business_managed?: boolean | null;
+    image_url?: string | null;
+    cover_image_url?: string | null;
+    date_of_birth?: string | null;
+    experience_years?: number | null;
+    verification_status?: ProviderVerificationStatus | null;
+    background_check_status?: BackgroundCheckStatus | null;
+    identity_verification_status?: string | null;
+    provider_role?: ProviderRole | null;
+    business_managed?: boolean;
+    is_active?: boolean | null;
+    total_bookings?: number | null;
+    completed_bookings?: number | null;
+    average_rating?: number | null;
+    total_reviews?: number | null;
+    notification_email?: string | null;
+    notification_phone?: string | null;
+    created_at?: string | null;
   };
 }
 
@@ -127,7 +163,7 @@ export interface UserRolesTable {
   Row: {
     id: string;
     user_id: string;
-    role: UserRoleEnum;
+    role: UserRoleType;
     business_id: string | null;
     location_id: string | null;
     granted_by: string | null;
@@ -140,7 +176,7 @@ export interface UserRolesTable {
   Insert: {
     id?: string;
     user_id: string;
-    role: UserRoleEnum;
+    role: UserRoleType;
     business_id?: string | null;
     location_id?: string | null;
     granted_by?: string | null;
@@ -153,7 +189,7 @@ export interface UserRolesTable {
   Update: {
     id?: string;
     user_id?: string;
-    role?: UserRoleEnum;
+    role?: UserRoleType;
     business_id?: string | null;
     location_id?: string | null;
     granted_by?: string | null;

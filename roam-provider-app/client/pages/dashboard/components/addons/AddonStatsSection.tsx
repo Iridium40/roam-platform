@@ -8,61 +8,63 @@ interface AddonStatsSectionProps {
 }
 
 export function AddonStatsSection({ stats }: AddonStatsSectionProps) {
-  const statCards = [
-    {
-      title: 'Total Add-ons',
-      value: stats.total_addons,
-      icon: Puzzle,
-      description: 'Eligible add-ons',
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-50 dark:bg-blue-950/20',
-    },
-    {
-      title: 'Available',
-      value: stats.available_addons,
-      icon: Package,
-      description: 'Currently available',
-      color: 'text-green-600',
-      bgColor: 'bg-green-50 dark:bg-green-950/20',
-    },
-    {
-      title: 'Avg. Price',
-      value: `$${stats.avg_price.toFixed(2)}`,
-      icon: TrendingUp,
-      description: 'Average add-on price',
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-50 dark:bg-purple-950/20',
-    },
-    {
-      title: 'Total Revenue',
-      value: `$${stats.total_revenue.toFixed(2)}`,
-      icon: DollarSign,
-      description: 'From configured add-ons',
-      color: 'text-amber-600',
-      bgColor: 'bg-amber-50 dark:bg-amber-950/20',
-    },
-  ];
-
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-      {statCards.map((stat) => (
-        <Card key={stat.title}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              {stat.title}
-            </CardTitle>
-            <div className={`rounded-full p-2 ${stat.bgColor}`}>
-              <stat.icon className={`h-4 w-4 ${stat.color}`} />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stat.value}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {stat.description}
-            </p>
-          </CardContent>
-        </Card>
-      ))}
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Total Add-ons</CardTitle>
+          <Puzzle className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{stats.total_addons}</div>
+          <p className="text-xs text-muted-foreground">
+            Eligible add-ons
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Available</CardTitle>
+          <Package className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{stats.available_addons}</div>
+          <p className="text-xs text-muted-foreground">
+            Currently available
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+          <DollarSign className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">
+            ${stats.total_revenue?.toLocaleString() || '0'}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            From configured add-ons
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Average Price</CardTitle>
+          <TrendingUp className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">
+            ${stats.avg_price?.toFixed(2) || '0.00'}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Average add-on price
+          </p>
+        </CardContent>
+      </Card>
     </div>
   );
 }
