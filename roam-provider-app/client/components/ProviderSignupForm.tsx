@@ -395,6 +395,7 @@ export function ProviderSignupForm({
                 variant="link"
                 className="p-0 h-auto text-roam-blue"
                 type="button"
+                onClick={() => window.location.href = '/login'}
               >
                 Sign in here
               </Button>
