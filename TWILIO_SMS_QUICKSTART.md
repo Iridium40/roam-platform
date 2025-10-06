@@ -16,9 +16,9 @@
 ### 1. Twilio Account Setup
 
 ✅ **Already Completed!** Your Twilio credentials are configured:
-- Account SID: `AC903bee9e4a9ca6e911de718acbf5385f`
-- Phone Number: `+18506088086`
-- Conversations Service SID: `IS5069b5cf49b04c40a9174548f5b1470e`
+- Account SID: `your_account_sid`
+- Phone Number: `your_twilio_phone_number`
+- Conversations Service SID: `your_service_sid`
 
 ### 2. Environment Configuration
 
@@ -26,15 +26,15 @@
 
 ```env
 # Frontend (Conversations)
-VITE_TWILIO_ACCOUNT_SID=AC903bee9e4a9ca6e911de718acbf5385f
-VITE_TWILIO_AUTH_TOKEN=34b7fbefcb5298dadd73ff66a0740b04
-VITE_TWILIO_CONVERSATIONS_SERVICE_SID=IS5069b5cf49b04c40a9174548f5b1470e
-VITE_TWILIO_PHONE_NUMBER=+18506088086
+VITE_TWILIO_ACCOUNT_SID=your_account_sid
+VITE_TWILIO_AUTH_TOKEN=your_auth_token
+VITE_TWILIO_CONVERSATIONS_SERVICE_SID=your_service_sid
+VITE_TWILIO_PHONE_NUMBER=your_twilio_phone_number
 
 # Backend (SMS Notifications - Server-side only)
-TWILIO_ACCOUNT_SID=AC903bee9e4a9ca6e911de718acbf5385f
-TWILIO_AUTH_TOKEN=34b7fbefcb5298dadd73ff66a0740b04
-TWILIO_PHONE_NUMBER=+18506088086
+TWILIO_ACCOUNT_SID=your_account_sid
+TWILIO_AUTH_TOKEN=your_auth_token
+TWILIO_PHONE_NUMBER=your_twilio_phone_number
 ```
 
 **Note:** The backend variables (without `VITE_` prefix) are for server-side SMS sending only and won't be exposed to the frontend.

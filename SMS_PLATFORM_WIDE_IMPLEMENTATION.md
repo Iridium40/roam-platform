@@ -436,14 +436,14 @@ All three apps need these environment variables (already configured in `.env`):
 
 ```env
 # Backend SMS (server-side only)
-TWILIO_ACCOUNT_SID=AC903bee9e4a9ca6e911de718acbf5385f
-TWILIO_AUTH_TOKEN=34b7fbefcb5298dadd73ff66a0740b04
-TWILIO_PHONE_NUMBER=+18506088086
+TWILIO_ACCOUNT_SID=your_account_sid_here
+TWILIO_AUTH_TOKEN=your_auth_token_here
+TWILIO_PHONE_NUMBER=your_twilio_phone_number
 
 # Frontend (if needed for conversations)
-VITE_TWILIO_ACCOUNT_SID=AC903bee9e4a9ca6e911de718acbf5385f
-VITE_TWILIO_AUTH_TOKEN=34b7fbefcb5298dadd73ff66a0740b04
-VITE_TWILIO_PHONE_NUMBER=+18506088086
+VITE_TWILIO_ACCOUNT_SID=your_account_sid_here
+VITE_TWILIO_AUTH_TOKEN=your_auth_token_here
+VITE_TWILIO_PHONE_NUMBER=your_twilio_phone_number
 ```
 
 ## Deployment Checklist
