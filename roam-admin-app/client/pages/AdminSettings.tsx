@@ -10,37 +10,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Settings,
-  Moon,
-  Sun,
   Bell,
-  Globe,
-  Lock,
-  Database,
   Mail,
   Save,
   RefreshCw,
   CheckCircle,
   AlertTriangle,
-  Shield,
-  Eye,
-  Clock,
-  Palette,
   Volume2,
+  Loader2,
+  Smartphone,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
@@ -53,11 +33,13 @@ interface UserSettings {
   timezone: string;
   email_notifications: boolean;
   push_notifications: boolean;
+  sms_notifications: boolean;
   sound_enabled: boolean;
   auto_logout_minutes: number;
   date_format: string;
   time_format: string;
   items_per_page: number;
+  sidebar_collapsed: boolean;
   created_at?: string;
   updated_at?: string;
 }
@@ -65,14 +47,16 @@ interface UserSettings {
 const defaultSettings: Partial<UserSettings> = {
   theme: "system",
   language: "en",
-  timezone: "UTC",
+  timezone: "America/Chicago", // CST
   email_notifications: true,
   push_notifications: true,
+  sms_notifications: false,
   sound_enabled: true,
   auto_logout_minutes: 60,
   date_format: "MM/DD/YYYY",
   time_format: "12h",
   items_per_page: 25,
+  sidebar_collapsed: false,
 };
 
 export default function AdminSettings() {
@@ -82,6 +66,9 @@ export default function AdminSettings() {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [unsavedChanges, setUnsavedChanges] = useState(false);
+  const [notificationPhone, setNotificationPhone] = useState<string>("");
+  const [notificationEmail, setNotificationEmail] = useState<string>("");
+  const [adminUserId, setAdminUserId] = useState<string | null>(null);
 
   const { user } = useAuth();
 
@@ -99,55 +86,71 @@ export default function AdminSettings() {
         return;
       }
 
+      // Fetch admin user info for notification phone and email
+      const { data: adminData } = await supabase
+        .from("admin_users")
+        .select("id, notification_phone, notification_email")
+        .eq("user_id", user.id)
+        .single();
+
+      if (adminData) {
+        setAdminUserId(adminData.id);
+        setNotificationPhone(adminData.notification_phone || "");
+        setNotificationEmail(adminData.notification_email || "");
+      }
+
+      // Load user settings
       const { data, error } = await supabase
         .from("user_settings")
         .select("*")
         .eq("user_id", user.id)
-        .single();
+        .maybeSingle();
 
-      if (error) {
-        // If table doesn't exist or user not found, use default settings or localStorage
-        if (
-          error.code === "PGRST116" ||
-          error.message.includes("does not exist")
-        ) {
-          // Using default/localStorage settings - user_settings table not found or no user record
-
-          // Try to load from localStorage first
-          const savedSettings = localStorage.getItem("admin_settings");
-          let userSettings;
-
-          if (savedSettings) {
-            try {
-              userSettings = { ...JSON.parse(savedSettings), user_id: user.id };
-            } catch (e) {
-              userSettings = { ...defaultSettings, user_id: user.id };
-            }
-          } else {
-            userSettings = { ...defaultSettings, user_id: user.id };
-          }
-
-          setSettings(userSettings as UserSettings);
-          setEditForm(userSettings);
-          return;
-        }
-
-        console.error("Error fetching settings:", error);
-        setError(`Failed to load settings: ${error.message}`);
-        return;
+      if (error && error.code !== 'PGRST116') {
+        throw error;
       }
 
-      const userSettings = data || { ...defaultSettings, user_id: user.id };
-      setSettings(userSettings as UserSettings);
-      setEditForm(userSettings);
+      if (data) {
+        setSettings(data as UserSettings);
+        setEditForm(data);
+      } else {
+        // Create default settings for new user
+        await createDefaultSettings();
+      }
     } catch (error: any) {
       console.error("Error in fetchSettings:", error);
-      // Use default settings as fallback
+      setError(`Failed to load settings: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Create default settings
+  const createDefaultSettings = async () => {
+    try {
+      if (!user?.id) return;
+
+      const newSettings = {
+        ...defaultSettings,
+        user_id: user.id,
+      };
+
+      const { data, error } = await supabase
+        .from("user_settings")
+        .insert([newSettings])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setSettings(data as UserSettings);
+      setEditForm(data);
+    } catch (error: any) {
+      console.error("Error creating default settings:", error);
+      // Use defaults locally if database insert fails
       const userSettings = { ...defaultSettings, user_id: user?.id };
       setSettings(userSettings as UserSettings);
       setEditForm(userSettings);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -167,6 +170,21 @@ export default function AdminSettings() {
         user_id: user.id,
         updated_at: new Date().toISOString(),
       };
+
+      // Save notification phone and email to admin_users if we have an admin user ID
+      if (adminUserId) {
+        const { error: notificationError } = await supabase
+          .from("admin_users")
+          .update({ 
+            notification_phone: notificationPhone?.trim() || null,
+            notification_email: notificationEmail?.trim() || null
+          })
+          .eq("id", adminUserId);
+
+        if (notificationError) {
+          console.error("Error updating notification settings:", notificationError);
+        }
+      }
 
       // Try to update existing settings or insert new ones
       const { data, error } = await supabase
@@ -269,31 +287,32 @@ export default function AdminSettings() {
     <AdminLayout title="Settings">
       <div className="space-y-8">
         {/* Header */}
-        <div className="flex justify-between items-start">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold">Settings</h1>
-            <p className="text-muted-foreground mt-1">
-              Customize your admin panel experience and preferences
+            <p className="text-sm text-muted-foreground mt-1">
+              Manage your notification preferences and account settings
             </p>
           </div>
-          <div className="flex gap-3">
-            <Button onClick={resetToDefaults} variant="outline" size="sm">
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Reset to Defaults
-            </Button>
+          {unsavedChanges && (
             <Button
               onClick={saveSettings}
-              disabled={saving || !unsavedChanges}
-              size="sm"
+              disabled={saving}
+              className="mt-4 sm:mt-0"
             >
               {saving ? (
-                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Saving...
+                </>
               ) : (
-                <Save className="w-4 h-4 mr-2" />
+                <>
+                  <Save className="w-4 h-4 mr-2" />
+                  Save Changes
+                </>
               )}
-              Save Changes
             </Button>
-          </div>
+          )}
         </div>
 
         {/* Success/Error Messages */}
@@ -320,85 +339,24 @@ export default function AdminSettings() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Appearance Settings */}
-          <ROAMCard>
-            <ROAMCardHeader>
-              <ROAMCardTitle className="flex items-center gap-2">
-                <Palette className="w-5 h-5" />
-                Appearance
-              </ROAMCardTitle>
-            </ROAMCardHeader>
-            <ROAMCardContent className="space-y-6">
-              <div>
-                <Label htmlFor="theme">Theme</Label>
-                <Select
-                  value={editForm.theme || "system"}
-                  onValueChange={(value) => handleChange("theme", value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="light">
-                      <div className="flex items-center gap-2">
-                        <Sun className="w-4 h-4" />
-                        Light
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="dark">
-                      <div className="flex items-center gap-2">
-                        <Moon className="w-4 h-4" />
-                        Dark
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="system">
-                      <div className="flex items-center gap-2">
-                        <Settings className="w-4 h-4" />
-                        System
-                      </div>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Choose your preferred theme
-                </p>
-              </div>
-
-
-              <div>
-                <Label htmlFor="items_per_page">Items per page</Label>
-                <Select
-                  value={String(editForm.items_per_page || 25)}
-                  onValueChange={(value) =>
-                    handleChange("items_per_page", parseInt(value))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="10">10 items</SelectItem>
-                    <SelectItem value="25">25 items</SelectItem>
-                    <SelectItem value="50">50 items</SelectItem>
-                    <SelectItem value="100">100 items</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </ROAMCardContent>
-          </ROAMCard>
-
-          {/* Notification Settings */}
-          <ROAMCard>
+        {/* Notification Settings - Full width single column */}
+        <ROAMCard>
             <ROAMCardHeader>
               <ROAMCardTitle className="flex items-center gap-2">
                 <Bell className="w-5 h-5" />
                 Notifications
               </ROAMCardTitle>
             </ROAMCardHeader>
-            <ROAMCardContent className="space-y-6">
-              <div>
-                <div className="flex items-center space-x-2">
+            <ROAMCardContent className="space-y-4">
+              {/* Email Notifications */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="email_notifications">Email Notifications</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Receive notifications via email
+                    </p>
+                  </div>
                   <Switch
                     id="email_notifications"
                     checked={editForm.email_notifications || false}
@@ -406,168 +364,115 @@ export default function AdminSettings() {
                       handleChange("email_notifications", checked)
                     }
                   />
-                  <Label htmlFor="email_notifications" className="text-sm">
-                    Email notifications
-                  </Label>
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Receive email alerts for important events
-                </p>
+
+                {/* Notification Email Address */}
+                {editForm.email_notifications && (
+                  <div className="space-y-2 pl-6">
+                    <Label htmlFor="notification_email">Notification Email Address</Label>
+                    <Input
+                      id="notification_email"
+                      type="email"
+                      placeholder="notifications@example.com"
+                      value={notificationEmail}
+                      onChange={(e) => {
+                        setNotificationEmail(e.target.value);
+                        setUnsavedChanges(true);
+                      }}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Enter the email address where you want to receive notifications (optional, defaults to account email)
+                    </p>
+                  </div>
+                )}
               </div>
 
-              <div>
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="push_notifications"
-                    checked={editForm.push_notifications || false}
-                    onCheckedChange={(checked) =>
-                      handleChange("push_notifications", checked)
-                    }
-                  />
-                  <Label htmlFor="push_notifications" className="text-sm">
-                    Push notifications
-                  </Label>
+              <Separator />
+
+              {/* Push Notifications */}
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="push_notifications">Push Notifications</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Receive push notifications in your browser
+                  </p>
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Browser notifications for real-time updates
-                </p>
-              </div>
-
-              <div>
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="sound_enabled"
-                    checked={editForm.sound_enabled || false}
-                    onCheckedChange={(checked) =>
-                      handleChange("sound_enabled", checked)
-                    }
-                  />
-                  <Label htmlFor="sound_enabled" className="text-sm">
-                    Sound alerts
-                  </Label>
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Play sounds for notifications and alerts
-                </p>
-              </div>
-            </ROAMCardContent>
-          </ROAMCard>
-
-          {/* Regional Settings */}
-          <ROAMCard>
-            <ROAMCardHeader>
-              <ROAMCardTitle className="flex items-center gap-2">
-                <Globe className="w-5 h-5" />
-                Regional & Format
-              </ROAMCardTitle>
-            </ROAMCardHeader>
-            <ROAMCardContent className="space-y-6">
-              <div>
-                <Label htmlFor="timezone">Timezone</Label>
-                <Select
-                  value={editForm.timezone || "UTC"}
-                  onValueChange={(value) => handleChange("timezone", value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="UTC">UTC</SelectItem>
-                    <SelectItem value="America/New_York">
-                      Eastern Time
-                    </SelectItem>
-                    <SelectItem value="America/Chicago">
-                      Central Time
-                    </SelectItem>
-                    <SelectItem value="America/Denver">
-                      Mountain Time
-                    </SelectItem>
-                    <SelectItem value="America/Los_Angeles">
-                      Pacific Time
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="date_format">Date Format</Label>
-                <Select
-                  value={editForm.date_format || "MM/DD/YYYY"}
-                  onValueChange={(value) => handleChange("date_format", value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="MM/DD/YYYY">MM/DD/YYYY</SelectItem>
-                    <SelectItem value="DD/MM/YYYY">DD/MM/YYYY</SelectItem>
-                    <SelectItem value="YYYY-MM-DD">YYYY-MM-DD</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="time_format">Time Format</Label>
-                <Select
-                  value={editForm.time_format || "12h"}
-                  onValueChange={(value) => handleChange("time_format", value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="12h">12 Hour (AM/PM)</SelectItem>
-                    <SelectItem value="24h">24 Hour</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </ROAMCardContent>
-          </ROAMCard>
-
-          {/* Security Settings */}
-          <ROAMCard>
-            <ROAMCardHeader>
-              <ROAMCardTitle className="flex items-center gap-2">
-                <Shield className="w-5 h-5" />
-                Security & Privacy
-              </ROAMCardTitle>
-            </ROAMCardHeader>
-            <ROAMCardContent className="space-y-6">
-              <div>
-                <Label htmlFor="auto_logout_minutes">Auto Logout</Label>
-                <Select
-                  value={String(editForm.auto_logout_minutes || 60)}
-                  onValueChange={(value) =>
-                    handleChange("auto_logout_minutes", parseInt(value))
+                <Switch
+                  id="push_notifications"
+                  checked={editForm.push_notifications || false}
+                  onCheckedChange={(checked) =>
+                    handleChange("push_notifications", checked)
                   }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="15">15 minutes</SelectItem>
-                    <SelectItem value="30">30 minutes</SelectItem>
-                    <SelectItem value="60">1 hour</SelectItem>
-                    <SelectItem value="120">2 hours</SelectItem>
-                    <SelectItem value="480">8 hours</SelectItem>
-                    <SelectItem value="0">Never</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Automatically sign out after inactivity
-                </p>
+                />
               </div>
 
-              <div className="pt-4 border-t">
-                <h4 className="font-medium mb-2">Data & Privacy</h4>
-                <p className="text-sm text-muted-foreground">
-                  Your settings and preferences are stored securely and are only
-                  used to customize your experience.
-                </p>
+              <Separator />
+
+              {/* Sound Enabled */}
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5 flex items-center gap-2">
+                  <Volume2 className="w-4 h-4 text-muted-foreground" />
+                  <div>
+                    <Label htmlFor="sound_enabled">Notification Sounds</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Play sound when notifications arrive
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  id="sound_enabled"
+                  checked={editForm.sound_enabled || false}
+                  onCheckedChange={(checked) =>
+                    handleChange("sound_enabled", checked)
+                  }
+                />
+              </div>
+
+              <Separator />
+
+              {/* SMS Notifications */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5 flex items-center gap-2">
+                    <Smartphone className="w-4 h-4 text-muted-foreground" />
+                    <div>
+                      <Label htmlFor="sms_notifications">SMS Notifications</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Receive notifications via text message
+                      </p>
+                    </div>
+                  </div>
+                  <Switch
+                    id="sms_notifications"
+                    checked={editForm.sms_notifications || false}
+                    onCheckedChange={(checked) =>
+                      handleChange("sms_notifications", checked)
+                    }
+                  />
+                </div>
+
+                {/* Notification Phone Number */}
+                {editForm.sms_notifications && (
+                  <div className="space-y-2 pl-6">
+                    <Label htmlFor="notification_phone">Notification Phone Number</Label>
+                    <Input
+                      id="notification_phone"
+                      type="tel"
+                      placeholder="+1 (555) 123-4567"
+                      value={notificationPhone}
+                      onChange={(e) => {
+                        setNotificationPhone(e.target.value);
+                        setUnsavedChanges(true);
+                      }}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Enter the phone number where you want to receive SMS notifications
+                    </p>
+                  </div>
+                )}
               </div>
             </ROAMCardContent>
           </ROAMCard>
-        </div>
       </div>
     </AdminLayout>
   );

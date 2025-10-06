@@ -974,10 +974,38 @@ export default function AdminBusinesses() {
       console.log("Fetching businesses from API...");
 
       const response = await fetch('/api/businesses');
-      const result = await response.json();
-
+      
+      // Check if response is ok before trying to parse JSON
       if (!response.ok) {
-        throw new Error(result.error || 'Failed to fetch businesses');
+        const text = await response.text();
+        console.error('Server error response:', text);
+        
+        // Try to parse as JSON if possible
+        let errorMessage = 'Failed to fetch businesses';
+        try {
+          const errorData = JSON.parse(text);
+          errorMessage = errorData.error || errorData.message || errorMessage;
+        } catch {
+          // If not JSON, use the text directly
+          errorMessage = text || errorMessage;
+        }
+        
+        throw new Error(errorMessage);
+      }
+
+      // Get response text first to check if it's valid JSON
+      const responseText = await response.text();
+      
+      if (!responseText || responseText.trim() === '') {
+        throw new Error('Server returned empty response');
+      }
+
+      let result;
+      try {
+        result = JSON.parse(responseText);
+      } catch (jsonError) {
+        console.error('Failed to parse JSON:', responseText.substring(0, 200));
+        throw new Error('Server returned invalid JSON response');
       }
 
       console.log("Business API response:", result);

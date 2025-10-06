@@ -34,7 +34,7 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
   },
   global: {
     headers: {
-      'x-application-name': 'roam-admin-server'
+      'x-application-name': 'roam-provider-server'
     }
   }
 });

@@ -222,40 +222,56 @@ export default function AdminProfile() {
       const fileName = `${user.id}-${Date.now()}.${fileExt}`;
       const filePath = `avatar-admin-user/${fileName}`;
 
-      // Upload to Supabase storage
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from("roam-file-storage")
-        .upload(filePath, file);
+      // Convert file to base64
+      const reader = new FileReader();
+      const fileDataPromise = new Promise<string>((resolve, reject) => {
+        reader.onload = () => {
+          const base64String = reader.result as string;
+          const base64Data = base64String.split(',')[1]; // Remove data:image/...;base64, prefix
+          resolve(base64Data);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
 
-      if (uploadError) {
-        console.error(
-          "Upload error:",
-          uploadError.message || JSON.stringify(uploadError),
-        );
-        const errorMessage =
-          uploadError.message ||
-          JSON.stringify(uploadError) ||
-          "Unknown upload error";
-        setError(`Failed to upload image: ${errorMessage}`);
-        return;
+      const fileData = await fileDataPromise;
+
+      // Upload via server-side endpoint (uses service role key to bypass RLS)
+      const uploadResponse = await fetch('/api/storage/upload-image', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          fileData,
+          fileName,
+          filePath,
+          mimeType: file.type,
+          adminUserId: adminUser?.id,
+          userId: user.id,
+          imageType: 'admin-avatar'
+        }),
+      });
+
+      if (!uploadResponse.ok) {
+        const errorData = await uploadResponse.json();
+        throw new Error(errorData.error || 'Upload failed');
       }
 
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from("roam-file-storage")
-        .getPublicUrl(filePath);
+      const uploadResult = await uploadResponse.json();
 
-      if (!urlData?.publicUrl) {
-        setError("Failed to get image URL");
-        return;
+      if (!uploadResult.success || !uploadResult.publicUrl) {
+        throw new Error('Failed to get image URL from upload response');
       }
+
+      const publicUrl = uploadResult.publicUrl;
 
       // Update or create admin user record with new image URL
 
       // First try to update existing record
       const { data: updateResult, error: updateError } = await supabase
         .from("admin_users")
-        .update({ image_url: urlData.publicUrl })
+        .update({ image_url: publicUrl })
         .eq("user_id", user.id)
         .select();
 
@@ -283,7 +299,7 @@ export default function AdminProfile() {
           .insert({
             user_id: user.id,
             email: user.email || "",
-            image_url: urlData.publicUrl,
+            image_url: publicUrl,
             role: "admin",
             is_active: true,
             permissions: [],
@@ -313,7 +329,7 @@ export default function AdminProfile() {
       }
 
       // Update local state with cache-busting URL
-      const cacheBustedUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+      const cacheBustedUrl = `${publicUrl}?t=${Date.now()}`;
       if (adminUser) {
         setAdminUser({ ...adminUser, image_url: cacheBustedUrl });
         setEditForm({ ...editForm, image_url: cacheBustedUrl });

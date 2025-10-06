@@ -1,7 +1,7 @@
 import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Upload, FileText, AlertCircle, CheckCircle } from "lucide-react";
+import { Upload, FileText, AlertCircle, CheckCircle, Eye, Trash2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 
@@ -65,6 +65,13 @@ export function DocumentsSection({
   };
 
   const handleFileUpload = async (file: File, documentType: string) => {
+    // Validate file size (50MB max)
+    const maxSize = 50 * 1024 * 1024; // 50MB in bytes
+    if (file.size > maxSize) {
+      alert(`File size exceeds 50MB limit. Please upload a smaller file.`);
+      return;
+    }
+
     setUploadingType(documentType);
     try {
       await onDocumentUpload(file, documentType);
@@ -160,11 +167,20 @@ export function DocumentsSection({
                 <div className="flex items-center gap-2">
                   {getStatusBadge(doc.upload_status)}
                   <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.open(doc.document_url, '_blank')}
+                  >
+                    <Eye className="w-4 h-4 mr-1" />
+                    View
+                  </Button>
+                  <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => onDocumentDelete(doc.id)}
                     className="text-destructive hover:text-destructive"
                   >
+                    <Trash2 className="w-4 h-4 mr-1" />
                     Delete
                   </Button>
                 </div>
@@ -253,7 +269,7 @@ export function DocumentsSection({
             <strong>Document Guidelines:</strong>
             <ul className="mt-2 text-sm space-y-1">
               <li>• Accepted formats: PDF, JPG, PNG, DOC, DOCX</li>
-              <li>• Maximum file size: 10MB per document</li>
+              <li>• Maximum file size: 50MB per document</li>
               <li>• Documents must be clear and legible</li>
               <li>• Required documents must be approved before you can receive bookings</li>
             </ul>

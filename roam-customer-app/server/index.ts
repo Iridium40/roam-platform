@@ -2,6 +2,7 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import { handleDemo } from "./routes/demo";
+import { handleTestSMS, handleGetSMSSettings } from "./routes/sms";
 import {
   handleEdgeNotifications,
   handleNotificationUpdates,
@@ -34,6 +35,10 @@ export function createServer() {
   });
 
   app.get("/api/demo", handleDemo);
+
+  // SMS routes
+  app.post("/api/sms/test", handleTestSMS);
+  app.get("/api/sms/settings/:id", handleGetSMSSettings);
 
   // Auth routes with validation
   app.post("/api/auth/signup", 

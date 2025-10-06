@@ -20,6 +20,9 @@ export async function handleBusinesses(req: Request, res: Response) {
 
 async function getBusinesses(req: Request, res: Response) {
   try {
+    console.log('[Businesses API] GET request received');
+    console.log('[Businesses API] Query params:', req.query);
+
     const { 
       verification_status,
       business_type,
@@ -29,6 +32,8 @@ async function getBusinesses(req: Request, res: Response) {
       sortBy = 'created_at',
       sortOrder = 'desc'
     } = req.query;
+
+    console.log('[Businesses API] Building query...');
 
     let query = supabase
       .from('business_profiles')
@@ -63,7 +68,7 @@ async function getBusinesses(req: Request, res: Response) {
         approved_by,
         approval_notes,
         business_description
-      `);
+      `, { count: 'exact' });  // Add count option
 
     if (search) {
       query = query.or(`business_name.ilike.%${search}%,contact_email.ilike.%${search}%`);
@@ -89,67 +94,71 @@ async function getBusinesses(req: Request, res: Response) {
     
     query = query.range(offset, offset + limitNum - 1);
 
-    const { data: businesses, error: fetchError, count } = await query;
+    console.log('[Businesses API] Executing query...');
+    
+    // Add timeout to prevent hanging
+    const queryPromise = query;
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Query timeout after 30 seconds')), 30000);
+    });
+
+    let businesses, fetchError, count;
+    
+    try {
+      const result = await Promise.race([queryPromise, timeoutPromise]) as any;
+      businesses = result.data;
+      fetchError = result.error;
+      count = result.count;
+    } catch (timeoutError) {
+      console.error('[Businesses API] Query timeout:', timeoutError);
+      return res.status(504).json({ 
+        error: 'Query timeout',
+        message: 'Database query took too long to respond'
+      });
+    }
 
     if (fetchError) {
-      console.error('Error fetching businesses:', fetchError);
+      console.error('[Businesses API] Error fetching businesses:', fetchError);
       return res.status(500).json({ 
         error: fetchError.message,
         details: fetchError.details 
       });
     }
 
-    // Transform the data and add verification metrics
-    const transformedBusinesses = await Promise.all(
-      (businesses || []).map(async (business: any) => {
-        // Get provider count
-        const { count: providerCount } = await supabase
-          .from('provider_profiles')
-          .select('*', { count: 'exact', head: true })
-          .eq('business_id', business.id);
+    console.log(`[Businesses API] Query successful. Found ${businesses?.length || 0} businesses (total: ${count})`);
 
-        // Get booking metrics
-        const { count: totalBookings } = await supabase
-          .from('bookings')
-          .select('*', { count: 'exact', head: true })
-          .in('provider_id', 
-            await supabase
-              .from('provider_profiles')
-              .select('id')
-              .eq('business_id', business.id)
-              .then(result => result.data?.map(p => p.id) || [])
-          );
+    // Transform the data
+    console.log('[Businesses API] Transforming business data...');
+    const transformedBusinesses = (businesses || []).map((business: any) => ({
+      ...business,
+      // Ensure arrays are properly handled
+      service_categories: Array.isArray(business.service_categories) ? business.service_categories : [],
+      service_subcategories: Array.isArray(business.service_subcategories) ? business.service_subcategories : [],
+      // Ensure numeric fields are properly typed
+      setup_step: business.setup_step ? Number(business.setup_step) : null,
+      // Ensure boolean fields have defaults
+      setup_completed: business.setup_completed ?? null,
+      is_featured: business.is_featured ?? false,
+      identity_verified: business.identity_verified ?? false,
+      bank_connected: business.bank_connected ?? false,
+      is_active: business.is_active ?? true,
+      // Add empty metrics for now (can be populated later if needed)
+      metrics: {
+        provider_count: 0,
+        total_bookings: 0
+      },
+      verification_summary: {
+        status: business.verification_status,
+        identity_verified: business.identity_verified,
+        bank_connected: business.bank_connected,
+        setup_completed: business.setup_completed,
+        pending_items: getPendingVerificationItems(business)
+      }
+    }));
 
-        return {
-          ...business,
-          // Ensure arrays are properly handled
-          service_categories: Array.isArray(business.service_categories) ? business.service_categories : [],
-          service_subcategories: Array.isArray(business.service_subcategories) ? business.service_subcategories : [],
-          // Ensure numeric fields are properly typed
-          setup_step: business.setup_step ? Number(business.setup_step) : null,
-          // Ensure boolean fields have defaults
-          setup_completed: business.setup_completed ?? null,
-          is_featured: business.is_featured ?? false,
-          identity_verified: business.identity_verified ?? false,
-          bank_connected: business.bank_connected ?? false,
-          is_active: business.is_active ?? true,
-          // Add metrics
-          metrics: {
-            provider_count: providerCount || 0,
-            total_bookings: totalBookings || 0
-          },
-          verification_summary: {
-            status: business.verification_status,
-            identity_verified: business.identity_verified,
-            bank_connected: business.bank_connected,
-            setup_completed: business.setup_completed,
-            pending_items: getPendingVerificationItems(business)
-          }
-        };
-      })
-    );
-
-    return res.status(200).json({ 
+    console.log('[Businesses API] Transformation complete. Sending response...');
+    
+    const response = { 
       data: transformedBusinesses,
       pagination: {
         page: pageNum,
@@ -157,11 +166,22 @@ async function getBusinesses(req: Request, res: Response) {
         total: count || 0,
         totalPages: Math.ceil((count || 0) / limitNum)
       }
+    };
+
+    console.log('[Businesses API] Response ready:', {
+      businessCount: response.data.length,
+      pagination: response.pagination
     });
 
+    return res.status(200).json(response);
+
   } catch (error) {
-    console.error('Error in getBusinesses:', error);
-    return res.status(500).json({ error: 'Failed to fetch businesses' });
+    console.error('[Businesses API] Error in getBusinesses:', error);
+    console.error('[Businesses API] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    return res.status(500).json({ 
+      error: 'Failed to fetch businesses',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 }
 

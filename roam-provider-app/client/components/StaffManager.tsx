@@ -145,6 +145,13 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
   // Safely handle locations prop - ensure it's always an array
   const safeLocations = Array.isArray(locations) ? locations : [];
 
+  // Debug: Log locations when component mounts or locations change
+  useEffect(() => {
+    console.log('🏢 StaffManager - Locations received:', {
+      locationsCount: safeLocations.length,
+      locations: safeLocations
+    });
+  }, [locations]);
 
   useEffect(() => {
     fetchStaff();
@@ -156,6 +163,19 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
       fetchProviderServices(selectedStaff.id);
     }
   }, [selectedStaff, isEditDialogOpen]);
+
+  // Debug: Log location dropdown data when edit dialog opens
+  useEffect(() => {
+    if (isEditDialogOpen && selectedStaff) {
+      console.log('🔍 Edit Dialog Opened - Location Data:', {
+        selected_staff_location_id: selectedStaff.location_id,
+        selected_staff_location_name: selectedStaff.location_name,
+        available_locations_count: safeLocations.length,
+        available_locations: safeLocations,
+        dropdown_value: selectedStaff.location_id || "no-location"
+      });
+    }
+  }, [isEditDialogOpen, selectedStaff, safeLocations]);
 
   const fetchBusinessServices = async () => {
     try {
@@ -331,7 +351,7 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
         .select(
           `
           *,
-          business_locations!inner(location_name)
+          business_locations(location_name)
         `,
         )
         .eq("business_id", businessId)
@@ -387,6 +407,22 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
     const handleUpdateStaff = async () => {
     if (!selectedStaff) return;
 
+    console.log('💾 Updating staff member:', {
+      staff_id: selectedStaff.id,
+      location_id: selectedStaff.location_id,
+      location_id_type: typeof selectedStaff.location_id,
+      all_updates: {
+        first_name: selectedStaff.first_name,
+        last_name: selectedStaff.last_name,
+        email: selectedStaff.email,
+        phone: selectedStaff.phone,
+        provider_role: selectedStaff.provider_role,
+        location_id: selectedStaff.location_id,
+        bio: selectedStaff.bio,
+        experience_years: selectedStaff.experience_years,
+      }
+    });
+
     try {
       const { error } = await supabase
         .from("providers")
@@ -404,6 +440,8 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
 
       if (error) throw error;
 
+      console.log('✅ Staff member updated successfully');
+
       // If provider role, also update services
       if (selectedStaff.provider_role === 'provider') {
         await handleUpdateProviderServices();
@@ -417,6 +455,7 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
       setIsEditDialogOpen(false);
       fetchStaff();
     } catch (error: any) {
+      console.error('❌ Error updating staff:', error);
       toast({
         title: "Error",
         description: error.message,
@@ -774,6 +813,17 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
                             size="sm"
                             variant="ghost"
                             onClick={() => {
+                              console.log('📝 Opening edit dialog for staff member:', {
+                                staff_id: member.id,
+                                staff_name: `${member.first_name} ${member.last_name}`,
+                                current_location_id: member.location_id,
+                                location_name: member.location_name,
+                                available_locations_count: safeLocations.length,
+                                available_locations: safeLocations.map(loc => ({
+                                  id: loc.id,
+                                  name: loc.location_name
+                                }))
+                              });
                               setSelectedStaff(member);
                               setIsEditDialogOpen(true);
                             }}
@@ -927,15 +977,19 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
                   <div className="space-y-2">
                     <Label htmlFor="editLocation">Location *</Label>
                     <Select
-                      value={selectedStaff.location_id || ""}
+                      value={selectedStaff.location_id || "no-location"}
                       onValueChange={(value) =>
-                        setSelectedStaff({ ...selectedStaff, location_id: value })
+                        setSelectedStaff({ 
+                          ...selectedStaff, 
+                          location_id: value === "no-location" ? null : value 
+                        })
                       }
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select a location" />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="no-location">No specific location</SelectItem>
                         {safeLocations.map((location) => (
                           <SelectItem key={location.id} value={location.id}>
                             {location.location_name}
