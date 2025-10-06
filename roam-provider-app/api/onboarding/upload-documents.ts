@@ -96,7 +96,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         // Upload to Supabase Storage using service role (bypasses RLS)
         const { data: storageData, error: storageError } = await supabase.storage
-          .from("provider-documents")
+          .from("roam-file-storage")
           .upload(storagePath, file.buffer, {
             contentType: file.mimetype,
             cacheControl: "3600",
@@ -116,7 +116,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         // Get public URL
         const { data: { publicUrl } } = supabase.storage
-          .from("provider-documents")
+          .from("roam-file-storage")
           .getPublicUrl(storageData.path);
 
         console.log("Public URL generated:", publicUrl);
@@ -142,7 +142,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           // If database insert fails, try to clean up storage
           try {
             await supabase.storage
-              .from("provider-documents")
+              .from("roam-file-storage")
               .remove([storageData.path]);
             console.log("Cleaned up storage file after db error");
           } catch (cleanupError) {
