@@ -25,7 +25,9 @@ interface BasicInfoSectionProps {
   onCancel: () => void;
   onEdit: () => void;
   logoUploading: boolean;
+  coverUploading: boolean;
   onLogoUpload: (file: File) => void;
+  onCoverUpload: (file: File) => void;
 }
 
 export default function BasicInfoSection({
@@ -36,7 +38,9 @@ export default function BasicInfoSection({
   onCancel,
   onEdit,
   logoUploading,
+  coverUploading,
   onLogoUpload,
+  onCoverUpload,
 }: BasicInfoSectionProps) {
   return (
     <Card>
@@ -82,8 +86,9 @@ export default function BasicInfoSection({
               className="hidden"
               onChange={(e) => {
                 const file = e.target.files?.[0];
-                if (file) onLogoUpload(file);
+                if (file) onCoverUpload(file);
               }}
+              disabled={coverUploading || !isEditing}
             />
           </div>
 

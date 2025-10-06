@@ -10,6 +10,13 @@ import {
 import { createLinkToken, exchangePublicToken, checkConnection } from "./routes/plaid";
 import { getServiceEligibility } from "./routes/service-eligibility";
 import { sendStaffInvite, validateStaffInvitation, completeStaffOnboarding } from "./routes/staff";
+import { 
+  handleTestSMS, 
+  handleGetSMSSettings, 
+  handleBookingNotification,
+  handleCancellationNotification,
+  handleBookingReminder 
+} from "./routes/sms";
 import { requireAuth, requireBusinessAccess, requirePhase2Access, AuthenticatedRequest } from "./middleware/auth";
 import { validateRequest } from "./middleware/validation";
 import { schemas } from "../shared";
@@ -333,6 +340,20 @@ export function createServer() {
       } catch (error) {
         console.error("Error importing business documents handler:", error);
         res.status(500).json({ error: "Failed to load business documents handler" });
+      }
+    }
+  );
+
+  // Business document upload route (with service role for storage)
+  app.post("/api/business/upload-document",
+    requireAuth(['owner', 'dispatcher', 'admin']),
+    async (req, res) => {
+      try {
+        const uploadDocumentHandler = await import("../api/business/upload-document");
+        await uploadDocumentHandler.default(req, res);
+      } catch (error) {
+        console.error("Error importing upload document handler:", error);
+        res.status(500).json({ error: "Failed to load upload document handler" });
       }
     }
   );
@@ -1641,6 +1662,13 @@ export function createServer() {
   app.post("/api/staff/invite", sendStaffInvite);
   app.post("/api/staff/validate-invitation", validateStaffInvitation);
   app.post("/api/staff/complete-onboarding", completeStaffOnboarding);
+
+  // SMS notification routes
+  app.post("/api/sms/test", handleTestSMS);
+  app.get("/api/sms/settings/:providerId", handleGetSMSSettings);
+  app.post("/api/sms/booking-notification", handleBookingNotification);
+  app.post("/api/sms/cancellation-notification", handleCancellationNotification);
+  app.post("/api/sms/reminder", handleBookingReminder);
 
   // ==================== Provider Services Management ====================
   

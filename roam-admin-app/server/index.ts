@@ -3,6 +3,8 @@ import express from "express";
 import cors from "cors";
 import { handleDemo } from "./routes/demo";
 import { handleSystemConfig } from "./routes/system-config";
+import { handleTestSMS, handleGetSMSSettings } from "./routes/sms";
+import { handleUploadImage } from "./routes/storage";
 import { handleSendApprovalEmail } from "./routes/send-approval-email";
 import { handleSendContactReply } from "./routes/send-contact-reply";
 import { handleValidatePhase2Token } from "./routes/validate-phase2-token";
@@ -54,9 +56,15 @@ export function createServer() {
 
   // Example API routes
   app.get("/api/ping", (_req, res) => {
-    const ping = process.env.PING_MESSAGE ?? "ping";
-    res.json({ message: ping });
+    return res.json({ ok: true, timestamp: Date.now() });
   });
+
+  // SMS routes
+  app.post("/api/sms/test", handleTestSMS);
+  app.get("/api/sms/settings/:id", handleGetSMSSettings);
+
+  // Storage routes
+  app.post("/api/storage/upload-image", handleUploadImage);
 
   app.get("/api/demo", handleDemo);
   app.get("/api/system-config", handleSystemConfig);

@@ -54,22 +54,28 @@ export class ImageStorageService {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Upload failed');
+        const errorData = await response.json().catch(() => ({ error: 'Upload failed' }));
+        throw new Error(errorData.error || `Upload failed with status ${response.status}`);
       }
 
       const result = await response.json();
       
       if (result.success) {
-        // For now, return a mock URL since we're in test mode
-        // In production, this would return the actual uploaded file URL
-        const mockUrl = `https://example.com/uploads/${imageType}_${businessId}_${Date.now()}.jpg`;
+        // Check if server returned actual URLs (production mode)
+        if (result.url || result.publicUrl) {
+          return {
+            success: true,
+            url: result.url,
+            publicUrl: result.publicUrl || result.url
+          };
+        }
         
-        return {
-          success: true,
-          url: mockUrl,
-          publicUrl: mockUrl
-        };
+        // If server is in test mode, throw error to trigger fallback
+        if (result.testMode) {
+          throw new Error('Server is in test mode - no actual upload performed');
+        }
+        
+        throw new Error('Server did not return image URL');
       } else {
         throw new Error(result.error || 'Upload failed');
       }
@@ -113,21 +119,23 @@ export class ImageStorageService {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Upload failed');
+        const errorData = await response.json().catch(() => ({ error: 'Upload failed' }));
+        throw new Error(errorData.error || `Upload failed with status ${response.status}`);
       }
 
       const result = await response.json();
       
       if (result.success) {
-        // For now, return a mock URL since we're in test mode
-        const mockUrl = `https://example.com/uploads/${config.fileName}`;
+        // Check if server returned actual URLs
+        if (result.url || result.publicUrl) {
+          return {
+            success: true,
+            url: result.url,
+            publicUrl: result.publicUrl || result.url
+          };
+        }
         
-        return {
-          success: true,
-          url: mockUrl,
-          publicUrl: mockUrl
-        };
+        throw new Error('Server did not return image URL');
       } else {
         throw new Error(result.error || 'Upload failed');
       }

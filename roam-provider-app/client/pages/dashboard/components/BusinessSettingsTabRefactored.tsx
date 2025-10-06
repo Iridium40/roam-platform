@@ -135,30 +135,24 @@ export function BusinessSettingsTab({ providerData, business, onBusinessUpdate }
 
     setDocumentsLoading(true);
     try {
-      // Step 1: Upload file to Supabase storage
-      const fileExt = file.name.split('.').pop();
-      const timestamp = Date.now();
-      const fileName = `${documentType}_${timestamp}.${fileExt}`;
-      const filePath = `provider-documents/${business.id}/${fileName}`;
+      // Convert file to base64 for server transmission
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => {
+          if (typeof reader.result === 'string') {
+            // Remove the data URL prefix to get just the base64
+            const base64 = reader.result.split(',')[1];
+            resolve(base64);
+          } else {
+            reject(new Error('Failed to convert file to base64'));
+          }
+        };
+        reader.onerror = error => reject(error);
+      });
 
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('provider-documents')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: false
-        });
-
-      if (uploadError) {
-        throw new Error(`Upload failed: ${uploadError.message}`);
-      }
-
-      // Step 2: Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('provider-documents')
-        .getPublicUrl(filePath);
-
-      // Step 3: Save document metadata to database via API
-      const response = await fetch('/api/business/documents', {
+      // Upload via server endpoint to avoid RLS policy issues
+      const response = await fetch('/api/business/upload-document', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -167,14 +161,21 @@ export function BusinessSettingsTab({ providerData, business, onBusinessUpdate }
           business_id: business.id,
           document_type: documentType,
           document_name: file.name,
-          file_url: publicUrl,
-          file_size_bytes: file.size,
+          file: base64,
+          file_type: file.type,
+          file_size: file.size,
         }),
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to save document metadata');
+        const errorData = await response.json().catch(() => ({ error: 'Upload failed' }));
+        throw new Error(errorData.error || `Upload failed with status ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Upload failed');
       }
 
       toast({
@@ -367,14 +368,17 @@ export function BusinessSettingsTab({ providerData, business, onBusinessUpdate }
 
   const hasUnsavedChanges = isEditing;
   
-  // Tabs that support editing
+  // Tabs that support editing (basic-info and hours)
   const editableTabs = ['basic-info', 'hours'];
   const isEditableTab = editableTabs.includes(activeTab);
+  
+  // Only show save/cancel buttons if on an editable tab
+  const showEditControls = isEditableTab && hasUnsavedChanges;
 
   return (
     <div className="space-y-6">
-      {/* Header with Edit or Save/Cancel actions */}
-      {hasUnsavedChanges ? (
+      {/* Header with Edit or Save/Cancel actions - only for editable tabs */}
+      {showEditControls ? (
         <div className="flex items-center justify-between p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
           <div className="flex items-center gap-2">
             <Badge variant="secondary">Unsaved Changes</Badge>
@@ -402,22 +406,27 @@ export function BusinessSettingsTab({ providerData, business, onBusinessUpdate }
             </Button>
           </div>
         </div>
+      ) : isEditableTab ? (
+        <div className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Business Settings</h2>
+            <p className="text-sm text-gray-600">Manage your business information and preferences</p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsEditing(true)}
+          >
+            <Edit className="w-4 h-4 mr-1" />
+            Edit Settings
+          </Button>
+        </div>
       ) : (
         <div className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg">
           <div>
             <h2 className="text-lg font-semibold text-gray-900">Business Settings</h2>
             <p className="text-sm text-gray-600">Manage your business information and preferences</p>
           </div>
-          {isEditableTab && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsEditing(true)}
-            >
-              <Edit className="w-4 h-4 mr-1" />
-              Edit Settings
-            </Button>
-          )}
         </div>
       )}
 
@@ -440,7 +449,9 @@ export function BusinessSettingsTab({ providerData, business, onBusinessUpdate }
             onCancel={cancelEditing}
             onEdit={() => setIsEditing(true)}
             logoUploading={logoUploading}
+            coverUploading={coverUploading}
             onLogoUpload={handleLogoUpload}
+            onCoverUpload={handleCoverUpload}
           />
         </TabsContent>
 

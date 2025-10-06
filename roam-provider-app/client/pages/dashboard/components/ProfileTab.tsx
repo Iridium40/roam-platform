@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   User,
   Camera,
@@ -14,11 +15,13 @@ import {
   Edit,
   Loader2,
   CheckCircle,
+  Settings,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { ImageStorageService } from "@/utils/image/imageStorage";
 import type { ImageType } from "@/utils/image/imageTypes";
+import UserSettingsSection from "./UserSettingsSection";
 
 interface ProfileTabProps {
   providerData: any;
@@ -326,37 +329,52 @@ export default function ProfileTab({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Profile Settings</h1>
-          <p className="text-sm text-gray-600">Manage your personal profile information</p>
-        </div>
-        <div className="flex items-center space-x-2 mt-4 sm:mt-0">
-          {isEditing ? (
-            <>
-              <Button variant="outline" onClick={() => setIsEditing(false)}>
-                Cancel
-              </Button>
-              <Button onClick={saveProfileData} disabled={loading}>
-                <Save className="w-4 h-4 mr-2" />
-                Save Changes
-              </Button>
-            </>
-          ) : (
-            <Button onClick={() => setIsEditing(true)}>
-              <Edit className="w-4 h-4 mr-2" />
-              Edit Profile
-            </Button>
-          )}
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Profile & Settings</h1>
+        <p className="text-sm text-gray-600">Manage your profile information and preferences</p>
       </div>
 
-      {/* Profile Information */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Profile Information</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
+      {/* Tabs for Profile and Settings */}
+      <Tabs defaultValue="profile" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="profile" className="flex items-center space-x-2">
+            <User className="w-4 h-4" />
+            <span>Profile</span>
+          </TabsTrigger>
+          <TabsTrigger value="settings" className="flex items-center space-x-2">
+            <Settings className="w-4 h-4" />
+            <span>Settings</span>
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="profile" className="mt-6">
+          <div className="space-y-6">
+            {/* Edit Profile Header */}
+            <div className="flex items-center justify-end space-x-2">
+              {isEditing ? (
+                <>
+                  <Button variant="outline" onClick={() => setIsEditing(false)}>
+                    Cancel
+                  </Button>
+                  <Button onClick={saveProfileData} disabled={loading}>
+                    <Save className="w-4 h-4 mr-2" />
+                    Save Changes
+                  </Button>
+                </>
+              ) : (
+                <Button onClick={() => setIsEditing(true)}>
+                  <Edit className="w-4 h-4 mr-2" />
+                  Edit Profile
+                </Button>
+              )}
+            </div>
+
+            {/* Profile Information Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Profile Information</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
           {/* Cover Photo */}
           <div>
             <Label className="text-sm font-medium">Cover Photo</Label>
@@ -537,6 +555,16 @@ export default function ProfileTab({
           </div>
         </CardContent>
       </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="settings" className="mt-6">
+          <UserSettingsSection 
+            userId={providerData?.user_id || ''} 
+            providerId={providerData?.id || ''}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

@@ -256,7 +256,19 @@ export function useBusinessSettings(business: any) {
         throw new Error(result.error || 'Upload failed');
       }
 
+      // Update local state
       setBusinessData(prev => ({ ...prev, logo_url: result.publicUrl! }));
+
+      // Save to database immediately
+      const { error: updateError } = await (supabase as any)
+        .from("business_profiles")
+        .update({ logo_url: result.publicUrl })
+        .eq("id", business.id);
+
+      if (updateError) {
+        console.error("Error saving logo URL to database:", updateError);
+        throw new Error("Failed to save logo URL to database");
+      }
 
       toast({
         title: "Success",
@@ -298,7 +310,19 @@ export function useBusinessSettings(business: any) {
         throw new Error(result.error || 'Upload failed');
       }
 
+      // Update local state
       setBusinessData(prev => ({ ...prev, cover_image_url: result.publicUrl! }));
+
+      // Save to database immediately
+      const { error: updateError } = await (supabase as any)
+        .from("business_profiles")
+        .update({ cover_image_url: result.publicUrl })
+        .eq("id", business.id);
+
+      if (updateError) {
+        console.error("Error saving cover image URL to database:", updateError);
+        throw new Error("Failed to save cover image URL to database");
+      }
 
       toast({
         title: "Success",

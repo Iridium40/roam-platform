@@ -620,20 +620,6 @@ export default function ProviderDashboard() {
               cover_image_url,
               is_active,
               created_at
-            ),
-            business_locations!inner (
-              id,
-              location_name,
-              address_line1,
-              address_line2,
-              city,
-              state,
-              postal_code,
-              country,
-              latitude,
-              longitude,
-              is_primary,
-              is_active
             )
           `)
           .eq('user_id', userId)
@@ -672,15 +658,27 @@ export default function ProviderDashboard() {
           setBusiness(typedProviderData.business_profiles as any);
         }
         
-        if (typedProviderData.business_locations) {
-          setLocations(typedProviderData.business_locations as any[]);
+        // Load business locations separately
+        if (typedProviderData.business_id) {
+          const { data: locationsData, error: locationsError } = await supabase
+            .from('business_locations')
+            .select('*')
+            .eq('business_id', typedProviderData.business_id)
+            .eq('is_active', true)
+            .order('is_primary', { ascending: false });
+
+          if (locationsError) {
+            console.error('Error loading business locations:', locationsError);
+          } else {
+            console.log('🏢 Business locations loaded:', locationsData);
+            setLocations(locationsData || []);
+          }
         }
 
         console.log('✅ Provider data loaded successfully:', {
           provider_id: typedProviderData.id,
           business_id: typedProviderData.business_id,
           business_name: typedProviderData.business_profiles?.business_name,
-          locations_count: typedProviderData.business_locations?.length || 0
         });
 
         // Note: Staff data and bookings are now loaded by their respective tab components
