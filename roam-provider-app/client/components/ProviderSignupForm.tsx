@@ -25,7 +25,6 @@ interface ProviderSignupFormData {
   lastName: string;
   phone: string;
   dateOfBirth: string;
-  agreedToBackground: boolean;
 }
 
 interface ProviderSignupFormProps {
@@ -49,7 +48,6 @@ export function ProviderSignupForm({
     lastName: "",
     phone: "",
     dateOfBirth: "",
-    agreedToBackground: false,
   });
 
   const [fieldErrors, setFieldErrors] = useState<
@@ -99,9 +97,6 @@ export function ProviderSignupForm({
           new Date().getFullYear() - new Date(value as string).getFullYear();
         if (age < 18)
           return "You must be at least 18 years old to register as a provider";
-        return null;
-      case "agreedToBackground":
-        if (!value) return "You must consent to background check";
         return null;
       default:
         return null;
@@ -362,33 +357,6 @@ export function ProviderSignupForm({
                   {fieldErrors.confirmPassword}
                 </p>
               )}
-            </div>
-          </div>
-
-          {/* Agreements */}
-          <div className="space-y-4">
-            <div className="flex items-start space-x-3">
-              <Checkbox
-                id="agreedToBackground"
-                checked={formData.agreedToBackground}
-                onCheckedChange={handleCheckboxChange("agreedToBackground")}
-                disabled={loading}
-              />
-              <div className="space-y-1">
-                <Label
-                  htmlFor="agreedToBackground"
-                  className="text-sm leading-relaxed cursor-pointer"
-                >
-                  I consent to a comprehensive background check including
-                  criminal history, sex offender registry, and identity
-                  verification as required for platform approval *
-                </Label>
-                {fieldErrors.agreedToBackground && (
-                  <p className="text-sm text-red-600">
-                    {fieldErrors.agreedToBackground}
-                  </p>
-                )}
-              </div>
             </div>
           </div>
 

@@ -128,6 +128,7 @@ export function ApplicationReviewPage({
   };
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [submissionConsent, setSubmissionConsent] = useState(false);
+  const [backgroundCheckConsent, setBackgroundCheckConsent] = useState(false);
 
   const { userData, businessInfo, documents } = applicationData;
 
@@ -158,7 +159,7 @@ export function ApplicationReviewPage({
   };
 
   const canSubmit = () => {
-    return finalConsent && termsAccepted && submissionConsent && !loading;
+    return finalConsent && termsAccepted && submissionConsent && backgroundCheckConsent && !loading;
   };
 
   const handleSubmit = async () => {
@@ -568,6 +569,25 @@ export function ApplicationReviewPage({
                   Provider Agreement
                 </Button>
                 .
+              </Label>
+            </div>
+
+            <div className="flex items-start space-x-3">
+              <Checkbox
+                id="backgroundCheckConsent"
+                checked={backgroundCheckConsent}
+                onCheckedChange={(checked) =>
+                  setBackgroundCheckConsent(checked as boolean)
+                }
+                disabled={loading}
+              />
+              <Label
+                htmlFor="backgroundCheckConsent"
+                className="text-sm leading-relaxed cursor-pointer"
+              >
+                I consent to a comprehensive background check including criminal
+                history, sex offender registry, and identity verification as
+                required for platform approval.
               </Label>
             </div>
 
