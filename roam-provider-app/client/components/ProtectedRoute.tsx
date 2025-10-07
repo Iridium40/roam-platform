@@ -11,7 +11,7 @@ interface ProtectedRouteProps {
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children,
-  redirectTo = "/sign-in",
+  redirectTo = "/provider-portal",
   fallback = null,
   allowedRoles,
 }) => {
@@ -58,7 +58,7 @@ export const RoleBasedRedirect: React.FC = () => {
   const { provider } = useAuth();
   
   if (!provider?.provider) {
-    return <Navigate to="/sign-in" replace />;
+    return <Navigate to="/provider-portal" replace />;
   }
 
   // Redirect based on provider role

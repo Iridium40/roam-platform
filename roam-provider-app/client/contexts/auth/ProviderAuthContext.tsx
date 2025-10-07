@@ -268,6 +268,7 @@ export const ProviderAuthProvider: React.FC<ProviderAuthProviderProps> = ({ chil
           authProcessingRef.current.clear();
           clearStoredData();
           apiClient.clearAuthToken();
+          setLoading(false);
         }
       });
       
