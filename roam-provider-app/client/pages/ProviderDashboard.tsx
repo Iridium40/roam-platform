@@ -179,6 +179,25 @@ export default function ProviderDashboard() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Role-based permission checker
+  const hasAccess = (feature: string): boolean => {
+    if (isOwner) return true; // Owners have full access
+    
+    if (isDispatcher) {
+      // Dispatchers can access: Dashboard, Bookings, Messages, Staff (read-only), Services (read-only)
+      // NO access to: Financials, Business Settings, Profile (they use their own account settings)
+      return ['dashboard', 'bookings', 'messages', 'staff', 'services'].includes(feature);
+    }
+    
+    if (isProvider) {
+      // Providers can access: Dashboard, My Bookings, Messages, My Profile, My Services (read-only)
+      // NO access to: Staff, Financials, Business Settings
+      return ['dashboard', 'bookings', 'messages', 'profile', 'services'].includes(feature);
+    }
+    
+    return false;
+  };
+
   // Determine current tab from URL
   const getCurrentTab = () => {
     const pathParts = location.pathname.split('/');
@@ -742,42 +761,54 @@ export default function ProviderDashboard() {
             
             {/* Desktop Navigation */}
             <div className="hidden lg:flex items-center space-x-8">
-              <button
-                onClick={() => navigateToTab("dashboard")}
-                className={`text-sm font-medium px-3 py-2 rounded-lg ${activeTab === "dashboard" ? "bg-gray-100 text-gray-900" : "text-gray-600 hover:text-gray-900"}`}
-              >
-                Dashboard
-              </button>
-              <button
-                onClick={() => navigateToTab("bookings")}
-                className={`text-sm font-medium px-3 py-2 rounded-lg ${activeTab === "bookings" ? "bg-gray-100 text-gray-900" : "text-gray-600 hover:text-gray-900"}`}
-              >
-                Bookings
-              </button>
-              <button
-                onClick={() => navigateToTab("messages")}
-                className={`text-sm font-medium px-3 py-2 rounded-lg ${activeTab === "messages" ? "bg-gray-100 text-gray-900" : "text-gray-600 hover:text-gray-900"}`}
-              >
-                Messages
-              </button>
-              <button
-                onClick={() => navigateToTab("services")}
-                className={`text-sm font-medium px-3 py-2 rounded-lg ${activeTab === "services" ? "bg-gray-100 text-gray-900" : "text-gray-600 hover:text-gray-900"}`}
-              >
-                Services
-              </button>
+              {hasAccess('dashboard') && (
+                <button
+                  onClick={() => navigateToTab("dashboard")}
+                  className={`text-sm font-medium px-3 py-2 rounded-lg ${activeTab === "dashboard" ? "bg-gray-100 text-gray-900" : "text-gray-600 hover:text-gray-900"}`}
+                >
+                  Dashboard
+                </button>
+              )}
+              {hasAccess('bookings') && (
+                <button
+                  onClick={() => navigateToTab("bookings")}
+                  className={`text-sm font-medium px-3 py-2 rounded-lg ${activeTab === "bookings" ? "bg-gray-100 text-gray-900" : "text-gray-600 hover:text-gray-900"}`}
+                >
+                  {isProvider ? 'My Bookings' : 'Bookings'}
+                </button>
+              )}
+              {hasAccess('messages') && (
+                <button
+                  onClick={() => navigateToTab("messages")}
+                  className={`text-sm font-medium px-3 py-2 rounded-lg ${activeTab === "messages" ? "bg-gray-100 text-gray-900" : "text-gray-600 hover:text-gray-900"}`}
+                >
+                  Messages
+                </button>
+              )}
+              {hasAccess('services') && (
+                <button
+                  onClick={() => navigateToTab("services")}
+                  className={`text-sm font-medium px-3 py-2 rounded-lg ${activeTab === "services" ? "bg-gray-100 text-gray-900" : "text-gray-600 hover:text-gray-900"}`}
+                >
+                  {isProvider ? 'My Services' : 'Services'}
+                </button>
+              )}
+              {hasAccess('staff') && (
                 <button
                   onClick={() => navigateToTab("staff")}
                   className={`text-sm font-medium px-3 py-2 rounded-lg ${activeTab === "staff" ? "bg-gray-100 text-gray-900" : "text-gray-600 hover:text-gray-900"}`}
                 >
                   Staff
                 </button>
-              <button
-                onClick={() => navigateToTab("financials")}
-                className={`text-sm font-medium px-3 py-2 rounded-lg ${activeTab === "financials" ? "bg-gray-100 text-gray-900" : "text-gray-600 hover:text-gray-900"}`}
-              >
-                Financials
-              </button>
+              )}
+              {hasAccess('financials') && (
+                <button
+                  onClick={() => navigateToTab("financials")}
+                  className={`text-sm font-medium px-3 py-2 rounded-lg ${activeTab === "financials" ? "bg-gray-100 text-gray-900" : "text-gray-600 hover:text-gray-900"}`}
+                >
+                  Financials
+                </button>
+              )}
             </div>
           </div>
 
@@ -793,14 +824,18 @@ export default function ProviderDashboard() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => navigateToTab("profile")}>
-                  <User className="w-4 h-4 mr-2" />
-                  Profile
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigateToTab("business-settings")}>
-                  <Building className="w-4 h-4 mr-2" />
-                  Business Settings
-                </DropdownMenuItem>
+                {hasAccess('profile') && (
+                  <DropdownMenuItem onClick={() => navigateToTab("profile")}>
+                    <User className="w-4 h-4 mr-2" />
+                    {isProvider ? 'My Profile' : 'Profile'}
+                  </DropdownMenuItem>
+                )}
+                {hasAccess('business-settings') && (
+                  <DropdownMenuItem onClick={() => navigateToTab("business-settings")}>
+                    <Building className="w-4 h-4 mr-2" />
+                    Business Settings
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut}>
                   <LogOut className="w-4 h-4 mr-2" />

@@ -116,18 +116,26 @@ export const validateStaffInvitation = async (req: Request, res: Response) => {
 
 export const completeStaffOnboarding = async (req: Request, res: Response) => {
   try {
-    const { token, firstName, lastName, phone, bio, password, confirmPassword } = req.body;
+    const { 
+      token, 
+      firstName, 
+      lastName, 
+      phone, 
+      bio, 
+      password,
+      professionalTitle,
+      yearsExperience,
+      avatarUrl,
+      coverImageUrl,
+      availability,
+      selectedServices,
+    } = req.body;
 
     console.log('[Staff Onboarding] Starting onboarding process');
 
     if (!token || !firstName || !lastName || !phone || !password) {
       console.log('[Staff Onboarding] Missing required fields');
       return res.status(400).json({ error: 'Missing required fields' });
-    }
-
-    if (password !== confirmPassword) {
-      console.log('[Staff Onboarding] Passwords do not match');
-      return res.status(400).json({ error: 'Passwords do not match' });
     }
 
     // Verify the JWT token
@@ -175,6 +183,28 @@ export const completeStaffOnboarding = async (req: Request, res: Response) => {
 
     console.log(`[Staff Onboarding] Auth user created with ID: ${authData.user.id}`);
 
+    // Prepare provider data based on role
+    const providerData: any = {
+      id: authData.user.id,
+      business_id: decoded.businessId,
+      email: decoded.email,
+      first_name: firstName,
+      last_name: lastName,
+      phone: phone,
+      bio: bio || null,
+      provider_role: decoded.role, // Use provider_role instead of role
+      location_id: decoded.locationId || null,
+      verification_status: 'approved',
+      is_active: true,
+    };
+
+    // Add optional fields
+    if (avatarUrl) providerData.image_url = avatarUrl;
+    if (coverImageUrl) providerData.cover_image_url = coverImageUrl;
+    if (professionalTitle) providerData.professional_title = professionalTitle;
+    if (yearsExperience !== undefined) providerData.years_experience = yearsExperience;
+    if (availability) providerData.availability_schedule = availability;
+
     // Step 2: Check if provider record already exists
     const { data: existingProvider, error: providerCheckError } = await supabase
       .from('providers')
@@ -183,21 +213,15 @@ export const completeStaffOnboarding = async (req: Request, res: Response) => {
       .eq('business_id', decoded.businessId)
       .single();
 
+    let providerId: string;
+
     if (existingProvider && !providerCheckError) {
       // Provider record exists, update it with the auth user ID
       console.log(`[Staff Onboarding] Updating existing provider record`);
       
       const { data: updatedProvider, error: updateError } = await supabase
         .from('providers')
-        .update({
-          id: authData.user.id, // Link to auth user
-          first_name: firstName,
-          last_name: lastName,
-          phone: phone,
-          bio: bio || null,
-          verification_status: 'approved',
-          is_active: true,
-        })
+        .update(providerData)
         .eq('email', decoded.email)
         .eq('business_id', decoded.businessId)
         .select()
@@ -208,32 +232,15 @@ export const completeStaffOnboarding = async (req: Request, res: Response) => {
         return res.status(500).json({ error: 'Failed to update provider record' });
       }
 
+      providerId = updatedProvider.id;
       console.log(`[Staff Onboarding] Provider record updated successfully`);
-
-      return res.status(200).json({
-        success: true,
-        message: 'Staff onboarding completed successfully',
-        provider: updatedProvider,
-      });
     } else {
       // Provider record doesn't exist, create it
       console.log(`[Staff Onboarding] Creating new provider record`);
       
       const { data: newProvider, error: insertError } = await supabase
         .from('providers')
-        .insert({
-          id: authData.user.id,
-          business_id: decoded.businessId,
-          email: decoded.email,
-          first_name: firstName,
-          last_name: lastName,
-          phone: phone,
-          bio: bio || null,
-          role: decoded.role,
-          location_id: decoded.locationId || null,
-          verification_status: 'approved',
-          is_active: true,
-        })
+        .insert(providerData)
         .select()
         .single();
 
@@ -245,14 +252,46 @@ export const completeStaffOnboarding = async (req: Request, res: Response) => {
         });
       }
 
+      providerId = newProvider.id;
       console.log(`[Staff Onboarding] Provider record created successfully`);
-
-      return res.status(200).json({
-        success: true,
-        message: 'Staff onboarding completed successfully',
-        provider: newProvider,
-      });
     }
+
+    // Step 3: Handle service assignments for providers
+    if (decoded.role === 'provider' && selectedServices && selectedServices.length > 0) {
+      console.log(`[Staff Onboarding] Assigning ${selectedServices.length} services to provider`);
+      
+      // Get business services to map service_id to business_service_id
+      const { data: businessServices, error: servicesError } = await supabase
+        .from('business_services')
+        .select('id, service_id')
+        .eq('business_id', decoded.businessId)
+        .in('service_id', selectedServices);
+
+      if (!servicesError && businessServices) {
+        const serviceAssignments = businessServices.map(bs => ({
+          provider_id: providerId,
+          business_service_id: bs.id,
+          is_available: true,
+        }));
+
+        const { error: assignmentError } = await supabase
+          .from('provider_service_assignments')
+          .insert(serviceAssignments);
+
+        if (assignmentError) {
+          console.error('[Staff Onboarding] Error assigning services:', assignmentError);
+          // Don't fail the whole onboarding if service assignment fails
+        } else {
+          console.log(`[Staff Onboarding] Services assigned successfully`);
+        }
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Staff onboarding completed successfully',
+      providerId: providerId,
+    });
 
   } catch (error) {
     console.error('[Staff Onboarding] Error in completeStaffOnboarding:', error);
