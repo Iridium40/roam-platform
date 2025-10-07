@@ -50,53 +50,22 @@ import {
   User,
   RefreshCw,
   Plus,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-
-interface Review {
-  id: string;
-  booking_id: string;
-  overall_rating: number;
-  service_rating?: number;
-  communication_rating?: number;
-  punctuality_rating?: number;
-  review_text?: string;
-  is_approved: boolean;
-  is_featured: boolean;
-  moderated_by?: string;
-  moderated_at?: string;
-  moderation_notes?: string;
-  created_at: string;
-  // Joined data from related tables
-  bookings?: {
-    id: string;
-    customer_profiles?: {
-      id: string;
-      first_name: string;
-      last_name: string;
-    };
-    providers?: {
-      id: string;
-      first_name: string;
-      last_name: string;
-      business_profiles?: {
-        id: string;
-        business_name: string;
-      };
-    };
-    services?: {
-      id: string;
-      name: string;
-    };
-  };
-  admin_users?: {
-    id: string;
-    first_name: string;
-    last_name: string;
-  };
-}
+// React Query hooks for optimized data fetching
+import {
+  useReviews,
+  useApproveReview,
+  useRejectReview,
+  useFeatureReview,
+  useDeleteReview,
+  useReviewStats,
+  type Review,
+} from "@/hooks/useReviews";
 
 const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString("en-US", {
@@ -160,12 +129,37 @@ export default function AdminReviews() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
-  const [reviews, setReviews] = useState<Review[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const limit = 25; // items per page
+  
+  // Filter state
   const [activeTab, setActiveTab] = useState<
     "all" | "pending" | "approved" | "featured"
   >("all");
+  
+  // React Query hooks for data fetching
+  const { 
+    data: reviewsResponse, 
+    isLoading, 
+    error: queryError, 
+    refetch 
+  } = useReviews(page, limit, activeTab !== "all" ? activeTab : undefined);
+  
+  const reviews = reviewsResponse?.reviews || [];
+  const totalReviews = reviewsResponse?.total || 0;
+  const totalPages = Math.ceil(totalReviews / limit);
+  
+  // React Query mutations
+  const approveReviewMutation = useApproveReview();
+  const rejectReviewMutation = useRejectReview();
+  const featureReviewMutation = useFeatureReview();
+  const deleteReviewMutation = useDeleteReview();
+  
+  // Calculate stats using memoized hook
+  const reviewStats = useReviewStats(reviews);
+  
   const [selectedReview, setSelectedReview] = useState<Review | null>(null);
   const [isReviewDetailsOpen, setIsReviewDetailsOpen] = useState(false);
   const [isModerationModalOpen, setIsModerationModalOpen] = useState(false);
@@ -194,107 +188,8 @@ export default function AdminReviews() {
     }
   };
 
-  // Fetch reviews from Supabase with related data
-  const fetchReviews = async (retryCount = 0) => {
-    const maxRetries = 2;
-
-    try {
-      setLoading(true);
-      setError(null);
-
-      // Add a small delay for retries
-      if (retryCount > 0) {
-        console.log(`Retrying fetchReviews... Attempt ${retryCount + 1}`);
-        await new Promise((resolve) => setTimeout(resolve, 1000 * retryCount));
-      }
-
-      // Add timeout to prevent hanging
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Request timeout')), 30000); // 30 second timeout
-      });
-
-      const queryPromise = supabase
-        .from("reviews")
-        .select(
-          `
-          *,
-          bookings (
-            id,
-            customer_profiles (
-              id,
-              first_name,
-              last_name
-            ),
-            providers (
-              id,
-              first_name,
-              last_name,
-              business_profiles (
-                id,
-                business_name
-              )
-            ),
-            services (
-              id,
-              name
-            )
-          ),
-          admin_users (
-            id,
-            first_name,
-            last_name
-          )
-        `,
-        )
-        .order("created_at", { ascending: false })
-        .limit(100); // Add a limit to prevent overwhelming the query
-
-      const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
-
-      if (error) {
-        console.error("Error fetching reviews:", error.message, error);
-        setError(
-          `Reviews Query Error: ${error.message}. Details: ${JSON.stringify(error)}. You may need to create RLS policy: CREATE POLICY "Allow anon read access" ON public.reviews FOR SELECT USING (true);`,
-        );
-        return;
-      }
-
-      console.log(`Fetched ${data?.length || 0} reviews`);
-      setReviews(data || []);
-    } catch (error: any) {
-      console.error("Error in fetchReviews:", error);
-      console.error("Error type:", typeof error);
-      console.error("Error name:", error?.name);
-      console.error("Error message:", error?.message);
-
-      let errorMessage = "Failed to fetch reviews data";
-
-      if (
-        error?.name === "TypeError" &&
-        error?.message.includes("Failed to fetch")
-      ) {
-        if (retryCount < maxRetries) {
-          console.log(
-            `Network error, retrying... (${retryCount + 1}/${maxRetries})`,
-          );
-          return fetchReviews(retryCount + 1);
-        }
-        errorMessage = `Network error: ${error.message}. Please check your internet connection and Supabase configuration.`;
-      } else if (error?.message) {
-        errorMessage = `Failed to fetch reviews: ${error.message}`;
-      } else if (typeof error === "string") {
-        errorMessage = `Failed to fetch reviews: ${error}`;
-      } else {
-        errorMessage = `Failed to fetch reviews: ${JSON.stringify(error)}`;
-      }
-      setError(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const refreshData = async () => {
-    await fetchReviews();
+    await refetch();
   };
 
   useEffect(() => {
@@ -312,35 +207,6 @@ export default function AdminReviews() {
       isMounted = false;
     };
   }, [user]);
-
-  useEffect(() => {
-    let isMounted = true;
-    
-    const loadReviews = async () => {
-      if (adminUser && isMounted) {
-        await fetchReviews();
-      }
-    };
-    
-    loadReviews();
-    
-    return () => {
-      isMounted = false;
-    };
-  }, [adminUser]);
-
-  const reviewStats = {
-    totalReviews: reviews.length,
-    approvedReviews: reviews.filter((r) => r.is_approved).length,
-    pendingReviews: reviews.filter((r) => !r.is_approved).length,
-    featuredReviews: reviews.filter((r) => r.is_featured).length,
-    averageRating:
-      reviews.length > 0
-        ? reviews.reduce((sum, r) => sum + r.overall_rating, 0) / reviews.length
-        : 0,
-    lowRatingReviews: reviews.filter((r) => r.overall_rating <= 2).length,
-    highRatingReviews: reviews.filter((r) => r.overall_rating >= 4).length,
-  };
 
   // Helper functions to get display names from joined data
   const getCustomerName = (review: Review) => {
@@ -378,7 +244,7 @@ export default function AdminReviews() {
     return null;
   };
 
-  // Moderation handlers
+  // Moderation handlers using React Query mutations
   const handleApproveReview = async (review: Review) => {
     if (!adminUser?.id) {
       toast({
@@ -391,116 +257,21 @@ export default function AdminReviews() {
     }
 
     try {
-      console.log("Starting approval for review:", review.id);
-      console.log("Admin user ID:", adminUser.id);
+      await approveReviewMutation.mutateAsync({
+        reviewId: review.id,
+        adminUserId: adminUser.id,
+      });
 
-      // Update with moderation fields
-      const { data, error } = await supabase
-        .from("reviews")
-        .update({
-          is_approved: true,
-          moderated_at: new Date().toISOString(),
-          moderated_by: adminUser?.id || null,
-        })
-        .eq("id", review.id)
-        .select();
-
-      console.log("Supabase update result:", { data, error });
-
-      if (error) {
-        console.error("=== APPROVE REVIEW - SUPABASE ERROR DEBUG START ===");
-        console.error("Raw error object:", error);
-        console.error("Error message:", error.message);
-        console.error("Error details:", error.details);
-        console.error("Error hint:", error.hint);
-        console.error("Error code:", error.code);
-        console.error("Error toString():", error.toString());
-        console.error("All error keys:", Object.keys(error));
-        try {
-          console.error("Error JSON attempt:", JSON.stringify(error, null, 2));
-        } catch (e) {
-          console.error("JSON stringify failed:", e);
-        }
-        console.error("=== APPROVE REVIEW - SUPABASE ERROR DEBUG END ===");
-        throw error;
-      }
-
-      console.log("Review approval successful, fetching reviews...");
       toast({
         title: "Review Approved",
         description: `Review by ${getCustomerName(review)} has been approved successfully.`,
         variant: "default",
       });
-
-      // Refresh reviews
-      await fetchReviews();
-      console.log("Reviews refreshed successfully");
     } catch (error: any) {
-      console.error("=== APPROVE REVIEW - CATCH BLOCK DEBUG START ===");
-      console.error("Full error object:", error);
-      console.error("Error type:", typeof error);
-      console.error("Error constructor:", error?.constructor?.name);
-      console.error("Error.toString():", error?.toString?.());
-      console.error("Error keys:", Object.keys(error || {}));
-
-      // Try to extract all possible error properties
-      const errorProps = {
-        message: error?.message,
-        details: error?.details,
-        hint: error?.hint,
-        code: error?.code,
-        status: error?.status,
-        statusText: error?.statusText,
-        statusCode: error?.statusCode,
-        data: error?.data,
-        response: error?.response,
-      };
-      console.error("Error properties:", errorProps);
-      console.error("=== APPROVE REVIEW - CATCH BLOCK DEBUG END ===");
-
-      let errorMessage = "Unknown error occurred while approving review";
-
-      // Try multiple ways to extract a meaningful error message
-      if (typeof error === "string") {
-        errorMessage = error;
-      } else if (error?.message && typeof error.message === "string") {
-        errorMessage = error.message;
-      } else if (error?.details && typeof error.details === "string") {
-        errorMessage = error.details;
-      } else if (error?.hint && typeof error.hint === "string") {
-        errorMessage = error.hint;
-      } else if (
-        error?.error?.message &&
-        typeof error.error.message === "string"
-      ) {
-        errorMessage = error.error.message;
-      } else if (error?.toString && typeof error.toString === "function") {
-        try {
-          errorMessage = error.toString();
-        } catch (toStringError) {
-          console.error("toString() failed:", toStringError);
-        }
-      }
-
-      // If we still have an object, try to display it in a readable way
-      if (
-        errorMessage === "Unknown error occurred while approving review" &&
-        error
-      ) {
-        try {
-          const stringified = JSON.stringify(error, null, 2);
-          if (stringified !== "{}") {
-            errorMessage = `Error details: ${stringified}`;
-          }
-        } catch (jsonError) {
-          console.error("JSON.stringify failed:", jsonError);
-          errorMessage = "Complex error object - see console for details";
-        }
-      }
-
+      console.error("Error approving review:", error);
       toast({
         title: "Error Approving Review",
-        description: errorMessage,
+        description: error?.message || "Failed to approve review",
         variant: "destructive",
       });
     }
@@ -518,71 +289,22 @@ export default function AdminReviews() {
     }
 
     try {
-      console.log("Starting disapproval for review:", review.id);
-      console.log("Admin user ID:", adminUser.id);
-
-      const { data, error } = await supabase
-        .from("reviews")
-        .update({
-          is_approved: false,
-          moderated_at: new Date().toISOString(),
-          moderated_by: adminUser?.id || null,
-        })
-        .eq("id", review.id)
-        .select();
-
-      console.log("Supabase update result:", { data, error });
-
-      if (error) {
-        console.error("=== DISAPPROVE REVIEW - SUPABASE ERROR DEBUG START ===");
-        console.error("Raw error object:", error);
-        console.error("Error message:", error.message);
-        console.error("Error details:", error.details);
-        console.error("Error hint:", error.hint);
-        console.error("Error code:", error.code);
-        console.error("Error toString():", error.toString());
-        console.error("All error keys:", Object.keys(error));
-        try {
-          console.error("Error JSON attempt:", JSON.stringify(error, null, 2));
-        } catch (e) {
-          console.error("JSON stringify failed:", e);
-        }
-        console.error("=== DISAPPROVE REVIEW - SUPABASE ERROR DEBUG END ===");
-        throw error;
-      }
+      await rejectReviewMutation.mutateAsync({
+        reviewId: review.id,
+        adminUserId: adminUser.id,
+        moderationNotes: "Disapproved by admin",
+      });
 
       toast({
         title: "Review Disapproved",
         description: `Review by ${getCustomerName(review)} has been disapproved.`,
         variant: "default",
       });
-      await fetchReviews();
     } catch (error: any) {
-      console.error("Error disapproving review - Full error object:", error);
-
-      let errorMessage = "Unknown error occurred";
-
-      if (error?.message) {
-        errorMessage = error.message;
-      } else if (error?.error?.message) {
-        errorMessage = error.error.message;
-      } else if (error?.details) {
-        errorMessage = error.details;
-      } else if (error?.hint) {
-        errorMessage = error.hint;
-      } else if (typeof error === "string") {
-        errorMessage = error;
-      } else if (error) {
-        try {
-          errorMessage = JSON.stringify(error, null, 2);
-        } catch (jsonError) {
-          errorMessage = "Error object could not be serialized";
-        }
-      }
-
+      console.error("Error disapproving review:", error);
       toast({
         title: "Error Disapproving Review",
-        description: errorMessage,
+        description: error?.message || "Failed to disapprove review",
         variant: "destructive",
       });
     }
@@ -590,34 +312,21 @@ export default function AdminReviews() {
 
   const handleFeatureReview = async (review: Review) => {
     try {
-      const { error } = await supabase
-        .from("reviews")
-        .update({ is_featured: true })
-        .eq("id", review.id);
-
-      if (error) throw error;
+      await featureReviewMutation.mutateAsync({
+        reviewId: review.id,
+        isFeatured: true,
+      });
 
       toast({
         title: "Review Featured",
         description: `Review by ${getCustomerName(review)} has been featured successfully.`,
         variant: "default",
       });
-      await fetchReviews();
     } catch (error: any) {
       console.error("Error featuring review:", error);
-      let errorMessage = "Unknown error occurred";
-      if (error?.message) {
-        errorMessage = error.message;
-      } else if (error?.error?.message) {
-        errorMessage = error.error.message;
-      } else if (typeof error === "string") {
-        errorMessage = error;
-      } else if (error) {
-        errorMessage = JSON.stringify(error);
-      }
       toast({
         title: "Error Featuring Review",
-        description: errorMessage,
+        description: error?.message || "Failed to feature review",
         variant: "destructive",
       });
     }
@@ -625,34 +334,21 @@ export default function AdminReviews() {
 
   const handleUnfeatureReview = async (review: Review) => {
     try {
-      const { error } = await supabase
-        .from("reviews")
-        .update({ is_featured: false })
-        .eq("id", review.id);
-
-      if (error) throw error;
+      await featureReviewMutation.mutateAsync({
+        reviewId: review.id,
+        isFeatured: false,
+      });
 
       toast({
         title: "Review Unfeatured",
         description: `Review by ${getCustomerName(review)} has been removed from featured reviews.`,
         variant: "default",
       });
-      await fetchReviews();
     } catch (error: any) {
       console.error("Error unfeaturing review:", error);
-      let errorMessage = "Unknown error occurred";
-      if (error?.message) {
-        errorMessage = error.message;
-      } else if (error?.error?.message) {
-        errorMessage = error.error.message;
-      } else if (typeof error === "string") {
-        errorMessage = error;
-      } else if (error) {
-        errorMessage = JSON.stringify(error);
-      }
       toast({
         title: "Error Unfeaturing Review",
-        description: errorMessage,
+        description: error?.message || "Failed to unfeature review",
         variant: "destructive",
       });
     }
@@ -665,18 +361,14 @@ export default function AdminReviews() {
   };
 
   const saveModerationNotes = async () => {
-    if (!selectedReview) return;
+    if (!selectedReview || !adminUser?.id) return;
 
     try {
-      const { error } = await supabase
-        .from("reviews")
-        .update({
-          moderation_notes: moderationNotes,
-          moderated_at: new Date().toISOString(),
-        })
-        .eq("id", selectedReview.id);
-
-      if (error) throw error;
+      await approveReviewMutation.mutateAsync({
+        reviewId: selectedReview.id,
+        adminUserId: adminUser.id,
+        moderationNotes: moderationNotes,
+      });
 
       toast({
         title: "Moderation Notes Saved",
@@ -685,40 +377,18 @@ export default function AdminReviews() {
       });
       setIsModerationModalOpen(false);
       setModerationNotes("");
-      await fetchReviews();
     } catch (error: any) {
       console.error("Error saving moderation notes:", error);
-      let errorMessage = "Unknown error occurred";
-      if (error?.message) {
-        errorMessage = error.message;
-      } else if (error?.error?.message) {
-        errorMessage = error.error.message;
-      } else if (typeof error === "string") {
-        errorMessage = error;
-      } else if (error) {
-        errorMessage = JSON.stringify(error);
-      }
       toast({
         title: "Error Saving Notes",
-        description: errorMessage,
+        description: error?.message || "Failed to save moderation notes",
         variant: "destructive",
       });
     }
   };
 
   // Filter reviews based on active tab
-  const filteredReviews = reviews.filter((review) => {
-    switch (activeTab) {
-      case "pending":
-        return !review.is_approved;
-      case "approved":
-        return review.is_approved;
-      case "featured":
-        return review.is_featured;
-      default:
-        return true;
-    }
-  });
+  const filteredReviews = reviews;
 
   const columns: Column[] = [
     {
@@ -960,7 +630,7 @@ export default function AdminReviews() {
     },
   ];
 
-  if (loading) {
+  if (isLoading) {
     return (
       <AdminLayout title="Reviews">
         <div className="flex items-center justify-center h-64">
@@ -973,7 +643,7 @@ export default function AdminReviews() {
     );
   }
 
-  if (error) {
+  if (queryError) {
     return (
       <AdminLayout title="Reviews">
         <div className="flex items-center justify-center h-64">
@@ -984,7 +654,7 @@ export default function AdminReviews() {
                 Failed to Load Reviews
               </h3>
               <p className="text-sm text-muted-foreground mb-4 max-w-md">
-                {error}
+                {queryError.message || "An error occurred while loading reviews"}
               </p>
               <Button onClick={refreshData} variant="outline">
                 <RefreshCw className="w-4 h-4 mr-2" />
@@ -1232,15 +902,70 @@ export default function AdminReviews() {
 
         {/* Reviews Table */}
         <ROAMDataTable
-          title={`${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Reviews`}
+          title={`${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Reviews (${totalReviews} total)`}
           columns={columns}
           data={filteredReviews}
           searchable={true}
           filterable={true}
           addable={false}
           onRowClick={(review) => console.log("View review:", review)}
-          pageSize={10}
+          pageSize={limit}
         />
+
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between border-t pt-4">
+            <div className="text-sm text-muted-foreground">
+              Page {page} of {totalPages} ({totalReviews} total reviews)
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage(Math.max(1, page - 1))}
+                disabled={page === 1}
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                Previous
+              </Button>
+              <div className="flex items-center gap-1">
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (page <= 3) {
+                    pageNum = i + 1;
+                  } else if (page >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = page - 2 + i;
+                  }
+                  
+                  return (
+                    <Button
+                      key={pageNum}
+                      variant={page === pageNum ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setPage(pageNum)}
+                      className="w-10"
+                    >
+                      {pageNum}
+                    </Button>
+                  );
+                })}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage(Math.min(totalPages, page + 1))}
+                disabled={page === totalPages}
+              >
+                Next
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Review Details Modal */}
@@ -1524,7 +1249,7 @@ export default function AdminReviews() {
                         </div>
                       </div>
 
-                      {selectedReview.moderated_by_name && (
+                      {getModeratorName(selectedReview) && (
                         <div className="flex items-center gap-3">
                           <UserCheck className="w-4 h-4 text-muted-foreground" />
                           <div>
@@ -1532,7 +1257,7 @@ export default function AdminReviews() {
                               Moderated By
                             </div>
                             <div className="font-medium">
-                              {selectedReview.moderated_by_name}
+                              {getModeratorName(selectedReview)}
                             </div>
                           </div>
                         </div>
@@ -1688,9 +1413,9 @@ export default function AdminReviews() {
                           No moderation notes added yet
                         </div>
                       )}
-                      {selectedReview.moderated_by_name && (
+                      {getModeratorName(selectedReview) && (
                         <div className="text-xs text-muted-foreground mt-2">
-                          Last moderated by {selectedReview.moderated_by_name}
+                          Last moderated by {getModeratorName(selectedReview)}
                           {selectedReview.moderated_at && (
                             <>
                               {" "}
