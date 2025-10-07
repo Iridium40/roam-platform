@@ -35,34 +35,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Decode base64 file data
     const fileBuffer = Buffer.from(file, 'base64');
     
-    // Determine storage bucket and path
-    const bucketMap: Record<string, string> = {
-      'business_logo': 'business-logos',
-      'business_cover': 'business-covers',
-      'provider_avatar': 'provider-images',
-      'provider_cover': 'provider-images',
-      'customer_avatar': 'customer-avatars'
-    };
-
-    const bucket = bucketMap[imageType] || 'business-images';
+    // Use unified storage bucket
+    const bucket = 'roam-file-storage';
     
     // Generate unique filename
     const fileExt = fileName ? fileName.split('.').pop() : 'jpg';
     const timestamp = Date.now();
-    const uniqueFileName = `${businessId}_${imageType}_${timestamp}.${fileExt}`;
+    const uniqueFileName = `${imageType}_${timestamp}.${fileExt}`;
     
-    // Determine storage path
+    // Determine storage path within the unified bucket
     let storagePath: string;
     if (imageType === 'business_logo') {
-      storagePath = `business_logos/${uniqueFileName}`;
+      storagePath = `business-images/${businessId}/${uniqueFileName}`;
     } else if (imageType === 'business_cover') {
-      storagePath = `business_covers/${uniqueFileName}`;
-    } else if (imageType === 'provider_avatar' || imageType === 'provider_cover') {
-      storagePath = `provider_images/${uniqueFileName}`;
+      storagePath = `business-images/${businessId}/${uniqueFileName}`;
+    } else if (imageType === 'provider_avatar') {
+      storagePath = `provider-images/${userId || businessId}/${uniqueFileName}`;
+    } else if (imageType === 'provider_cover') {
+      storagePath = `provider-images/${userId || businessId}/${uniqueFileName}`;
     } else if (imageType === 'customer_avatar') {
-      storagePath = `customer_avatars/${uniqueFileName}`;
+      storagePath = `customer-images/${userId || businessId}/${uniqueFileName}`;
     } else {
-      storagePath = `images/${uniqueFileName}`;
+      storagePath = `images/${businessId}/${uniqueFileName}`;
     }
 
     console.log(`Uploading ${imageType} to ${bucket}/${storagePath}`);

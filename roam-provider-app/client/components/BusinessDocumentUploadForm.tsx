@@ -91,10 +91,10 @@ export default function BusinessDocumentUploadForm({
       };
 
       const sanitizedFileName = sanitizeFileName(document.file.name);
-      const fileName = `${businessId}/${document.documentType}/${Date.now()}_${sanitizedFileName}`;
+      const fileName = `provider-documents/${businessId}/${document.documentType}_${Date.now()}_${sanitizedFileName}`;
       
       const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('provider-documents')
+        .from('roam-file-storage')
         .upload(fileName, document.file);
 
       if (uploadError) {
@@ -103,7 +103,7 @@ export default function BusinessDocumentUploadForm({
 
       // Get public URL
       const { data: urlData } = supabase.storage
-        .from('provider-documents')
+        .from('roam-file-storage')
         .getPublicUrl(fileName);
 
       // Create database record directly with Supabase
