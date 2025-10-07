@@ -1,9 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -14,10 +11,10 @@ import {
   CheckCircle,
   AlertCircle,
   Building,
-  Globe,
   Camera,
   ArrowRight,
   Loader2,
+  Info,
 } from "lucide-react";
 import { ImageStorageService } from "@/utils/image/imageStorage";
 import { IMAGE_REQUIREMENTS, ImageType } from "@/utils/image/imageTypes";
@@ -25,7 +22,6 @@ import { IMAGE_REQUIREMENTS, ImageType } from "@/utils/image/imageTypes";
 interface BusinessProfileData {
   logoUrl?: string;
   coverImageUrl?: string;
-  businessCategoryRefined?: string;
 }
 
 interface BusinessProfileSetupProps {
@@ -46,7 +42,7 @@ interface ImageUpload {
   error?: string;
 }
 
-export default function BusinessProfileSetup({
+export default function BusinessProfileSetupSimplified({
   businessId,
   userId,
   onComplete,
@@ -57,10 +53,9 @@ export default function BusinessProfileSetup({
   const [formData, setFormData] = useState<BusinessProfileData>({
     logoUrl: initialData?.logoUrl,
     coverImageUrl: initialData?.coverImageUrl,
-    businessCategoryRefined: initialData?.businessCategoryRefined,
   });
 
-  // Load existing business info from Phase 1
+  // Load existing business info from Phase 1 (read-only display)
   const [businessInfo, setBusinessInfo] = useState<{
     businessName: string;
     businessDescription: string;
@@ -88,10 +83,8 @@ export default function BusinessProfileSetup({
   });
 
   const [loading, setLoading] = useState(false);
+  const [loadingInfo, setLoadingInfo] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [validationErrors, setValidationErrors] = useState<
-    Record<string, string>
-  >({});
 
   // Load existing data
   useEffect(() => {
@@ -107,47 +100,31 @@ export default function BusinessProfileSetup({
 
   const loadExistingData = async () => {
     try {
-      // Use the onboarding-specific endpoint that doesn't require authentication
+      setLoadingInfo(true);
+      // Load business profile data from Phase 1
       const response = await fetch(`/api/onboarding/business-profile/${businessId}`);
       if (response.ok) {
         const data = await response.json();
-        setFormData((prev) => ({
-          ...prev,
-          ...data,
-        }));
+        setBusinessInfo({
+          businessName: data.business_name || "",
+          businessDescription: data.business_description || "",
+          website: data.website || "",
+          socialMedia: data.social_media || {},
+        });
+        
+        // Load existing images if any
+        if (data.logo_url) {
+          setFormData((prev) => ({ ...prev, logoUrl: data.logo_url }));
+        }
+        if (data.cover_image_url) {
+          setFormData((prev) => ({ ...prev, coverImageUrl: data.cover_image_url }));
+        }
       }
     } catch (error) {
       console.log("No existing business profile data found");
+    } finally {
+      setLoadingInfo(false);
     }
-  };
-
-  const handleInputChange = (
-    field: keyof BusinessProfileData,
-    value: string,
-  ) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-
-    // Clear validation error when user starts typing
-    if (validationErrors[field]) {
-      setValidationErrors((prev) => {
-        const newErrors = { ...prev };
-        delete newErrors[field];
-        return newErrors;
-      });
-    }
-  };
-
-  const handleSocialMediaChange = (platform: string, value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      socialMediaLinks: {
-        ...prev.socialMediaLinks,
-        [platform]: value,
-      },
-    }));
   };
 
   const handleImageSelect = async (
@@ -270,50 +247,7 @@ export default function BusinessProfileSetup({
     }));
   };
 
-  const validateForm = (): boolean => {
-    const errors: Record<string, string> = {};
-
-    if (!formData.businessName.trim()) {
-      errors.businessName = "Business name is required";
-    }
-
-    if (!formData.detailedDescription.trim()) {
-      errors.detailedDescription = "Business description is required";
-    } else if (formData.detailedDescription.length < 50) {
-      errors.detailedDescription =
-        "Description should be at least 50 characters";
-    }
-
-    if (formData.websiteUrl && !isValidUrl(formData.websiteUrl)) {
-      errors.websiteUrl = "Please enter a valid website URL";
-    }
-
-    // Validate social media URLs
-    Object.entries(formData.socialMediaLinks).forEach(([platform, url]) => {
-      if (url && !isValidUrl(url)) {
-        errors[`social_${platform}`] = `Please enter a valid ${platform} URL`;
-      }
-    });
-
-    setValidationErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
-  const isValidUrl = (url: string): boolean => {
-    try {
-      new URL(url.startsWith("http") ? url : `https://${url}`);
-      return true;
-    } catch {
-      return false;
-    }
-  };
-
   const handleSubmit = async () => {
-    if (!validateForm()) {
-      setError("Please fix the errors above");
-      return;
-    }
-
     setLoading(true);
     setError(null);
 
@@ -326,7 +260,7 @@ export default function BusinessProfileSetup({
         await uploadImage("cover");
       }
 
-      // Save business profile data (temporary test endpoint)
+      // Save business profile data
       const response = await fetch(`/api/test-business-profile`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -340,7 +274,7 @@ export default function BusinessProfileSetup({
         throw new Error("Failed to save business profile");
       }
 
-      // Mark step as completed (use test endpoint for now)
+      // Mark step as completed
       await fetch("/api/test-phase2-progress", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -363,20 +297,28 @@ export default function BusinessProfileSetup({
     }
   };
 
+  const canSkip = () => {
+    // Allow skipping if images are optional
+    return true;
+  };
+
   const completionPercentage = () => {
     let completed = 0;
-    const total = 6; // name, description, logo, cover, website, social
+    const total = 2; // logo, cover
 
-    if (formData.businessName.trim()) completed++;
-    if (formData.detailedDescription.trim()) completed++;
     if (formData.logoUrl || logoUpload.uploaded) completed++;
     if (formData.coverImageUrl || coverUpload.uploaded) completed++;
-    if (formData.websiteUrl.trim()) completed++;
-    if (Object.values(formData.socialMediaLinks).some((url) => url?.trim()))
-      completed++;
 
     return Math.round((completed / total) * 100);
   };
+
+  if (loadingInfo) {
+    return (
+      <div className="max-w-4xl mx-auto flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-roam-blue" />
+      </div>
+    );
+  }
 
   return (
     <div className={`max-w-4xl mx-auto ${className}`}>
@@ -391,7 +333,7 @@ export default function BusinessProfileSetup({
                 Business Profile Setup
               </CardTitle>
               <p className="text-foreground/70">
-                Complete your business branding and visual identity
+                Add your business branding and visual identity
               </p>
             </div>
           </div>
@@ -418,13 +360,39 @@ export default function BusinessProfileSetup({
             </Alert>
           )}
 
+          {/* Display existing business info from Phase 1 */}
+          <Alert className="border-blue-200 bg-blue-50">
+            <Info className="h-4 w-4 text-blue-600" />
+            <AlertDescription className="text-blue-800">
+              <strong>Your Business Information (from Phase 1):</strong>
+              <div className="mt-2 space-y-1">
+                <p><strong>Name:</strong> {businessInfo.businessName}</p>
+                {businessInfo.businessDescription && (
+                  <p><strong>Description:</strong> {businessInfo.businessDescription.substring(0, 100)}...</p>
+                )}
+                {businessInfo.website && (
+                  <p><strong>Website:</strong> {businessInfo.website}</p>
+                )}
+                {businessInfo.socialMedia && Object.keys(businessInfo.socialMedia).length > 0 && (
+                  <p><strong>Social Media:</strong> {Object.keys(businessInfo.socialMedia).join(", ")}</p>
+                )}
+              </div>
+              <p className="mt-2 text-sm italic">These details were collected in Phase 1 and can be updated later in your business settings.</p>
+            </AlertDescription>
+          </Alert>
+
           {/* Business Logo Upload */}
           <div className="space-y-4">
             <div>
-              <Label className="text-base font-semibold">Business Logo</Label>
-              <p className="text-sm text-foreground/70">
-                Square logo (512x512px recommended) • Max 2MB • JPG, PNG, WebP
-              </p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-base font-semibold">Business Logo</p>
+                  <p className="text-sm text-foreground/70">
+                    Square logo (512x512px recommended) • Max 2MB • JPG, PNG, WebP
+                  </p>
+                </div>
+                <Badge variant="secondary">Optional</Badge>
+              </div>
             </div>
 
             <div className="flex items-start gap-6">
@@ -512,12 +480,15 @@ export default function BusinessProfileSetup({
           {/* Business Cover Image */}
           <div className="space-y-4">
             <div>
-              <Label className="text-base font-semibold">
-                Business Cover Image
-              </Label>
-              <p className="text-sm text-foreground/70">
-                Banner image (1200x400px recommended) • Max 5MB • JPG, PNG, WebP
-              </p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-base font-semibold">Business Cover Image</p>
+                  <p className="text-sm text-foreground/70">
+                    Banner image (1200x400px recommended) • Max 5MB • JPG, PNG, WebP
+                  </p>
+                </div>
+                <Badge variant="secondary">Optional</Badge>
+              </div>
             </div>
 
             <div className="space-y-4">
@@ -605,140 +576,6 @@ export default function BusinessProfileSetup({
             </div>
           </div>
 
-          {/* Business Information */}
-          <div className="grid gap-6 md:grid-cols-2">
-            <div className="md:col-span-2 space-y-2">
-              <Label htmlFor="businessName" className="text-base font-semibold">
-                Business Name *
-              </Label>
-              <Input
-                id="businessName"
-                value={formData.businessName}
-                onChange={(e) =>
-                  handleInputChange("businessName", e.target.value)
-                }
-                placeholder="Enter your business name"
-                className={
-                  validationErrors.businessName ? "border-red-500" : ""
-                }
-              />
-              {validationErrors.businessName && (
-                <p className="text-red-500 text-sm">
-                  {validationErrors.businessName}
-                </p>
-              )}
-            </div>
-
-            <div className="md:col-span-2 space-y-2">
-              <Label htmlFor="description" className="text-base font-semibold">
-                Detailed Business Description *
-              </Label>
-              <Textarea
-                id="description"
-                value={formData.detailedDescription}
-                onChange={(e) =>
-                  handleInputChange("detailedDescription", e.target.value)
-                }
-                placeholder="Describe your business, services, and what makes you unique..."
-                rows={4}
-                className={
-                  validationErrors.detailedDescription ? "border-red-500" : ""
-                }
-              />
-              <div className="flex justify-between text-sm">
-                <span
-                  className={
-                    validationErrors.detailedDescription
-                      ? "text-red-500"
-                      : "text-foreground/70"
-                  }
-                >
-                  {validationErrors.detailedDescription ||
-                    "At least 50 characters recommended"}
-                </span>
-                <span className="text-foreground/50">
-                  {formData.detailedDescription.length} characters
-                </span>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="website" className="text-base font-semibold">
-                Website URL
-              </Label>
-              <Input
-                id="website"
-                value={formData.websiteUrl}
-                onChange={(e) =>
-                  handleInputChange("websiteUrl", e.target.value)
-                }
-                placeholder="https://yourbusiness.com"
-                className={validationErrors.websiteUrl ? "border-red-500" : ""}
-              />
-              {validationErrors.websiteUrl && (
-                <p className="text-red-500 text-sm">
-                  {validationErrors.websiteUrl}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Social Media Links */}
-          <div className="space-y-4">
-            <Label className="text-base font-semibold">
-              Social Media Links
-            </Label>
-            <div className="grid gap-4 md:grid-cols-2">
-              {[
-                {
-                  key: "facebook",
-                  label: "Facebook",
-                  placeholder: "https://facebook.com/yourbusiness",
-                },
-                {
-                  key: "instagram",
-                  label: "Instagram",
-                  placeholder: "https://instagram.com/yourbusiness",
-                },
-                {
-                  key: "twitter",
-                  label: "Twitter",
-                  placeholder: "https://twitter.com/yourbusiness",
-                },
-                {
-                  key: "linkedin",
-                  label: "LinkedIn",
-                  placeholder: "https://linkedin.com/company/yourbusiness",
-                },
-              ].map(({ key, label, placeholder }) => (
-                <div key={key} className="space-y-2">
-                  <Label htmlFor={key}>{label}</Label>
-                  <div className="relative">
-                    <Globe className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <Input
-                      id={key}
-                      value={
-                        formData.socialMediaLinks[
-                          key as keyof typeof formData.socialMediaLinks
-                        ] || ""
-                      }
-                      onChange={(e) =>
-                        handleSocialMediaChange(key, e.target.value)
-                      }
-                      placeholder={placeholder}
-                      className={`pl-10 ${validationErrors[`social_${key}`] ? "border-red-500" : ""}`}
-                    />
-                  </div>
-                  {validationErrors[`social_${key}`] && (
-                    <p className="text-red-500 text-sm">
-                      {validationErrors[`social_${key}`]}
-                    </p>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-
           {/* Action Buttons */}
           <div className="flex justify-between pt-6">
             {onBack && (
@@ -747,23 +584,35 @@ export default function BusinessProfileSetup({
               </Button>
             )}
 
-            <Button
-              onClick={handleSubmit}
-              disabled={loading}
-              className="bg-roam-blue hover:bg-roam-blue/90 ml-auto"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  Continue to Personal Profile
-                  <ArrowRight className="w-4 h-4 ml-2" />
-                </>
+            <div className="flex gap-2 ml-auto">
+              {canSkip() && (
+                <Button
+                  variant="ghost"
+                  onClick={() => onComplete(formData)}
+                  disabled={loading}
+                >
+                  Skip for Now
+                </Button>
               )}
-            </Button>
+              
+              <Button
+                onClick={handleSubmit}
+                disabled={loading}
+                className="bg-roam-blue hover:bg-roam-blue/90"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    Continue to Personal Profile
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>

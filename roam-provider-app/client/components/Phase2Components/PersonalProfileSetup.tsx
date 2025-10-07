@@ -135,20 +135,6 @@ export default function PersonalProfileSetup({
     }
   };
 
-  const handleSocialLinkChange = (platform: string, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      socialLinks: {
-        ...prev.socialLinks,
-        [platform]: value
-      }
-    }));
-  };
-
-
-
-
-
   const handleImageSelect = async (
     event: React.ChangeEvent<HTMLInputElement>,
     imageType: 'avatar' | 'cover'
@@ -270,32 +256,16 @@ export default function PersonalProfileSetup({
 
     if (!formData.professionalBio.trim()) {
       errors.professionalBio = 'Professional bio is required';
-    } else if (formData.professionalBio.length < 100) {
-      errors.professionalBio = 'Bio should be at least 100 characters';
+    } else if (formData.professionalBio.length < 50) {
+      errors.professionalBio = 'Bio should be at least 50 characters';
     }
 
     if (formData.yearsExperience < 0 || formData.yearsExperience > 50) {
       errors.yearsExperience = 'Please enter valid years of experience (0-50)';
     }
 
-    // Validate social media URLs
-    Object.entries(formData.socialLinks).forEach(([platform, url]) => {
-      if (url && !isValidUrl(url)) {
-        errors[`social_${platform}`] = `Please enter a valid ${platform} URL`;
-      }
-    });
-
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
-  };
-
-  const isValidUrl = (url: string): boolean => {
-    try {
-      new URL(url.startsWith('http') ? url : `https://${url}`);
-      return true;
-    } catch {
-      return false;
-    }
   };
 
   const handleSubmit = async () => {
@@ -609,45 +579,11 @@ export default function PersonalProfileSetup({
             />
             <div className="flex justify-between text-sm">
               <span className={validationErrors.professionalBio ? 'text-red-500' : 'text-foreground/70'}>
-                {validationErrors.professionalBio || 'At least 100 characters recommended'}
+                {validationErrors.professionalBio || 'At least 50 characters required'}
               </span>
               <span className="text-foreground/50">
                 {formData.professionalBio.length} characters
               </span>
-            </div>
-          </div>
-
-
-
-
-
-          {/* Professional Social Links */}
-          <div className="space-y-4">
-            <Label className="text-base font-semibold">Professional Social Links</Label>
-            <div className="grid gap-4 md:grid-cols-2">
-              {[
-                { key: 'linkedin', label: 'LinkedIn', placeholder: 'https://linkedin.com/in/yourprofile' },
-                { key: 'website', label: 'Personal Website', placeholder: 'https://yourwebsite.com' },
-                { key: 'twitter', label: 'Twitter', placeholder: 'https://twitter.com/yourhandle' },
-                { key: 'instagram', label: 'Instagram', placeholder: 'https://instagram.com/yourhandle' }
-              ].map(({ key, label, placeholder }) => (
-                <div key={key} className="space-y-2">
-                  <Label htmlFor={key}>{label}</Label>
-                  <div className="relative">
-                    <Globe className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <Input
-                      id={key}
-                      value={formData.socialLinks[key as keyof typeof formData.socialLinks] || ''}
-                      onChange={(e) => handleSocialLinkChange(key, e.target.value)}
-                      placeholder={placeholder}
-                      className={`pl-10 ${validationErrors[`social_${key}`] ? 'border-red-500' : ''}`}
-                    />
-                  </div>
-                  {validationErrors[`social_${key}`] && (
-                    <p className="text-red-500 text-sm">{validationErrors[`social_${key}`]}</p>
-                  )}
-                </div>
-              ))}
             </div>
           </div>
 

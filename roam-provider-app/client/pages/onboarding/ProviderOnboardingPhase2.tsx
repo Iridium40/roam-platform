@@ -19,7 +19,7 @@ import {
 
 // Import components
 import WelcomeBackStep from "@/components/WelcomeBackStep";
-import BusinessProfileSetup from "@/components/Phase2Components/BusinessProfileSetup";
+import BusinessProfileSetup from "@/components/Phase2Components/BusinessProfileSetupSimplified";
 import PersonalProfileSetup from "@/components/Phase2Components/PersonalProfileSetup";
 import BusinessHoursSetup from "@/components/Phase2Components/BusinessHoursSetup";
 import StaffManagementSetup from "@/components/Phase2Components/StaffManagementSetup";
