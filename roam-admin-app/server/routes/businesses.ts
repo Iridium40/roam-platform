@@ -96,26 +96,8 @@ async function getBusinesses(req: Request, res: Response) {
 
     console.log('[Businesses API] Executing query...');
     
-    // Add timeout to prevent hanging
-    const queryPromise = query;
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Query timeout after 30 seconds')), 30000);
-    });
-
-    let businesses, fetchError, count;
-    
-    try {
-      const result = await Promise.race([queryPromise, timeoutPromise]) as any;
-      businesses = result.data;
-      fetchError = result.error;
-      count = result.count;
-    } catch (timeoutError) {
-      console.error('[Businesses API] Query timeout:', timeoutError);
-      return res.status(504).json({ 
-        error: 'Query timeout',
-        message: 'Database query took too long to respond'
-      });
-    }
+    // Execute the query directly without timeout wrapper (Supabase has its own timeout)
+    const { data: businesses, error: fetchError, count } = await query;
 
     if (fetchError) {
       console.error('[Businesses API] Error fetching businesses:', fetchError);
