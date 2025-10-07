@@ -3715,22 +3715,14 @@ export default function AdminBusinesses() {
 
             <div>
               <Label htmlFor="verification_status">Verification Status</Label>
-              <Select
-                value={newBusiness.verification_status}
-                onValueChange={(value: VerificationStatus) =>
-                  setNewBusiness({ ...newBusiness, verification_status: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="under_review">Under Review</SelectItem>
-                  <SelectItem value="verified">Verified</SelectItem>
-                  <SelectItem value="rejected">Rejected</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="mt-2">
+                <ROAMBadge variant="secondary">
+                  Pending
+                </ROAMBadge>
+                <p className="text-xs text-muted-foreground mt-1">
+                  New businesses start as "Pending" and must be verified through the Verification page
+                </p>
+              </div>
             </div>
 
             <div className="flex items-center space-x-2">
@@ -3855,23 +3847,25 @@ export default function AdminBusinesses() {
                   <Label htmlFor="verification_status">
                     Verification Status
                   </Label>
-                  <select
-                    id="verification_status"
-                    value={editFormData.verification_status}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        verification_status: e.target
-                          .value as VerificationStatus,
-                      })
-                    }
-                    className="mt-1 w-full px-3 py-2 border border-border rounded-md text-sm bg-background"
-                  >
-                    <option value="pending">Pending</option>
-                    <option value="approved">Approved</option>
-                    <option value="rejected">Rejected</option>
-                    <option value="suspended">Suspended</option>
-                  </select>
+                  <div className="mt-2">
+                    <ROAMBadge
+                      variant={
+                        editFormData.verification_status === "approved"
+                          ? "success"
+                          : editFormData.verification_status === "rejected"
+                            ? "destructive"
+                            : editFormData.verification_status === "suspended"
+                              ? "warning"
+                              : "secondary"
+                      }
+                    >
+                      {editFormData.verification_status.charAt(0).toUpperCase() + 
+                       editFormData.verification_status.slice(1)}
+                    </ROAMBadge>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Verification status can only be changed from the Verification page
+                    </p>
+                  </div>
                 </div>
               </div>
 
@@ -3894,36 +3888,52 @@ export default function AdminBusinesses() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                <div className="flex items-center space-x-2 pt-2">
-                  <input
-                    type="checkbox"
-                    id="is_active"
-                    checked={editFormData.is_active}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        is_active: e.target.checked,
-                      })
-                    }
-                    className="rounded border-border"
-                  />
-                  <Label htmlFor="is_active">Business is Active</Label>
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between space-x-2">
+                    <Label htmlFor="is_active" className={`text-sm font-medium ${editFormData.verification_status !== 'approved' ? 'text-muted-foreground' : ''}`}>
+                      Business is Active
+                    </Label>
+                    <Switch
+                      id="is_active"
+                      checked={editFormData.is_active}
+                      disabled={editFormData.verification_status !== 'approved'}
+                      onCheckedChange={(checked) =>
+                        setEditFormData({
+                          ...editFormData,
+                          is_active: checked,
+                        })
+                      }
+                    />
+                  </div>
+                  {editFormData.verification_status !== 'approved' && (
+                    <p className="text-xs text-muted-foreground">
+                      Business must be approved before it can be activated
+                    </p>
+                  )}
                 </div>
 
-                <div className="flex items-center space-x-2 pt-6">
-                  <input
-                    type="checkbox"
-                    id="is_featured"
-                    checked={editFormData.is_featured}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        is_featured: e.target.checked,
-                      })
-                    }
-                    className="rounded border-border"
-                  />
-                  <Label htmlFor="is_featured">Featured Business</Label>
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between space-x-2">
+                    <Label htmlFor="is_featured" className={`text-sm font-medium ${editFormData.verification_status !== 'approved' ? 'text-muted-foreground' : ''}`}>
+                      Featured Business
+                    </Label>
+                    <Switch
+                      id="is_featured"
+                      checked={editFormData.is_featured}
+                      disabled={editFormData.verification_status !== 'approved'}
+                      onCheckedChange={(checked) =>
+                        setEditFormData({
+                          ...editFormData,
+                          is_featured: checked,
+                        })
+                      }
+                    />
+                  </div>
+                  {editFormData.verification_status !== 'approved' && (
+                    <p className="text-xs text-muted-foreground">
+                      Business must be approved before it can be featured
+                    </p>
+                  )}
                 </div>
               </div>
             </div>

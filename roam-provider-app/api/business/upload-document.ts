@@ -44,7 +44,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Step 3: Upload to Supabase storage using service role (bypasses RLS)
     const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('provider-documents')
+      .from('roam-file-storage')
       .upload(storagePath, fileBuffer, {
         contentType: file_type || 'application/pdf',
         cacheControl: '3600',
@@ -61,7 +61,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Step 4: Get public URL
     const { data: urlData } = supabase.storage
-      .from('provider-documents')
+      .from('roam-file-storage')
       .getPublicUrl(storagePath);
 
     if (!urlData || !urlData.publicUrl) {
@@ -88,7 +88,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       console.error("Database error:", dbError);
       // Try to clean up uploaded file
       await supabase.storage
-        .from('provider-documents')
+        .from('roam-file-storage')
         .remove([storagePath]);
       
       return res.status(500).json({ 

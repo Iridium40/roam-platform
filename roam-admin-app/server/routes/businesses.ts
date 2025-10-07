@@ -54,8 +54,6 @@ async function getBusinesses(req: Request, res: Response) {
         social_media,
         verification_notes,
         business_type,
-        service_categories,
-        service_subcategories,
         setup_completed,
         setup_step,
         is_featured,
@@ -109,13 +107,70 @@ async function getBusinesses(req: Request, res: Response) {
 
     console.log(`[Businesses API] Query successful. Found ${businesses?.length || 0} businesses (total: ${count})`);
 
+    // Fetch service categories and subcategories for each business
+    let businessCategories: any[] = [];
+    let businessSubcategories: any[] = [];
+    
+    if (businesses && businesses.length > 0) {
+      console.log('[Businesses API] Fetching service categories and subcategories...');
+      const businessIds = businesses.map(b => b.id);
+      
+      // Fetch business service categories
+      const categoriesResult = await supabase
+        .from('business_service_categories')
+        .select(`
+          business_id,
+          service_categories (
+            service_category_type
+          )
+        `)
+        .in('business_id', businessIds);
+      
+      businessCategories = categoriesResult.data || [];
+      
+      // Fetch business service subcategories
+      const subcategoriesResult = await supabase
+        .from('business_service_subcategories')
+        .select(`
+          business_id,
+          service_subcategories (
+            service_subcategory_type
+          )
+        `)
+        .in('business_id', businessIds);
+      
+      businessSubcategories = subcategoriesResult.data || [];
+    }
+
+    // Create lookup maps
+    const categoriesMap = new Map<string, string[]>();
+    const subcategoriesMap = new Map<string, string[]>();
+
+    (businessCategories || []).forEach((bc: any) => {
+      if (!categoriesMap.has(bc.business_id)) {
+        categoriesMap.set(bc.business_id, []);
+      }
+      if (bc.service_categories?.service_category_type) {
+        categoriesMap.get(bc.business_id)!.push(bc.service_categories.service_category_type);
+      }
+    });
+
+    (businessSubcategories || []).forEach((bsc: any) => {
+      if (!subcategoriesMap.has(bsc.business_id)) {
+        subcategoriesMap.set(bsc.business_id, []);
+      }
+      if (bsc.service_subcategories?.service_subcategory_type) {
+        subcategoriesMap.get(bsc.business_id)!.push(bsc.service_subcategories.service_subcategory_type);
+      }
+    });
+
     // Transform the data
     console.log('[Businesses API] Transforming business data...');
     const transformedBusinesses = (businesses || []).map((business: any) => ({
       ...business,
-      // Ensure arrays are properly handled
-      service_categories: Array.isArray(business.service_categories) ? business.service_categories : [],
-      service_subcategories: Array.isArray(business.service_subcategories) ? business.service_subcategories : [],
+      // Populate service categories and subcategories from junction tables
+      service_categories: categoriesMap.get(business.id) || [],
+      service_subcategories: subcategoriesMap.get(business.id) || [],
       // Ensure numeric fields are properly typed
       setup_step: business.setup_step ? Number(business.setup_step) : null,
       // Ensure boolean fields have defaults

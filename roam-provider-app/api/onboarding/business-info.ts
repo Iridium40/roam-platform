@@ -64,12 +64,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       "serviceCategories",
     ];
     for (const field of requiredFields) {
-      if (!businessData[field as keyof BusinessInfoData]) {
+      const value = businessData[field as keyof BusinessInfoData];
+      // For arrays, check if they exist and have length
+      if (field === "serviceCategories") {
+        if (!Array.isArray(value) || value.length === 0) {
+          console.log("Service categories validation failed:", value);
+          return res
+            .status(400)
+            .json({ error: `Missing required field: ${field}. At least one service category must be selected.` });
+        }
+      } else if (!value) {
+        console.log(`Field ${field} validation failed:`, value);
         return res
           .status(400)
           .json({ error: `Missing required field: ${field}` });
       }
     }
+    
+    // Log the categories and subcategories being processed
+    console.log("Service categories to be saved:", businessData.serviceCategories);
+    console.log("Service subcategories to be saved:", businessData.serviceSubcategories);
 
     // Check if user exists
     let userData;
@@ -139,16 +153,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       businessProfileData = updatedBusiness;
 
+      console.log("=== UPDATING EXISTING BUSINESS - CATEGORIES ===");
+      console.log("Existing Business ID:", existingBusiness.id);
+      console.log("Service categories from form:", businessData.serviceCategories);
+
       // Handle service categories - update associations
       if (
         businessData.serviceCategories &&
         businessData.serviceCategories.length > 0
       ) {
+        console.log("Deleting existing categories...");
         // First, remove existing service category associations
-        await supabase
+        const { error: deleteError } = await supabase
           .from("business_service_categories")
           .delete()
           .eq("business_id", existingBusiness.id);
+
+        if (deleteError) {
+          console.error("Error deleting existing categories:", deleteError);
+        } else {
+          console.log("Existing categories deleted successfully");
+        }
 
         // Create new service category associations using category IDs
         const categoryInserts = businessData.serviceCategories.map(
@@ -159,29 +184,52 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           }),
         );
 
-        const { error: categoryError } = await supabase
+        console.log("Creating new category associations:", categoryInserts);
+
+        const { data: categoryData, error: categoryError } = await supabase
           .from("business_service_categories")
-          .insert(categoryInserts);
+          .insert(categoryInserts)
+          .select();
 
         if (categoryError) {
           console.error(
-            "Error updating service category associations:",
+            "❌ Error updating service category associations:",
             categoryError,
           );
+          console.error("Category error details:", {
+            message: categoryError.message,
+            details: categoryError.details,
+            hint: categoryError.hint,
+            code: categoryError.code
+          });
           // Continue anyway - categories can be updated later
+        } else {
+          console.log("✅ Categories updated successfully:", categoryData);
         }
+      } else {
+        console.log("⚠️ No categories to update (array empty or missing)");
       }
+
+      console.log("=== UPDATING EXISTING BUSINESS - SUBCATEGORIES ===");
+      console.log("Service subcategories from form:", businessData.serviceSubcategories);
 
       // Handle service subcategories - update associations
       if (
         businessData.serviceSubcategories &&
         businessData.serviceSubcategories.length > 0
       ) {
+        console.log("Deleting existing subcategories...");
         // First, remove existing service subcategory associations
-        await supabase
+        const { error: deleteSubError } = await supabase
           .from("business_service_subcategories")
           .delete()
           .eq("business_id", existingBusiness.id);
+
+        if (deleteSubError) {
+          console.error("Error deleting existing subcategories:", deleteSubError);
+        } else {
+          console.log("Existing subcategories deleted successfully");
+        }
 
         // Create new service subcategory associations using subcategory IDs
         // First, fetch the subcategory details to get their category_ids
@@ -191,8 +239,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           .in("id", businessData.serviceSubcategories);
 
         if (fetchError) {
-          console.error("Error fetching subcategory details:", fetchError);
+          console.error("❌ Error fetching subcategory details:", fetchError);
+          console.error("Fetch error details:", {
+            message: fetchError.message,
+            details: fetchError.details,
+            hint: fetchError.hint,
+            code: fetchError.code
+          });
         } else {
+          console.log("Fetched subcategory details:", subcategoryDetails);
+          
           const subcategoryInserts = subcategoryDetails.map((subcategory) => ({
             business_id: existingBusiness.id,
             category_id: subcategory.category_id,
@@ -200,18 +256,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             is_active: true,
           }));
 
-          const { error: subcategoryError } = await supabase
+          console.log("Creating new subcategory associations:", subcategoryInserts);
+
+          const { data: subcategoryData, error: subcategoryError } = await supabase
             .from("business_service_subcategories")
-            .insert(subcategoryInserts);
+            .insert(subcategoryInserts)
+            .select();
 
           if (subcategoryError) {
             console.error(
-              "Error updating service subcategory associations:",
+              "❌ Error updating service subcategory associations:",
               subcategoryError,
             );
+            console.error("Subcategory error details:", {
+              message: subcategoryError.message,
+              details: subcategoryError.details,
+              hint: subcategoryError.hint,
+              code: subcategoryError.code
+            });
             // Continue anyway - subcategories can be updated later
+          } else {
+            console.log("✅ Subcategories updated successfully:", subcategoryData);
           }
         }
+      } else {
+        console.log("⚠️ No subcategories to update (array empty or missing)");
       }
     } else {
       // Create new business profile
@@ -248,6 +317,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         businessData.serviceCategories &&
         businessData.serviceCategories.length > 0
       ) {
+        console.log("=== CREATING SERVICE CATEGORY ASSOCIATIONS ===");
+        console.log("Business ID:", businessProfileData.id);
+        console.log("Category IDs:", businessData.serviceCategories);
+        
         // Create new service category associations using category IDs
         const categoryInserts = businessData.serviceCategories.map(
           (categoryId) => ({
@@ -257,17 +330,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           }),
         );
 
-        const { error: categoryError } = await supabase
+        console.log("Category inserts to be created:", categoryInserts);
+
+        const { data: categoryData, error: categoryError } = await supabase
           .from("business_service_categories")
-          .insert(categoryInserts);
+          .insert(categoryInserts)
+          .select();
 
         if (categoryError) {
           console.error(
-            "Error creating service category associations:",
+            "❌ Error creating service category associations:",
             categoryError,
           );
+          console.error("Category error details:", {
+            message: categoryError.message,
+            details: categoryError.details,
+            hint: categoryError.hint,
+            code: categoryError.code
+          });
           // Continue anyway - categories can be added later
+        } else {
+          console.log("✅ Service categories created successfully:", categoryData);
         }
+      } else {
+        console.log("⚠️ No service categories to create or array is empty");
       }
 
       // Handle service subcategories - create associations if they exist
@@ -275,6 +361,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         businessData.serviceSubcategories &&
         businessData.serviceSubcategories.length > 0
       ) {
+        console.log("=== CREATING SERVICE SUBCATEGORY ASSOCIATIONS ===");
+        console.log("Business ID:", businessProfileData.id);
+        console.log("Subcategory IDs:", businessData.serviceSubcategories);
+        
         // Create new service subcategory associations using subcategory IDs
         // First, fetch the subcategory details to get their category_ids
         const { data: subcategoryDetails, error: fetchError } = await supabase
@@ -283,8 +373,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           .in("id", businessData.serviceSubcategories);
 
         if (fetchError) {
-          console.error("Error fetching subcategory details:", fetchError);
+          console.error("❌ Error fetching subcategory details:", fetchError);
+          console.error("Fetch error details:", {
+            message: fetchError.message,
+            details: fetchError.details,
+            hint: fetchError.hint,
+            code: fetchError.code
+          });
         } else {
+          console.log("Fetched subcategory details:", subcategoryDetails);
+          
           const subcategoryInserts = subcategoryDetails.map((subcategory) => ({
             business_id: businessProfileData.id,
             category_id: subcategory.category_id,
@@ -292,18 +390,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             is_active: true,
           }));
 
-          const { error: subcategoryError } = await supabase
+          console.log("Subcategory inserts to be created:", subcategoryInserts);
+
+          const { data: subcategoryData, error: subcategoryError } = await supabase
             .from("business_service_subcategories")
-            .insert(subcategoryInserts);
+            .insert(subcategoryInserts)
+            .select();
 
           if (subcategoryError) {
             console.error(
-              "Error creating service subcategory associations:",
+              "❌ Error creating service subcategory associations:",
               subcategoryError,
             );
+            console.error("Subcategory error details:", {
+              message: subcategoryError.message,
+              details: subcategoryError.details,
+              hint: subcategoryError.hint,
+              code: subcategoryError.code
+            });
             // Continue anyway - subcategories can be added later
+          } else {
+            console.log("✅ Service subcategories created successfully:", subcategoryData);
           }
         }
+      } else {
+        console.log("⚠️ No service subcategories to create or array is empty");
       }
 
       // Create default business location

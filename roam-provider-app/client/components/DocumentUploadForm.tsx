@@ -197,7 +197,7 @@ export function DocumentUploadForm({
     const filePath = generateDocumentPath(userId, documentType, file.name);
 
     const { data, error } = await supabase.storage
-      .from("provider-documents")
+      .from("roam-file-storage")
       .upload(filePath, file, {
         cacheControl: "3600",
         upsert: false,
@@ -210,7 +210,7 @@ export function DocumentUploadForm({
     // Get public URL
     const {
       data: { publicUrl },
-    } = supabase.storage.from("provider-documents").getPublicUrl(data.path);
+    } = supabase.storage.from("roam-file-storage").getPublicUrl(data.path);
 
     return publicUrl;
   };

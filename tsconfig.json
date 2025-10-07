@@ -26,25 +26,12 @@
       "@roam/payment-service": ["packages/payment-service/src"]
     }
   },
-  "include": [
-    "packages/*/src/**/*",
-    "apps/*/src/**/*",
-    "apps/*/api/**/*"
-  ],
+  "include": [],
   "exclude": [
     "node_modules",
     "dist",
     "build",
     ".next",
     ".vercel"
-  ],
-  "references": [
-    { "path": "./packages/shared" },
-    { "path": "./packages/auth-service" },
-    { "path": "./packages/notification-service" },
-    { "path": "./packages/payment-service" },
-    { "path": "./apps/roam-admin-app" },
-    { "path": "./apps/roam-provider-app" },
-    { "path": "./apps/roam-customer-app" }
   ]
 }

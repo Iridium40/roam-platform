@@ -474,8 +474,7 @@ export default function AdminVerification() {
       console.log("fetchBusinessDocuments called for business_id:", businessId);
       
       // Use server API endpoint with service role key (bypasses RLS)
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3001";
-      const response = await fetch(`${apiBaseUrl}/api/business-documents?business_id=${businessId}`);
+      const response = await fetch(`/api/business-documents?business_id=${businessId}`);
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: response.statusText }));
@@ -754,6 +753,58 @@ export default function AdminVerification() {
 
       console.log("Status to set:", newStatus);
 
+      // VALIDATION: Check if all documents are verified before approving
+      if (action === "approve") {
+        console.log("Checking if all documents are verified before approval...");
+        
+        // Fetch documents for this business
+        const response = await fetch(`/api/business-documents?business_id=${businessId}`);
+        
+        if (!response.ok) {
+          throw new Error("Failed to fetch business documents for validation");
+        }
+        
+        const result = await response.json();
+        const documents = result.data || [];
+        
+        console.log("Documents validation:", {
+          total: documents.length,
+          documents: documents.map((d: any) => ({
+            type: d.document_type,
+            status: d.verification_status
+          }))
+        });
+        
+        // Check if there are any unverified documents
+        const unverifiedDocs = documents.filter(
+          (doc: any) => doc.verification_status !== "verified"
+        );
+        
+        if (documents.length === 0) {
+          toast({
+            title: "Cannot Approve Business",
+            description: "This business has no documents uploaded. At least one verified document is required for approval.",
+            variant: "destructive",
+          });
+          return; // Stop the approval process
+        }
+        
+        if (unverifiedDocs.length > 0) {
+          const unverifiedList = unverifiedDocs
+            .map((doc: any) => `${doc.document_type} (${doc.verification_status})`)
+            .join(", ");
+          
+          toast({
+            title: "Cannot Approve Business",
+            description: `All documents must be verified before approval. Unverified documents: ${unverifiedList}`,
+            variant: "destructive",
+          });
+          return; // Stop the approval process
+        }
+        
+        console.log("All documents verified. Proceeding with approval...");
+      }
+
       const updateData: any = {
         verification_status: newStatus,
         verification_notes: notes || null,
@@ -985,19 +1036,24 @@ export default function AdminVerification() {
     try {
       console.log("Fetching documents for business:", businessId);
 
-      const { data, error } = await supabase
-        .from("business_documents")
-        .select("*")
-        .eq("business_id", businessId)
-        .order("created_at", { ascending: false });
-
-      console.log("fetchCardDocuments response:", { data, error, businessId });
-
-      if (error) throw error;
+      // Use server API endpoint (same as fetchBusinessDocuments) to bypass RLS
+      const response = await fetch(`/api/business-documents?business_id=${businessId}`);
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: response.statusText }));
+        throw new Error(errorData.error || `HTTP ${response.status}`);
+      }
+      
+      const result = await response.json();
+      
+      console.log("fetchCardDocuments response:", {
+        businessId,
+        documentsCount: result.data?.length || 0,
+      });
 
       setCardDocuments((prev) => ({
         ...prev,
-        [businessId]: data || [],
+        [businessId]: result.data || [],
       }));
     } catch (error: any) {
       const errorMessage =
@@ -1659,44 +1715,68 @@ export default function AdminVerification() {
                                   {business.verification_status !==
                                     "approved" && (
                                     <>
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() =>
-                                          handleBusinessActionClick(
-                                            business.id,
-                                            "suspend",
-                                          )
-                                        }
-                                        className="text-orange-600 border-orange-600 hover:bg-orange-50"
-                                      >
-                                        Suspend
-                                      </Button>
-                                      <Button
-                                        variant="destructive"
-                                        size="sm"
-                                        onClick={() =>
-                                          handleBusinessActionClick(
-                                            business.id,
-                                            "reject",
-                                          )
-                                        }
-                                      >
-                                        Reject Business
-                                      </Button>
-                                      <Button
-                                        size="sm"
-                                        onClick={() => {
-                                          handleVerificationAction(
-                                            business.id,
-                                            "approve",
-                                            "Business approved by admin",
-                                          );
-                                        }}
-                                        className="bg-green-600 hover:bg-green-700"
-                                      >
-                                        Approve Business
-                                      </Button>
+                                      {/* Check if all documents are verified */}
+                                      {(() => {
+                                        const hasUnverifiedDocs = documents.some(
+                                          (doc) => doc.verification_status !== "verified"
+                                        );
+                                        const hasNoDocs = documents.length === 0;
+                                        const canApprove = !hasUnverifiedDocs && !hasNoDocs;
+                                        
+                                        return (
+                                          <>
+                                            <Button
+                                              variant="outline"
+                                              size="sm"
+                                              onClick={() =>
+                                                handleBusinessActionClick(
+                                                  business.id,
+                                                  "suspend",
+                                                )
+                                              }
+                                              className="text-orange-600 border-orange-600 hover:bg-orange-50"
+                                            >
+                                              Suspend
+                                            </Button>
+                                            <Button
+                                              variant="destructive"
+                                              size="sm"
+                                              onClick={() =>
+                                                handleBusinessActionClick(
+                                                  business.id,
+                                                  "reject",
+                                                )
+                                              }
+                                            >
+                                              Reject Business
+                                            </Button>
+                                            <div className="relative group">
+                                              <Button
+                                                size="sm"
+                                                onClick={() => {
+                                                  handleVerificationAction(
+                                                    business.id,
+                                                    "approve",
+                                                    "Business approved by admin",
+                                                  );
+                                                }}
+                                                disabled={!canApprove}
+                                                className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                                              >
+                                                Approve Business
+                                              </Button>
+                                              {!canApprove && (
+                                                <div className="absolute bottom-full mb-2 hidden group-hover:block bg-gray-900 text-white text-xs rounded py-1 px-2 whitespace-nowrap z-10">
+                                                  {hasNoDocs 
+                                                    ? "No documents uploaded"
+                                                    : `${documents.filter((d) => d.verification_status !== "verified").length} document(s) need verification`
+                                                  }
+                                                </div>
+                                              )}
+                                            </div>
+                                          </>
+                                        );
+                                      })()}
                                     </>
                                   )}
                                   {business.verification_status ===
@@ -2107,18 +2187,43 @@ export default function AdminVerification() {
                   >
                     Reject
                   </Button>
-                  <Button
-                    onClick={() =>
-                      handleVerificationAction(
-                        selectedBusiness.id,
-                        "approve",
-                        reviewNotes,
-                      )
-                    }
-                    className="bg-green-600 hover:bg-green-700"
-                  >
-                    Approve
-                  </Button>
+                  {(() => {
+                    // Check if all documents are verified before allowing approval
+                    const hasUnverifiedDocs = businessDocuments.some(
+                      (doc) => doc.verification_status !== "verified"
+                    );
+                    const hasNoDocs = businessDocuments.length === 0;
+                    const canApprove = !hasUnverifiedDocs && !hasNoDocs;
+                    const unverifiedCount = businessDocuments.filter(
+                      (doc) => doc.verification_status !== "verified"
+                    ).length;
+                    
+                    return (
+                      <div className="relative group">
+                        <Button
+                          onClick={() =>
+                            handleVerificationAction(
+                              selectedBusiness.id,
+                              "approve",
+                              reviewNotes,
+                            )
+                          }
+                          disabled={!canApprove}
+                          className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                        >
+                          Approve
+                        </Button>
+                        {!canApprove && (
+                          <div className="absolute bottom-full mb-2 right-0 hidden group-hover:block bg-gray-900 text-white text-xs rounded py-2 px-3 whitespace-nowrap z-10">
+                            {hasNoDocs 
+                              ? "Cannot approve: No documents uploaded"
+                              : `Cannot approve: ${unverifiedCount} document(s) need verification`
+                            }
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             )}

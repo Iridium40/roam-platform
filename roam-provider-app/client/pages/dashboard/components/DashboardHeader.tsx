@@ -1,4 +1,5 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -33,12 +34,17 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
   onMobileMenuToggle,
 }) => {
   const { signOut } = useAuth();
+  const navigate = useNavigate();
 
   const handleSignOut = async () => {
     try {
       await signOut();
+      // Explicitly navigate to provider portal after sign out
+      navigate("/provider-portal", { replace: true });
     } catch (error) {
       console.error("Sign out error:", error);
+      // Navigate to provider portal even if there's an error
+      navigate("/provider-portal", { replace: true });
     }
   };
 

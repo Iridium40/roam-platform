@@ -228,7 +228,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // Delete from storage (non-blocking, best effort)
         try {
           const { error: storageError } = await supabase.storage
-            .from('provider-documents')
+            .from('roam-file-storage')
             .remove([filePath]);
           
           if (storageError) {
