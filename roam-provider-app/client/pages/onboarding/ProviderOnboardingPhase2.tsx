@@ -35,7 +35,6 @@ type Phase2Step =
   | "business_profile"
   | "personal_profile"
   | "business_hours"
-  | "staff_management"
   | "banking_payout"
   | "service_pricing"
   | "final_review"
@@ -58,17 +57,13 @@ const phase2Steps = [
   { id: "business_profile", title: "Business Profile", icon: Building },
   { id: "personal_profile", title: "Personal Profile", icon: User },
   { id: "business_hours", title: "Business Hours", icon: Clock },
-  { id: "staff_management", title: "Staff Management", icon: Users },
   { id: "banking_payout", title: "Banking & Payouts", icon: Banknote },
   { id: "service_pricing", title: "Service Pricing", icon: DollarSign },
   { id: "final_review", title: "Final Review", icon: CheckCircle },
 ];
 
-// Get filtered Phase 2 steps based on business type
+// Get Phase 2 steps (staff management removed - handled post-onboarding)
 const getPhase2Steps = (businessType?: string) => {
-  if (businessType === 'independent') {
-    return phase2Steps.filter(step => step.id !== 'staff_management');
-  }
   return phase2Steps;
 };
 
@@ -261,28 +256,9 @@ export default function ProviderOnboardingPhase2() {
           <BusinessHoursSetup
             businessId={onboardingState.businessId || ""}
             userId={onboardingState.userId || ""}
-            onComplete={() => {
-              // Skip staff management for independent businesses
-              if (onboardingState.businessData?.business_type === 'independent') {
-                handlePhase2StepComplete("banking_payout");
-              } else {
-                handlePhase2StepComplete("staff_management");
-              }
-            }}
+            onComplete={() => handlePhase2StepComplete("banking_payout")}
             onBack={() => handlePhase2StepComplete("personal_profile")}
             initialData={onboardingState.businessData?.business_hours}
-          />
-        );
-
-      case "staff_management":
-        return (
-          <StaffManagementSetup
-            businessId={onboardingState.businessId || ""}
-            userId={onboardingState.userId || ""}
-            businessType={onboardingState.businessData?.business_type}
-            onComplete={() => handlePhase2StepComplete("banking_payout")}
-            onBack={() => handlePhase2StepComplete("business_hours")}
-            initialData={onboardingState.businessData?.staff_members}
           />
         );
 
@@ -292,14 +268,7 @@ export default function ProviderOnboardingPhase2() {
             businessId={onboardingState.businessId || ""}
             userId={onboardingState.userId || ""}
             onComplete={() => handlePhase2StepComplete("service_pricing")}
-            onBack={() => {
-              // Go back to business_hours if staff management was skipped
-              if (onboardingState.businessData?.business_type === 'independent') {
-                handlePhase2StepComplete("business_hours");
-              } else {
-                handlePhase2StepComplete("staff_management");
-              }
-            }}
+            onBack={() => handlePhase2StepComplete("business_hours")}
             initialData={onboardingState.businessData?.banking_payout}
           />
         );

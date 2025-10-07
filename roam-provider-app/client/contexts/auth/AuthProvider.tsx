@@ -46,38 +46,21 @@ const AuthProviderInner: React.FC<AuthProviderProps> = ({ children }) => {
   }, [customerAuth.isAuthenticated, providerAuth.isAuthenticated]);
 
   const signOut = async () => {
-    console.log("🚪 Unified signOut starting...");
     setSigningOut(true);
     try {
       if (customerAuth.isAuthenticated) {
-        console.log("🚪 Signing out customer...");
         await customerAuth.signOut();
       } else if (providerAuth.isAuthenticated) {
-        console.log("🚪 Signing out provider...");
         await providerAuth.signOut();
       }
-      console.log("🚪 Sign out complete");
-    } catch (error) {
-      console.error("🚪 Sign out error:", error);
     } finally {
       setSigningOut(false);
-      console.log("🚪 Unified signOut finished, signingOut=false");
     }
   };
 
   const isAuthenticated = customerAuth.isAuthenticated || providerAuth.isAuthenticated;
   // Don't show loading if we're in the middle of signing out and user is no longer authenticated
   const loading = signingOut ? false : (customerAuth.loading || providerAuth.loading);
-
-  console.log("🔍 Auth State:", {
-    signingOut,
-    customerLoading: customerAuth.loading,
-    providerLoading: providerAuth.loading,
-    finalLoading: loading,
-    isAuthenticated,
-    customerAuth: customerAuth.isAuthenticated,
-    providerAuth: providerAuth.isAuthenticated
-  });
 
   return (
     <UnifiedAuthContext.Provider

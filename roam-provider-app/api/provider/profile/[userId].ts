@@ -33,7 +33,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       const { data: profile, error } = await supabase
-        .from('provider_profiles')
+        .from('providers')
         .select('*')
         .eq('user_id', userId)
         .single();
@@ -59,16 +59,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
       }
 
+      // Map providers table fields to expected format
       return res.status(200).json({
-        professionalTitle: profile.professional_title || '',
-        professionalBio: profile.professional_bio || '',
-        yearsExperience: profile.years_experience || 0,
-        specialties: profile.specialties || [],
-        certifications: profile.certifications || [],
-        education: profile.education || [],
-        awards: profile.awards || [],
-        socialLinks: profile.social_links || {},
-        avatarUrl: profile.avatar_url,
+        professionalTitle: profile.provider_role || '',
+        professionalBio: profile.bio || '',
+        yearsExperience: profile.experience_years || 0,
+        specialties: [], // Not stored in providers table yet
+        certifications: [], // Not stored in providers table yet
+        education: [], // Not stored in providers table yet
+        awards: [], // Not stored in providers table yet
+        socialLinks: {}, // Not stored in providers table yet
+        avatarUrl: profile.image_url,
         coverImageUrl: profile.cover_image_url
       });
     } catch (error) {
@@ -113,23 +114,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // Check if profile exists
       const { data: existingProfile } = await supabase
-        .from('provider_profiles')
+        .from('providers')
         .select('id')
         .eq('user_id', userId)
         .single();
 
+      // Map to providers table schema
       const profileData = {
-        user_id: userId,
-        business_id: businessId,
-        professional_title: professionalTitle,
-        professional_bio: professionalBio,
-        years_experience: yearsExperience,
-        specialties: specialties,
-        certifications: certifications,
-        education: education,
-        awards: awards,
-        social_links: socialLinks,
-        avatar_url: avatarUrl,
+        bio: professionalBio,
+        experience_years: yearsExperience,
+        image_url: avatarUrl,
         cover_image_url: coverImageUrl,
         updated_at: new Date().toISOString()
       };
@@ -137,7 +131,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (existingProfile) {
         // Update existing profile
         const { error: updateError } = await supabase
-          .from('provider_profiles')
+          .from('providers')
           .update(profileData)
           .eq('user_id', userId);
 
@@ -146,18 +140,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           return res.status(500).json({ error: 'Failed to update provider profile' });
         }
       } else {
-        // Create new profile
-        const { error: insertError } = await supabase
-          .from('provider_profiles')
-          .insert({
-            ...profileData,
-            created_at: new Date().toISOString()
-          });
-
-        if (insertError) {
-          console.error('Error creating provider profile:', insertError);
-          return res.status(500).json({ error: 'Failed to create provider profile' });
-        }
+        // Provider should already exist from Phase 1, but handle edge case
+        console.warn('Provider profile not found for user:', userId);
+        return res.status(404).json({ error: 'Provider profile not found. Complete Phase 1 first.' });
       }
 
       return res.status(200).json({ success: true });

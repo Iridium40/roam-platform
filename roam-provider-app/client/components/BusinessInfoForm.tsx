@@ -103,7 +103,6 @@ export interface BusinessInfoFormData {
   socialMedia?: SocialMediaLinks;
   socialMediaArray?: SocialMediaLink[];
   businessDescription?: string;
-  yearsExperience: string;
 }
 
 interface BusinessInfoFormProps {
@@ -207,7 +206,6 @@ export function BusinessInfoForm({
     socialMedia: initialData?.socialMedia || {},
     socialMediaArray: initialData?.socialMediaArray || [],
     businessDescription: initialData?.businessDescription || "",
-    yearsExperience: initialData?.yearsExperience || "",
   });
 
   const [fieldErrors, setFieldErrors] = useState<
@@ -316,9 +314,6 @@ export function BusinessInfoForm({
         if (!value) return "ZIP/Postal code is required";
         if (!/^\d{5}(-\d{4})?$/.test(value))
           return "Please enter a valid ZIP code";
-        return null;
-      case "yearsExperience":
-        if (!value) return "Years of experience is required";
         return null;
       default:
         return null;
@@ -465,7 +460,6 @@ export function BusinessInfoForm({
       "contactEmail",
       "phone",
       "serviceCategories",
-      "yearsExperience",
     ];
 
     const addressFields = ["addressLine1", "city", "state", "postalCode"];
@@ -640,33 +634,6 @@ export function BusinessInfoForm({
                   <p className="text-sm text-red-600">{fieldErrors.phone}</p>
                 )}
               </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="yearsExperience">Years of Experience *</Label>
-              <Select
-                value={formData.yearsExperience}
-                onValueChange={handleSelectChange("yearsExperience")}
-                disabled={loading}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select experience level" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="less-than-1">Less than 1 year</SelectItem>
-                  <SelectItem value="1-2">1-2 years</SelectItem>
-                  <SelectItem value="3-5">3-5 years</SelectItem>
-                  <SelectItem value="6-10">6-10 years</SelectItem>
-                  <SelectItem value="11-15">11-15 years</SelectItem>
-                  <SelectItem value="16-20">16-20 years</SelectItem>
-                  <SelectItem value="20+">20+ years</SelectItem>
-                </SelectContent>
-              </Select>
-              {fieldErrors.yearsExperience && (
-                <p className="text-sm text-red-600">
-                  {fieldErrors.yearsExperience}
-                </p>
-              )}
             </div>
           </div>
 

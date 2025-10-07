@@ -30,7 +30,6 @@ interface BusinessInfoData {
   website?: string;
   socialMedia?: any;
   businessDescription?: string;
-  yearsExperience: string;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -152,6 +151,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       businessProfileData = updatedBusiness;
+
+      // Update provider record with contact info (no experience_years update here, it's set in Step 1)
+      const { error: providerUpdateError } = await supabase
+        .from("providers")
+        .update({
+          email: businessData.contactEmail,
+          phone: businessData.phone,
+        })
+        .eq("user_id", userId)
+        .eq("provider_role", "owner");
+
+      if (providerUpdateError) {
+        console.error("Error updating provider record:", providerUpdateError);
+        // Continue anyway - this can be updated later
+      } else {
+        console.log("Provider record updated with contact info");
+      }
 
       console.log("=== UPDATING EXISTING BUSINESS - CATEGORIES ===");
       console.log("Existing Business ID:", existingBusiness.id);
@@ -455,21 +471,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           userInfo.data.user?.user_metadata?.first_name || "Provider";
         const lastName = userInfo.data.user?.user_metadata?.last_name || "";
 
-        // Update existing provider record
+        // Update existing provider record with business_id
         const { error: updateProviderError } = await supabase
           .from("providers")
           .update({
             business_id: businessProfileData.id,
-            first_name: firstName,
-            last_name: lastName,
             email: businessData.contactEmail,
             phone: businessData.phone,
-            provider_role: "owner",
-            verification_status: "pending",
-            background_check_status: "under_review",
-            is_active: false,
-            business_managed: true,
-            updated_at: new Date().toISOString(),
           })
           .eq("user_id", userId);
 

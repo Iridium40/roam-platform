@@ -57,12 +57,6 @@ const phase2Steps = [
     description: 'Operating hours and availability',
   },
   {
-    id: 'staff_management',
-    title: 'Staff Management',
-    icon: Users,
-    description: 'Team members and roles',
-  },
-  {
     id: 'banking_payout',
     title: 'Banking & Payouts',
     icon: Banknote,

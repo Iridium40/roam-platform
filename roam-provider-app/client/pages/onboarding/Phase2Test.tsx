@@ -21,7 +21,6 @@ type Phase2Step =
   | "business_profile"
   | "personal_profile"
   | "business_hours"
-  | "staff_management"
   | "banking_payout"
   | "service_pricing"
   | "final_review";
@@ -101,12 +100,7 @@ export default function Phase2Test() {
                   {
                     step: "business_hours",
                     title: "Business Hours",
-                    desc: "Operating hours & availability (Coming Soon)",
-                  },
-                  {
-                    step: "staff_management",
-                    title: "Staff Management",
-                    desc: "Team members & permissions (Coming Soon)",
+                    desc: "Operating hours & availability",
                   },
                   {
                     step: "banking_payout",
@@ -227,7 +221,7 @@ export default function Phase2Test() {
           <BusinessHoursSetup
             businessId={testBusinessId}
             userId={testUserId}
-            onComplete={() => handleStepComplete("staff_management")}
+            onComplete={() => handleStepComplete("banking_payout")}
             onBack={handleBack}
             initialData={{
               monday: { isOpen: true, openTime: '09:00', closeTime: '17:00' },
@@ -238,31 +232,6 @@ export default function Phase2Test() {
               saturday: { isOpen: false, openTime: '09:00', closeTime: '17:00' },
               sunday: { isOpen: false, openTime: '09:00', closeTime: '17:00' }
             }}
-          />
-        );
-
-      case "staff_management":
-        return (
-          <StaffManagementSetup
-            businessId={testBusinessId}
-            userId={testUserId}
-            businessType="business"
-            onComplete={() => handleStepComplete("banking_payout")}
-            onBack={handleBack}
-            initialData={[
-              {
-                id: "1",
-                first_name: "John",
-                last_name: "Doe",
-                email: "john@example.com",
-                phone: "(555) 123-4567",
-                provider_role: "provider",
-                bio: "Experienced service provider",
-                experience_years: 3,
-                verification_status: "approved",
-                is_active: true,
-              }
-            ]}
           />
         );
 

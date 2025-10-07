@@ -32,7 +32,7 @@ export interface ROAMBadgeProps
   extends React.HTMLAttributes<HTMLDivElement>,
     VariantProps<typeof roamBadgeVariants> {}
 
-function ROAMBadge({ className, variant, size, ...props }: ROAMBadgeProps) {
+export function ROAMBadge({ className, variant, size, ...props }: ROAMBadgeProps) {
   return (
     <div
       className={cn(roamBadgeVariants({ variant, size }), className)}
@@ -41,4 +41,4 @@ function ROAMBadge({ className, variant, size, ...props }: ROAMBadgeProps) {
   );
 }
 
-export { ROAMBadge, roamBadgeVariants };
+export { roamBadgeVariants };

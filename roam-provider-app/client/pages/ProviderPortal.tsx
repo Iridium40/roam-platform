@@ -271,12 +271,12 @@ export default function ProviderPortal() {
                       </form>
                     </TabsContent>
 
-                    {/* New Provider Onboarding */}
+                    {/* New Business Onboarding */}
                     <TabsContent value="signup">
                       <div className="space-y-4">
                         <div className="bg-roam-light-blue/10 border border-roam-light-blue/30 rounded-lg p-4">
                           <h4 className="font-medium text-roam-blue mb-2">
-                            New Provider Onboarding
+                            New Business Onboarding
                           </h4>
                           <p className="text-sm text-foreground/70 mb-3">
                             Experience our streamlined two-phase onboarding
@@ -289,7 +289,7 @@ export default function ProviderPortal() {
                             className="w-full bg-roam-blue hover:bg-roam-blue/90"
                             size="lg"
                           >
-                            Start New Provider Application
+                            Start New Business Application
                           </Button>
                         </div>
                         

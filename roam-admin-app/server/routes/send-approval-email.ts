@@ -185,21 +185,13 @@ export async function handleSendApprovalEmail(req: Request, res: Response) {
                   <div class="timeline-item" style="display: flex; margin-bottom: 12px; align-items: flex-start;">
                     <div style="background: #4F46E5; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; margin-right: 12px; flex-shrink: 0;">4</div>
                     <div>
-                      <strong style="color: #1e293b;">Staff Management</strong><br>
-                      <span style="color: #64748b; font-size: 14px;">Add team members if needed</span>
-                    </div>
-                  </div>
-
-                  <div class="timeline-item" style="display: flex; margin-bottom: 12px; align-items: flex-start;">
-                    <div style="background: #4F46E5; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; margin-right: 12px; flex-shrink: 0;">5</div>
-                    <div>
                       <strong style="color: #1e293b;">Banking & Payouts</strong><br>
                       <span style="color: #64748b; font-size: 14px;">Set up payment processing</span>
                     </div>
                   </div>
 
                   <div class="timeline-item" style="display: flex; margin-bottom: 0; align-items: flex-start;">
-                    <div style="background: #4F46E5; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; margin-right: 12px; flex-shrink: 0;">6</div>
+                    <div style="background: #4F46E5; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; margin-right: 12px; flex-shrink: 0;">5</div>
                     <div>
                       <strong style="color: #1e293b;">Service Pricing</strong><br>
                       <span style="color: #64748b; font-size: 14px;">Set your rates and packages</span>

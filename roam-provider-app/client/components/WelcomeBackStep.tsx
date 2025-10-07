@@ -60,13 +60,6 @@ const setupSteps: SetupStep[] = [
     estimatedTime: '2-4 minutes'
   },
   {
-    id: 'staff_management',
-    title: 'Staff Management',
-    description: 'Add team members and set their permissions',
-    icon: Users,
-    estimatedTime: '3-6 minutes'
-  },
-  {
     id: 'banking_payout',
     title: 'Banking & Payouts',
     description: 'Configure payment processing and payout preferences',

@@ -6,6 +6,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Loader2,
   Mail,
   Lock,
@@ -25,6 +32,7 @@ interface ProviderSignupFormData {
   lastName: string;
   phone: string;
   dateOfBirth: string;
+  yearsExperience: string;
 }
 
 interface ProviderSignupFormProps {
@@ -48,6 +56,7 @@ export function ProviderSignupForm({
     lastName: "",
     phone: "",
     dateOfBirth: "",
+    yearsExperience: "",
   });
 
   const [fieldErrors, setFieldErrors] = useState<
@@ -98,6 +107,9 @@ export function ProviderSignupForm({
         if (age < 18)
           return "You must be at least 18 years old to register as a provider";
         return null;
+      case "yearsExperience":
+        if (!value) return "Years of experience is required";
+        return null;
       default:
         return null;
     }
@@ -118,6 +130,16 @@ export function ProviderSignupForm({
   const handleCheckboxChange =
     (field: keyof ProviderSignupFormData) => (checked: boolean) => {
       setFormData((prev) => ({ ...prev, [field]: checked }));
+
+      // Clear field error when user interacts
+      if (fieldErrors[field]) {
+        setFieldErrors((prev) => ({ ...prev, [field]: undefined }));
+      }
+    };
+
+  const handleSelectChange =
+    (field: keyof ProviderSignupFormData) => (value: string) => {
+      setFormData((prev) => ({ ...prev, [field]: value }));
 
       // Clear field error when user interacts
       if (fieldErrors[field]) {
@@ -157,7 +179,7 @@ export function ProviderSignupForm({
     <Card className="w-full max-w-2xl mx-auto">
       <CardHeader className="text-center">
         <CardTitle className="text-2xl font-bold text-roam-blue">
-          Become a ROAM Provider
+          Become a ROAM Business
         </CardTitle>
         <p className="text-foreground/70">Step 1: Create your account</p>
       </CardHeader>
@@ -255,34 +277,62 @@ export function ProviderSignupForm({
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="dateOfBirth">Date of Birth *</Label>
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                <Input
-                  id="dateOfBirth"
-                  type="date"
-                  className="pl-10"
-                  value={formData.dateOfBirth}
-                  onChange={handleInputChange("dateOfBirth")}
-                  disabled={loading}
-                  max={
-                    new Date(
-                      new Date().setFullYear(new Date().getFullYear() - 18),
-                    )
-                      .toISOString()
-                      .split("T")[0]
-                  }
-                />
-              </div>
-              {fieldErrors.dateOfBirth && (
-                <p className="text-sm text-red-600">
-                  {fieldErrors.dateOfBirth}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="dateOfBirth">Date of Birth *</Label>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                  <Input
+                    id="dateOfBirth"
+                    type="date"
+                    className="pl-10"
+                    value={formData.dateOfBirth}
+                    onChange={handleInputChange("dateOfBirth")}
+                    disabled={loading}
+                    max={
+                      new Date(
+                        new Date().setFullYear(new Date().getFullYear() - 18),
+                      )
+                        .toISOString()
+                        .split("T")[0]
+                    }
+                  />
+                </div>
+                {fieldErrors.dateOfBirth && (
+                  <p className="text-sm text-red-600">
+                    {fieldErrors.dateOfBirth}
+                  </p>
+                )}
+                <p className="text-xs text-foreground/60">
+                  You must be at least 18 years old
                 </p>
-              )}
-              <p className="text-xs text-foreground/60">
-                You must be at least 18 years old
-              </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="yearsExperience">Years of Experience *</Label>
+                <Select
+                  value={formData.yearsExperience}
+                  onValueChange={handleSelectChange("yearsExperience")}
+                  disabled={loading}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select years of experience" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="0-1">0-1 years</SelectItem>
+                    <SelectItem value="1-3">1-3 years</SelectItem>
+                    <SelectItem value="3-5">3-5 years</SelectItem>
+                    <SelectItem value="5-10">5-10 years</SelectItem>
+                    <SelectItem value="10-20">10-20 years</SelectItem>
+                    <SelectItem value="20+">20+ years</SelectItem>
+                  </SelectContent>
+                </Select>
+                {fieldErrors.yearsExperience && (
+                  <p className="text-sm text-red-600">
+                    {fieldErrors.yearsExperience}
+                  </p>
+                )}
+              </div>
             </div>
           </div>
 

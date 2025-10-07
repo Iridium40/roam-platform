@@ -67,6 +67,7 @@ type BusinessType =
   | "franchise"
   | "enterprise"
   | "other";
+// Matches database enum: business_document_type
 type BusinessDocumentType =
   | "drivers_license"
   | "proof_of_address"
@@ -945,6 +946,100 @@ export default function AdminVerification() {
         }
       }
 
+      // Send rejection email if business was rejected
+      if (action === "reject" && notes) {
+        try {
+          console.log("Sending rejection email for business:", businessId);
+
+          // Get business details for the email
+          const { data: businessData, error: businessFetchError } =
+            await supabase
+              .from("business_profiles")
+              .select("business_name, contact_email")
+              .eq("id", businessId)
+              .single();
+
+          if (businessFetchError || !businessData?.contact_email) {
+            console.error(
+              "Could not fetch business email:",
+              businessFetchError,
+            );
+            toast({
+              title: "Business Rejected",
+              description:
+                "Business verification rejected successfully. Note: No contact email found for rejection notification.",
+              variant: "default",
+            });
+          } else {
+            console.log(
+              "Sending rejection email to:",
+              businessData.contact_email,
+            );
+
+            const emailPayload = {
+              businessName: businessData.business_name,
+              contactEmail: businessData.contact_email,
+              rejectionReason: notes,
+              businessId: businessId,
+              userId: user?.id,
+            };
+
+            console.log("Rejection email API payload:", emailPayload);
+
+            // Send email via our server-side API endpoint
+            const emailResponse = await fetch("/api/send-rejection-email", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(emailPayload),
+            });
+
+            console.log("Rejection email API response status:", emailResponse.status);
+
+            if (emailResponse.ok) {
+              try {
+                const emailResult = await emailResponse.json();
+                console.log("Rejection email sent successfully:", emailResult);
+              } catch (parseError) {
+                console.log("Rejection email sent successfully (could not parse response details)");
+              }
+            } else {
+              const errorMessage = `HTTP ${emailResponse.status} - Email service error`;
+              console.error("Failed to send rejection email:", errorMessage);
+
+              toast({
+                title: "Business Rejected",
+                description: `Business verification rejected successfully. Note: Rejection email could not be sent. Error: ${errorMessage}`,
+                variant: "default",
+              });
+            }
+          }
+        } catch (emailError) {
+          console.error("Error sending rejection email:", emailError);
+
+          let errorMessage = "Network error or server unavailable";
+          if (emailError instanceof Error) {
+            errorMessage = emailError.message;
+          } else if (typeof emailError === "string") {
+            errorMessage = emailError;
+          } else if (emailError && typeof emailError === "object") {
+            try {
+              errorMessage = JSON.stringify(emailError);
+            } catch (e) {
+              errorMessage = "Unknown error occurred";
+            }
+          }
+
+          // Don't throw error here - business rejection succeeded
+          toast({
+            title: "Business Rejected",
+            description: `Business verification rejected successfully. Note: Rejection email could not be sent. Error: ${errorMessage}`,
+            variant: "default",
+          });
+        }
+      }
+
       const actionText =
         {
           approve: "approved",
@@ -953,17 +1048,23 @@ export default function AdminVerification() {
           pending: "set to pending",
         }[action] || "updated";
 
-      // Show success toast for non-approval actions
-      if (action !== "approve") {
+      // Show success toast for non-approval/rejection actions
+      if (action !== "approve" && action !== "reject") {
         toast({
           title: "Success",
           description: `Business verification ${actionText}`,
         });
-      } else {
+      } else if (action === "approve") {
         // For approval, show success message (email status handled above)
         toast({
           title: "Success",
           description: `Business verification approved successfully`,
+        });
+      } else if (action === "reject") {
+        // For rejection, show success message (email status handled above)
+        toast({
+          title: "Success",
+          description: `Business verification rejected successfully`,
         });
       }
 
@@ -1857,23 +1958,18 @@ export default function AdminVerification() {
                       required: true,
                     },
                     {
-                      type: "tax_id",
-                      label: "Tax ID Certificate",
-                      required: true,
-                    },
-                    {
-                      type: "insurance",
-                      label: "Insurance Certificate",
+                      type: "liability_insurance",
+                      label: "Liability Insurance",
                       required: false,
                     },
                     {
-                      type: "background_check",
-                      label: "Background Check",
+                      type: "professional_license",
+                      label: "Professional License",
                       required: false,
                     },
                     {
-                      type: "professional_cert",
-                      label: "Professional Certifications",
+                      type: "professional_certificate",
+                      label: "Professional Certificate",
                       required: false,
                     },
                   ].map((docType) => {
@@ -2094,13 +2190,13 @@ export default function AdminVerification() {
                                         onClick={() =>
                                           handleDocumentAction(
                                             doc.id,
-                                            "under_review",
+                                            "review",
                                           )
                                         }
                                         className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                                       >
                                         <AlertTriangle className="w-4 h-4 mr-1" />
-                                        Under Review
+                                        Review
                                       </Button>
                                     )}
                                   {doc.verification_status !== "rejected" && (
@@ -2161,19 +2257,6 @@ export default function AdminVerification() {
                     onClick={() => setIsDocumentReviewOpen(false)}
                   >
                     Close
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() =>
-                      handleVerificationAction(
-                        selectedBusiness.id,
-                        "request_info",
-                        reviewNotes,
-                      )
-                    }
-                    className="text-orange-600 border-orange-600 hover:bg-orange-50"
-                  >
-                    Request Additional Info
                   </Button>
                   <Button
                     variant="destructive"

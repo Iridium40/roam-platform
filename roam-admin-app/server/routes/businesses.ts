@@ -263,10 +263,10 @@ async function updateBusinessVerification(req: Request, res: Response) {
       });
     }
 
-    // If approved, also approve all associated provider profiles
+    // If approved, also approve all associated providers
     if (verification_status === 'approved') {
       const { error: providerUpdateError } = await supabase
-        .from('provider_profiles')
+        .from('providers')
         .update({ 
           verification_status: 'approved'
         })

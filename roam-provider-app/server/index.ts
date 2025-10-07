@@ -64,8 +64,8 @@ export function createServer() {
 
   // Middleware
   app.use(cors());
-  app.use(express.json({ limit: '10mb' }));
-  app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+  app.use(express.json({ limit: '50mb' })); // Increased for base64-encoded images
+  app.use(express.urlencoded({ extended: true, limit: '50mb' }));
   
   // Disable body parsing for file uploads - let multer handle it
   app.use('/api/onboarding/upload-documents', (req, res, next) => {
@@ -278,6 +278,71 @@ export function createServer() {
         res
           .status(500)
           .json({ error: "Failed to load save phase2 progress handler" });
+      }
+    }
+  );
+
+  // GET Phase 2 progress by business ID
+  app.get("/api/onboarding/phase2-progress/:businessId",
+    requirePhase2Access(),
+    async (req: AuthenticatedRequest, res) => {
+      try {
+        const progressHandler = await import(
+          "../api/onboarding/phase2-progress/[businessId]"
+        );
+        // Transform Express req to match Vercel format
+        const vercelReq = {
+          ...req,
+          query: { businessId: req.params.businessId }
+        };
+        await progressHandler.default(vercelReq as any, res as any);
+      } catch (error) {
+        console.error("Error importing get phase2 progress handler:", error);
+        res
+          .status(500)
+          .json({ error: "Failed to load get phase2 progress handler" });
+      }
+    }
+  );
+
+  // Phase 2 Provider Profile routes (no login required during Phase 2 onboarding)
+  app.get("/api/provider/profile/:userId",
+    requirePhase2Access(),
+    async (req: AuthenticatedRequest, res) => {
+      try {
+        const profileHandler = await import("../api/provider/profile/[userId]");
+        // Transform Express req to match Vercel format
+        const vercelReq = {
+          ...req,
+          query: { userId: req.params.userId }
+        };
+        await profileHandler.default(vercelReq as any, res as any);
+      } catch (error) {
+        console.error("Error importing provider profile handler:", error);
+        res
+          .status(500)
+          .json({ error: "Failed to load provider profile handler" });
+      }
+    }
+  );
+
+  app.put("/api/provider/profile/:userId",
+    requirePhase2Access(),
+    async (req: AuthenticatedRequest, res) => {
+      try {
+        const profileHandler = await import("../api/provider/profile/[userId]");
+        // Transform Express req to match Vercel format
+        const vercelReq = {
+          ...req,
+          query: { userId: req.params.userId },
+          body: req.body
+        };
+        await profileHandler.default(vercelReq as any, res as any);
+      } catch (error) {
+        console.error("Error importing provider profile handler:", error);
+        res
+          .status(500)
+          .json({ error: "Failed to load provider profile handler" });
       }
     }
   );
@@ -549,7 +614,13 @@ export function createServer() {
     async (req: AuthenticatedRequest, res) => {
       try {
         const uploadHandler = await import("../api/onboarding/upload-image");
-        await uploadHandler.default(req, res);
+        // Transform Express req to match Vercel format
+        const vercelReq = {
+          ...req,
+          query: req.query || {},
+          body: req.body
+        };
+        await uploadHandler.default(vercelReq as any, res as any);
       } catch (error) {
         console.error("Error importing upload image handler:", error);
         res.status(500).json({ error: "Failed to load upload image handler" });
@@ -572,38 +643,6 @@ export function createServer() {
         res
           .status(500)
           .json({ error: "Failed to load business profile handler" });
-      }
-    }
-  );
-
-  // Provider profile routes with auth
-  app.get("/api/provider/profile/:userId", 
-    requireAuth(['owner', 'dispatcher', 'provider', 'admin']),
-    async (req: AuthenticatedRequest, res) => {
-      try {
-        const profileHandler = await import("../api/provider/profile/[userId]");
-        await profileHandler.default(req, res);
-      } catch (error) {
-        console.error("Error importing provider profile handler:", error);
-        res
-          .status(500)
-          .json({ error: "Failed to load provider profile handler" });
-      }
-    }
-  );
-
-  app.put("/api/provider/profile/:userId", 
-    requireAuth(['owner', 'dispatcher', 'provider', 'admin']),
-    validateRequest(schemas.userProfile),
-    async (req: AuthenticatedRequest, res) => {
-      try {
-        const profileHandler = await import("../api/provider/profile/[userId]");
-        await profileHandler.default(req, res);
-      } catch (error) {
-        console.error("Error importing provider profile handler:", error);
-        res
-          .status(500)
-          .json({ error: "Failed to load provider profile handler" });
       }
     }
   );

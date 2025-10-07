@@ -6,6 +6,7 @@ import { handleSystemConfig } from "./routes/system-config";
 import { handleTestSMS, handleGetSMSSettings } from "./routes/sms";
 import { handleUploadImage } from "./routes/storage";
 import { handleSendApprovalEmail } from "./routes/send-approval-email";
+import { handleSendRejectionEmail } from "./routes/send-rejection-email";
 import { handleSendContactReply } from "./routes/send-contact-reply";
 import { handleValidatePhase2Token } from "./routes/validate-phase2-token";
 import { handleBusinessServiceCategories } from "./routes/business-service-categories";
@@ -70,6 +71,7 @@ export function createServer() {
   app.get("/api/demo", handleDemo);
   app.get("/api/system-config", handleSystemConfig);
   app.post("/api/send-approval-email", handleSendApprovalEmail);
+  app.post("/api/send-rejection-email", handleSendRejectionEmail);
   app.post("/api/send-contact-reply", handleSendContactReply);
   app.post("/api/validate-phase2-token", handleValidatePhase2Token);
   

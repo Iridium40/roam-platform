@@ -29,6 +29,7 @@ import {
   Heart,
   Megaphone,
   Calendar,
+  AlertTriangle,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
@@ -66,6 +67,10 @@ interface DashboardStats {
     completionRate: number;
     avgRating: number;
   };
+  newCustomersThisMonth: number;
+  activeBusinesses: number;
+  pendingVerification: number;
+  newContactSubmissions: number;
 }
 
 interface RecentActivity {
@@ -92,6 +97,10 @@ export default function AdminDashboard() {
       completionRate: 0,
       avgRating: 0,
     },
+    newCustomersThisMonth: 0,
+    activeBusinesses: 0,
+    pendingVerification: 0,
+    newContactSubmissions: 0,
   });
   const [recentActivities, setRecentActivities] = useState<RecentActivity[]>(
     [],
@@ -219,13 +228,13 @@ export default function AdminDashboard() {
       const { data: reviewsData } = await supabase
         .from("reviews")
         .select("overall_rating")
-        .gte("overall_rating", 1);
+        .not("overall_rating", "is", null);
 
       const avgRating =
-        reviewsData?.length > 0
-          ? reviewsData.reduce((sum, review) => sum + review.overall_rating, 0) /
+        reviewsData && reviewsData.length > 0
+          ? reviewsData.reduce((sum, review) => sum + (review.overall_rating || 0), 0) /
             reviewsData.length
-          : 4.8;
+          : 0;
 
       // Promotion usage stats
       const { data: activePromotionsData } = await supabase
@@ -233,18 +242,18 @@ export default function AdminDashboard() {
         .select("id")
         .eq("is_active", true);
 
-      const { data: weeklyPromotionUsageData } = await supabase
+      const { count: totalPromotionUsageCount } = await supabase
         .from("promotion_usage")
-        .select("discount_applied")
+        .select("*", { count: "exact", head: true });
+
+      const { count: weeklyPromotionUsageCount } = await supabase
+        .from("promotion_usage")
+        .select("*", { count: "exact", head: true })
         .gte("created_at", weekStartTimestamp);
 
       const totalActivePromotions = activePromotionsData?.length || 0;
-      const totalUsage = 0; // TODO: Calculate from promotion_usage table if needed
-      const weeklyUsage =
-        weeklyPromotionUsageData?.reduce(
-          (sum, usage) => sum + (usage.discount_applied || 0),
-          0,
-        ) || 0;
+      const totalUsage = totalPromotionUsageCount || 0;
+      const weeklyUsage = weeklyPromotionUsageCount || 0;
 
       // Top services by booking count (last 30 days)
       const thirtyDaysAgo = new Date();
@@ -287,6 +296,35 @@ export default function AdminDashboard() {
         .sort((a, b) => b.booking_count - a.booking_count)
         .slice(0, 4);
 
+      // New Customers This Month
+      const monthStart = new Date();
+      monthStart.setDate(1);
+      monthStart.setHours(0, 0, 0, 0);
+      const monthStartStr = monthStart.toISOString();
+
+      const { count: newCustomersCount } = await supabase
+        .from("customer_profiles")
+        .select("*", { count: "exact", head: true })
+        .gte("created_at", monthStartStr);
+
+      // Active Businesses
+      const { count: activeBusinessesCount } = await supabase
+        .from("business_profiles")
+        .select("*", { count: "exact", head: true })
+        .eq("is_active", true);
+
+      // Pending Verification
+      const { count: pendingVerificationCount } = await supabase
+        .from("business_profiles")
+        .select("*", { count: "exact", head: true })
+        .eq("verification_status", "pending");
+
+      // New/Received Contact Submissions
+      const { count: newContactSubmissionsCount } = await supabase
+        .from("contact_submissions")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "received");
+
       setStats({
         todayBookings: {
           total: todayTotal,
@@ -307,6 +345,10 @@ export default function AdminDashboard() {
           completionRate,
           avgRating: Math.round(avgRating * 10) / 10,
         },
+        newCustomersThisMonth: newCustomersCount || 0,
+        activeBusinesses: activeBusinessesCount || 0,
+        pendingVerification: pendingVerificationCount || 0,
+        newContactSubmissions: newContactSubmissionsCount || 0,
       });
     } catch (error) {
       console.error("Error fetching dashboard stats:", error);
@@ -462,6 +504,38 @@ export default function AdminDashboard() {
             changeType="positive"
             changeIcon={<TrendingUp className="w-3 h-3" />}
           />
+
+          <ROAMStatCard
+            title="New Customers This Month"
+            value={loading ? "..." : stats.newCustomersThisMonth.toString()}
+            icon={<Users className="w-5 h-5" />}
+            changeText="Recent signups"
+            changeType="positive"
+          />
+
+          <ROAMStatCard
+            title="Active Businesses"
+            value={loading ? "..." : stats.activeBusinesses.toString()}
+            icon={<CheckCircle className="w-5 h-5" />}
+            changeText="Currently active"
+            changeType="positive"
+          />
+
+          <ROAMStatCard
+            title="Pending Verification"
+            value={loading ? "..." : stats.pendingVerification.toString()}
+            icon={<Clock className="w-5 h-5" />}
+            changeText="Awaiting review"
+            changeType="warning"
+          />
+
+          <ROAMStatCard
+            title="New Contact Submissions"
+            value={loading ? "..." : stats.newContactSubmissions.toString()}
+            icon={<AlertTriangle className="w-5 h-5" />}
+            changeText="New/Received"
+            changeType="warning"
+          />
         </div>
 
         {/* Performance Chart */}
@@ -611,7 +685,11 @@ export default function AdminDashboard() {
                 </div>
                 <div>
                   <div className="text-lg font-bold text-roam-blue">
-                    {loading ? "..." : stats.totalStats.avgRating}
+                    {loading
+                      ? "..."
+                      : stats.totalStats.avgRating > 0
+                        ? stats.totalStats.avgRating
+                        : "N/A"}
                   </div>
                   <div className="text-xs text-muted-foreground">
                     Avg Rating

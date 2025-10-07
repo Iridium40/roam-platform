@@ -645,7 +645,7 @@ export default function ProviderOnboardingPhase1() {
               variant="outline"
               className="border-roam-blue text-roam-blue"
             >
-              Provider Onboarding - Phase 1
+              Business Onboarding - Phase 1
             </Badge>
           </div>
         </div>
