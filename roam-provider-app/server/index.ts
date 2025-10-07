@@ -24,6 +24,15 @@ import { schemas } from "../shared";
 // Import supabase client from auth middleware
 import { createClient } from '@supabase/supabase-js';
 
+// Development mode: In-memory store for mock business services
+const mockBusinessServicesStore = new Map<string, {
+  business_id: string;
+  service_id: string;
+  business_price: number;
+  delivery_type: string;
+  is_active: boolean;
+}>();
+
 // Validate required environment variables
 function validateEnvironment() {
   const requiredVars = [
@@ -824,10 +833,10 @@ export function createServer() {
             duration_minutes: 120,
             is_active: true,
             subcategory_id: 'house-cleaning',
-            is_configured: false,
-            business_price: null,
-            delivery_type: null,
-            business_is_active: null,
+            is_configured: true,
+            business_price: 75,
+            delivery_type: 'customer_location',
+            business_is_active: true,
             service_subcategories: {
               service_subcategory_type: 'House Cleaning',
               service_categories: {
@@ -913,11 +922,30 @@ export function createServer() {
           'service-3': ['addon-1', 'addon-2', 'addon-3'] // Deep Cleaning compatible addons
         };
 
+        // Merge with in-memory store for services that have been updated
+        const updatedServices = mockEligibleServices.map(service => {
+          const key = `${business_id}:${service.id}`;
+          const storedService = mockBusinessServicesStore.get(key);
+          
+          if (storedService) {
+            console.log(`Merging stored data for service ${service.id}:`, storedService);
+            return {
+              ...service,
+              is_configured: true,
+              business_price: storedService.business_price,
+              delivery_type: storedService.delivery_type,
+              business_is_active: storedService.is_active
+            };
+          }
+          
+          return service;
+        });
+
         res.json({
           business_id: business_id,
-          service_count: mockEligibleServices.length,
+          service_count: updatedServices.length,
           addon_count: mockEligibleAddons.length,
-          eligible_services: mockEligibleServices,
+          eligible_services: updatedServices,
           eligible_addons: mockEligibleAddons,
           service_addon_map: mockServiceAddonMap
         });
@@ -1343,28 +1371,35 @@ export function createServer() {
       try {
         console.log("Production mode: Updating business service in database");
         
-        // Build update object with only provided fields
-        const updateData: any = {};
-        if (business_price !== undefined) updateData.business_price = parseFloat(business_price);
-        if (delivery_type !== undefined) updateData.delivery_type = delivery_type;
-        if (is_active !== undefined) updateData.is_active = is_active;
+        // Build upsert object with all required fields
+        const upsertData: any = {
+          business_id,
+          service_id
+        };
+        
+        if (business_price !== undefined) upsertData.business_price = parseFloat(business_price);
+        if (delivery_type !== undefined) upsertData.delivery_type = delivery_type;
+        if (is_active !== undefined) upsertData.is_active = is_active;
 
-        // Update the service
+        // Use upsert to insert if not exists, or update if exists
         const { data, error } = await supabase
           .from('business_services')
-          .update(updateData)
-          .eq('business_id', business_id)
-          .eq('service_id', service_id)
+          .upsert(upsertData, {
+            onConflict: 'business_id,service_id'
+          })
           .select()
           .single();
 
         if (error) {
-          console.error('Error updating business service:', error);
-          return res.status(500).json({ error: 'Failed to update business service' });
+          console.error('Error upserting business service:', error);
+          return res.status(500).json({ 
+            error: 'Failed to update business service',
+            details: error.message 
+          });
         }
 
         if (!data) {
-          return res.status(404).json({ error: 'Business service not found' });
+          return res.status(404).json({ error: 'Business service operation failed' });
         }
 
         res.json({ service: data });

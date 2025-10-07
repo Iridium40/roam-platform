@@ -6,7 +6,6 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { DollarSign, ArrowRight, Info, Loader2, Package, CheckCircle, Clock } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
 
 interface InvitationData {
   businessId: string;
@@ -64,42 +63,50 @@ export default function StaffServicesSetup({
     try {
       setLoading(true);
 
-      // Load business services
-      const { data: services, error: servicesError } = await supabase
-        .from('business_services')
-        .select(`
-          *,
-          services (
-            name,
-            description,
-            duration_minutes
-          )
-        `)
-        .eq('business_id', invitationData.businessId)
-        .eq('is_active', true);
+      // Use API endpoint instead of direct Supabase query for onboarding
+      // This bypasses RLS issues during the invitation flow
+      const response = await fetch(`/api/business-eligible-services?business_id=${invitationData.businessId}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to load business services');
+      }
 
-      if (servicesError) throw servicesError;
+      const data = await response.json();
+      
+      // Filter for only configured/active services
+      const configuredServices = (data.eligible_services || [])
+        .filter((service: any) => service.is_configured && service.business_is_active)
+        .map((service: any) => ({
+          id: service.id,
+          service_id: service.id,
+          business_price: service.business_price,
+          delivery_type: service.delivery_type,
+          services: {
+            name: service.name,
+            description: service.description,
+            duration_minutes: service.duration_minutes
+          }
+        }));
 
-      // Load business addons
-      const { data: addons, error: addonsError } = await supabase
-        .from('business_addons')
-        .select(`
-          *,
-          addons (
-            name,
-            description
-          )
-        `)
-        .eq('business_id', invitationData.businessId)
-        .eq('is_available', true);
+      // Map eligible addons to expected format
+      const eligibleAddons = (data.eligible_addons || []).map((addon: any) => ({
+        id: addon.id,
+        addon_id: addon.id,
+        custom_price: null,
+        addons: {
+          name: addon.name,
+          description: addon.description
+        }
+      }));
 
-      if (addonsError) throw addonsError;
-
-      setBusinessServices(services || []);
-      setBusinessAddons(addons || []);
+      setBusinessServices(configuredServices);
+      setBusinessAddons(eligibleAddons);
       
     } catch (error) {
       console.error('Error loading business services:', error);
+      // Set empty arrays on error to allow continuing
+      setBusinessServices([]);
+      setBusinessAddons([]);
     } finally {
       setLoading(false);
     }
@@ -190,16 +197,15 @@ export default function StaffServicesSetup({
                   return (
                     <Card
                       key={service.id}
-                      className={`p-4 cursor-pointer transition-colors ${
+                      className={`p-4 transition-colors ${
                         isSelected ? 'border-green-500 bg-green-50' : 'hover:bg-gray-50'
                       }`}
-                      onClick={() => handleServiceToggle(service.service_id)}
                     >
                       <div className="flex items-start gap-3">
                         <Checkbox
                           checked={isSelected}
                           onCheckedChange={() => handleServiceToggle(service.service_id)}
-                          className="mt-1"
+                          className="mt-1 cursor-pointer"
                         />
                         <div className="flex-1">
                           <div className="flex items-center justify-between mb-2">

@@ -148,7 +148,9 @@ export const completeStaffOnboarding = async (req: Request, res: Response) => {
 
     console.log(`[Staff Onboarding] Creating auth user for email: ${decoded.email}`);
 
-    // Step 1: Create Supabase auth user
+    // Step 1: Create or get existing Supabase auth user
+    let userId: string;
+    
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email: decoded.email,
       password: password,
@@ -165,27 +167,48 @@ export const completeStaffOnboarding = async (req: Request, res: Response) => {
       
       // Check if user already exists
       if (authError.message.includes('already registered') || authError.message.includes('already exists')) {
-        return res.status(400).json({ 
-          error: 'An account with this email already exists. Please use the login page.' 
+        console.log('[Staff Onboarding] User already exists, fetching existing user');
+        
+        // Get the existing user by email
+        const { data: { users }, error: listError } = await supabase.auth.admin.listUsers();
+        
+        if (listError) {
+          console.error('[Staff Onboarding] Error listing users:', listError);
+          return res.status(500).json({ 
+            error: 'Failed to fetch existing user',
+            details: listError.message 
+          });
+        }
+        
+        const existingUser = users?.find(u => u.email === decoded.email);
+        
+        if (!existingUser) {
+          return res.status(400).json({ 
+            error: 'User exists but could not be found. Please contact support.' 
+          });
+        }
+        
+        userId = existingUser.id;
+        console.log(`[Staff Onboarding] Found existing user with ID: ${userId}`);
+      } else {
+        return res.status(500).json({ 
+          error: 'Failed to create user account',
+          details: authError.message 
         });
       }
+    } else {
+      if (!authData.user) {
+        console.error('[Staff Onboarding] No user data returned from auth creation');
+        return res.status(500).json({ error: 'Failed to create user account' });
+      }
       
-      return res.status(500).json({ 
-        error: 'Failed to create user account',
-        details: authError.message 
-      });
+      userId = authData.user.id;
+      console.log(`[Staff Onboarding] Auth user created with ID: ${userId}`);
     }
-
-    if (!authData.user) {
-      console.error('[Staff Onboarding] No user data returned from auth creation');
-      return res.status(500).json({ error: 'Failed to create user account' });
-    }
-
-    console.log(`[Staff Onboarding] Auth user created with ID: ${authData.user.id}`);
 
     // Prepare provider data based on role
     const providerData: any = {
-      id: authData.user.id,
+      id: userId,
       business_id: decoded.businessId,
       email: decoded.email,
       first_name: firstName,

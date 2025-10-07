@@ -78,7 +78,11 @@ export default function StaffReviewComplete({
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || 'Failed to complete onboarding');
+        const errorMessage = result.details 
+          ? `${result.error}: ${result.details}`
+          : result.error || 'Failed to complete onboarding';
+        console.error('Server error details:', result);
+        throw new Error(errorMessage);
       }
 
       toast({
