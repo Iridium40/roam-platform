@@ -504,6 +504,17 @@ export default function ProviderOnboardingPhase2() {
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {renderProgressBar()}
+        
+        {/* Informational Note */}
+        {onboardingState.phase2Step !== 'welcome' && onboardingState.phase2Step !== 'complete' && (
+          <Alert className="max-w-4xl mx-auto mb-6 border-blue-200 bg-blue-50">
+            <Shield className="h-4 w-4 text-blue-600" />
+            <AlertDescription className="text-blue-800">
+              <strong>Note:</strong> You can update any information you provide during onboarding at any time through your Business Settings and User Settings once setup is complete.
+            </AlertDescription>
+          </Alert>
+        )}
+        
         {renderContent()}
       </div>
     </div>
