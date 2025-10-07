@@ -11,6 +11,7 @@ import { handleValidatePhase2Token } from "./routes/validate-phase2-token";
 import { handleBusinessServiceCategories } from "./routes/business-service-categories";
 import { handleBusinessServiceSubcategories } from "./routes/business-service-subcategories";
 import { handleBusinesses, handleVerificationStats } from "./routes/businesses";
+import { handleBusinessDocuments } from "./routes/business-documents";
 import { handleUsers, handleUserActivity } from "./routes/users";
 import { handleBookings, handleBookingStats, handleBookingTrends } from "./routes/bookings";
 import { 
@@ -76,6 +77,7 @@ export function createServer() {
   app.get("/api/businesses", handleBusinesses);
   app.put("/api/businesses", handleBusinesses);
   app.get("/api/verification/stats", handleVerificationStats);
+  app.get("/api/business-documents", handleBusinessDocuments);
   
   // User management routes (monitoring only)
   app.get("/api/users", handleUsers);

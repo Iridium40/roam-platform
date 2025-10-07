@@ -471,14 +471,30 @@ export default function AdminVerification() {
   // Fetch documents for specific business
   const fetchBusinessDocuments = async (businessId: string) => {
     try {
-      const { data, error } = await supabase
-        .from("business_documents")
-        .select("*")
-        .eq("business_id", businessId)
-        .order("created_at", { ascending: false });
+      console.log("fetchBusinessDocuments called for business_id:", businessId);
+      
+      // Use server API endpoint with service role key (bypasses RLS)
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3001";
+      const response = await fetch(`${apiBaseUrl}/api/business-documents?business_id=${businessId}`);
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: response.statusText }));
+        throw new Error(errorData.error || `HTTP ${response.status}`);
+      }
+      
+      const result = await response.json();
+      
+      console.log("fetchBusinessDocuments API result:", {
+        businessId,
+        documentsCount: result.data?.length || 0,
+        documents: result.data,
+      });
 
-      if (error) throw error;
-      setBusinessDocuments(data || []);
+      setBusinessDocuments(result.data || []);
+      
+      if (!result.data || result.data.length === 0) {
+        console.warn("No documents found for business_id:", businessId);
+      }
     } catch (error: any) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error occurred";
