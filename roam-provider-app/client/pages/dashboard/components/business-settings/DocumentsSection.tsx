@@ -27,15 +27,16 @@ interface DocumentsSectionProps {
 }
 
 const REQUIRED_DOCUMENT_TYPES = [
-  { type: "business_license", label: "Business License", description: "Valid business registration or license" },
-  { type: "insurance_certificate", label: "Insurance Certificate", description: "Current liability insurance certificate" },
-  { type: "tax_id", label: "Tax ID Document", description: "EIN or Tax ID verification" },
+  { type: "drivers_license", label: "Driver's License", description: "Government-issued photo identification" },
+  { type: "proof_of_address", label: "Proof of Address", description: "Recent utility bill or lease agreement" },
+  { type: "liability_insurance", label: "Liability Insurance", description: "Professional liability insurance certificate" },
+  { type: "professional_license", label: "Professional License/Certification", description: "Your professional license, certification, or training credentials" },
+  { type: "professional_certificate", label: "Professional Certificate", description: "Professional certification or clear headshot photo" },
+  { type: "business_license", label: "Business License", description: "Business registration or operating license (if applicable)" },
 ];
 
 const OPTIONAL_DOCUMENT_TYPES = [
-  { type: "certifications", label: "Professional Certifications", description: "Industry-specific certifications" },
-  { type: "portfolio", label: "Portfolio/Work Samples", description: "Examples of your work" },
-  { type: "other", label: "Other Documentation", description: "Additional supporting documents" },
+  // No optional documents currently
 ];
 
 export function DocumentsSection({

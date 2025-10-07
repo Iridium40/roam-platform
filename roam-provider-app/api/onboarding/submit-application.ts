@@ -288,7 +288,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Get user info for email
     const user = await supabase.auth.admin.getUserById(userId);
     const firstName = user.data.user?.user_metadata?.first_name || "Provider";
-    const userEmail = user.data.user?.email || "";
+    
+    // Use business contact email (from Step 2) instead of auth email
+    const userEmail = businessProfile.contact_email || user.data.user?.email || "";
 
     // Send confirmation email to provider (don't fail if email fails)
     try {
@@ -298,9 +300,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           firstName,
           submission.id,
         );
-        if (!emailSent) {
-          console.error("Failed to send application submitted email");
+        if (emailSent) {
+          console.log("✅ Application submitted email sent to:", userEmail);
+        } else {
+          console.error("❌ Failed to send application submitted email to:", userEmail);
         }
+      } else {
+        console.error("❌ No email address available for sending confirmation");
       }
     } catch (emailError) {
       console.error("Error sending application submitted email:", emailError);

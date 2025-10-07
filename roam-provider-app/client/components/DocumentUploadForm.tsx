@@ -71,7 +71,7 @@ const documentRequirements = {
   liability_insurance: {
     title: "Liability Insurance",
     description: "Professional liability insurance certificate",
-    required: false,
+    required: true,
     acceptedFormats: [".pdf", ".jpg", ".jpeg", ".png"],
     maxSize: 5, // MB
     examples: [
@@ -270,10 +270,7 @@ export function DocumentUploadForm({
       formData.append("documents", file);
       formData.append("userId", userId);
       formData.append("businessId", businessId || "");
-      formData.append(
-        "documentMappings",
-        JSON.stringify({ [file.name]: documentType }),
-      );
+      formData.append("documentType", documentType); // Send document type directly
 
       console.log("Uploading file:", {
         fileName: file.name,

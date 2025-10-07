@@ -31,29 +31,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.log("Files after multer:", files?.length || 0);
     console.log("Body after multer:", body);
     
-    const { userId, businessId, documentMappings } = body;
+    const { userId, businessId, documentType } = body;
 
     console.log("Files received:", files ? files.length : 0);
-    console.log("Request body:", { userId, businessId, documentMappings });
+    console.log("Request body:", { userId, businessId, documentType });
 
     if (!userId || !businessId) {
       console.error("Missing userId or businessId:", { userId, businessId });
       return res.status(400).json({ error: "Missing userId or businessId" });
     }
 
+    if (!documentType) {
+      console.error("Missing documentType");
+      return res.status(400).json({ error: "Missing documentType" });
+    }
+
     if (!files || files.length === 0) {
       console.error("No files uploaded");
       return res.status(400).json({ error: "No files uploaded" });
-    }
-
-    // Parse document mappings
-    let mappings: Record<string, string> = {};
-    try {
-      mappings = JSON.parse(documentMappings || "{}");
-      console.log("Document mappings:", mappings);
-    } catch (error) {
-      console.error("Failed to parse document mappings:", error);
-      return res.status(400).json({ error: "Invalid document mappings format" });
     }
 
     // Validate file types
@@ -72,19 +67,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const uploadedDocuments: any[] = [];
     const errors: any[] = [];
 
-    // Process each file
+    // Process each file (using single documentType for all files in this upload)
     for (const file of files) {
       try {
-        const documentType = mappings[file.originalname];
-        if (!documentType) {
-          console.error("No document type mapping for:", file.originalname);
-          errors.push({
-            file: file.originalname,
-            error: "No document type specified"
-          });
-          continue;
-        }
-
         console.log(`Processing file: ${file.originalname}, type: ${documentType}`);
 
         // Generate storage path: provider-documents/{userId}/{documentType}_{timestamp}.{extension}
