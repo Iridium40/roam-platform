@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { DollarSign, AlertCircle, Info, Package } from 'lucide-react';
+import { DollarSign, AlertCircle, Package } from 'lucide-react';
 
 interface AddonPriceModalProps {
   isOpen: boolean;
@@ -32,12 +32,10 @@ export default function AddonPriceModal({
 }: AddonPriceModalProps) {
   const [price, setPrice] = useState<string>(currentPrice?.toString() || '');
   const [error, setError] = useState<string | null>(null);
-  const [isVariablePricing, setIsVariablePricing] = useState<boolean>(currentPrice === null);
 
   useEffect(() => {
     if (isOpen) {
       setPrice(currentPrice?.toString() || '');
-      setIsVariablePricing(currentPrice === null);
       setError(null);
     }
   }, [isOpen, currentPrice]);
@@ -54,21 +52,19 @@ export default function AddonPriceModal({
     
     setPrice(sanitized);
     setError(null);
-    setIsVariablePricing(false);
   };
 
   const handleConfirm = () => {
-    // If variable pricing (empty), return null
-    if (isVariablePricing || !price || price.trim() === '') {
-      onConfirm(null);
-      onClose();
+    // Require a price value
+    if (!price || price.trim() === '') {
+      setError('Please enter a price for this addon');
       return;
     }
 
     const numPrice = parseFloat(price);
     
     if (isNaN(numPrice)) {
-      setError('Please enter a valid price or leave empty for variable pricing');
+      setError('Please enter a valid price');
       return;
     }
     
@@ -103,12 +99,6 @@ export default function AddonPriceModal({
     }).format(value);
   };
 
-  const handleVariablePricingToggle = () => {
-    setIsVariablePricing(true);
-    setPrice('');
-    setError(null);
-  };
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px]">
@@ -129,18 +119,10 @@ export default function AddonPriceModal({
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          {/* Info Alert */}
-          <Alert className="border-blue-200 bg-blue-50">
-            <Info className="h-4 w-4 text-blue-600" />
-            <AlertDescription className="text-blue-800">
-              Leave price empty for <span className="font-semibold">variable pricing</span> - you can set different prices for different services.
-            </AlertDescription>
-          </Alert>
-
           {/* Price Input */}
           <div className="space-y-2">
             <Label htmlFor="addon-price" className="text-base font-medium">
-              Your Price {isVariablePricing && <span className="text-sm text-foreground/60">(Variable)</span>}
+              Your Price
             </Label>
             <div className="relative">
               <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-foreground/50" />
@@ -148,7 +130,7 @@ export default function AddonPriceModal({
                 id="addon-price"
                 type="text"
                 inputMode="decimal"
-                placeholder="0.00 or leave empty"
+                placeholder="0.00"
                 value={price}
                 onChange={(e) => handlePriceChange(e.target.value)}
                 onKeyDown={handleKeyDown}
@@ -158,23 +140,10 @@ export default function AddonPriceModal({
             </div>
             
             {/* Live Preview */}
-            {price && !error && !isNaN(parseFloat(price)) && !isVariablePricing && (
+            {price && !error && !isNaN(parseFloat(price)) && (
               <p className="text-sm text-roam-blue font-medium">
                 Price: {formatCurrency(parseFloat(price))}
               </p>
-            )}
-
-            {/* Variable Pricing Button */}
-            {!isVariablePricing && price && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={handleVariablePricingToggle}
-                className="text-xs"
-              >
-                Switch to variable pricing
-              </Button>
             )}
           </div>
 

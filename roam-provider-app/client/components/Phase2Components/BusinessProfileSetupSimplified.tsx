@@ -261,7 +261,7 @@ export default function BusinessProfileSetupSimplified({
       }
 
       // Save business profile data
-      const response = await fetch(`/api/test-business-profile`, {
+      const profileResponse = await fetch(`/api/test-business-profile`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -270,12 +270,12 @@ export default function BusinessProfileSetupSimplified({
         }),
       });
 
-      if (!response.ok) {
+      if (!profileResponse.ok) {
         throw new Error("Failed to save business profile");
       }
 
       // Mark step as completed
-      await fetch("/api/test-phase2-progress", {
+      const progressResponse = await fetch("/api/onboarding/save-phase2-progress", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -284,6 +284,10 @@ export default function BusinessProfileSetupSimplified({
           data: formData,
         }),
       });
+
+      if (!progressResponse.ok) {
+        throw new Error("Failed to save progress");
+      }
 
       onComplete(formData);
     } catch (error) {

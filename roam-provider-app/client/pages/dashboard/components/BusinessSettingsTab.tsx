@@ -378,6 +378,11 @@ export default function BusinessSettingsTab({
         description: "Your business settings have been updated successfully.",
       });
       setIsEditing(false);
+      
+      // Reload the page to reflect changes
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
     } catch (error) {
       console.error('Error updating business:', error);
       toast({
@@ -413,12 +418,25 @@ export default function BusinessSettingsTab({
         .from('roam-file-storage')
         .getPublicUrl(filePath);
 
+      // Save the logo URL to the database
+      const { error: updateError } = await supabase
+        .from('business_profiles')
+        .update({ logo_url: publicUrl })
+        .eq('id', business.id);
+
+      if (updateError) throw updateError;
+
       setBusinessData(prev => ({ ...prev, logo_url: publicUrl }));
 
       toast({
         title: "Success",
-        description: "Logo uploaded successfully.",
+        description: "Logo uploaded and saved successfully.",
       });
+      
+      // Reload the page to reflect changes
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
     } catch (error) {
       console.error('Error uploading logo:', error);
       toast({
@@ -454,12 +472,25 @@ export default function BusinessSettingsTab({
         .from('roam-file-storage')
         .getPublicUrl(filePath);
 
+      // Save the cover image URL to the database
+      const { error: updateError } = await supabase
+        .from('business_profiles')
+        .update({ cover_image_url: publicUrl })
+        .eq('id', business.id);
+
+      if (updateError) throw updateError;
+
       setBusinessData(prev => ({ ...prev, cover_image_url: publicUrl }));
 
       toast({
         title: "Success",
-        description: "Cover photo uploaded successfully.",
+        description: "Cover photo uploaded and saved successfully.",
       });
+      
+      // Reload the page to reflect changes
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
     } catch (error) {
       console.error('Error uploading cover photo:', error);
       toast({

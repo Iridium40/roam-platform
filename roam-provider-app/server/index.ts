@@ -1621,8 +1621,7 @@ export function createServer() {
       }
 
       // Development mode bypass
-      // Temporarily disabled to test with real Supabase data
-      if (false && process.env.NODE_ENV === 'development') {
+      if (process.env.NODE_ENV === 'development') {
         console.log("Development mode: Mock adding/updating business addon");
         
         const mockAddon = {
@@ -1634,7 +1633,7 @@ export function createServer() {
           created_at: new Date().toISOString()
         };
 
-        res.json({ mockAddon });
+        res.json({ addon: mockAddon });
         return;
       }
 

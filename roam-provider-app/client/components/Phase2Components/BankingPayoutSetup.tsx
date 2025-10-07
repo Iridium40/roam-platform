@@ -177,11 +177,9 @@ export default function BankingPayoutSetup({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          businessId,
-          userId,
+          business_id: businessId,
           step: 'banking_payout',
-          data: bankingData,
-          completed: true
+          data: bankingData
         }),
       });
 

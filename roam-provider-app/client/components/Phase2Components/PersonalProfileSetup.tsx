@@ -286,23 +286,23 @@ export default function PersonalProfileSetup({
         await uploadImage('cover');
       }
 
-      // Save personal profile data (use test endpoint for development)
-      const response = await fetch(`/api/test-personal-profile`, {
+      // Save personal profile data
+      const profileResponse = await fetch(`/api/test-personal-profile`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...formData,
-          userId
+          userId,
+          ...formData
         })
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
+      if (!profileResponse.ok) {
+        const errorData = await profileResponse.json();
         throw new Error(errorData.error || 'Failed to save personal profile');
       }
 
-      // Mark step as completed (use test endpoint for development)
-      await fetch("/api/test-phase2-progress", {
+      // Mark step as completed
+      const progressResponse = await fetch("/api/onboarding/save-phase2-progress", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -311,6 +311,10 @@ export default function PersonalProfileSetup({
           data: formData
         })
       });
+
+      if (!progressResponse.ok) {
+        throw new Error('Failed to save progress');
+      }
 
       onComplete(formData);
     } catch (error) {

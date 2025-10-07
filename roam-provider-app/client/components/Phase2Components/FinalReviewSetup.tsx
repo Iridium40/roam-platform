@@ -80,9 +80,62 @@ export default function FinalReviewSetup({
 }: FinalReviewSetupProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadedPhase2Data, setLoadedPhase2Data] = useState<Phase2Data>(phase2Data || {});
+  const [loadingProgress, setLoadingProgress] = useState(true);
+
+  // Load Phase 2 progress from database
+  useEffect(() => {
+    const loadProgress = async () => {
+      try {
+        setLoadingProgress(true);
+        const response = await fetch(`/api/onboarding/phase2-progress/${businessId}`);
+        
+        if (response.ok) {
+          const progressData = await response.json();
+          console.log('Loaded Phase 2 progress:', progressData);
+          
+          // Transform the database progress into phase2Data format
+          const transformedData: Phase2Data = {};
+          
+          if (progressData.business_profile_completed) {
+            transformedData.business_profile = progressData.business_profile_data || { completed: true };
+          }
+          
+          if (progressData.personal_profile_completed) {
+            transformedData.personal_profile = progressData.personal_profile_data || { completed: true };
+          }
+          
+          if (progressData.business_hours_completed) {
+            transformedData.business_hours = progressData.business_hours_data || { completed: true };
+          }
+          
+          if (progressData.banking_payout_completed) {
+            transformedData.banking_payout = progressData.banking_payout_data || { completed: true };
+          }
+          
+          if (progressData.service_pricing_completed) {
+            transformedData.service_pricing = progressData.service_pricing_data || { completed: true };
+          }
+          
+          setLoadedPhase2Data(transformedData);
+        }
+      } catch (error) {
+        console.error('Error loading Phase 2 progress:', error);
+        // Use the provided phase2Data as fallback
+      } finally {
+        setLoadingProgress(false);
+      }
+    };
+    
+    if (businessId) {
+      loadProgress();
+    } else {
+      setLoadingProgress(false);
+    }
+  }, [businessId]);
 
   const getStepStatus = (stepId: string) => {
-    const data = phase2Data[stepId as keyof Phase2Data];
+    const data = loadedPhase2Data[stepId as keyof Phase2Data];
     return data ? 'completed' : 'pending';
   };
 
@@ -94,7 +147,7 @@ export default function FinalReviewSetup({
   };
 
   const getStepSummary = (stepId: string) => {
-    const data = phase2Data[stepId as keyof Phase2Data];
+    const data = loadedPhase2Data[stepId as keyof Phase2Data];
     if (!data) return 'Not completed';
 
     switch (stepId) {
@@ -130,11 +183,9 @@ export default function FinalReviewSetup({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          businessId,
-          userId,
+          business_id: businessId,
           step: 'final_review',
-          data: { completed: true },
-          completed: true
+          data: { completed: true }
         }),
       });
 
@@ -153,6 +204,18 @@ export default function FinalReviewSetup({
   };
 
   const allStepsCompleted = getCompletionPercentage() === 100;
+
+  if (loadingProgress) {
+    return (
+      <div className={`max-w-4xl mx-auto ${className}`}>
+        <Card>
+          <CardContent className="flex items-center justify-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-roam-blue" />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className={`max-w-4xl mx-auto ${className}`}>

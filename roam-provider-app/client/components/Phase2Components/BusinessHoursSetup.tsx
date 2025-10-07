@@ -103,8 +103,8 @@ export default function BusinessHoursSetup({
       setLoading(true);
       setError(null);
 
-      // Save business hours to database (use test endpoint for development)
-      const response = await fetch('/api/test-phase2-progress', {
+      // Save business hours to database
+      const response = await fetch('/api/onboarding/save-phase2-progress', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

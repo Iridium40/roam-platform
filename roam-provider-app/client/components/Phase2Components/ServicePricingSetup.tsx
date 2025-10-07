@@ -38,7 +38,11 @@ import {
   Clock,
   Users,
   Settings,
-  Package
+  Package,
+  MapPin,
+  Building2,
+  Video,
+  RefreshCw
 } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 import ServicePriceModal from '@/components/ServicePriceModal';
@@ -79,6 +83,7 @@ interface EligibleAddon {
   description: string;
   image_url?: string;
   is_active: boolean;
+  custom_price?: number | null;
 }
 
 interface BusinessAddon {
@@ -168,6 +173,22 @@ export default function ServicePricingSetup({
     }));
   };
 
+  // Helper function to get delivery type icon and label
+  const getDeliveryTypeInfo = (deliveryType: string) => {
+    switch (deliveryType) {
+      case 'business_location':
+        return { icon: Building2, label: 'Business', color: 'text-blue-600' };
+      case 'customer_location':
+        return { icon: MapPin, label: 'Mobile', color: 'text-green-600' };
+      case 'virtual':
+        return { icon: Video, label: 'Virtual', color: 'text-purple-600' };
+      case 'both_locations':
+        return { icon: RefreshCw, label: 'Both', color: 'text-orange-600' };
+      default:
+        return { icon: MapPin, label: 'Unknown', color: 'text-gray-600' };
+    }
+  };
+
   // Fetch eligible services and addons for the business
   const fetchEligibleServices = async () => {
     try {
@@ -254,14 +275,11 @@ export default function ServicePricingSetup({
 
       const { service } = await response.json();
 
-      // Update local state
+      // Update local state with the new service
       setPricingData(prev => ({
         ...prev,
         business_services: [...prev.business_services, service]
       }));
-
-      // Refresh eligible services to update the list
-      await fetchEligibleServices();
       
       setSelectedServiceForPricing(null);
 
@@ -391,14 +409,11 @@ export default function ServicePricingSetup({
 
       const { addon } = await response.json();
 
-      // Update local state
+      // Update local state with the new addon
       setPricingData(prev => ({
         ...prev,
         business_addons: [...prev.business_addons, addon]
       }));
-
-      // Refresh eligible addons to update the list
-      await fetchEligibleServices();
 
       setSelectedAddonForPricing(null);
     } catch (error) {
@@ -513,11 +528,9 @@ export default function ServicePricingSetup({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          businessId,
-          userId,
+          business_id: businessId,
           step: 'service_pricing',
-          data: pricingData,
-          completed: true
+          data: pricingData
         }),
       });
 
@@ -556,6 +569,23 @@ export default function ServicePricingSetup({
               </p>
             </div>
           </div>
+
+          {/* Information Alerts */}
+          <Alert>
+            <Info className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Tip #1:</strong> Services and addons are based on your business qualifications. 
+              You can adjust pricing and availability anytime from your dashboard.
+            </AlertDescription>
+          </Alert>
+
+          <Alert className="border-blue-200 bg-blue-50">
+            <Info className="h-4 w-4 text-blue-600" />
+            <AlertDescription className="text-blue-800">
+              <strong>Tip #2:</strong> Don't see a service or addon you provide? You can request the ROAM team 
+              to add it after completing onboarding, and it will become available for you to choose.
+            </AlertDescription>
+          </Alert>
 
           {/* Progress Bar */}
           <div className="space-y-2">
@@ -618,7 +648,7 @@ export default function ServicePricingSetup({
                           )}
                         </div>
                         <p className="text-gray-600 mb-2 text-sm">{eligibleService.description}</p>
-                        <div className="flex items-center gap-4 text-sm text-gray-600">
+                        <div className="flex items-center gap-4 text-sm text-gray-600 flex-wrap">
                           {isConfigured && businessService ? (
                             <>
                               <span className="flex items-center gap-1 font-medium text-green-700">
@@ -629,6 +659,16 @@ export default function ServicePricingSetup({
                                 <Clock className="w-4 h-4" />
                                 {eligibleService.duration_minutes} min
                               </span>
+                              {businessService.delivery_type && (() => {
+                                const deliveryInfo = getDeliveryTypeInfo(businessService.delivery_type);
+                                const DeliveryIcon = deliveryInfo.icon;
+                                return (
+                                  <span className={`flex items-center gap-1 font-medium ${deliveryInfo.color}`}>
+                                    <DeliveryIcon className="w-4 h-4" />
+                                    {deliveryInfo.label}
+                                  </span>
+                                );
+                              })()}
                             </>
                           ) : (
                             <>
@@ -651,8 +691,13 @@ export default function ServicePricingSetup({
                             variant="outline"
                             size="sm"
                             onClick={() => {
-                              setEditingService(eligibleService);
-                              setShowAddServiceModal(true);
+                              // Create a service object with current price and delivery type for editing
+                              const serviceWithCurrentData = {
+                                ...eligibleService,
+                                business_price: businessService?.business_price,
+                                delivery_type: businessService?.delivery_type || 'business_location'
+                              };
+                              openPriceModal(serviceWithCurrentData);
                             }}
                             className="h-9"
                           >
@@ -714,11 +759,11 @@ export default function ServicePricingSetup({
                           )}
                         </div>
                         <p className="text-gray-600 mb-2 text-sm">{eligibleAddon.description}</p>
-                        {isConfigured && businessAddon && (
+                        {isConfigured && businessAddon && businessAddon.custom_price && (
                           <div className="flex items-center gap-4 text-sm">
                             <span className="flex items-center gap-1 font-medium text-green-700">
                               <DollarSign className="w-4 h-4" />
-                              {businessAddon.custom_price ? `$${businessAddon.custom_price}` : 'Variable'}
+                              ${businessAddon.custom_price}
                             </span>
                           </div>
                         )}
@@ -730,8 +775,12 @@ export default function ServicePricingSetup({
                             variant="outline"
                             size="sm"
                             onClick={() => {
-                              setEditingAddon(eligibleAddon);
-                              setShowAddonModal(true);
+                              // Create an addon object with current price for editing
+                              const addonWithCurrentData = {
+                                ...eligibleAddon,
+                                custom_price: businessAddon?.custom_price
+                              };
+                              openAddonPriceModal(addonWithCurrentData);
                             }}
                             className="h-9"
                           >
@@ -762,17 +811,6 @@ export default function ServicePricingSetup({
               })}
             </div>
           </div>
-
-
-
-          {/* Information Alert */}
-          <Alert>
-            <Info className="h-4 w-4" />
-            <AlertDescription>
-              <strong>Tip:</strong> Services and addons are based on your business qualifications. 
-              You can adjust pricing and availability anytime from your dashboard.
-            </AlertDescription>
-          </Alert>
 
           {/* Action Buttons */}
           <div className="flex justify-between pt-6">
@@ -827,7 +865,7 @@ export default function ServicePricingSetup({
         }}
         onConfirm={handleAddonPriceConfirm}
         addonName={selectedAddonForPricing?.name || ''}
-        currentPrice={selectedAddonForPricing ? null : undefined}
+        currentPrice={selectedAddonForPricing?.custom_price}
         currency={pricingData.currency}
       />
     </div>

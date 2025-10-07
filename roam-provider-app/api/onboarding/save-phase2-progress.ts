@@ -33,7 +33,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const updateData = {
       [`${step}_completed`]: true,
       [`${step}_data`]: data || {},
-      current_step: step,
       updated_at: new Date().toISOString()
     };
 

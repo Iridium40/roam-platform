@@ -109,6 +109,11 @@ export default function ProfileTab({
         description: "Your profile has been updated successfully.",
       });
       setIsEditing(false);
+      
+      // Reload the page to reflect changes
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
     } catch (error) {
       console.error('Error updating profile:', error);
       toast({
@@ -177,6 +182,11 @@ export default function ProfileTab({
         title: "Profile Photo Updated",
         description: "Your profile photo has been uploaded successfully.",
       });
+      
+      // Reload the page to reflect changes
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
     } catch (error) {
       console.error('Error uploading profile photo:', error);
       setUploadProgress(prev => ({
@@ -253,6 +263,11 @@ export default function ProfileTab({
         title: "Cover Photo Updated",
         description: "Your cover photo has been uploaded successfully.",
       });
+      
+      // Reload the page to reflect changes
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
     } catch (error) {
       console.error('Error uploading cover photo:', error);
       setUploadProgress(prev => ({

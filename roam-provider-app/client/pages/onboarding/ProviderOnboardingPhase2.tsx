@@ -167,9 +167,10 @@ export default function ProviderOnboardingPhase2() {
       phase2Step: "complete",
     }));
 
-    // Redirect to provider dashboard
+    // Clear Phase 2 session and redirect to provider portal login
+    sessionStorage.removeItem('phase2_session');
     setTimeout(() => {
-      navigate("/provider-dashboard");
+      navigate("/provider-portal");
     }, 2000);
   };
 
@@ -358,7 +359,7 @@ export default function ProviderOnboardingPhase2() {
               </Alert>
 
               <p className="text-foreground/70">
-                Redirecting you to your provider dashboard...
+                Redirecting you to the provider portal login...
               </p>
             </CardContent>
           </Card>
@@ -465,7 +466,7 @@ export default function ProviderOnboardingPhase2() {
               variant="outline"
               className="border-roam-blue text-roam-blue"
             >
-              Provider Onboarding - Phase 2
+              Business Onboarding - Phase 2
             </Badge>
           </div>
         </div>
