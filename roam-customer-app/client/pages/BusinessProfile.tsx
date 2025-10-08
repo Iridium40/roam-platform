@@ -1,13 +1,16 @@
 import { useParams, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Calendar, Clock, Building, User, CreditCard, Tag } from "lucide-react";
+import { ArrowLeft, Calendar, Clock, Building, User, CreditCard, Tag, ExternalLink, Share2 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+
+// Lazy load ShareModal
+const ShareModal = lazy(() => import("@/components/ShareModal"));
 
 interface Business {
   id: string;
@@ -29,6 +32,19 @@ interface Service {
   image_url?: string;
 }
 
+interface Provider {
+  id: string;
+  user_id: string;
+  first_name: string;
+  last_name: string;
+  bio?: string;
+  image_url?: string;
+  cover_image_url?: string;
+  provider_role: 'owner' | 'provider' | 'dispatcher';
+  rating?: number;
+  review_count?: number;
+}
+
 export default function BusinessProfile() {
   const { businessId } = useParams();
   const [searchParams] = useSearchParams();
@@ -37,8 +53,10 @@ export default function BusinessProfile() {
   
   const [business, setBusiness] = useState<Business | null>(null);
   const [services, setServices] = useState<Service[]>([]);
+  const [staff, setStaff] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
+  const [shareModalOpen, setShareModalOpen] = useState(false);
 
   // Check if user wants to book directly
   const shouldBook = searchParams.get('book') === 'true';
@@ -92,6 +110,49 @@ export default function BusinessProfile() {
 
         if (!servicesError && servicesData) {
           setServices(servicesData);
+        }
+
+        // Load staff members (owners and providers) for this business
+        console.log('🔍 Loading staff for business ID:', businessId);
+        const { data: staffData, error: staffError } = await supabase
+          .from('providers')
+          .select(`
+            id,
+            user_id,
+            first_name,
+            last_name,
+            bio,
+            image_url,
+            cover_image_url,
+            provider_role
+          `)
+          .eq('business_id', businessId)
+          .in('provider_role', ['owner', 'provider'])
+          .eq('is_active', true)
+          .eq('active_for_bookings', true);
+
+        console.log('📊 Staff query result:', { staffData, staffError });
+
+        if (staffError) {
+          console.error('❌ Error loading staff:', staffError);
+          console.error('Error details:', JSON.stringify(staffError, null, 2));
+        }
+
+        if (!staffError && staffData) {
+          console.log('✅ Found staff members:', staffData.length);
+          // Add mock ratings for now
+          const staffWithRatings = staffData.map((provider) => ({
+            ...provider,
+            rating: 4.8,
+            review_count: Math.floor(Math.random() * 50) + 10,
+          }));
+          setStaff(staffWithRatings);
+        } else if (!staffError && !staffData) {
+          console.log('⚠️ No staff data returned (null)');
+          setStaff([]);
+        } else {
+          console.log('⚠️ No staff members found for this business');
+          setStaff([]);
         }
 
         // If user wants to book and there are services, redirect to first service
@@ -196,9 +257,20 @@ export default function BusinessProfile() {
                 )}
               </div>
               <div className="flex-1">
-                <h1 className="text-3xl font-bold text-foreground mb-2">
-                  {business.business_name}
-                </h1>
+                <div className="flex items-center justify-between mb-2">
+                  <h1 className="text-3xl font-bold text-foreground">
+                    {business.business_name}
+                  </h1>
+                  <Button
+                    onClick={() => setShareModalOpen(true)}
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                  >
+                    <Share2 className="w-4 h-4" />
+                    Share
+                  </Button>
+                </div>
                 <p className="text-foreground/60 mb-4">
                   {business.description}
                 </p>
@@ -239,6 +311,16 @@ export default function BusinessProfile() {
                   }`}
                 >
                   Services ({services.length})
+                </button>
+                <button
+                  onClick={() => setActiveTab('staff')}
+                  className={`px-6 py-4 font-medium ${
+                    activeTab === 'staff'
+                      ? 'border-b-2 border-roam-blue text-roam-blue'
+                      : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  Staff ({staff.length})
                 </button>
                 <button
                   onClick={() => setActiveTab('reviews')}
@@ -338,6 +420,78 @@ export default function BusinessProfile() {
                 </div>
               )}
 
+              {activeTab === 'staff' && (
+                <div>
+                  <h2 className="text-2xl font-semibold mb-6">Our Team</h2>
+                  {staff.length > 0 ? (
+                    <div className="grid gap-6 md:grid-cols-2">
+                      {staff.map((provider) => (
+                        <Card 
+                          key={provider.id} 
+                          className="hover:shadow-lg transition-all cursor-pointer group border-2 hover:border-roam-blue/30"
+                          onClick={() => window.location.href = `/provider/${provider.user_id}`}
+                        >
+                          <CardContent className="p-6">
+                            <div className="flex gap-4">
+                              <div className="w-20 h-20 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+                                {provider.image_url ? (
+                                  <img 
+                                    src={provider.image_url} 
+                                    alt={`${provider.first_name} ${provider.last_name}`} 
+                                    className="w-full h-full object-cover" 
+                                  />
+                                ) : (
+                                  <User className="w-10 h-10 text-gray-400" />
+                                )}
+                              </div>
+                              <div className="flex-1">
+                                <div className="flex items-center justify-between gap-2 mb-1">
+                                  <div className="flex items-center gap-2">
+                                    <h3 className="font-semibold text-xl group-hover:text-roam-blue transition-colors">
+                                      {provider.first_name} {provider.last_name}
+                                    </h3>
+                                    {provider.provider_role === 'owner' && (
+                                      <Badge className="bg-purple-100 text-purple-800 border-purple-300">
+                                        Owner
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <ExternalLink className="w-5 h-5 text-gray-400 group-hover:text-roam-blue transition-colors flex-shrink-0" />
+                                </div>
+                                {provider.bio && (
+                                  <p className="text-gray-600 text-sm mb-3 line-clamp-2">
+                                    {provider.bio}
+                                  </p>
+                                )}
+                                <div className="flex items-center gap-4">
+                                  <div className="flex items-center">
+                                    <span className="text-yellow-500">★</span>
+                                    <span className="ml-1 text-sm font-medium">{provider.rating}</span>
+                                    <span className="text-gray-500 ml-1 text-sm">
+                                      ({provider.review_count} reviews)
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <User className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                      <h3 className="text-lg font-semibold text-gray-600 mb-2">
+                        No Team Members Listed
+                      </h3>
+                      <p className="text-gray-500">
+                        This business hasn't added any team members yet.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {activeTab === 'reviews' && (
                 <div>
                   <h2 className="text-2xl font-semibold mb-6">Customer Reviews</h2>
@@ -359,6 +513,19 @@ export default function BusinessProfile() {
           </div>
         </div>
       </div>
+
+      {/* Share Modal */}
+      {business && (
+        <Suspense fallback={<div />}>
+          <ShareModal
+            isOpen={shareModalOpen}
+            onClose={() => setShareModalOpen(false)}
+            providerName={business.business_name}
+            providerTitle="Business"
+            pageUrl={window.location.href}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }

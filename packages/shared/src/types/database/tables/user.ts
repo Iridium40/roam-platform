@@ -92,6 +92,7 @@ export interface ProvidersTable {
     provider_role: ProviderRole | null;
     business_managed: boolean;
     is_active: boolean | null;
+    active_for_bookings: boolean | null;
     total_bookings: number | null;
     completed_bookings: number | null;
     average_rating: number | null;
@@ -120,6 +121,7 @@ export interface ProvidersTable {
     provider_role?: ProviderRole | null;
     business_managed: boolean;
     is_active?: boolean | null;
+    active_for_bookings?: boolean | null;
     total_bookings?: number | null;
     completed_bookings?: number | null;
     average_rating?: number | null;
@@ -148,6 +150,7 @@ export interface ProvidersTable {
     provider_role?: ProviderRole | null;
     business_managed?: boolean;
     is_active?: boolean | null;
+    active_for_bookings?: boolean | null;
     total_bookings?: number | null;
     completed_bookings?: number | null;
     average_rating?: number | null;

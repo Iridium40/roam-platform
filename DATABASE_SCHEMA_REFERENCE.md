@@ -437,7 +437,7 @@ create table public.reviews (
 ## 👥 Provider Domain
 
 ### `providers`
-**Status**: ✅ CONFIRMED WORKING (2025-10-01)
+**Status**: ✅ CONFIRMED WORKING (2025-10-08)
 **Used in**: Provider management, Staff assignments, Bookings
 
 ```sql
@@ -455,9 +455,9 @@ create table public.providers (
   cover_image_url text null,
   date_of_birth date null,
   experience_years integer null,
-  verification_status public.provider_verification_status null default 'pending',
-  background_check_status public.background_check_status null default 'under_review',
-  identity_verification_status text null default 'pending',
+  verification_status public.provider_verification_status null default 'pending'::provider_verification_status,
+  background_check_status public.background_check_status null default 'under_review'::background_check_status,
+  identity_verification_status text null default 'pending'::text,
   provider_role public.provider_role null,
   business_managed boolean not null,
   is_active boolean null default true,
@@ -467,13 +467,28 @@ create table public.providers (
   total_reviews integer null default 0,
   notification_email text null,
   notification_phone text null,
+  active_for_bookings boolean null,
   created_at timestamp with time zone null default now(),
   constraint providers_pkey primary key (id),
-  constraint providers_user_id_fkey foreign KEY (user_id) references auth.users (id),
+  constraint providers_user_id_fkey foreign KEY (user_id) references auth.users (id) on delete set null,
   constraint providers_business_id_fkey foreign KEY (business_id) references business_profiles (id),
   constraint providers_location_id_fkey foreign KEY (location_id) references business_locations (id)
 );
+
+create index IF not exists idx_providers_user_id on public.providers using btree (user_id) TABLESPACE pg_default;
+
+create index IF not exists idx_providers_business_id on public.providers using btree (business_id) TABLESPACE pg_default;
+
+create index IF not exists idx_providers_location_id on public.providers using btree (location_id) TABLESPACE pg_default;
+
+create index IF not exists idx_providers_verification on public.providers using btree (verification_status) TABLESPACE pg_default;
 ```
+
+**Key Fields:**
+- `active_for_bookings` - Boolean flag to control if a staff member (owner or provider) can be booked for services in the customer app
+- `is_active` - General active status for the staff member account
+- `provider_role` - Role type: 'owner', 'dispatcher', or 'provider'
+- `business_managed` - Indicates if this provider is managed by a business
 
 ### `provider_verifications`
 **Status**: ✅ CONFIRMED WORKING (2025-10-01)

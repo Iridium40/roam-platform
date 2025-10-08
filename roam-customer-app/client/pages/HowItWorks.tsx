@@ -271,21 +271,17 @@ export default function HowItWorks() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
             {[
-              { name: "Beauty & Spa", icon: "💄", services: "Hair, Nails, Skincare, Makeup" },
-              { name: "Fitness & Wellness", icon: "🏃‍♀️", services: "Personal Training, Yoga, Massage" },
-              { name: "Healthcare", icon: "🏥", services: "Physical Therapy, Nutrition, Mental Health" },
-              { name: "Home Services", icon: "🏠", services: "Cleaning, Repair, Maintenance" },
-              { name: "Pet Care", icon: "🐕", services: "Grooming, Training, Sitting" },
-              { name: "Events", icon: "🎉", services: "Photography, Catering, Planning" },
-              { name: "Education", icon: "📚", services: "Tutoring, Music, Language" },
-              { name: "Business", icon: "💼", services: "Consulting, Marketing, Legal" }
+              { name: "Beauty", icon: "💄", services: "Hair, Nails, Skincare, Makeup" },
+              { name: "Fitness", icon: "🏃‍♀️", services: "Personal Training, Yoga, Exercise" },
+              { name: "Wellness", icon: "🧘", services: "Massage, Spa, Relaxation" },
+              { name: "Healthcare", icon: "🏥", services: "Physical Therapy, Nutrition, Mental Health" }
             ].map((category, index) => (
-              <Card key={index} className="text-center hover:shadow-md transition-shadow">
-                <CardContent className="p-6">
-                  <div className="text-4xl mb-4">{category.icon}</div>
-                  <h3 className="text-lg font-semibold mb-2">{category.name}</h3>
+              <Card key={index} className="text-center hover:shadow-lg transition-all hover:scale-105">
+                <CardContent className="p-8">
+                  <div className="text-5xl mb-4">{category.icon}</div>
+                  <h3 className="text-xl font-semibold mb-3">{category.name}</h3>
                   <p className="text-sm text-foreground/70">{category.services}</p>
                 </CardContent>
               </Card>

@@ -46,6 +46,7 @@ import {
   TrendingUp,
   Star,
   Calendar,
+  CalendarCheck,
   Award,
   Building2,
   Phone,
@@ -87,6 +88,7 @@ interface Provider {
   bio: string | null;
   image_url: string | null;
   is_active: boolean;
+  active_for_bookings: boolean | null;
   created_at: string;
   date_of_birth: string | null;
   experience_years: number | null;
@@ -1237,26 +1239,14 @@ export default function AdminProviders() {
       header: "Verification",
       sortable: true,
       render: (value: VerificationStatus, row: Provider) => (
-        <div className="space-y-1">
-          <ROAMBadge
-            variant={getVerificationBadgeVariant(value)}
-            size="sm"
-            className="flex items-center gap-1 w-fit"
-          >
-            {getVerificationIcon(value)}
-            {formatEnumDisplay(value)}
-          </ROAMBadge>
-          <ROAMBadge
-            variant={getBackgroundCheckBadgeVariant(
-              row.background_check_status,
-            )}
-            size="sm"
-            className="flex items-center gap-1 w-fit"
-          >
-            <Shield className="w-3 h-3" />
-            {formatEnumDisplay(row.background_check_status)}
-          </ROAMBadge>
-        </div>
+        <ROAMBadge
+          variant={getVerificationBadgeVariant(value)}
+          size="sm"
+          className="flex items-center gap-1 w-fit"
+        >
+          {getVerificationIcon(value)}
+          {formatEnumDisplay(value)}
+        </ROAMBadge>
       ),
     },
     {
@@ -1285,6 +1275,16 @@ export default function AdminProviders() {
       render: (value: any, row: Provider) => (
         <ROAMBadge variant={row.is_active ? "success" : "secondary"}>
           {row.is_active ? "Active" : "Inactive"}
+        </ROAMBadge>
+      ),
+    },
+    {
+      key: "active_for_bookings",
+      header: "Bookable",
+      sortable: true,
+      render: (value: boolean | null | undefined, row: Provider) => (
+        <ROAMBadge variant={value ? "success" : "secondary"}>
+          {value ? "Yes" : "No"}
         </ROAMBadge>
       ),
     },
@@ -2118,6 +2118,23 @@ export default function AdminProviders() {
                     </div>
 
                     <div className="flex items-center gap-3">
+                      <CalendarCheck className="w-4 h-4 text-muted-foreground" />
+                      <div>
+                        <div className="text-sm text-muted-foreground">
+                          Active for Bookings
+                        </div>
+                        <ROAMBadge
+                          variant={
+                            selectedProvider.active_for_bookings ? "success" : "secondary"
+                          }
+                          className="mt-1"
+                        >
+                          {selectedProvider.active_for_bookings ? "Yes" : "No"}
+                        </ROAMBadge>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
                       <Shield className="w-4 h-4 text-muted-foreground" />
                       <div>
                         <div className="text-sm text-muted-foreground">
@@ -2131,25 +2148,6 @@ export default function AdminProviders() {
                         >
                           {formatEnumDisplay(
                             selectedProvider.verification_status,
-                          )}
-                        </ROAMBadge>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      <ShieldCheck className="w-4 h-4 text-muted-foreground" />
-                      <div>
-                        <div className="text-sm text-muted-foreground">
-                          Background Check
-                        </div>
-                        <ROAMBadge
-                          variant={getBackgroundCheckBadgeVariant(
-                            selectedProvider.background_check_status,
-                          )}
-                          className="mt-1"
-                        >
-                          {formatEnumDisplay(
-                            selectedProvider.background_check_status,
                           )}
                         </ROAMBadge>
                       </div>

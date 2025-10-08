@@ -57,6 +57,7 @@ import {
   Settings,
   Send,
   Package,
+  Loader2,
 } from "lucide-react";
 import { useProviderAuth } from "@/contexts/auth/ProviderAuthContext";
 import { supabase } from "@/lib/supabase";
@@ -135,12 +136,27 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
   const [inviteRole, setInviteRole] = useState<ProviderRole>("provider");
   const [inviteLocation, setInviteLocation] = useState("no-location");
 
+  // Manual staff creation state
+  const [showManualAddDialog, setShowManualAddDialog] = useState(false);
+  const [manualStaffData, setManualStaffData] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    role: "provider" as ProviderRole,
+    locationId: "no-location",
+  });
+
   // Service assignment state
   const [businessServices, setBusinessServices] = useState<BusinessService[]>([]);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [businessAddons, setBusinessAddons] = useState<any[]>([]);
   const [loadingServices, setLoadingServices] = useState(false);
   const [editDialogTab, setEditDialogTab] = useState("details");
+
+  // Image upload state
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [coverImageUploading, setCoverImageUploading] = useState(false);
 
   // Safely handle locations prop - ensure it's always an array
   const safeLocations = Array.isArray(locations) ? locations : [];
@@ -159,7 +175,7 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
   }, [businessId]);
 
   useEffect(() => {
-    if (selectedStaff && isEditDialogOpen && selectedStaff.provider_role === 'provider') {
+    if (selectedStaff && isEditDialogOpen && (selectedStaff.provider_role === 'provider' || selectedStaff.provider_role === 'owner')) {
       fetchProviderServices(selectedStaff.id);
     }
   }, [selectedStaff, isEditDialogOpen]);
@@ -231,18 +247,23 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
   const fetchProviderServices = async (providerId: string) => {
     setLoadingServices(true);
     try {
-      const response = await fetch(`/api/provider/services/${providerId}`);
-      
-      if (!response.ok) {
-        throw new Error("Failed to fetch provider services");
+      // Fetch provider services
+      const { data: providerServices, error } = await supabase
+        .from('provider_services')
+        .select('service_id, is_active')
+        .eq('provider_id', providerId)
+        .eq('is_active', true);
+
+      if (error) {
+        console.error("Error fetching provider services:", error);
+        setSelectedServices([]);
+        return;
       }
 
-      const data = await response.json();
-      const activeServiceIds = (data.services || [])
-        .filter((ps: any) => ps.is_active)
-        .map((ps: any) => ps.service_id);
+      // Get the service IDs that are assigned and active
+      const assignedServiceIds = (providerServices || []).map((ps: any) => ps.service_id);
       
-      setSelectedServices(activeServiceIds);
+      setSelectedServices(assignedServiceIds);
     } catch (error: any) {
       console.error("Error fetching provider services:", error);
       toast({
@@ -250,6 +271,7 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
         description: "Failed to load provider services",
         variant: "destructive",
       });
+      setSelectedServices([]);
     } finally {
       setLoadingServices(false);
     }
@@ -267,18 +289,58 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
     if (!selectedStaff) return;
 
     try {
-      // Update provider services
-      const servicesResponse = await fetch("/api/provider/services", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          provider_id: selectedStaff.id,
-          service_ids: selectedServices,
-        }),
-      });
+      // Step 1: Deactivate all existing services for this provider
+      const { error: deactivateError } = await supabase
+        .from('provider_services')
+        .update({ is_active: false })
+        .eq('provider_id', selectedStaff.id);
 
-      if (!servicesResponse.ok) {
-        throw new Error("Failed to update provider services");
+      if (deactivateError) {
+        throw deactivateError;
+      }
+
+      // Step 2: Upsert selected services (insert new or reactivate existing)
+      if (selectedServices.length > 0) {
+        const serviceAssignments = selectedServices.map(serviceId => ({
+          provider_id: selectedStaff.id,
+          service_id: serviceId,
+          is_active: true,
+        }));
+
+        // Use upsert to handle both new and existing services
+        const { error: upsertError } = await supabase
+          .from('provider_services')
+          .upsert(serviceAssignments, {
+            onConflict: 'provider_id,service_id',
+            ignoreDuplicates: false
+          });
+
+        if (upsertError) {
+          throw upsertError;
+        }
+      }
+
+      // Step 3: If all services removed and active_for_bookings is true, disable it
+      if (selectedServices.length === 0 && selectedStaff.active_for_bookings) {
+        const { error: bookingsError } = await supabase
+          .from('providers')
+          .update({ active_for_bookings: false })
+          .eq('id', selectedStaff.id);
+
+        if (bookingsError) {
+          console.error("Error disabling active_for_bookings:", bookingsError);
+        } else {
+          // Update local state
+          setSelectedStaff({
+            ...selectedStaff,
+            active_for_bookings: false,
+          });
+          toast({
+            title: "Bookings Disabled",
+            description: "Staff member is no longer bookable as all services have been removed.",
+            variant: "default",
+          });
+        }
       }
 
       // Auto-assign eligible addons based on selected services
@@ -302,41 +364,68 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
     if (!selectedStaff || selectedServices.length === 0) return;
 
     try {
-      // Find all eligible addons for the selected services
-      const eligibleAddonIds = new Set<string>();
-      
-      // Get addon eligibility from service_addon_eligibility
-      const { data: addonEligibility, error } = await supabase
+      // Step 1: Deactivate all existing addons for this provider
+      const { error: deactivateError } = await supabase
+        .from('provider_addons')
+        .update({ is_active: false })
+        .eq('provider_id', selectedStaff.id);
+
+      if (deactivateError) {
+        console.error('Error deactivating provider addons:', deactivateError);
+        return;
+      }
+
+      // Step 2: Find all eligible addons for the selected services
+      const { data: addonEligibility, error: eligibilityError } = await supabase
         .from('service_addon_eligibility')
         .select('addon_id')
         .in('service_id', selectedServices);
 
-      if (error) {
-        console.error('Error fetching addon eligibility:', error);
+      if (eligibilityError) {
+        console.error('Error fetching addon eligibility:', eligibilityError);
         return;
       }
 
-      addonEligibility?.forEach((ae: any) => eligibleAddonIds.add(ae.addon_id));
-
-      // Filter to only business-available addons
-      const businessAddonIds = businessAddons.map((ba: any) => ba.id);
-      const addonsToAssign = Array.from(eligibleAddonIds).filter(
-        addonId => businessAddonIds.includes(addonId)
+      const eligibleAddonIds = Array.from(
+        new Set(addonEligibility?.map((ae: any) => ae.addon_id) || [])
       );
 
-      // Assign addons to provider
-      if (addonsToAssign.length > 0) {
-        const addonsResponse = await fetch("/api/provider/addons", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            provider_id: selectedStaff.id,
-            addon_ids: addonsToAssign,
-          }),
-        });
+      // Step 3: Filter to only business-available addons
+      if (eligibleAddonIds.length > 0) {
+        const { data: businessAddons, error: businessAddonsError } = await supabase
+          .from('business_addons')
+          .select('addon_id')
+          .eq('business_id', businessId)
+          .eq('is_available', true)
+          .in('addon_id', eligibleAddonIds);
 
-        if (!addonsResponse.ok) {
-          console.error("Failed to auto-assign addons");
+        if (businessAddonsError) {
+          console.error('Error fetching business addons:', businessAddonsError);
+          return;
+        }
+
+        const addonsToAssign = businessAddons?.map((ba: any) => ba.addon_id) || [];
+
+        // Step 4: Upsert eligible addons (insert new or reactivate existing)
+        if (addonsToAssign.length > 0) {
+          const addonAssignments = addonsToAssign.map(addonId => ({
+            provider_id: selectedStaff.id,
+            addon_id: addonId,
+            is_active: true,
+          }));
+
+          const { error: upsertError } = await supabase
+            .from('provider_addons')
+            .upsert(addonAssignments, {
+              onConflict: 'provider_id,addon_id',
+              ignoreDuplicates: false
+            });
+
+          if (upsertError) {
+            console.error('Error upserting provider addons:', upsertError);
+          } else {
+            console.log(`Auto-assigned ${addonsToAssign.length} addons to provider`);
+          }
         }
       }
     } catch (error: any) {
@@ -407,6 +496,16 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
     const handleUpdateStaff = async () => {
     if (!selectedStaff) return;
 
+    // Validation: If active_for_bookings is true, must have at least 1 service
+    if (selectedStaff.active_for_bookings && selectedServices.length === 0) {
+      toast({
+        title: "Validation Error",
+        description: "Cannot enable bookings without at least 1 active service assigned.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     console.log('💾 Updating staff member:', {
       staff_id: selectedStaff.id,
       location_id: selectedStaff.location_id,
@@ -420,6 +519,8 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
         location_id: selectedStaff.location_id,
         bio: selectedStaff.bio,
         experience_years: selectedStaff.experience_years,
+        verification_status: selectedStaff.verification_status,
+        active_for_bookings: selectedStaff.active_for_bookings,
       }
     });
 
@@ -435,6 +536,8 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
           location_id: selectedStaff.location_id,
           bio: selectedStaff.bio,
           experience_years: selectedStaff.experience_years,
+          verification_status: selectedStaff.verification_status,
+          active_for_bookings: selectedStaff.active_for_bookings,
         })
         .eq("id", selectedStaff.id);
 
@@ -442,8 +545,8 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
 
       console.log('✅ Staff member updated successfully');
 
-      // If provider role, also update services
-      if (selectedStaff.provider_role === 'provider') {
+      // If provider or owner role, also update services
+      if (selectedStaff.provider_role === 'provider' || selectedStaff.provider_role === 'owner') {
         await handleUpdateProviderServices();
       }
 
@@ -461,6 +564,118 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
         description: error.message,
         variant: "destructive",
       });
+    }
+  };
+
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!selectedStaff || !event.target.files || event.target.files.length === 0) {
+      return;
+    }
+
+    const file = event.target.files[0];
+    
+    try {
+      setAvatarUploading(true);
+      
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${selectedStaff.id}-avatar-${Date.now()}.${fileExt}`;
+      const filePath = `provider-avatars/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('roam-file-storage')
+        .upload(filePath, file);
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('roam-file-storage')
+        .getPublicUrl(filePath);
+
+      // Update the provider record with the new avatar URL
+      const { error: updateError } = await supabase
+        .from('providers')
+        .update({ image_url: publicUrl })
+        .eq('id', selectedStaff.id);
+
+      if (updateError) throw updateError;
+
+      // Update local state
+      setSelectedStaff({ ...selectedStaff, image_url: publicUrl });
+
+      toast({
+        title: "Avatar Updated",
+        description: "Avatar image has been uploaded successfully.",
+      });
+
+      // Refresh staff list
+      await fetchStaff();
+    } catch (error) {
+      console.error('Error uploading avatar:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to upload avatar. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
+
+  const handleCoverImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!selectedStaff || !event.target.files || event.target.files.length === 0) {
+      return;
+    }
+
+    const file = event.target.files[0];
+    
+    try {
+      setCoverImageUploading(true);
+      
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${selectedStaff.id}-cover-${Date.now()}.${fileExt}`;
+      const filePath = `provider-covers/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('roam-file-storage')
+        .upload(filePath, file);
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('roam-file-storage')
+        .getPublicUrl(filePath);
+
+      // Update the provider record with the new cover image URL
+      const { error: updateError } = await supabase
+        .from('providers')
+        .update({ cover_image_url: publicUrl })
+        .eq('id', selectedStaff.id);
+
+      if (updateError) throw updateError;
+
+      // Update local state
+      setSelectedStaff({ ...selectedStaff, cover_image_url: publicUrl });
+
+      toast({
+        title: "Cover Image Updated",
+        description: "Cover image has been uploaded successfully.",
+      });
+
+      // Refresh staff list
+      await fetchStaff();
+    } catch (error) {
+      console.error('Error uploading cover image:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to upload cover image. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setCoverImageUploading(false);
     }
   };
 
@@ -489,6 +704,69 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
       await fetchStaff();
     } catch (error) {
       console.error("Error deleting staff member:", error);
+    }
+  };
+
+  const createStaffManually = async () => {
+    if (!manualStaffData.firstName || !manualStaffData.lastName || !manualStaffData.email || !manualStaffData.phone) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // Call the manual staff creation API
+      const response = await fetch('/api/staff/create-manual', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          businessId: businessId,
+          firstName: manualStaffData.firstName,
+          lastName: manualStaffData.lastName,
+          email: manualStaffData.email,
+          phone: manualStaffData.phone,
+          role: manualStaffData.role,
+          locationId: manualStaffData.locationId === "no-location" ? null : manualStaffData.locationId,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || result.details || 'Failed to create staff member');
+      }
+
+      toast({
+        title: "Staff Member Created",
+        description: `${manualStaffData.firstName} ${manualStaffData.lastName} has been added. Temporary password: ${result.temporaryPassword}`,
+        duration: 10000, // Show for 10 seconds so they can copy the password
+      });
+
+      // Reset form
+      setManualStaffData({
+        firstName: "",
+        lastName: "",
+        email: "",
+        phone: "",
+        role: "provider",
+        locationId: "no-location",
+      });
+      setShowManualAddDialog(false);
+
+      // Refresh staff list
+      await fetchStaff();
+    } catch (error: any) {
+      console.error('Error creating staff member:', error);
+      toast({
+        title: "Error",
+        description: error.message || 'Failed to create staff member',
+        variant: "destructive",
+      });
     }
   };
 
@@ -627,10 +905,22 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
       {(isOwner || isDispatcher) && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Add Staff Member</CardTitle>
-            <p className="text-sm text-foreground/60">
-              Send an invitation email to add a new team member
-            </p>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-lg">Add Staff Member</CardTitle>
+                <p className="text-sm text-foreground/60">
+                  Send an invitation email or create staff member manually
+                </p>
+              </div>
+              <Button
+                onClick={() => setShowManualAddDialog(true)}
+                variant="outline"
+                className="gap-2"
+              >
+                <UserCheck className="w-4 h-4" />
+                Create Manually
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="flex gap-2">
@@ -674,7 +964,7 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
                 className="bg-roam-blue hover:bg-roam-blue/90"
               >
                 <Send className="w-4 h-4 mr-2" />
-                Invite
+                Send Invite
               </Button>
             </div>
           </CardContent>
@@ -746,7 +1036,17 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
                           </div>
                         </div>
                       </div>
-                      {getStatusBadge(member)}
+                      <div className="flex flex-col items-end gap-1">
+                        {getStatusBadge(member)}
+                        {(member.provider_role === "provider" || member.provider_role === "owner") && (
+                          <Badge
+                            variant={member.active_for_bookings ? "default" : "secondary"}
+                            className="text-xs"
+                          >
+                            {member.active_for_bookings ? "Bookable" : "Not Bookable"}
+                          </Badge>
+                        )}
+                      </div>
                     </div>
 
                     <div className="space-y-2 text-sm">
@@ -893,12 +1193,11 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
             </DialogHeader>
 
             <Tabs value={editDialogTab} onValueChange={setEditDialogTab}>
-              <TabsList className="grid w-full grid-cols-1">
+              <TabsList className={`grid w-full ${(selectedStaff.provider_role === 'provider' || selectedStaff.provider_role === 'owner') ? 'grid-cols-2' : 'grid-cols-1'}`}>
                 <TabsTrigger value="details">Details</TabsTrigger>
-                {/* Services tab temporarily disabled - will be enabled after server restart */}
-                {/* {selectedStaff.provider_role === 'provider' && (
+                {(selectedStaff.provider_role === 'provider' || selectedStaff.provider_role === 'owner') && (
                   <TabsTrigger value="services">Services</TabsTrigger>
-                )} */}
+                )}
               </TabsList>
 
               <TabsContent value="details" className="space-y-4 mt-4">
@@ -999,6 +1298,129 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
                     </Select>
                   </div>
                 </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="editVerificationStatus">Identity Verification Status</Label>
+                  <Select
+                    value={selectedStaff.verification_status}
+                    onValueChange={(value) =>
+                      setSelectedStaff({
+                        ...selectedStaff,
+                        verification_status: value as ProviderVerificationStatus,
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select verification status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="documents_submitted">Documents Submitted</SelectItem>
+                      <SelectItem value="under_review">Under Review</SelectItem>
+                      <SelectItem value="approved">Approved</SelectItem>
+                      <SelectItem value="rejected">Rejected</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Identity verification status for background checks and compliance
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="editBookable">Active for Bookings</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Allow customers to book this staff member for services
+                        {selectedServices.length === 0 && (
+                          <span className="text-destructive font-medium"> (Requires at least 1 active service)</span>
+                        )}
+                      </p>
+                    </div>
+                    <Switch
+                      id="editBookable"
+                      checked={selectedStaff.active_for_bookings || false}
+                      disabled={selectedServices.length === 0}
+                      onCheckedChange={(checked) => {
+                        // If trying to enable bookings, check if at least 1 service is assigned
+                        if (checked && selectedServices.length === 0) {
+                          toast({
+                            title: "Cannot Enable Bookings",
+                            description: "Staff member must have at least 1 active service assigned before they can be bookable.",
+                            variant: "destructive",
+                          });
+                          return;
+                        }
+                        
+                        setSelectedStaff({
+                          ...selectedStaff,
+                          active_for_bookings: checked,
+                        });
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <Separator className="my-4" />
+
+                {/* Avatar Image Upload */}
+                <div className="space-y-2">
+                  <Label>Avatar Image</Label>
+                  <div className="flex items-center gap-4">
+                    <Avatar className="h-20 w-20">
+                      <AvatarImage src={selectedStaff.image_url || undefined} />
+                      <AvatarFallback className="bg-gradient-to-br from-roam-blue to-roam-light-blue text-white text-xl">
+                        {selectedStaff.first_name[0]}{selectedStaff.last_name[0]}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleAvatarUpload}
+                        disabled={avatarUploading}
+                        className="cursor-pointer"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Upload a profile photo (JPG, PNG, or GIF)
+                      </p>
+                    </div>
+                    {avatarUploading && (
+                      <Loader2 className="h-5 w-5 animate-spin text-roam-blue" />
+                    )}
+                  </div>
+                </div>
+
+                {/* Cover Image Upload */}
+                <div className="space-y-2">
+                  <Label>Cover Image</Label>
+                  <div className="space-y-2">
+                    {selectedStaff.cover_image_url && (
+                      <div className="relative w-full h-32 rounded-lg overflow-hidden">
+                        <img
+                          src={selectedStaff.cover_image_url}
+                          alt="Cover"
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleCoverImageUpload}
+                        disabled={coverImageUploading}
+                        className="cursor-pointer flex-1"
+                      />
+                      {coverImageUploading && (
+                        <Loader2 className="h-5 w-5 animate-spin text-roam-blue" />
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Upload a cover photo (JPG, PNG, or GIF)
+                    </p>
+                  </div>
+                </div>
               </TabsContent>
 
               <TabsContent value="services" className="space-y-4 mt-4">
@@ -1012,7 +1434,7 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
                       <div>
                         <h3 className="text-lg font-medium">Assign Services</h3>
                         <p className="text-sm text-muted-foreground">
-                          Select services this provider can offer. Only active business services are shown.
+                          Select services this staff member can offer. All active business services and add-ons are available.
                         </p>
                       </div>
                       <Badge variant="secondary">
@@ -1124,6 +1546,141 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
           </div>
         </CardContent>
       </Card>
+
+      {/* Manual Staff Creation Dialog */}
+      <Dialog open={showManualAddDialog} onOpenChange={setShowManualAddDialog}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Create Staff Member Manually</DialogTitle>
+            <DialogDescription>
+              Enter staff member details to create their account directly. A temporary password will be generated.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="firstName">First Name *</Label>
+                <Input
+                  id="firstName"
+                  value={manualStaffData.firstName}
+                  onChange={(e) => setManualStaffData({ ...manualStaffData, firstName: e.target.value })}
+                  placeholder="John"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lastName">Last Name *</Label>
+                <Input
+                  id="lastName"
+                  value={manualStaffData.lastName}
+                  onChange={(e) => setManualStaffData({ ...manualStaffData, lastName: e.target.value })}
+                  placeholder="Doe"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="email">Email Address *</Label>
+              <Input
+                id="email"
+                type="email"
+                value={manualStaffData.email}
+                onChange={(e) => setManualStaffData({ ...manualStaffData, email: e.target.value })}
+                placeholder="john.doe@example.com"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="phone">Phone Number *</Label>
+              <Input
+                id="phone"
+                type="tel"
+                value={manualStaffData.phone}
+                onChange={(e) => setManualStaffData({ ...manualStaffData, phone: e.target.value })}
+                placeholder="5551234567"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="role">Role *</Label>
+                <Select
+                  value={manualStaffData.role}
+                  onValueChange={(value) => setManualStaffData({ ...manualStaffData, role: value as ProviderRole })}
+                >
+                  <SelectTrigger id="role">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {roleOptions.map((role) => (
+                      <SelectItem key={role.value} value={role.value}>
+                        <div className="flex items-center gap-2">
+                          <role.icon className="w-4 h-4" />
+                          {role.label}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="location">Location</Label>
+                <Select
+                  value={manualStaffData.locationId}
+                  onValueChange={(value) => setManualStaffData({ ...manualStaffData, locationId: value })}
+                >
+                  <SelectTrigger id="location">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="no-location">No specific location</SelectItem>
+                    {safeLocations.map((location) => (
+                      <SelectItem key={location.id} value={location.id}>
+                        {location.location_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                A temporary password will be generated. The staff member must change it on their first login.
+              </AlertDescription>
+            </Alert>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowManualAddDialog(false);
+                setManualStaffData({
+                  firstName: "",
+                  lastName: "",
+                  email: "",
+                  phone: "",
+                  role: "provider",
+                  locationId: "no-location",
+                });
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={createStaffManually}
+              disabled={!manualStaffData.firstName || !manualStaffData.lastName || !manualStaffData.email || !manualStaffData.phone}
+              className="bg-roam-blue hover:bg-roam-blue/90"
+            >
+              <UserCheck className="w-4 h-4 mr-2" />
+              Create Staff Member
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

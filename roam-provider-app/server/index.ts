@@ -9,7 +9,7 @@ import {
 } from "./routes/edge-notifications";
 import { createLinkToken, exchangePublicToken, checkConnection } from "./routes/plaid";
 import { getServiceEligibility } from "./routes/service-eligibility";
-import { sendStaffInvite, validateStaffInvitation, completeStaffOnboarding } from "./routes/staff";
+import { sendStaffInvite, createStaffManually, validateStaffInvitation, completeStaffOnboarding } from "./routes/staff";
 import { 
   handleTestSMS, 
   handleGetSMSSettings, 
@@ -1733,6 +1733,7 @@ export function createServer() {
 
   // Staff management routes
   app.post("/api/staff/invite", sendStaffInvite);
+  app.post("/api/staff/create-manual", createStaffManually);
   app.post("/api/staff/validate-invitation", validateStaffInvitation);
   app.post("/api/staff/complete-onboarding", completeStaffOnboarding);
 

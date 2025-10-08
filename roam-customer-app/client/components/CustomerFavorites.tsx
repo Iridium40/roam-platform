@@ -316,8 +316,15 @@ export function CustomerFavorites() {
                           <Heart className="w-4 h-4 mr-1 fill-current" />
                           Remove
                         </Button>
-                        <Button size="sm" className="flex-1 bg-roam-blue hover:bg-roam-blue/90">
-                          Book Now
+                        <Button 
+                          asChild 
+                          size="sm" 
+                          className="flex-1 bg-roam-blue hover:bg-roam-blue/90"
+                        >
+                          <Link to={`/book-service/${favorite.service_id}`}>
+                            <Calendar className="w-4 h-4 mr-2" />
+                            Book Now
+                          </Link>
                         </Button>
                       </div>
                     </CardContent>

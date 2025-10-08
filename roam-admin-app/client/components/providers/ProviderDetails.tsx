@@ -18,6 +18,7 @@ import {
   Mail,
   MapPin,
   Calendar,
+  CalendarCheck,
   Star,
   UserCheck,
   Shield,
@@ -54,6 +55,7 @@ interface Provider {
   bio: string | null;
   image_url: string | null;
   is_active: boolean;
+  active_for_bookings: boolean | null;
   created_at: string;
   date_of_birth: string | null;
   experience_years: number | null;
@@ -261,6 +263,19 @@ export function ProviderDetails({
                   </div>
 
                   <div className="flex items-center gap-3">
+                    <CalendarCheck className="w-4 h-4 text-muted-foreground" />
+                    <div>
+                      <div className="text-sm text-muted-foreground">Active for Bookings</div>
+                      <ROAMBadge
+                        variant={provider.active_for_bookings ? "success" : "secondary"}
+                        className="mt-1"
+                      >
+                        {provider.active_for_bookings ? "Yes" : "No"}
+                      </ROAMBadge>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
                     <Shield className="w-4 h-4 text-muted-foreground" />
                     <div>
                       <div className="text-sm text-muted-foreground">Verification Status</div>
@@ -269,19 +284,6 @@ export function ProviderDetails({
                         className="mt-1"
                       >
                         {formatEnumDisplay(provider.verification_status)}
-                      </ROAMBadge>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <ShieldCheck className="w-4 h-4 text-muted-foreground" />
-                    <div>
-                      <div className="text-sm text-muted-foreground">Background Check</div>
-                      <ROAMBadge
-                        variant={getBackgroundCheckBadgeVariant(provider.background_check_status)}
-                        className="mt-1"
-                      >
-                        {formatEnumDisplay(provider.background_check_status)}
                       </ROAMBadge>
                     </div>
                   </div>

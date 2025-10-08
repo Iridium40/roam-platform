@@ -24,9 +24,11 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const BookService = lazy(() => import("./pages/BookService"));
 const BookingSuccess = lazy(() => import("./pages/BookingSuccess"));
 const BusinessProfile = lazy(() => import("./pages/BusinessProfile"));
+const ProviderProfile = lazy(() => import("./pages/ProviderProfile"));
 const About = lazy(() => import("./pages/About"));
 const Contact = lazy(() => import("./pages/Contact"));
 const HowItWorks = lazy(() => import("./pages/HowItWorks"));
+const WhyRoam = lazy(() => import("./pages/WhyRoam"));
 const SignIn = lazy(() => import("./pages/SignIn"));
 const BecomeProvider = lazy(() => import("./pages/BecomeProvider"));
 const CustomerLocations = lazy(() => import("./pages/CustomerLocations"));
@@ -63,9 +65,11 @@ const App = () => (
                 <Route path="/book-service/:serviceId" element={<BookService />} />
                 <Route path="/booking-success" element={<BookingSuccess />} />
                 <Route path="/business/:businessId" element={<BusinessProfile />} />
+                <Route path="/provider/:providerId" element={<ProviderProfile />} />
                 <Route path="/about" element={<About />} />
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/how-it-works" element={<HowItWorks />} />
+                <Route path="/whyroam" element={<WhyRoam />} />
                 <Route path="/sign-in" element={<SignIn />} />
                 <Route path="/become-a-provider" element={<BecomeProvider />} />
                 <Route

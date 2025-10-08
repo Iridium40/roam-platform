@@ -307,30 +307,21 @@ export const completeStaffOnboarding = async (req: Request, res: Response) => {
     if (decoded.role === 'provider' && selectedServices && selectedServices.length > 0) {
       console.log(`[Staff Onboarding] Assigning ${selectedServices.length} services to provider`);
       
-      // Get business services to map service_id to business_service_id
-      const { data: businessServices, error: servicesError } = await supabase
-        .from('business_services')
-        .select('id, service_id')
-        .eq('business_id', decoded.businessId)
-        .in('service_id', selectedServices);
+      const serviceAssignments = selectedServices.map(serviceId => ({
+        provider_id: providerId,
+        service_id: serviceId,
+        is_active: true,
+      }));
 
-      if (!servicesError && businessServices) {
-        const serviceAssignments = businessServices.map(bs => ({
-          provider_id: providerId,
-          business_service_id: bs.id,
-          is_available: true,
-        }));
+      const { error: assignmentError } = await supabase
+        .from('provider_services')
+        .insert(serviceAssignments);
 
-        const { error: assignmentError } = await supabase
-          .from('provider_service_assignments')
-          .insert(serviceAssignments);
-
-        if (assignmentError) {
-          console.error('[Staff Onboarding] Error assigning services:', assignmentError);
-          // Don't fail the whole onboarding if service assignment fails
-        } else {
-          console.log(`[Staff Onboarding] Services assigned successfully`);
-        }
+      if (assignmentError) {
+        console.error('[Staff Onboarding] Error assigning services:', assignmentError);
+        // Don't fail the whole onboarding if service assignment fails
+      } else {
+        console.log(`[Staff Onboarding] Services assigned successfully`);
       }
     }
 
@@ -502,6 +493,170 @@ export const sendStaffInvite = async (req: Request, res: Response) => {
 
   } catch (error) {
     console.error('Error in sendStaffInvite:', error);
+    return res.status(500).json({ 
+      error: 'Internal server error',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+};
+
+// Generate a random temporary password
+function generateTemporaryPassword(): string {
+  const length = 12;
+  const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+  let password = '';
+  for (let i = 0; i < length; i++) {
+    password += charset.charAt(Math.floor(Math.random() * charset.length));
+  }
+  return password;
+}
+
+// Manual staff creation endpoint
+export const createStaffManually = async (req: Request, res: Response) => {
+  try {
+    const { businessId, firstName, lastName, email, phone, role, locationId } = req.body;
+
+    // Validate required fields
+    if (!businessId || !firstName || !lastName || !email || !phone || !role) {
+      return res.status(400).json({ 
+        error: 'Missing required fields: businessId, firstName, lastName, email, phone, role' 
+      });
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ error: 'Invalid email format' });
+    }
+
+    // Validate role
+    const validRoles = ['provider', 'dispatcher', 'owner'];
+    if (!validRoles.includes(role)) {
+      return res.status(400).json({ error: 'Invalid role. Must be provider, dispatcher, or owner' });
+    }
+
+    console.log('Manual staff creation request:', { businessId, firstName, lastName, email, role });
+
+    // Check if business exists
+    const { data: business, error: businessError } = await supabase
+      .from('business_profiles')
+      .select('id, business_name')
+      .eq('id', businessId)
+      .single();
+
+    if (businessError || !business) {
+      console.error('Business not found:', businessError);
+      return res.status(404).json({ error: 'Business not found' });
+    }
+
+    // Check if user already exists with this email in auth.users
+    const { data: existingAuthUsers } = await supabase.auth.admin.listUsers();
+    const authUserExists = existingAuthUsers?.users?.find(
+      u => u.email?.toLowerCase() === email.toLowerCase()
+    );
+
+    if (authUserExists) {
+      // Check if they're already a provider in the system
+      const { data: existingProvider } = await supabase
+        .from('providers')
+        .select('id, business_id')
+        .eq('email', email)
+        .single();
+
+      if (existingProvider) {
+        if (existingProvider.business_id === businessId) {
+          return res.status(400).json({ error: 'User is already a member of this business' });
+        } else {
+          return res.status(400).json({ error: 'User is already associated with another business' });
+        }
+      }
+    }
+
+    // Generate temporary password
+    const temporaryPassword = generateTemporaryPassword();
+    console.log('Generated temporary password for', email);
+
+    // Create user account in Supabase Auth
+    let userId: string;
+    
+    if (authUserExists) {
+      // User exists in auth, use their ID
+      userId = authUserExists.id;
+      console.log('Using existing auth user:', userId);
+    } else {
+      // Create new auth user
+      const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
+        email: email,
+        password: temporaryPassword,
+        email_confirm: true, // Auto-confirm email since owner is creating
+        user_metadata: {
+          first_name: firstName,
+          last_name: lastName,
+          phone: phone,
+          must_change_password: true, // Flag to force password change on first login
+        },
+      });
+
+      if (createError || !newUser.user) {
+        console.error('Error creating auth user:', createError);
+        return res.status(500).json({ 
+          error: 'Failed to create user account',
+          details: createError?.message 
+        });
+      }
+
+      userId = newUser.user.id;
+      console.log('Created new auth user:', userId);
+    }
+
+    // Create provider record
+    const { data: provider, error: providerError } = await supabase
+      .from('providers')
+      .insert({
+        user_id: userId,
+        first_name: firstName,
+        last_name: lastName,
+        email: email,
+        phone: phone,
+        provider_role: role,
+        location_id: locationId || null,
+        business_id: businessId,
+        verification_status: 'pending', // Pending until owner manually approves
+        is_active: false, // Inactive until owner activates
+        business_managed: true,
+      })
+      .select()
+      .single();
+
+    if (providerError) {
+      console.error('Error creating provider record:', providerError);
+      // If provider creation fails, try to delete the auth user we just created
+      if (!authUserExists) {
+        await supabase.auth.admin.deleteUser(userId);
+      }
+      return res.status(500).json({ 
+        error: 'Failed to create provider record',
+        details: providerError.message 
+      });
+    }
+
+    console.log(`Staff member ${firstName} ${lastName} created successfully`);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Staff member created successfully',
+      temporaryPassword: temporaryPassword, // Return temp password so owner can share it
+      provider: {
+        id: provider.id,
+        firstName: firstName,
+        lastName: lastName,
+        email: email,
+        role: role,
+      },
+    });
+
+  } catch (error) {
+    console.error('Error in createStaffManually:', error);
     return res.status(500).json({ 
       error: 'Internal server error',
       details: error instanceof Error ? error.message : 'Unknown error'
