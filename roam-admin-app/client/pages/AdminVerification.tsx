@@ -277,6 +277,10 @@ export default function AdminVerification() {
     Record<string, BusinessDocument[]>
   >({});
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
   // Fetch verification data
   const fetchVerifications = async () => {
     try {
@@ -1195,6 +1199,17 @@ export default function AdminVerification() {
     return matchesStatus && matchesPriority && matchesSearch;
   });
 
+  // Calculate pagination
+  const totalPages = Math.ceil(filteredVerifications.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedVerifications = filteredVerifications.slice(startIndex, endIndex);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter, priorityFilter, searchQuery]);
+
   // Get status badge variant
   const getStatusVariant = (status: VerificationStatus) => {
     switch (status) {
@@ -1475,10 +1490,13 @@ export default function AdminVerification() {
             <h2 className="text-lg font-semibold">
               Business Verifications ({filteredVerifications.length})
             </h2>
+            <div className="text-sm text-muted-foreground">
+              Showing {startIndex + 1}-{Math.min(endIndex, filteredVerifications.length)} of {filteredVerifications.length}
+            </div>
           </div>
 
           <div className="space-y-4">
-            {filteredVerifications.length === 0 ? (
+            {paginatedVerifications.length === 0 ? (
               <ROAMCard>
                 <ROAMCardContent className="p-8 text-center">
                   <div className="text-muted-foreground">
@@ -1488,7 +1506,7 @@ export default function AdminVerification() {
                 </ROAMCardContent>
               </ROAMCard>
             ) : (
-              filteredVerifications.map((business) => {
+              paginatedVerifications.map((business) => {
                 const isExpanded = expandedCards.has(business.id);
                 const documents = cardDocuments[business.id] || [];
 
@@ -1904,6 +1922,71 @@ export default function AdminVerification() {
               })
             )}
           </div>
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between border-t pt-4">
+              <div className="text-sm text-muted-foreground">
+                Page {currentPage} of {totalPages}
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                >
+                  Previous
+                </Button>
+                
+                {/* Page Numbers */}
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                    // Show first page, last page, current page, and pages around current
+                    const showPage = 
+                      page === 1 ||
+                      page === totalPages ||
+                      (page >= currentPage - 1 && page <= currentPage + 1);
+                    
+                    // Show ellipsis
+                    const showEllipsisBefore = page === currentPage - 2 && currentPage > 3;
+                    const showEllipsisAfter = page === currentPage + 2 && currentPage < totalPages - 2;
+                    
+                    if (showEllipsisBefore || showEllipsisAfter) {
+                      return (
+                        <span key={page} className="px-2 text-muted-foreground">
+                          ...
+                        </span>
+                      );
+                    }
+                    
+                    if (!showPage) return null;
+                    
+                    return (
+                      <Button
+                        key={page}
+                        variant={currentPage === page ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setCurrentPage(page)}
+                        className={currentPage === page ? "bg-roam-blue hover:bg-roam-blue/90" : ""}
+                      >
+                        {page}
+                      </Button>
+                    );
+                  })}
+                </div>
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Document Review Modal */}
