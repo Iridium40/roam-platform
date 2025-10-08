@@ -9,22 +9,22 @@ export function HomeHero({ className = "" }: HomeHeroProps) {
     <section className={`py-20 lg:py-32 relative overflow-hidden ${className}`}>
       {/* Background Video */}
       <div className="absolute inset-0 w-full h-full overflow-hidden">
-        <iframe
-          src="https://www.youtube.com/embed/Z0A84Ev5Waw?autoplay=1&mute=1&loop=1&playlist=Z0A84Ev5Waw&controls=0&showinfo=0&rel=0&modestbranding=1&playsinline=1&vq=hd1080"
-          className="absolute inset-0 w-full h-full"
-          style={{
-            filter: "brightness(0.7)",
-            pointerEvents: "none",
-            width: "100vw",
-            height: "100vh",
-            objectFit: "cover",
-            objectPosition: "center",
-            transform: "scale(1.1)",
-          }}
-          frameBorder="0"
-          allow="autoplay; encrypted-media"
-          title="Background Video"
-        />
+        {/* Video container with responsive aspect ratio */}
+        <div className="absolute inset-0 w-full h-full">
+          <iframe
+            src="https://www.youtube.com/embed/Z0A84Ev5Waw?autoplay=1&mute=1&loop=1&playlist=Z0A84Ev5Waw&controls=0&showinfo=0&rel=0&modestbranding=1&playsinline=1&vq=hd1080"
+            className="absolute top-1/2 left-1/2 min-w-full min-h-full w-auto h-auto scale-110"
+            style={{
+              filter: "brightness(0.7)",
+              pointerEvents: "none",
+              aspectRatio: "16/9",
+              transform: "translate(-50%, -50%) scale(1.1)",
+            }}
+            frameBorder="0"
+            allow="autoplay; encrypted-media"
+            title="Background Video"
+          />
+        </div>
         <div className="absolute inset-0 bg-gradient-to-r from-roam-blue/10 via-black/5 to-roam-yellow/10 pointer-events-none"></div>
       </div>
       
