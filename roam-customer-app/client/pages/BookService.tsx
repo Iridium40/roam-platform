@@ -103,7 +103,7 @@ const getDeliveryTypes = (business: Business): string[] => {
       description.includes('mobile') ||
       description.includes('your location') ||
       description.includes('on-site')) {
-    return ['mobile', 'business_location'];
+    return ['customer_location', 'business_location'];
   }
 
   // Virtual services (online consultations, therapy, etc.)
@@ -118,7 +118,7 @@ const getDeliveryTypes = (business: Business): string[] => {
 
   // Default: most businesses offer services at their location
   // Some also offer mobile services
-  return ['business_location', 'mobile'];
+  return ['business_location', 'customer_location'];
 };
 
 // Note: getDeliveryTypeLabel and getDeliveryTypeIcon are now imported from utils/deliveryTypeHelpers.tsx
@@ -142,8 +142,8 @@ const sortAndFilterBusinesses = (businesses: Business[], sortBy: string, sortOrd
             return sortOrder === 'asc' ? a.rating - b.rating : b.rating - a.rating;
 
           case 'delivery_type':
-            // Sort by delivery type priority: mobile -> business_location -> virtual
-            const deliveryPriority = { mobile: 1, business_location: 2, virtual: 3 };
+            // Sort by delivery type priority: customer_location -> business_location -> virtual
+            const deliveryPriority = { customer_location: 1, business_location: 2, virtual: 3, both_locations: 4 };
             const primaryDeliveryA = getDeliveryTypes(a)[0] || 'business_location';
             const primaryDeliveryB = getDeliveryTypes(b)[0] || 'business_location';
             const priorityA = deliveryPriority[primaryDeliveryA as keyof typeof deliveryPriority] || 999;
@@ -713,11 +713,12 @@ export default function BookService() {
           );
           console.log('Filtered for individual business (owners only):', filteredProviders.length);
         } else {
-          // For non-individual businesses, only show providers (not owners)
+          // For non-individual businesses (agency), show both owners and providers
+          // All are already filtered by active_for_bookings = true
           filteredProviders = filteredProviders.filter(provider =>
-            provider.provider_role === 'provider'
+            provider.provider_role === 'owner' || provider.provider_role === 'provider'
           );
-          console.log('Filtered for non-individual business (providers only):', filteredProviders.length);
+          console.log('Filtered for non-individual business (owners and providers):', filteredProviders.length);
         }
       } else {
         console.log('No business type available, showing all providers');

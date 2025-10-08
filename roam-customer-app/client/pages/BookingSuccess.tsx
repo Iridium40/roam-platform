@@ -27,7 +27,7 @@ export default function BookingSuccess() {
   const sessionId = searchParams.get('session_id');
 
   useEffect(() => {
-    const fetchBookingDetails = async () => {
+    const fetchBookingDetails = async (retryCount = 0) => {
       if (!sessionId) {
         setError('No session ID provided - please return to the booking page and try again');
         setLoading(false);
@@ -35,8 +35,8 @@ export default function BookingSuccess() {
       }
 
       try {
-        // Fetch booking details from Supabase
-        const { data: bookings, error: bookingError } = await supabase
+        // Fetch booking details from Supabase with corrected join syntax
+        const { data: bookingData, error: bookingError } = await supabase
           .from('bookings')
           .select(`
             id,
@@ -44,9 +44,12 @@ export default function BookingSuccess() {
             start_time,
             total_amount,
             payment_status,
-            services:service_id (name),
-            business_profiles:business_id (business_name),
-            customer_profiles:customer_id (first_name, last_name)
+            service_id,
+            business_id,
+            customer_id,
+            services!bookings_service_id_fkey (name),
+            business_profiles!bookings_business_id_fkey (business_name),
+            customer_profiles!bookings_customer_id_fkey (first_name, last_name)
           `)
           .eq('stripe_checkout_session_id', sessionId)
           .single();
@@ -54,24 +57,30 @@ export default function BookingSuccess() {
         if (bookingError) {
           console.error('Error fetching booking:', bookingError);
           
-          // Set a generic message that doesn't alarm the user
-          // The error is logged for developers, but users see a success message
-          setError('Payment successful - processing booking details');
+          // If booking not found and we haven't retried too many times, retry
+          // The webhook might still be processing
+          if (bookingError.code === 'PGRST116' && retryCount < 10) {
+            console.log(`Booking not found yet, retrying in 2 seconds (attempt ${retryCount + 1}/10)...`);
+            setTimeout(() => fetchBookingDetails(retryCount + 1), 2000);
+            return;
+          }
           
+          // Set a generic message that doesn't alarm the user
+          setError('Payment successful - processing booking details');
           setLoading(false);
           return;
         }
 
-        if (bookings) {
+        if (bookingData) {
           setBooking({
-            id: bookings.id,
-            booking_date: bookings.booking_date,
-            start_time: bookings.start_time,
-            total_amount: bookings.total_amount,
-            payment_status: bookings.payment_status,
-            service_name: bookings.services?.name,
-            business_name: bookings.business_profiles?.business_name,
-            customer_name: `${bookings.customer_profiles?.first_name} ${bookings.customer_profiles?.last_name}`,
+            id: bookingData.id,
+            booking_date: bookingData.booking_date,
+            start_time: bookingData.start_time,
+            total_amount: bookingData.total_amount,
+            payment_status: bookingData.payment_status,
+            service_name: bookingData.services?.name || 'Service',
+            business_name: bookingData.business_profiles?.business_name || 'Business',
+            customer_name: `${bookingData.customer_profiles?.first_name || ''} ${bookingData.customer_profiles?.last_name || ''}`.trim() || 'Customer',
           });
         }
 
