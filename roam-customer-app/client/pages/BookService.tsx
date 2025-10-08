@@ -18,6 +18,7 @@ import { Elements } from '@stripe/react-stripe-js';
 import { stripePromise } from '../lib/stripe-client';
 import { CheckoutForm } from '../components/CheckoutForm';
 import { getDeliveryTypeLabel, getDeliveryTypeIcon } from '@/utils/deliveryTypeHelpers';
+import { CustomerAuthModal } from '@/components/CustomerAuthModal';
 
 type BookingStep = 'datetime' | 'business' | 'provider' | 'delivery-location' | 'summary' | 'checkout';
 
@@ -235,6 +236,10 @@ export default function BookService() {
   const [paymentBreakdown, setPaymentBreakdown] = useState<any>(null);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [saveLocationForFuture, setSaveLocationForFuture] = useState(true); // Default to true to save locations
+  
+  // Auth modal state
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [pendingCheckout, setPendingCheckout] = useState(false);
 
   // Calculate total amount for booking (including any promotions)
   const calculateTotalAmount = (): number => {
@@ -289,6 +294,18 @@ export default function BookService() {
     acc[slot.period].push(slot);
     return acc;
   }, {} as Record<string, typeof timeSlots>);
+
+  // Auto-proceed with checkout after successful login
+  useEffect(() => {
+    if (customer && pendingCheckout) {
+      setPendingCheckout(false);
+      setShowAuthModal(false);
+      // Small delay to ensure modal closes before checkout
+      setTimeout(() => {
+        handleCheckout();
+      }, 300);
+    }
+  }, [customer, pendingCheckout]);
 
   // Load service details and promotion if applicable
   useEffect(() => {
@@ -1072,8 +1089,20 @@ export default function BookService() {
   };
 
   const handleCheckout = async () => {
+    // Check if user is authenticated first
+    if (!customer) {
+      toast({
+        title: "Sign In Required",
+        description: "Please sign in or create an account to complete your booking.",
+        variant: "default",
+      });
+      setShowAuthModal(true);
+      setPendingCheckout(true);
+      return;
+    }
+
     // Ensure all necessary data is available
-    if (!service || !selectedBusiness || !selectedProvider || !selectedDate || !selectedTime || !customer) {
+    if (!service || !selectedBusiness || !selectedProvider || !selectedDate || !selectedTime) {
       toast({
         title: "Missing Information",
         description: "Please complete all booking steps before proceeding.",
@@ -2159,6 +2188,16 @@ export default function BookService() {
           </div>
         </div>
       </div>
+
+      {/* Auth Modal */}
+      <CustomerAuthModal
+        isOpen={showAuthModal}
+        onClose={() => {
+          setShowAuthModal(false);
+          setPendingCheckout(false);
+        }}
+        defaultTab="signin"
+      />
     </div>
   );
 }

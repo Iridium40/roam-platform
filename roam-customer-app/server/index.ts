@@ -16,6 +16,12 @@ export function createServer() {
 
   // Middleware
   app.use(cors());
+  
+  // For Stripe webhooks, we need the raw body for signature verification
+  // So we apply raw body parser BEFORE json parser, but only for webhook route
+  app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));
+  
+  // For all other routes, use JSON parser
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
@@ -163,17 +169,26 @@ export function createServer() {
     }
   );
 
-  app.post("/api/stripe/webhook",
-    async (req, res) => {
-      try {
-        const webhookHandler = await import("../api/stripe/webhook");
-        await webhookHandler.default(req, res);
-      } catch (error) {
-        console.error("Error importing webhook handler:", error);
-        res.status(500).json({ error: "Failed to load webhook handler" });
-      }
+  // Webhook handler function (used by both routes)
+  const handleStripeWebhook = async (req: any, res: any) => {
+    console.log('🎯 [WEBHOOK] Received webhook request from Stripe');
+    console.log('🎯 [WEBHOOK] Headers:', req.headers);
+    console.log('🎯 [WEBHOOK] Body type:', typeof req.body, 'Is Buffer:', Buffer.isBuffer(req.body));
+    try {
+      const webhookHandler = await import("../api/stripe/webhook");
+      await webhookHandler.default(req, res);
+      console.log('✅ [WEBHOOK] Webhook handler completed successfully');
+    } catch (error) {
+      console.error("❌ [WEBHOOK] Error importing/running webhook handler:", error);
+      res.status(500).json({ error: "Failed to load webhook handler" });
     }
-  );
+  };
+
+  // Production webhook endpoint (configured in Stripe Dashboard)
+  app.post("/api/webhooks/stripe", handleStripeWebhook);
+  
+  // Local/development webhook endpoint (for Stripe CLI)
+  app.post("/api/stripe/webhook", handleStripeWebhook);
 
   app.get("/api/stripe/session",
     async (req, res) => {

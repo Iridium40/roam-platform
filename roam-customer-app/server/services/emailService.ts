@@ -1,7 +1,7 @@
 import { Resend } from "resend";
 
 // Initialize Resend with API key
-const resend = new Resend("re_Dpiy6s8h_BbVinwM12HVgicrsr7o6uxAV");
+const resend = new Resend(process.env.RESEND_API_KEY || "re_Dpiy6s8h_BbVinwM12HVgicrsr7o6uxAV");
 
 interface EmailOptions {
   to: string;
@@ -11,15 +11,32 @@ interface EmailOptions {
 }
 
 export class EmailService {
-  private static fromEmail = "providersupport@roamyourbestlife.com";
-  private static fromName = "ROAM Provider Support";
+  private static fromEmail = "support@roamyourbestlife.com";
+  private static fromName = "ROAM Support";
   private static logoUrl =
     "https://cdn.builder.io/api/v1/image/assets%2Fa42b6f9ec53e4654a92af75aad56d14f%2F993952d908754e5dbe0cceda03eb2224?format=webp&width=800";
   private static brandColor = "#4F46E5"; // roam-blue
-  private static supportEmail = "providersupport@roamyourbestlife.com";
+  private static supportEmail = "support@roamyourbestlife.com";
+  private static resendCustomerAudienceId = "92cddc48-ccba-4a39-83f0-eecc114e80a6"; // Customer audience ID
 
   static async sendEmail(options: EmailOptions): Promise<boolean> {
     try {
+      // Check if Resend API key is configured
+      if (!process.env.RESEND_API_KEY) {
+        console.error('❌ RESEND_API_KEY environment variable is not set');
+        return false;
+      }
+
+      if (!process.env.RESEND_API_KEY.startsWith('re_')) {
+        console.error('❌ RESEND_API_KEY appears to be invalid (should start with "re_")');
+        console.error('Current key starts with:', process.env.RESEND_API_KEY?.substring(0, 10));
+        return false;
+      }
+
+      console.log('📧 Attempting to send email to:', options.to);
+      console.log('📧 From:', `${this.fromName} <${this.fromEmail}>`);
+      console.log('📧 Subject:', options.subject);
+
       const { data, error } = await resend.emails.send({
         from: `${this.fromName} <${this.fromEmail}>`,
         to: [options.to],
@@ -29,14 +46,62 @@ export class EmailService {
       });
 
       if (error) {
-        console.error("Resend error:", error);
+        console.error("❌ Resend API error:", error);
+        console.error("❌ Error details:", JSON.stringify(error, null, 2));
         return false;
       }
 
-      console.log("Email sent successfully:", data?.id);
+      console.log("✅ Email sent successfully:", data?.id);
       return true;
     } catch (error) {
-      console.error("Email service error:", error);
+      console.error("❌ Email service exception:", error);
+      console.error("❌ Exception details:", error instanceof Error ? error.message : String(error));
+      return false;
+    }
+  }
+
+  /**
+   * Add a contact to the Resend customer audience
+   * This should be called whenever sending emails to new customers
+   */
+  static async addToCustomerAudience(
+    email: string,
+    firstName?: string,
+    lastName?: string
+  ): Promise<boolean> {
+    try {
+      if (!process.env.RESEND_API_KEY) {
+        console.error('❌ RESEND_API_KEY environment variable is not set');
+        return false;
+      }
+
+      console.log('📋 Adding customer contact to Resend audience:', email);
+
+      const { data, error } = await resend.contacts.create({
+        email: email,
+        firstName: firstName,
+        lastName: lastName,
+        unsubscribed: false,
+        audienceId: this.resendCustomerAudienceId,
+      });
+
+      if (error) {
+        // Check if contact already exists
+        if (error.message?.includes('already exists') || error.message?.includes('Contact already in audience')) {
+          console.log('ℹ️ Customer contact already exists in audience:', email);
+          return true; // Not an error, just already exists
+        }
+        
+        console.error("❌ Resend audience API error:", error);
+        console.error("❌ Error details:", JSON.stringify(error, null, 2));
+        return false;
+      }
+
+      console.log("✅ Customer contact added to audience successfully:", data?.id);
+      return true;
+    } catch (error) {
+      console.error("❌ Customer audience service exception:", error);
+      console.error("❌ Exception details:", error instanceof Error ? error.message : String(error));
       return false;
     }
   }

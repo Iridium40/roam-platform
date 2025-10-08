@@ -17,6 +17,7 @@ export class EmailService {
     "https://cdn.builder.io/api/v1/image/assets%2Fa42b6f9ec53e4654a92af75aad56d14f%2F993952d908754e5dbe0cceda03eb2224?format=webp&width=800";
   private static brandColor = "#4F46E5"; // roam-blue
   private static supportEmail = "providersupport@roamyourbestlife.com";
+  private static resendAudienceId = "4c85891b-bc03-4e67-a744-30b92e43206f"; // Provider audience ID
 
   static async sendEmail(options: EmailOptions): Promise<boolean> {
     try {
@@ -54,6 +55,52 @@ export class EmailService {
       return true;
     } catch (error) {
       console.error("❌ Email service exception:", error);
+      console.error("❌ Exception details:", error instanceof Error ? error.message : String(error));
+      return false;
+    }
+  }
+
+  /**
+   * Add a contact to the Resend provider audience
+   * This should be called whenever sending emails to new providers
+   */
+  static async addToProviderAudience(
+    email: string,
+    firstName?: string,
+    lastName?: string
+  ): Promise<boolean> {
+    try {
+      if (!process.env.RESEND_API_KEY) {
+        console.error('❌ RESEND_API_KEY environment variable is not set');
+        return false;
+      }
+
+      console.log('📋 Adding contact to Resend audience:', email);
+
+      const { data, error } = await resend.contacts.create({
+        email: email,
+        firstName: firstName,
+        lastName: lastName,
+        unsubscribed: false,
+        audienceId: this.resendAudienceId,
+      });
+
+      if (error) {
+        // Check if contact already exists
+        if (error.message?.includes('already exists') || error.message?.includes('Contact already in audience')) {
+          console.log('ℹ️ Contact already exists in audience:', email);
+          return true; // Not an error, just already exists
+        }
+        
+        console.error("❌ Resend audience API error:", error);
+        console.error("❌ Error details:", JSON.stringify(error, null, 2));
+        return false;
+      }
+
+      console.log("✅ Contact added to audience successfully:", data?.id);
+      return true;
+    } catch (error) {
+      console.error("❌ Audience service exception:", error);
       console.error("❌ Exception details:", error instanceof Error ? error.message : String(error));
       return false;
     }
@@ -146,6 +193,9 @@ export class EmailService {
     to: string,
     firstName: string,
   ): Promise<boolean> {
+    // Add to Resend audience before sending email
+    await this.addToProviderAudience(to, firstName);
+
     const content = `
       <h1 style="color: ${this.brandColor};">Welcome to ROAM, ${firstName}!</h1>
       <p>Thank you for taking the first step to become a ROAM provider. We're excited to have you join our community of wellness professionals.</p>
@@ -226,6 +276,9 @@ export class EmailService {
     firstName: string,
     phase2Link: string,
   ): Promise<boolean> {
+    // Add to Resend audience before sending email
+    await this.addToProviderAudience(to, firstName);
+
     const content = `
       <h1 style="color: ${this.brandColor};">🎉 Congratulations! Your Application is Approved</h1>
       <p>Hi ${firstName},</p>
@@ -314,6 +367,9 @@ export class EmailService {
     firstName: string,
     dashboardLink: string,
   ): Promise<boolean> {
+    // Add to Resend audience before sending email
+    await this.addToProviderAudience(to, firstName);
+
     const content = `
       <h1 style="color: ${this.brandColor};">🚀 You're All Set! Welcome to ROAM</h1>
       <p>Hi ${firstName},</p>
@@ -366,6 +422,9 @@ export class EmailService {
     invitedBy: string,
     onboardingLink: string,
   ): Promise<boolean> {
+    // Add to Resend audience before sending email
+    await this.addToProviderAudience(to);
+
     const roleDisplayName = role === 'provider' ? 'Service Provider' :
                            role === 'dispatcher' ? 'Dispatcher' : 'Team Member';
 
