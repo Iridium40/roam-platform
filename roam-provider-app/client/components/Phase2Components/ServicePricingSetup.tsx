@@ -46,7 +46,6 @@ import {
 } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 import ServicePriceModal from '@/components/ServicePriceModal';
-import AddonPriceModal from '@/components/AddonPriceModal';
 
 interface EligibleService {
   id: string;
@@ -156,15 +155,8 @@ export default function ServicePricingSetup({
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showAddServiceModal, setShowAddServiceModal] = useState(false);
-  const [showAddonModal, setShowAddonModal] = useState(false);
-  const [editingService, setEditingService] = useState<EligibleService | null>(null);
-  const [editingAddon, setEditingAddon] = useState<EligibleAddon | null>(null);
-  const [selectedServiceForAddon, setSelectedServiceForAddon] = useState<string | null>(null);
   const [showPriceModal, setShowPriceModal] = useState(false);
   const [selectedServiceForPricing, setSelectedServiceForPricing] = useState<EligibleService | null>(null);
-  const [showAddonPriceModal, setShowAddonPriceModal] = useState(false);
-  const [selectedAddonForPricing, setSelectedAddonForPricing] = useState<EligibleAddon | null>(null);
 
   const updatePricingData = (field: keyof ServicePricingData, value: any) => {
     setPricingData(prev => ({
@@ -562,10 +554,10 @@ export default function ServicePricingSetup({
             </div>
             <div>
               <CardTitle className="text-2xl text-roam-blue">
-                Service Pricing & Addons
+                Service Pricing
               </CardTitle>
               <p className="text-foreground/70">
-                Configure your eligible services and addons with custom pricing
+                Configure your eligible services with custom pricing
               </p>
             </div>
           </div>
@@ -574,7 +566,7 @@ export default function ServicePricingSetup({
           <Alert>
             <Info className="h-4 w-4" />
             <AlertDescription>
-              <strong>Tip #1:</strong> Services and addons are based on your business qualifications. 
+              <strong>Tip #1:</strong> Services are based on your business qualifications. 
               You can adjust pricing and availability anytime from your dashboard.
             </AlertDescription>
           </Alert>
@@ -582,7 +574,7 @@ export default function ServicePricingSetup({
           <Alert className="border-blue-200 bg-blue-50">
             <Info className="h-4 w-4 text-blue-600" />
             <AlertDescription className="text-blue-800">
-              <strong>Tip #2:</strong> Don't see a service or addon you provide? You can request the ROAM team 
+              <strong>Tip #2:</strong> Don't see a service you provide? You can request the ROAM team 
               to add it after completing onboarding, and it will become available for you to choose.
             </AlertDescription>
           </Alert>
@@ -729,89 +721,6 @@ export default function ServicePricingSetup({
             </div>
           </div>
 
-          {/* Available Addons */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Label className="text-lg font-semibold">Available Addons</Label>
-              <Badge variant="outline" className="text-sm">
-                {pricingData.business_addons.length} Configured
-              </Badge>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              {pricingData.eligible_addons.map((eligibleAddon) => {
-                const businessAddon = pricingData.business_addons.find(ba => ba.addon_id === eligibleAddon.id);
-                const isConfigured = !!businessAddon;
-                
-                return (
-                  <Card key={eligibleAddon.id} className={`p-4 ${isConfigured ? 'border-green-200 bg-green-50/30' : 'border-dashed'}`}>
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-2 flex-wrap">
-                          <h4 className="font-semibold">{eligibleAddon.name}</h4>
-                          {isConfigured ? (
-                            <Badge className="bg-green-600 hover:bg-green-600 text-white">
-                              <CheckCircle className="w-3 h-3 mr-1" />
-                              Added
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline">Available</Badge>
-                          )}
-                        </div>
-                        <p className="text-gray-600 mb-2 text-sm">{eligibleAddon.description}</p>
-                        {isConfigured && businessAddon && businessAddon.custom_price && (
-                          <div className="flex items-center gap-4 text-sm">
-                            <span className="flex items-center gap-1 font-medium text-green-700">
-                              <DollarSign className="w-4 h-4" />
-                              ${businessAddon.custom_price}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                      
-                      {isConfigured ? (
-                        <div className="flex gap-2 flex-shrink-0">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              // Create an addon object with current price for editing
-                              const addonWithCurrentData = {
-                                ...eligibleAddon,
-                                custom_price: businessAddon?.custom_price
-                              };
-                              openAddonPriceModal(addonWithCurrentData);
-                            }}
-                            className="h-9"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => removeBusinessAddon(eligibleAddon.id)}
-                            className="text-red-600 border-red-300 hover:bg-red-50 h-9"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      ) : (
-                        <Button
-                          size="sm"
-                          onClick={() => openAddonPriceModal(eligibleAddon)}
-                          className="bg-roam-blue hover:bg-roam-blue/90 flex-shrink-0 h-9"
-                        >
-                          <Plus className="w-4 h-4 mr-2" />
-                          Add
-                        </Button>
-                      )}
-                    </div>
-                  </Card>
-                );
-              })}
-            </div>
-          </div>
-
           {/* Action Buttons */}
           <div className="flex justify-between pt-6">
             {onBack && (
@@ -853,19 +762,6 @@ export default function ServicePricingSetup({
         minPrice={selectedServiceForPricing?.min_price}
         currentPrice={selectedServiceForPricing?.business_price}
         currentDeliveryType={selectedServiceForPricing?.delivery_type}
-        currency={pricingData.currency}
-      />
-
-      {/* Addon Price Modal */}
-      <AddonPriceModal
-        isOpen={showAddonPriceModal}
-        onClose={() => {
-          setShowAddonPriceModal(false);
-          setSelectedAddonForPricing(null);
-        }}
-        onConfirm={handleAddonPriceConfirm}
-        addonName={selectedAddonForPricing?.name || ''}
-        currentPrice={selectedAddonForPricing?.custom_price}
         currency={pricingData.currency}
       />
     </div>
