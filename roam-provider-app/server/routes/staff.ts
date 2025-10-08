@@ -165,26 +165,51 @@ export const completeStaffOnboarding = async (req: Request, res: Response) => {
     if (authError) {
       console.error('[Staff Onboarding] Error creating auth user:', authError);
       
-      // Check if user already exists
-      if (authError.message.includes('already registered') || authError.message.includes('already exists')) {
-        console.log('[Staff Onboarding] User already exists, fetching existing user');
+      // Check if user already exists (check for various forms of the message)
+      const errorMsg = authError.message.toLowerCase();
+      if (errorMsg.includes('already') && (errorMsg.includes('registered') || errorMsg.includes('exists'))) {
+        console.log('[Staff Onboarding] User already exists, fetching existing user by email');
         
-        // Get the existing user by email
-        const { data: { users }, error: listError } = await supabase.auth.admin.listUsers();
+        // List all users with pagination and find by email (case-insensitive)
+        let allUsers: any[] = [];
+        let page = 1;
+        let hasMore = true;
         
-        if (listError) {
-          console.error('[Staff Onboarding] Error listing users:', listError);
-          return res.status(500).json({ 
-            error: 'Failed to fetch existing user',
-            details: listError.message 
+        while (hasMore && page <= 20) { // Max 20 pages (20,000 users)
+          console.log(`[Staff Onboarding] Fetching users page ${page}...`);
+          
+          const { data: { users }, error: listError } = await supabase.auth.admin.listUsers({
+            page: page,
+            perPage: 1000
           });
+          
+          if (listError) {
+            console.error('[Staff Onboarding] Error listing users:', listError);
+            return res.status(500).json({ 
+              error: 'Failed to fetch existing user',
+              details: listError.message 
+            });
+          }
+          
+          const batchSize = users?.length || 0;
+          console.log(`[Staff Onboarding] Page ${page} returned ${batchSize} users`);
+          
+          allUsers = allUsers.concat(users || []);
+          hasMore = batchSize === 1000;
+          page++;
         }
         
-        const existingUser = users?.find(u => u.email === decoded.email);
+        console.log(`[Staff Onboarding] Total users fetched: ${allUsers.length}, searching for: ${decoded.email}`);
+        
+        const existingUser = allUsers.find(u => u.email?.toLowerCase() === decoded.email.toLowerCase());
         
         if (!existingUser) {
+          console.error('[Staff Onboarding] User not found after searching', allUsers.length, 'users');
+          console.error('[Staff Onboarding] Email being searched:', decoded.email);
+          console.error('[Staff Onboarding] Sample of emails in system:', allUsers.slice(0, 5).map(u => u.email));
           return res.status(400).json({ 
-            error: 'User exists but could not be found. Please contact support.' 
+            error: 'User exists but could not be found. Please contact support.',
+            details: `Searched ${allUsers.length} users, looking for ${decoded.email}`
           });
         }
         
@@ -208,7 +233,7 @@ export const completeStaffOnboarding = async (req: Request, res: Response) => {
 
     // Prepare provider data based on role
     const providerData: any = {
-      id: userId,
+      user_id: userId,  // This links to auth.users.id
       business_id: decoded.businessId,
       email: decoded.email,
       first_name: firstName,
@@ -219,14 +244,13 @@ export const completeStaffOnboarding = async (req: Request, res: Response) => {
       location_id: decoded.locationId || null,
       verification_status: 'approved',
       is_active: true,
+      business_managed: true, // Default value for business_managed
     };
 
-    // Add optional fields
+    // Add optional fields that exist in the providers table
     if (avatarUrl) providerData.image_url = avatarUrl;
     if (coverImageUrl) providerData.cover_image_url = coverImageUrl;
-    if (professionalTitle) providerData.professional_title = professionalTitle;
-    if (yearsExperience !== undefined) providerData.years_experience = yearsExperience;
-    if (availability) providerData.availability_schedule = availability;
+    // Note: professional_title, years_experience, and availability_schedule columns don't exist in providers table
 
     // Step 2: Check if provider record already exists
     const { data: existingProvider, error: providerCheckError } = await supabase

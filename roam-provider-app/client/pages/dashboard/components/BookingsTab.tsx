@@ -46,17 +46,23 @@ import { useToast } from "@/hooks/use-toast";
 interface BookingsTabProps {
   providerData: any;
   business: any;
+  providerRole?: string; // 'owner', 'dispatcher', or 'provider'
 }
 
 export default function BookingsTab({
   providerData,
   business,
+  providerRole,
 }: BookingsTabProps) {
   const { toast } = useToast();
   const [bookings, setBookings] = useState<any[]>([]);
   const [staffMembers, setStaffMembers] = useState<any[]>([]);
   const [allProviders, setAllProviders] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // Determine if user is owner (show full stats) or dispatcher/provider (hide stats)
+  const role = providerRole || providerData?.provider_role;
+  const isOwner = role === 'owner';
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatusFilter, setSelectedStatusFilter] = useState("all");
   const [activeTab, setActiveTab] = useState("present");
@@ -395,68 +401,70 @@ export default function BookingsTab({
         <p className="text-sm text-gray-600">Manage and track all your bookings</p>
       </div>
 
-      {/* Booking Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Total Bookings</p>
-              <p className="text-3xl font-bold text-gray-900">{bookingStats.totalBookings}</p>
-              <p className="text-sm text-gray-500 mt-1">
-                {bookingStats.completionRate.toFixed(1)}% completion rate
-              </p>
+      {/* Booking Statistics - Only visible to owners */}
+      {isOwner && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Card className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Total Bookings</p>
+                <p className="text-3xl font-bold text-gray-900">{bookingStats.totalBookings}</p>
+                <p className="text-sm text-gray-500 mt-1">
+                  {bookingStats.completionRate.toFixed(1)}% completion rate
+                </p>
+              </div>
+              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                <Calendar className="w-6 h-6 text-blue-600" />
+              </div>
             </div>
-            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-              <Calendar className="w-6 h-6 text-blue-600" />
-            </div>
-          </div>
-        </Card>
+          </Card>
 
-        <Card className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Total Revenue</p>
-              <p className="text-3xl font-bold text-gray-900">${bookingStats.totalRevenue.toFixed(2)}</p>
-              <p className="text-sm text-gray-500 mt-1">
-                ${bookingStats.averageBookingValue.toFixed(2)} avg per booking
-              </p>
+          <Card className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Total Revenue</p>
+                <p className="text-3xl font-bold text-gray-900">${bookingStats.totalRevenue.toFixed(2)}</p>
+                <p className="text-sm text-gray-500 mt-1">
+                  ${bookingStats.averageBookingValue.toFixed(2)} avg per booking
+                </p>
+              </div>
+              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                <DollarSign className="w-6 h-6 text-green-600" />
+              </div>
             </div>
-            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-              <DollarSign className="w-6 h-6 text-green-600" />
-            </div>
-          </div>
-        </Card>
+          </Card>
 
-        <Card className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Pending Actions</p>
-              <p className="text-3xl font-bold text-gray-900">{bookingStats.pendingBookings}</p>
-              <p className="text-sm text-gray-500 mt-1">
-                {bookingStats.inProgressBookings} in progress
-              </p>
+          <Card className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Pending Actions</p>
+                <p className="text-3xl font-bold text-gray-900">{bookingStats.pendingBookings}</p>
+                <p className="text-sm text-gray-500 mt-1">
+                  {bookingStats.inProgressBookings} in progress
+                </p>
+              </div>
+              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                <Clock className="w-6 h-6 text-orange-600" />
+              </div>
             </div>
-            <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-              <Clock className="w-6 h-6 text-orange-600" />
-            </div>
-          </div>
-        </Card>
+          </Card>
 
-        <Card className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Completed</p>
-              <p className="text-3xl font-bold text-gray-900">{bookingStats.completedBookings}</p>
-              <p className="text-sm text-gray-500 mt-1">
-                {bookingStats.cancelledBookings} cancelled
-              </p>
+          <Card className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Completed</p>
+                <p className="text-3xl font-bold text-gray-900">{bookingStats.completedBookings}</p>
+                <p className="text-sm text-gray-500 mt-1">
+                  {bookingStats.cancelledBookings} cancelled
+                </p>
+              </div>
+              <div className="w-12 h-12 bg-emerald-100 rounded-lg flex items-center justify-center">
+                <CheckCircle className="w-6 h-6 text-emerald-600" />
+              </div>
             </div>
-            <div className="w-12 h-12 bg-emerald-100 rounded-lg flex items-center justify-center">
-              <CheckCircle className="w-6 h-6 text-emerald-600" />
-            </div>
-          </div>
-        </Card>
-      </div>
+          </Card>
+        </div>
+      )}
 
       {/* Quick Status Overview */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">

@@ -15,9 +15,7 @@ import { Suspense, lazy } from "react";
 import { Loader2 } from "lucide-react";
 import { PageErrorBoundary } from "@/components/ErrorBoundary";
 import AnnouncementPopup from "@/components/AnnouncementPopup";
-import { 
-  CustomerFavorites 
-} from "@/components/placeholders/PlaceholderPages";
+import { CustomerFavorites } from "@/components/CustomerFavorites";
 
 // Lazy load pages for better performance
 const Index = lazy(() => import("./pages/Index"));

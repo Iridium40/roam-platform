@@ -502,6 +502,12 @@ export default function Index() {
         const { data: promotionsData, error: promotionsError } =
           promotionsResponse;
 
+        if (promotionsError) {
+          logger.error("Error fetching promotions:", promotionsError);
+        } else {
+          logger.debug("Raw promotions data:", promotionsData);
+        }
+
         if (!promotionsError && promotionsData) {
           const currentDate = new Date();
           currentDate.setHours(0, 0, 0, 0); // Set to start of day for accurate comparison

@@ -184,9 +184,9 @@ export default function ProviderDashboard() {
     if (isOwner) return true; // Owners have full access
     
     if (isDispatcher) {
-      // Dispatchers can access: Dashboard, Bookings, Messages, Staff (read-only), Services (read-only)
-      // NO access to: Financials, Business Settings, Profile (they use their own account settings)
-      return ['dashboard', 'bookings', 'messages', 'staff', 'services'].includes(feature);
+      // Dispatchers can access: Dashboard, Bookings, Messages, Staff (read-only), Services (read-only), Profile (own profile settings)
+      // NO access to: Financials, Business Settings
+      return ['dashboard', 'bookings', 'messages', 'staff', 'services', 'profile'].includes(feature);
     }
     
     if (isProvider) {
@@ -827,7 +827,7 @@ export default function ProviderDashboard() {
                 {hasAccess('profile') && (
                   <DropdownMenuItem onClick={() => navigateToTab("profile")}>
                     <User className="w-4 h-4 mr-2" />
-                    {isProvider ? 'My Profile' : 'Profile'}
+                    {isProvider || isDispatcher ? 'My Profile' : 'Profile'}
                   </DropdownMenuItem>
                 )}
                 {hasAccess('business-settings') && (
@@ -863,6 +863,7 @@ export default function ProviderDashboard() {
           <DashboardTab
             providerData={providerData}
             business={business}
+            providerRole={providerData?.provider_role}
           />
         )}
 
@@ -871,6 +872,7 @@ export default function ProviderDashboard() {
           <BookingsTab
             providerData={providerData}
             business={business}
+            providerRole={providerData?.provider_role}
           />
         )}
 

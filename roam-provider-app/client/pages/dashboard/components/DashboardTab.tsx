@@ -18,16 +18,22 @@ import { supabase } from "@/lib/supabase";
 interface DashboardTabProps {
   providerData: any;
   business: any;
+  providerRole?: string; // 'owner', 'dispatcher', or 'provider'
 }
 
 export default function DashboardTab({
   providerData,
   business,
+  providerRole,
 }: DashboardTabProps) {
   const [bookings, setBookings] = useState<any[]>([]);
   const [staffMembers, setStaffMembers] = useState<any[]>([]);
   const [conversations, setConversations] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // Determine if user is owner (show full stats) or dispatcher/provider (hide stats)
+  const role = providerRole || providerData?.provider_role;
+  const isOwner = role === 'owner';
 
   // Load dashboard data
   const loadDashboardData = async () => {
@@ -147,56 +153,58 @@ export default function DashboardTab({
         <p className="text-sm text-gray-600">Welcome back, {providerData?.first_name || 'Provider'}!</p>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Total Bookings</p>
-              <p className="text-3xl font-bold text-gray-900">{totalBookings}</p>
+      {/* Stats Cards - Only visible to owners */}
+      {isOwner && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Card className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Total Bookings</p>
+                <p className="text-3xl font-bold text-gray-900">{totalBookings}</p>
+              </div>
+              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                <Calendar className="w-6 h-6 text-blue-600" />
+              </div>
             </div>
-            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-              <Calendar className="w-6 h-6 text-blue-600" />
-            </div>
-          </div>
-        </Card>
+          </Card>
 
-        <Card className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Total Revenue</p>
-              <p className="text-3xl font-bold text-gray-900">${totalRevenue.toFixed(2)}</p>
+          <Card className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Total Revenue</p>
+                <p className="text-3xl font-bold text-gray-900">${totalRevenue.toFixed(2)}</p>
+              </div>
+              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                <DollarSign className="w-6 h-6 text-green-600" />
+              </div>
             </div>
-            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-              <DollarSign className="w-6 h-6 text-green-600" />
-            </div>
-          </div>
-        </Card>
+          </Card>
 
-        <Card className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Active Staff</p>
-              <p className="text-3xl font-bold text-gray-900">{activeStaff}</p>
+          <Card className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Active Staff</p>
+                <p className="text-3xl font-bold text-gray-900">{activeStaff}</p>
+              </div>
+              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                <Users className="w-6 h-6 text-purple-600" />
+              </div>
             </div>
-            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-              <Users className="w-6 h-6 text-purple-600" />
-            </div>
-          </div>
-        </Card>
+          </Card>
 
-        <Card className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Active Conversations</p>
-              <p className="text-3xl font-bold text-gray-900">{activeConversations}</p>
+          <Card className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Active Conversations</p>
+                <p className="text-3xl font-bold text-gray-900">{activeConversations}</p>
+              </div>
+              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                <MessageCircle className="w-6 h-6 text-orange-600" />
+              </div>
             </div>
-            <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-              <MessageCircle className="w-6 h-6 text-orange-600" />
-            </div>
-          </div>
-        </Card>
-      </div>
+          </Card>
+        </div>
+      )}
 
       {/* Booking Status Overview */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
