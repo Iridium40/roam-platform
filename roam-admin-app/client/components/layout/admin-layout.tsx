@@ -458,12 +458,12 @@ export function AdminLayout({
       {/* Main Content */}
       <div className="flex-1 lg:ml-64">
         {/* Top Navigation */}
-        <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-border bg-card px-6">
-          <div className="flex items-center gap-4">
+        <header className="sticky top-0 z-40 flex h-14 sm:h-16 items-center justify-between border-b border-border bg-card px-3 sm:px-4 md:px-6">
+          <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
             <Button
               variant="ghost"
               size="icon"
-              className="lg:hidden"
+              className="lg:hidden shrink-0"
               onClick={() => setSidebarOpen(!sidebarOpen)}
             >
               {sidebarOpen ? (
@@ -472,14 +472,14 @@ export function AdminLayout({
                 <Menu className="h-5 w-5" />
               )}
             </Button>
-            <h1 className="text-xl font-semibold text-foreground">{title}</h1>
+            <h1 className="text-base sm:text-lg md:text-xl font-semibold text-foreground truncate">{title}</h1>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
             <Button
               variant="ghost"
               size="icon"
-              className="relative"
+              className="relative h-9 w-9 sm:h-10 sm:w-10"
               onClick={handleNotificationClick}
               title={
                 hasStaffNotifications
@@ -487,9 +487,9 @@ export function AdminLayout({
                   : "View announcements"
               }
             >
-              <Bell className="h-5 w-5" />
+              <Bell className="h-4 w-4 sm:h-5 sm:w-5" />
               {hasStaffNotifications && (
-                <span className="absolute top-0 right-0 h-2 w-2 bg-destructive rounded-full"></span>
+                <span className="absolute top-1 right-1 h-2 w-2 bg-destructive rounded-full"></span>
               )}
             </Button>
 
@@ -498,15 +498,15 @@ export function AdminLayout({
               onOpenChange={setUserDropdownOpen}
             >
               <DropdownMenuTrigger asChild>
-                <div className="flex items-center gap-2 cursor-pointer">
-                  <Avatar className="w-8 h-8">
+                <div className="flex items-center gap-1 sm:gap-2 cursor-pointer">
+                  <Avatar className="w-7 h-7 sm:w-8 sm:h-8">
                     <AvatarImage src={adminUser?.image_url} />
                     <AvatarFallback className="text-xs font-semibold">
                       {getInitials()}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="hidden sm:inline">{getDisplayName()}</span>
-                  <ChevronDown className="w-4 h-4" />
+                  <span className="hidden md:inline text-sm truncate max-w-[120px]">{getDisplayName()}</span>
+                  <ChevronDown className="w-3 h-3 sm:w-4 sm:h-4 hidden sm:block" />
                 </div>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
@@ -538,7 +538,7 @@ export function AdminLayout({
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 p-4 md:p-8">{children}</main>
+        <main className="flex-1 p-3 sm:p-4 md:p-6 lg:p-8">{children}</main>
       </div>
 
       {/* Mobile Overlay */}

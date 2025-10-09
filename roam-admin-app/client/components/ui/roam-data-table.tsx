@@ -110,47 +110,49 @@ export function ROAMDataTable({
     >
       {/* Header */}
       {(title || searchable || filterable || addable) && (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 border-b border-border ml-[5px]">
+        <div className="flex flex-col gap-4 p-4 sm:p-6 border-b border-border">
           {title && (
-            <h2 className="text-xl font-semibold text-foreground">{title}</h2>
+            <h2 className="text-lg sm:text-xl font-semibold text-foreground">{title}</h2>
           )}
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
             {searchable && (
-              <div className="relative">
+              <div className="relative flex-1 sm:flex-initial">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                 <ROAMInput
                   placeholder="Search..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 min-w-[200px]"
+                  className="pl-10 w-full sm:min-w-[200px]"
                 />
               </div>
             )}
 
-            {filterable && (
-              <Button variant="outline" size="sm">
-                <Filter className="w-4 h-4 mr-2" />
-                Filter
-              </Button>
-            )}
+            <div className="flex items-center gap-2">
+              {filterable && (
+                <Button variant="outline" size="sm" className="flex-1 sm:flex-initial">
+                  <Filter className="w-4 h-4 mr-2" />
+                  <span className="hidden sm:inline">Filter</span>
+                </Button>
+              )}
 
-            {addable && (
-              <Button
-                size="sm"
-                onClick={onAdd}
-                className="bg-roam-blue hover:bg-roam-blue/90"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Add New
-              </Button>
-            )}
+              {addable && (
+                <Button
+                  size="sm"
+                  onClick={onAdd}
+                  className="bg-roam-blue hover:bg-roam-blue/90 flex-1 sm:flex-initial"
+                >
+                  <Plus className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Add New</span>
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       )}
 
-      {/* Table */}
-      <div className="overflow-x-auto">
+      {/* Table - Desktop View */}
+      <div className="hidden md:block overflow-x-auto">
         <table className="w-full">
           <thead>
             <tr className="bg-muted border-b border-border">
@@ -158,7 +160,7 @@ export function ROAMDataTable({
                 <th
                   key={column.key}
                   className={cn(
-                    "px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider",
+                    "px-4 lg:px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider",
                     column.sortable && "cursor-pointer hover:text-foreground",
                   )}
                   onClick={() => handleSort(column.key)}
@@ -184,11 +186,13 @@ export function ROAMDataTable({
                 {columns.map((column) => (
                   <td
                     key={column.key}
-                    className="px-6 py-4 whitespace-nowrap text-sm text-foreground"
+                    className="px-4 lg:px-6 py-4 text-sm text-foreground"
                   >
-                    {column.render
-                      ? column.render(row[column.key], row)
-                      : row[column.key]}
+                    <div className="max-w-xs truncate">
+                      {column.render
+                        ? column.render(row[column.key], row)
+                        : row[column.key]}
+                    </div>
                   </td>
                 ))}
               </tr>
@@ -203,27 +207,61 @@ export function ROAMDataTable({
         )}
       </div>
 
+      {/* Mobile Card View */}
+      <div className="md:hidden divide-y divide-border">
+        {paginatedData.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">No data found</p>
+          </div>
+        ) : (
+          paginatedData.map((row, index) => (
+            <div
+              key={index}
+              className={cn(
+                "p-4 space-y-3 hover:bg-muted/50 transition-colors",
+                onRowClick && "cursor-pointer active:bg-muted",
+              )}
+              onClick={() => onRowClick?.(row)}
+            >
+              {columns.map((column) => (
+                <div key={column.key} className="flex flex-col gap-1">
+                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    {column.header}
+                  </span>
+                  <div className="text-sm text-foreground break-words">
+                    {column.render
+                      ? column.render(row[column.key], row)
+                      : row[column.key]}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ))
+        )}
+      </div>
+
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between px-6 py-4 border-t border-border bg-muted/50">
-          <div className="text-sm text-muted-foreground">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 sm:px-6 py-4 border-t border-border bg-muted/50">
+          <div className="text-xs sm:text-sm text-muted-foreground order-2 sm:order-1">
             Showing {(currentPage - 1) * pageSize + 1}-
             {Math.min(currentPage * pageSize, sortedData.length)} of{" "}
             {sortedData.length} results
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 order-1 sm:order-2">
             <Button
               variant="outline"
               size="sm"
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               disabled={currentPage === 1}
+              className="h-8"
             >
-              <ChevronLeft className="w-4 h-4 mr-1" />
-              Previous
+              <ChevronLeft className="w-4 h-4 sm:mr-1" />
+              <span className="hidden sm:inline">Previous</span>
             </Button>
 
-            <span className="text-sm text-muted-foreground">
+            <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
               Page {currentPage} of {totalPages}
             </span>
 
@@ -232,9 +270,10 @@ export function ROAMDataTable({
               size="sm"
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
+              className="h-8"
             >
-              Next
-              <ChevronRight className="w-4 h-4 ml-1" />
+              <span className="hidden sm:inline">Next</span>
+              <ChevronRight className="w-4 h-4 sm:ml-1" />
             </Button>
           </div>
         </div>

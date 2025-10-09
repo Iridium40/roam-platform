@@ -10,6 +10,7 @@ import {
 import { ROAMStatCard } from "@/components/ui/roam-stat-card";
 import { ROAMBadge } from "@/components/ui/roam-badge";
 import { Button } from "@/components/ui/button";
+import { MobileActionButtons, ActionButton } from "@/components/ui/mobile-action-buttons";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -4062,15 +4063,17 @@ export default function AdminBusinesses() {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex justify-end gap-3 pt-4">
-              <Button
+            <MobileActionButtons>
+              <ActionButton
                 variant="outline"
                 onClick={() => setIsEditBusinessOpen(false)}
               >
                 Cancel
-              </Button>
-              <Button onClick={handleSaveBusinessEdit}>Save Changes</Button>
-            </div>
+              </ActionButton>
+              <ActionButton onClick={handleSaveBusinessEdit}>
+                Save Changes
+              </ActionButton>
+            </MobileActionButtons>
           </div>
         </DialogContent>
       </Dialog>

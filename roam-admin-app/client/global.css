@@ -99,4 +99,18 @@
   body {
     @apply bg-background text-foreground font-sans;
   }
+
+  /* Mobile optimization - prevent horizontal scroll */
+  html, body {
+    overflow-x: hidden;
+    max-width: 100%;
+  }
+
+  /* Improve touch targets on mobile */
+  @media (max-width: 768px) {
+    button, a {
+      min-height: 44px;
+      min-width: 44px;
+    }
+  }
 }
