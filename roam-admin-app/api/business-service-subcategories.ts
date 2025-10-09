@@ -1,7 +1,32 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import { supabase } from '../server/lib/supabase';
+import { createSupabaseClient, validateEnvironment } from './_lib/supabase';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // Add CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
+  // Validate environment variables
+  const envError = validateEnvironment();
+  if (envError) {
+    console.error('Environment validation failed:', envError);
+    return res.status(500).json(envError);
+  }
+
+  // Initialize Supabase client
+  const supabase = createSupabaseClient();
+  if (!supabase) {
+    return res.status(500).json({ 
+      error: 'Failed to initialize database connection',
+      details: 'Could not create Supabase client'
+    });
+  }
+
   try {
     switch (req.method) {
       case 'GET':
