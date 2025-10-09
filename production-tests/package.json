@@ -1,0 +1,25 @@
+{
+  "name": "@roam/production-tests",
+  "version": "1.0.0",
+  "description": "Production testing suite for ROAM Platform",
+  "private": true,
+  "scripts": {
+    "test:smoke": "ts-node -r dotenv/config smoke-tests.ts dotenv_config_path=../.env.production.test",
+    "test:api": "ts-node -r dotenv/config api-tests.ts dotenv_config_path=../.env.production.test",
+    "test:e2e": "playwright test e2e-tests.ts",
+    "test:all": "npm run test:smoke && npm run test:api",
+    "monitor": "ts-node -r dotenv/config monitoring-dashboard.ts dotenv_config_path=../.env.production.test",
+    "install:playwright": "playwright install chromium"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.40.0",
+    "@types/node": "^20.10.0",
+    "dotenv": "^16.3.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  }
+}
+

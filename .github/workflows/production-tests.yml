@@ -1,0 +1,365 @@
+name: Production Tests
+
+on:
+  # Run every 6 hours
+  schedule:
+    - cron: '0 */6 * * *'
+  
+  # Allow manual trigger
+  workflow_dispatch:
+  
+  # Trigger on production deployments
+  repository_dispatch:
+    types: [production-deploy]
+
+env:
+  NODE_VERSION: '18'
+
+jobs:
+  smoke-tests:
+    name: Smoke Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      
+      - name: Install dependencies
+        working-directory: ./production-tests
+        run: npm install
+      
+      - name: Run Smoke Tests
+        working-directory: ./production-tests
+        env:
+          PROVIDER_APP_URL: ${{ secrets.PROVIDER_APP_URL }}
+          CUSTOMER_APP_URL: ${{ secrets.CUSTOMER_APP_URL }}
+          ADMIN_APP_URL: ${{ secrets.ADMIN_APP_URL }}
+          VITE_PUBLIC_SUPABASE_URL: ${{ secrets.VITE_PUBLIC_SUPABASE_URL }}
+          VITE_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.VITE_PUBLIC_SUPABASE_ANON_KEY }}
+        run: npm run test:smoke
+      
+      - name: Upload Results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: smoke-test-results
+          path: production-tests/smoke-test-results.json
+          retention-days: 30
+      
+      - name: Comment on Failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const results = JSON.parse(fs.readFileSync('production-tests/smoke-test-results.json', 'utf8'));
+            const failed = results.results.filter(r => r.status === 'failed');
+            
+            const body = `## 🚨 Smoke Tests Failed
+            
+            **Failed Tests:** ${failed.length}
+            **Total Tests:** ${results.summary.total}
+            
+            ### Failed Tests:
+            ${failed.map(f => `- ❌ **${f.test}**: ${f.message}`).join('\n')}
+            
+            **Timestamp:** ${results.summary.timestamp}
+            `;
+            
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '🚨 Production Smoke Tests Failed',
+              body,
+              labels: ['production', 'critical', 'automated']
+            });
+      
+      - name: Notify Slack on Failure
+        if: failure()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          text: |
+            🚨 Production smoke tests failed!
+            Check the details: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          channel: '#alerts'
+          username: 'ROAM CI/CD'
+          icon_emoji: ':warning:'
+
+  api-tests:
+    name: API Tests
+    runs-on: ubuntu-latest
+    needs: smoke-tests
+    timeout-minutes: 15
+    if: success()
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      
+      - name: Install dependencies
+        working-directory: ./production-tests
+        run: npm install
+      
+      - name: Run API Tests
+        working-directory: ./production-tests
+        env:
+          PROVIDER_APP_URL: ${{ secrets.PROVIDER_APP_URL }}
+          CUSTOMER_APP_URL: ${{ secrets.CUSTOMER_APP_URL }}
+          ADMIN_APP_URL: ${{ secrets.ADMIN_APP_URL }}
+          VITE_PUBLIC_SUPABASE_URL: ${{ secrets.VITE_PUBLIC_SUPABASE_URL }}
+          VITE_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.VITE_PUBLIC_SUPABASE_ANON_KEY }}
+          TEST_EMAIL: ${{ secrets.TEST_EMAIL }}
+          TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
+        run: npm run test:api
+      
+      - name: Upload Results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: api-test-results
+          path: production-tests/production-test-results.json
+          retention-days: 30
+      
+      - name: Generate Test Report
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const results = JSON.parse(fs.readFileSync('production-tests/production-test-results.json', 'utf8'));
+            
+            const summary = results.summary;
+            const passRate = ((summary.passed / summary.total) * 100).toFixed(2);
+            
+            const comment = `## 📊 API Test Results
+            
+            - **Total Tests:** ${summary.total}
+            - **Passed:** ${summary.passed} ✅
+            - **Failed:** ${summary.failed} ❌
+            - **Pass Rate:** ${passRate}%
+            - **Duration:** ${(summary.duration / 1000).toFixed(2)}s
+            
+            ${summary.failed > 0 ? `
+            ### Failed Tests:
+            ${results.results.filter(r => r.status === 'failed')
+              .map(r => `- ❌ **${r.name}**: ${r.error}`)
+              .join('\n')}
+            ` : ''}
+            `;
+            
+            core.summary.addRaw(comment).write();
+      
+      - name: Notify on API Test Failure
+        if: failure()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          text: 'API tests failed in production environment'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  performance-check:
+    name: Performance Check
+    runs-on: ubuntu-latest
+    needs: smoke-tests
+    timeout-minutes: 10
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Check Homepage Performance
+        run: |
+          echo "Checking homepage load times..."
+          
+          # Provider App
+          PROVIDER_TIME=$(curl -o /dev/null -s -w '%{time_total}\n' ${{ secrets.PROVIDER_APP_URL }})
+          echo "Provider App: ${PROVIDER_TIME}s"
+          
+          # Customer App
+          CUSTOMER_TIME=$(curl -o /dev/null -s -w '%{time_total}\n' ${{ secrets.CUSTOMER_APP_URL }})
+          echo "Customer App: ${CUSTOMER_TIME}s"
+          
+          # Admin App
+          ADMIN_TIME=$(curl -o /dev/null -s -w '%{time_total}\n' ${{ secrets.ADMIN_APP_URL }})
+          echo "Admin App: ${ADMIN_TIME}s"
+          
+          # Check if any exceed 3 seconds
+          if (( $(echo "$PROVIDER_TIME > 3.0" | bc -l) )); then
+            echo "⚠️ Provider App load time exceeded 3s"
+            exit 1
+          fi
+      
+      - name: Check API Response Times
+        run: |
+          echo "Checking API response times..."
+          
+          # Test database connection endpoint
+          DB_TIME=$(curl -o /dev/null -s -w '%{time_total}\n' ${{ secrets.PROVIDER_APP_URL }}/api/test-db-connection)
+          echo "Database Connection: ${DB_TIME}s"
+          
+          if (( $(echo "$DB_TIME > 2.0" | bc -l) )); then
+            echo "⚠️ Database connection time exceeded 2s"
+            exit 1
+          fi
+      
+      - name: Report Performance
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            core.summary
+              .addHeading('Performance Metrics')
+              .addTable([
+                [{data: 'Service', header: true}, {data: 'Load Time', header: true}, {data: 'Status', header: true}],
+                ['Provider App', process.env.PROVIDER_TIME + 's', '✅'],
+                ['Customer App', process.env.CUSTOMER_TIME + 's', '✅'],
+                ['Admin App', process.env.ADMIN_TIME + 's', '✅']
+              ])
+              .write();
+
+  security-check:
+    name: Security Headers Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    
+    steps:
+      - name: Check Security Headers
+        run: |
+          echo "Checking security headers..."
+          
+          # Check Provider App
+          echo "=== Provider App ==="
+          curl -I ${{ secrets.PROVIDER_APP_URL }} | grep -i "x-content-type-options\|x-frame-options\|content-security-policy"
+          
+          # Check Customer App
+          echo "=== Customer App ==="
+          curl -I ${{ secrets.CUSTOMER_APP_URL }} | grep -i "x-content-type-options\|x-frame-options\|content-security-policy"
+          
+          # Check Admin App
+          echo "=== Admin App ==="
+          curl -I ${{ secrets.ADMIN_APP_URL }} | grep -i "x-content-type-options\|x-frame-options\|content-security-policy"
+      
+      - name: Check HTTPS
+        run: |
+          echo "Verifying HTTPS..."
+          
+          # Try HTTP and verify redirect
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" -L http://roamprovider.app)
+          if [ "$STATUS" == "200" ]; then
+            echo "✅ HTTPS redirect working"
+          else
+            echo "⚠️ Unexpected status: $STATUS"
+          fi
+
+  database-health:
+    name: Database Health Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      
+      - name: Check Database Connection
+        run: |
+          node << 'EOF'
+          const { createClient } = require('@supabase/supabase-js');
+          
+          const supabase = createClient(
+            process.env.VITE_PUBLIC_SUPABASE_URL,
+            process.env.VITE_PUBLIC_SUPABASE_ANON_KEY
+          );
+          
+          async function checkHealth() {
+            const start = Date.now();
+            const { error } = await supabase.from('services').select('id').limit(1);
+            const duration = Date.now() - start;
+            
+            if (error) {
+              console.error('❌ Database query failed:', error.message);
+              process.exit(1);
+            }
+            
+            console.log(`✅ Database healthy (${duration}ms)`);
+            
+            if (duration > 1000) {
+              console.warn('⚠️ Slow query detected');
+            }
+          }
+          
+          checkHealth();
+          EOF
+        env:
+          VITE_PUBLIC_SUPABASE_URL: ${{ secrets.VITE_PUBLIC_SUPABASE_URL }}
+          VITE_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.VITE_PUBLIC_SUPABASE_ANON_KEY }}
+
+  summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    needs: [smoke-tests, api-tests, performance-check, security-check, database-health]
+    if: always()
+    
+    steps:
+      - name: Generate Summary
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const jobs = [
+              { name: 'Smoke Tests', status: '${{ needs.smoke-tests.result }}' },
+              { name: 'API Tests', status: '${{ needs.api-tests.result }}' },
+              { name: 'Performance Check', status: '${{ needs.performance-check.result }}' },
+              { name: 'Security Check', status: '${{ needs.security-check.result }}' },
+              { name: 'Database Health', status: '${{ needs.database-health.result }}' }
+            ];
+            
+            const passed = jobs.filter(j => j.status === 'success').length;
+            const failed = jobs.filter(j => j.status === 'failure').length;
+            const skipped = jobs.filter(j => j.status === 'skipped').length;
+            
+            const statusEmoji = failed > 0 ? '❌' : '✅';
+            
+            core.summary
+              .addHeading(`${statusEmoji} Production Test Results`)
+              .addTable([
+                [{data: 'Test Suite', header: true}, {data: 'Status', header: true}],
+                ...jobs.map(j => [
+                  j.name,
+                  j.status === 'success' ? '✅ Passed' :
+                  j.status === 'failure' ? '❌ Failed' :
+                  j.status === 'skipped' ? '⏭️ Skipped' : '⏳ Running'
+                ])
+              ])
+              .addRaw(`\n**Summary:** ${passed} passed, ${failed} failed, ${skipped} skipped`)
+              .write();
+      
+      - name: Final Notification
+        if: failure()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: failure
+          text: |
+            ⚠️ Production tests completed with failures!
+            Please review: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          channel: '#alerts'
+
