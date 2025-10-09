@@ -23,7 +23,6 @@
     "dev:admin": "cd apps/roam-admin-app && npm run dev",
     "dev:provider": "cd apps/roam-provider-app && npm run dev",
     "dev:customer": "cd roam-customer-app && npm run dev",
-    "preinstall": "node ./scripts/install-rollup-linux.js",
     "test:production": "cd production-tests && npm install && npm run test:all",
     "test:smoke": "cd production-tests && npm run test:smoke",
     "test:api": "cd production-tests && npm run test:api",
