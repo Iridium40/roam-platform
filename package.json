@@ -23,7 +23,7 @@
     "dev:admin": "cd apps/roam-admin-app && npm run dev",
     "dev:provider": "cd apps/roam-provider-app && npm run dev",
     "dev:customer": "cd roam-customer-app && npm run dev",
-    "preinstall": "npm install @rollup/rollup-linux-x64-gnu@4.13.0 --no-save",
+    "preinstall": "node ./scripts/install-rollup-linux.js",
     "test:production": "cd production-tests && npm install && npm run test:all",
     "test:smoke": "cd production-tests && npm run test:smoke",
     "test:api": "cd production-tests && npm run test:api",
@@ -32,7 +32,7 @@
     "setup:production-tests": "./production-tests/setup.sh"
   },
   "devDependencies": {
-    "eslint": "^8.57.0",
+    "eslint": "^9.15.0",
     "prettier": "^3.5.3",
     "turbo": "^1.13.4",
     "typescript": "^5.5.3"
@@ -43,7 +43,11 @@
   },
   "packageManager": "npm@10.0.0",
   "overrides": {
-    "@rollup/rollup-linux-x64-gnu": "4.13.0"
+    "@rollup/rollup-linux-x64-gnu": "4.13.0",
+    "uuid": "^10.0.0",
+    "inflight": "npm:inflight-bluebird@^2.0.0",
+    "rimraf": "^6.0.0",
+    "glob": "^11.0.0"
   },
   "dependencies": {
     "@stripe/stripe-js": "^7.9.0",
