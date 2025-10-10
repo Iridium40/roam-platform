@@ -12,7 +12,7 @@ export function HomeHero({ className = "" }: HomeHeroProps) {
         {/* Video container with responsive aspect ratio */}
         <div className="absolute inset-0 w-full h-full">
           <iframe
-            src="https://www.youtube.com/embed/Z0A84Ev5Waw?autoplay=1&mute=1&loop=1&playlist=Z0A84Ev5Waw&controls=0&showinfo=0&rel=0&modestbranding=1&playsinline=1&vq=hd1080"
+            src="https://www.youtube.com/embed/-g5P96JAif0?autoplay=1&mute=1&loop=1&playlist=-g5P96JAif0&controls=0&showinfo=0&rel=0&modestbranding=1&playsinline=1&vq=hd1080"
             className="absolute top-1/2 left-1/2 min-w-full min-h-full w-auto h-auto scale-110"
             style={{
               filter: "brightness(0.7)",
