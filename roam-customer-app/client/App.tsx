@@ -19,6 +19,10 @@ import { CustomerFavorites } from "@/components/CustomerFavorites";
 
 // Lazy load pages for better performance
 const Index = lazy(() => import("./pages/Index"));
+const SimpleHomeIndex = lazy(() => import("./pages/SimpleHomeIndex"));
+const SimpleMyBookings = lazy(() => import("./pages/SimpleMyBookings"));
+const ProgressiveIndex = lazy(() => import("./pages/ProgressiveIndex"));
+const SimpleIndex = lazy(() => import("./pages/SimpleIndex"));
 const MyBookings = lazy(() => import("./pages/MyBookings"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const BookService = lazy(() => import("./pages/BookService"));
@@ -35,6 +39,7 @@ const CustomerLocations = lazy(() => import("./pages/CustomerLocations"));
 const CustomerTransactions = lazy(() => import("./pages/CustomerTransactions"));
 const CustomerProfile = lazy(() => import("./pages/CustomerProfile"));
 const CustomerSettings = lazy(() => import("./pages/CustomerSettings"));
+const Test = lazy(() => import("./pages/Test"));
 
 // Loading component for Suspense fallback
 const PageLoader = () => (
@@ -60,8 +65,8 @@ const App = () => (
           <AuthProvider>
             <Suspense fallback={<PageLoader />}>
               <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/bookings" element={<MyBookings />} />
+                <Route path="/" element={<SimpleHomeIndex />} />
+                <Route path="/bookings" element={<SimpleMyBookings />} />
                 <Route path="/book-service/:serviceId" element={<BookService />} />
                 <Route path="/booking-success" element={<BookingSuccess />} />
                 <Route path="/business/:businessId" element={<BusinessProfile />} />
@@ -76,7 +81,7 @@ const App = () => (
                   path="/my-bookings"
                   element={
                     <ProtectedRoute>
-                      <MyBookings />
+                      <SimpleMyBookings />
                     </ProtectedRoute>
                   }
                 />
@@ -120,6 +125,7 @@ const App = () => (
                     </ProtectedRoute>
                   }
                 />
+                <Route path="/test" element={<Test />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>
@@ -129,6 +135,4 @@ const App = () => (
       <AnnouncementPopup appType="customer" />
     </TooltipProvider>
   </QueryClientProvider>
-);
-
-export default App;
+);export default App;

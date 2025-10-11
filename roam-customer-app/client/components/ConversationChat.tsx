@@ -20,8 +20,8 @@ import {
   User,
   X
 } from 'lucide-react';
-import { useConversations } from '@/hooks/useConversations';
-import type { ConversationMessage, Conversation } from '@roam/shared';
+import { useConversations } from '@roam/shared';
+import type { ConversationMessage as DBConversationMessage, Conversation } from '@roam/shared';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatDistanceToNow } from 'date-fns';
 import { logger } from '@/utils/logger';
@@ -76,8 +76,14 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
     createConversation,
     getUserIdentity,
     getUserType,
-    setActiveConversation
-  } = useConversations();
+    setCurrentConversation
+  } = useConversations({
+    userId: currentUser?.id || '',
+    userType: currentUserType,
+    onError: (error) => {
+      logger.error('Conversations hook error:', error);
+    }
+  });
 
   const [newMessage, setNewMessage] = useState('');
   const [activeConversationSid, setActiveConversationSid] = useState<string | null>(conversationSid || null);
@@ -105,7 +111,7 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
     } else if (isOpen && conversationSid) {
       logger.debug('Setting conversation SID from prop:', conversationSid);
       setActiveConversationSid(conversationSid);
-      setActiveConversation(conversationSid);
+      setCurrentConversation(conversationSid);
     }
   }, [isOpen, booking, conversationSid]);
 
@@ -182,7 +188,7 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
 
     const userIdentity = getUserIdentity();
     const userType = getUserType();
-    logger.debug('👤 User identity:', userIdentity, 'User type:', userType);
+    logger.debug('👤 User identity and type:', { userIdentity, userType: currentUserType });
 
     if (!userIdentity || !userType) {
       logger.error('❌ Failed to get user identity or type');
@@ -238,12 +244,15 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
 
     try {
       logger.debug('📞 Calling createConversation...');
-      const convSid = await createConversation(booking.id, bookingParticipants);
+      const convSid = await createConversation({
+        bookingId: booking.id,
+        participants: bookingParticipants
+      });
       logger.debug('✅ Conversation SID returned:', convSid);
       if (convSid) {
         logger.debug('🎯 Setting active conversation SID:', convSid);
         setActiveConversationSid(convSid);
-        setActiveConversation(convSid);
+        setCurrentConversation(convSid);
       } else {
         logger.error('❌ Failed to get conversation SID - returned null/undefined');
       }
@@ -286,18 +295,17 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
     }
   };
 
-  const getMessageAuthorInfo = (message: ConversationMessage) => {
+  const getMessageAuthorInfo = (message: any) => {
     const userIdentity = getUserIdentity();
-    const attributes = message.attributes || {};
     
     // Enhanced identity matching - check if message author is same user type as current user
-      const isCurrentUserType = message.author.startsWith('customer-');
+    const isCurrentUserType = message.author_id === currentUser?.id;
     
     // For now, assume same user type messages are from current user
     const isCurrentUser = isCurrentUserType;
     
     // SMART APPROACH: Find the actual participant from the participants list
-    const actualParticipant = participants.find(p => p.identity === message.author);
+    const actualParticipant = participants.find(p => p.user_id === message.author_id);
     
     let participantInfo;
     if (actualParticipant) {
@@ -306,8 +314,8 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
     } else {
       // Fallback: create a fake participant object if not found
       const fakeParticipant = {
-        identity: message.author,
-        attributes: attributes
+        user_id: message.author_id,
+        user_type: message.author_type
       };
       participantInfo = getParticipantInfo(fakeParticipant);
     }
@@ -315,7 +323,7 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
     return {
       isCurrentUser,
       name: participantInfo.name,
-      role: attributes.userRole || 'participant',
+      role: message.author_type || 'participant',
       initials: participantInfo.initials
     };
   };
@@ -324,19 +332,19 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
     const userIdentity = getUserIdentity();
     
     // Enhanced identity matching - check if participant is same user type as current user
-      const isCurrentUserType = participant.identity.startsWith('customer-');
+    const isCurrentUserType = participant.user_id === currentUser?.id;
     const isCurrentUser = isCurrentUserType;
     
     // Enhanced name resolution logic
-    let displayName = participant.attributes?.name || participant.identity;
+    let displayName = participant.user_id;
     
     // Try to get actual names from booking data
-    if (participant.identity.startsWith('customer-')) {
+    if (participant.user_type === 'customer') {
       if (currentUser) {
         // Current customer viewing - use their name
         displayName = `${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim();
       }
-    } else if (participant.identity.startsWith('provider-')) {
+    } else if (participant.user_type === 'provider') {
       if (booking?.providers) {
         // Customer viewing provider - use provider profile name
         displayName = `${booking.providers.first_name} ${booking.providers.last_name}`.trim();
@@ -344,15 +352,15 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
     }
     
     // Fallback to clean version of identity if no good name found
-    if (!displayName || displayName === participant.identity) {
-      displayName = participant.identity.replace(/^(customer-|provider-)/, '').replace(/[_-]/g, ' ') || 'User';
+    if (!displayName || displayName === participant.user_id) {
+      displayName = participant.user_id?.replace(/^(customer-|provider-)/, '').replace(/[_-]/g, ' ') || 'User';
     }
     
     return {
       isCurrentUser,
       name: displayName,
-      role: participant.attributes?.role || participant.userType || 'participant',
-      imageUrl: participant.attributes?.imageUrl,
+      role: participant.user_type || 'participant',
+      imageUrl: undefined,
       initials: displayName
         .split(' ')
         .map(n => n[0])
@@ -389,7 +397,7 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
                   const info = getParticipantInfo(participant);
                   return (
                     <Badge
-                      key={participant.sid}
+                      key={participant.id}
                       variant={info.isCurrentUser ? "default" : "secondary"}
                       className="flex items-center gap-1"
                     >
@@ -424,18 +432,18 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
                     messages.map((message) => {
                       const authorInfo = getMessageAuthorInfo(message);
                       logger.debug('🔍 Message debug:', {
-                        messageSid: message.sid,
-                        author: message.author,
-                        body: message.body,
+                        messageId: message.id,
+                        author_id: message.author_id,
+                        content: message.content,
                         authorInfo: authorInfo,
                         currentUserIdentity: getUserIdentity(),
-                        userType: userType,
+                        currentUserType: currentUserType,
                         currentUser: currentUser,
                         booking: booking
                       });
                       return (
                         <div
-                          key={message.sid}
+                          key={message.id}
                           className={`flex gap-3 ${
                             authorInfo.isCurrentUser ? 'flex-row-reverse' : 'flex-row'
                           }`}
@@ -459,7 +467,7 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
                                 {authorInfo.role}
                               </Badge>
                               <span className="text-xs text-gray-500">
-                                {formatMessageTime(message.dateCreated)}
+                                {formatMessageTime(message.created_at)}
                               </span>
                             </div>
                             <div
@@ -469,7 +477,7 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
                                   : 'bg-gray-100 text-gray-900'
                               }`}
                             >
-                              {message.body}
+                              {message.content}
                             </div>
                           </div>
                         </div>
