@@ -44,6 +44,7 @@ export function BookingsTab({ providerData, business }: BookingsTabProps) {
     setPastPage,
     
     // Actions
+    loadBookings,
     updateBookingStatus,
     formatDisplayTime,
   } = useBookings(providerData, business);
@@ -108,6 +109,7 @@ export function BookingsTab({ providerData, business }: BookingsTabProps) {
         selectedBooking={selectedBooking}
         setSelectedBooking={setSelectedBooking}
         formatDisplayTime={formatDisplayTime}
+        onBookingUpdate={loadBookings}
       />
     </div>
   );

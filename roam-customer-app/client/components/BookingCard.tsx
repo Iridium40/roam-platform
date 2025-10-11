@@ -56,6 +56,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { logger } from '@/utils/logger';
+import ConversationChat from "@/components/ConversationChat";
 import type {
   Booking,
   Provider,
@@ -87,6 +88,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({
   const [isReassignDialogOpen, setIsReassignDialogOpen] = useState(false);
   const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false);
   const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
   const [reassignProviderId, setReassignProviderId] = useState("");
   const [message, setMessage] = useState("");
@@ -439,12 +441,41 @@ export const BookingCard: React.FC<BookingCardProps> = ({
 
         {/* Provider Information */}
         {booking.providers && (
-          <div className="flex items-center gap-2 mb-4 p-3 bg-gray-50 rounded-lg">
-            <Users className="w-4 h-4 text-gray-500" />
-            <span className="text-sm">
-              Provider: {booking.providers.first_name}{" "}
-              {booking.providers.last_name}
-            </span>
+          <div className="flex items-center justify-between mb-4 p-3 bg-gray-50 rounded-lg">
+            <div className="flex items-center gap-2">
+              <Users className="w-4 h-4 text-gray-500" />
+              <span className="text-sm">
+                Provider: {booking.providers.first_name}{" "}
+                {booking.providers.last_name}
+              </span>
+            </div>
+            {/* Chat Icon for Confirmed Bookings */}
+            {booking.booking_status === 'confirmed' && (
+              <Button
+                onClick={() => setIsChatOpen(true)}
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0"
+                title="Chat with Provider"
+              >
+                <MessageCircle className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        )}
+
+        {/* Chat Button for Confirmed Bookings without Provider Info */}
+        {booking.booking_status === 'confirmed' && !booking.providers && (
+          <div className="mb-4">
+            <Button
+              onClick={() => setIsChatOpen(true)}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <MessageCircle className="h-4 w-4" />
+              Chat with Provider
+            </Button>
           </div>
         )}
 
@@ -691,6 +722,13 @@ export const BookingCard: React.FC<BookingCardProps> = ({
           </div>
         )}
       </CardContent>
+
+      {/* Chat Modal */}
+      <ConversationChat
+        isOpen={isChatOpen}
+        onClose={() => setIsChatOpen(false)}
+        booking={booking}
+      />
     </Card>
   );
 };

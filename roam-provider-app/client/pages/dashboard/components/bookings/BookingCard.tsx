@@ -1,8 +1,9 @@
-import React from "react";
+import React, { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import BookingStatusIndicator from "@/components/BookingStatusIndicator";
+import ConversationChat from "@/components/ConversationChat";
 import {
   Calendar,
   Clock,
@@ -15,6 +16,7 @@ import {
   XCircle,
   AlertCircle,
   DollarSign,
+  UserCheck,
 } from "lucide-react";
 
 interface BookingCardProps {
@@ -32,6 +34,7 @@ export default function BookingCard({
   formatDisplayTime,
   showActions = true,
 }: BookingCardProps) {
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const getStatusActions = (status: string) => {
     switch (status) {
       case "pending":
@@ -167,6 +170,33 @@ export default function BookingCard({
           </div>
         )}
 
+        {/* Assignment Status */}
+        <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-md">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <UserCheck className="w-4 h-4 text-gray-500" />
+              <span className="text-sm font-medium">Assigned Provider:</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Badge variant={booking.providers ? "default" : "secondary"}>
+                {booking.providers 
+                  ? `${booking.providers.first_name} ${booking.providers.last_name}`
+                  : "Unassigned"
+                }
+              </Badge>
+              <Button
+                onClick={() => setIsChatOpen(true)}
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0"
+                title="Open Chat"
+              >
+                <MessageCircle className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+
         {/* Action Buttons */}
         {showActions && (
           <div className="flex items-center justify-between mt-4 pt-4 border-t">
@@ -200,6 +230,13 @@ export default function BookingCard({
           </div>
         )}
       </div>
+
+      {/* Chat Modal */}
+      <ConversationChat
+        isOpen={isChatOpen}
+        onClose={() => setIsChatOpen(false)}
+        booking={booking}
+      />
     </Card>
   );
 }
