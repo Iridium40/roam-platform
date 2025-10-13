@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { createAuthAPI, SupabaseAuthService } from '@roam/shared';
+import { createAuthAPI } from '@roam/shared/dist/services/auth-api';
+import { SupabaseAuthService } from '@roam/shared/dist/services/supabase-auth-service';
 
 // Create auth service with default email service
 const authService = new SupabaseAuthService();

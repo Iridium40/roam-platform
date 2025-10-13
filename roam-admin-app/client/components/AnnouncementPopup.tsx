@@ -3,7 +3,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { Announcement } from "@roam/shared";
+import type { AnnouncementsTable } from "@roam/shared/dist/types/database/tables/notification";
+type Announcement = AnnouncementsTable;
 
 interface AnnouncementPopupProps {
   appType?: 'customer' | 'provider' | 'admin';

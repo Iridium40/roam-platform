@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { createNotificationAPI } from '@roam/shared';
+import { createNotificationAPI } from '@roam/shared/dist/services/notification-api';
 
 // Create notification API with shared service
 const api = createNotificationAPI();

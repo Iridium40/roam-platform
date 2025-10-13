@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { MFAService } from '@roam/shared';
+import { MFAService } from '@roam/shared/dist/services/mfa-service';
 
 const mfaService = new MFAService();
 
