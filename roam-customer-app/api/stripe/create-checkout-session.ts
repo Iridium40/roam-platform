@@ -177,27 +177,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         promotion_id: promotionId || '',
         guest_phone: guestPhone || ''
       },
-      // Customize appearance
-      custom_fields: [
-        {
-          key: 'booking_date',
-          label: {
-            type: 'custom',
-            custom: 'Booking Date'
-          },
-          type: 'text',
-          optional: true
-        },
-        {
-          key: 'start_time',
-          label: {
-            type: 'custom',
-            custom: 'Start Time'
-          },
-          type: 'text',
-          optional: true
-        }
-      ],
       // Apply branding
       billing_address_collection: 'required',
       customer_update: {
