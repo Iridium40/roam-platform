@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,8 +21,12 @@ import {
   X
 } from 'lucide-react';
 import { useConversations, ConversationMessage, Conversation } from '@/hooks/useConversations';
-import { useCustomerConversations } from '@/hooks/useCustomerConversations';
 import { useAuth } from '@/contexts/auth/AuthProvider';
+import {
+  createBookingConversationsClient,
+  type BookingConversationParticipant,
+  type BookingConversationParticipantData,
+} from '@roam/shared/dist/services/booking-conversations-client.js';
 import { formatDistanceToNow } from 'date-fns';
 
 interface ConversationChatProps {
@@ -53,6 +57,8 @@ interface ConversationChatProps {
   conversationSid?: string;
 }
 
+const bookingConversationsClient = createBookingConversationsClient();
+
 const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: ConversationChatProps) => {
   const { user, customer, userType } = useAuth();
   
@@ -75,11 +81,12 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
     createConversation,
     getUserIdentity,
     getUserType,
-    setActiveConversation
+    setActiveConversation,
   } = useConversations();
 
   const [newMessage, setNewMessage] = useState('');
   const [activeConversationSid, setActiveConversationSid] = useState<string | null>(conversationSid || null);
+  const [enrichedParticipants, setEnrichedParticipants] = useState<BookingConversationParticipant[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom when new messages arrive
@@ -177,27 +184,44 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
       return;
     }
 
-    console.log('📋 Initializing booking conversation for:', booking.id);
+      console.log('📋 Initializing booking conversation for:', booking.id);
 
-    const userIdentity = getUserIdentity();
-    const userType = getUserType();
-    console.log('👤 User identity:', userIdentity, 'User type:', userType);
+      const participants: BookingConversationParticipantData[] = [];
 
-    if (!userIdentity || !userType) {
-      console.error('❌ Failed to get user identity or type');
-      console.log('🔍 Debug info:', {
-        currentUser: currentUser,
-        userIdentity: userIdentity,
-        userType: userType,
-        getUserIdentity: getUserIdentity,
-        getUserType: getUserType
-      });
-      return;
-    }
+      if (booking.customer_profiles?.id) {
+        participants.push({
+          userId: booking.customer_profiles.id,
+          userType: 'customer',
+          userName: `${booking.customer_profiles.first_name ?? ''} ${booking.customer_profiles.last_name ?? ''}`.trim(),
+          email: booking.customer_profiles.email || null,
+        });
+      }
 
-    // Create participants for both customer and provider
-    const bookingParticipants = [];
-    
+      if (booking.providers?.user_id) {
+        participants.push({
+          userId: booking.providers.user_id,
+          userType: 'provider',
+          userName: `${booking.providers.first_name ?? ''} ${booking.providers.last_name ?? ''}`.trim(),
+        });
+      }
+
+      const result = await bookingConversationsClient.getOrCreateConversationForBooking(
+        {
+          bookingId: booking.id,
+          customerId: booking.customer_profiles?.id,
+          providerId: booking.providers?.user_id,
+          businessId: booking.business_id,
+          serviceName: booking.service_name,
+          customerName: `${booking.customer_profiles?.first_name ?? ''} ${booking.customer_profiles?.last_name ?? ''}`.trim(),
+          providerName: `${booking.providers?.first_name ?? ''} ${booking.providers?.last_name ?? ''}`.trim(),
+        },
+        participants,
+      );
+
+      setActiveConversationSid(result.conversationId);
+      setActiveConversation(result.conversationId);
+      setEnrichedParticipants(result.participants || []);
+
     // Add current user (enhanced logic for provider side)
     let currentUserName = `${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim();
     let currentUserId = currentUser.id;
@@ -390,6 +414,28 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
     };
   };
 
+  const participantMap = useMemo(() => {
+    const map = new Map<string, BookingConversationParticipant>();
+    [...enrichedParticipants, ...participants.map((p) => ({
+      userId: p.user_id,
+      userType: (p.user_type as any) || 'unknown',
+      userName: p.attributes?.senderName || p.identity,
+      email: p.attributes?.email,
+      avatarUrl: p.attributes?.avatarUrl,
+    }))].forEach((participant) => {
+      if (!participant.userId || !participant.userType) return;
+      const key = `${participant.userType}-${participant.userId}`;
+      if (!map.has(key)) {
+        map.set(key, participant as BookingConversationParticipant);
+      }
+    });
+    return map;
+  }, [enrichedParticipants, participants]);
+
+  const resolveMessageAuthor = (message: ConversationMessage) => {
+    const key = `${message.author_type}-${message.author_id}`;
+    return participantMap.get(key) || null;
+  };
 
 
   return (
@@ -450,54 +496,45 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
                     <div className="text-center text-gray-500">No messages yet. Start the conversation!</div>
                   ) : (
                     messages.map((message) => {
-                      const authorInfo = getMessageAuthorInfo(message);
-                      console.log('🔍 Message debug:', {
-                        messageSid: message.sid,
-                        author: message.author,
-                        body: message.body,
-                        authorInfo: authorInfo,
-                        currentUserIdentity: getUserIdentity(),
-                        userType: userType,
-                        currentUser: currentUser,
-                        booking: booking
-                      });
+                      const author = resolveMessageAuthor(message);
+                      const isCurrentUser = author?.userId === currentUser?.id;
+                      const displayName = author?.userName || message.author_name || 'Participant';
+                      const initials = displayName
+                        .split(' ')
+                        .map((part) => part[0])
+                        .join('')
+                        .slice(0, 2)
+                        .toUpperCase();
+
                       return (
                         <div
-                          key={message.sid}
-                          className={`flex gap-3 ${
-                            authorInfo.isCurrentUser ? 'flex-row-reverse' : 'flex-row'
-                          }`}
+                          key={message.id}
+                          className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'} mb-4`}
                         >
-                          <Avatar className="h-8 w-8">
-                            <AvatarImage src="" />
-                            <AvatarFallback className="text-xs">
-                              {authorInfo.initials}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div
-                            className={`flex flex-col max-w-[70%] ${
-                              authorInfo.isCurrentUser ? 'items-end' : 'items-start'
-                            }`}
-                          >
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="text-sm font-medium">
-                                {authorInfo.name}
-                              </span>
-                              <Badge variant="outline" className="text-xs">
-                                {authorInfo.role}
-                              </Badge>
-                              <span className="text-xs text-gray-500">
-                                {formatMessageTime(message.dateCreated)}
+                          <div className={`flex items-end gap-3 ${isCurrentUser ? 'flex-row-reverse' : 'flex-row'}`}>
+                            <div className="flex flex-col items-center">
+                              <Avatar className="h-8 w-8 border">
+                                <AvatarImage src={author?.avatarUrl || undefined} alt={displayName} />
+                                <AvatarFallback>{initials}</AvatarFallback>
+                              </Avatar>
+                              <span className="mt-1 text-[11px] text-muted-foreground/80 max-w-[140px] text-center truncate">
+                                {displayName}
                               </span>
                             </div>
                             <div
-                              className={`rounded-lg px-3 py-2 text-sm ${
-                                authorInfo.isCurrentUser
-                                  ? 'bg-blue-500 text-white'
-                                  : 'bg-gray-100 text-gray-900'
+                              className={`max-w-[70%] rounded-lg px-4 py-2 ${
+                                isCurrentUser ? 'bg-roam-blue text-white' : 'bg-white border shadow-sm'
                               }`}
                             >
-                              {message.body}
+                              <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
+                              <div className="flex items-center justify-between mt-1 text-[11px] opacity-80">
+                                {!isCurrentUser && author?.userType && (
+                                  <span className="uppercase tracking-wide">
+                                    {author.userType === 'provider' ? 'Provider' : author.userType}
+                                  </span>
+                                )}
+                                <span>{formatDistanceToNow(new Date(message.created_at), { addSuffix: true })}</span>
+                              </div>
                             </div>
                           </div>
                         </div>

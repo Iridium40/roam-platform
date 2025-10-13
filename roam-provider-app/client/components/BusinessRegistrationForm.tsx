@@ -25,7 +25,8 @@ import {
   Calendar,
   Globe,
 } from "lucide-react";
-import type { BusinessRegistration, BusinessType } from "@roam/shared";
+import type { BusinessRegistration } from "@roam/shared/dist/types/database/tables/business";
+import type { BusinessType } from "@roam/shared/dist/types/database/enums";
 
 interface BusinessRegistrationFormProps {
   onSubmit: (

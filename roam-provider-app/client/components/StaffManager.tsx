@@ -62,12 +62,8 @@ import {
 import { useProviderAuth } from "@/contexts/auth/ProviderAuthContext";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
-import type {
-  Provider,
-  BusinessLocation,
-  ProviderRole,
-  ProviderVerificationStatus,
-} from "@roam/shared";
+import type { Provider, BusinessLocation } from "@roam/shared/dist/types/database/tables/user";
+import type { ProviderRole, ProviderVerificationStatus } from "@roam/shared/dist/types/database/enums";
 import type { BusinessService } from "@/types/services";
 
 interface StaffManagerProps {

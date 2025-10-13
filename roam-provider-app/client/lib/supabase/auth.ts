@@ -1,5 +1,5 @@
 import { supabase, supabaseAdmin } from "./index";
-import type { AuthCustomer, AuthProvider } from "@roam/shared";
+import type { AuthCustomer, AuthProvider } from "@roam/shared/dist/types/auth";
 
 export interface SignUpData {
   email: string;

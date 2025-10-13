@@ -43,7 +43,8 @@ export interface ConversationService {
 
 export interface ConversationServiceWithDB extends ConversationService {
   getConversationsForUser(userId: string, userType: DatabaseConversationParticipant['user_type']): Promise<{ conversations: ConversationMetadata[]; error?: string }>;
-  createConversationWithDB(data: CreateConversationData): Promise<{ conversationId: string; error?: string }>;
+  createConversationWithDB(data: CreateConversationData): Promise<{ conversationId: string; metadataId?: string; error?: string }>;
+  getDatabaseClient(): ReturnType<typeof createClient>;
 }
 
 // Implementation
@@ -58,6 +59,10 @@ export class TwilioConversationsServiceImpl implements ConversationServiceWithDB
   ) {
     this.twilioClient = twilio(config.accountSid, config.authToken);
     this.supabase = createClient(supabaseUrl, supabaseKey);
+  }
+
+  getDatabaseClient() {
+    return this.supabase;
   }
 
   async createConversation(data: CreateConversationData): Promise<{ conversationId: string; error?: string }> {
@@ -78,7 +83,7 @@ export class TwilioConversationsServiceImpl implements ConversationServiceWithDB
     }
   }
 
-  async createConversationWithDB(data: CreateConversationData): Promise<{ conversationId: string; error?: string }> {
+  async createConversationWithDB(data: CreateConversationData): Promise<{ conversationId: string; metadataId?: string; error?: string }> {
     try {
       // 1. Create Twilio conversation
       const twilioResult = await this.createConversation(data);
@@ -88,20 +93,22 @@ export class TwilioConversationsServiceImpl implements ConversationServiceWithDB
       }
 
       // 2. Store in database
-      const { error: dbError } = await this.supabase
+      const { data: metadataData, error: dbError } = await this.supabase
         .from('conversation_metadata')
         .insert({
           booking_id: data.bookingId,
           twilio_conversation_sid: twilioResult.conversationId,
           participant_count: 0
-        } as any);
+        } as any)
+        .select('id')
+        .single<{ id: string }>();
 
       if (dbError) {
         console.error('Database error:', dbError);
         return { conversationId: '', error: 'Failed to store conversation in database' };
       }
 
-      return { conversationId: twilioResult.conversationId };
+      return { conversationId: twilioResult.conversationId, metadataId: metadataData?.id };
     } catch (error) {
       console.error('Error creating conversation with DB:', error);
       return { 

@@ -9,6 +9,7 @@ export * from './contexts/UnifiedAuthContext';
 // Types
 export * from './types/database';
 export * from './types/twilio';
+export * from './types/booking-conversations';
 // Unified Service Types (explicit exports to avoid conflicts)
 export type {
   UnifiedServiceBase,
@@ -57,6 +58,8 @@ export * from './services/notification-api';
 export * from './services/notification-service';
 export * from './services/twilio-conversations';
 export * from './services/conversations';
+export * from './services/booking-conversations-client';
+export * from './api/twilio-conversations-api';
 export * from './services/stripe-service';
 export * from './services/business-service-subcategories';
 

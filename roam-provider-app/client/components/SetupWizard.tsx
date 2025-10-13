@@ -35,13 +35,8 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth/AuthProvider";
 import { supabase } from "@/lib/supabase";
-import type {
-  BusinessProfile,
-  BusinessLocation,
-  BusinessSetupProgress,
-  SubscriptionPlan,
-  BusinessType,
-} from "@roam/shared";
+import type { BusinessProfile, BusinessLocation, BusinessSetupProgress, SubscriptionPlan } from "@roam/shared/dist/types/database/tables/business";
+import type { BusinessType } from "@roam/shared/dist/types/database/enums";
 
 interface SetupWizardProps {
   businessId: string;

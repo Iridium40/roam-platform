@@ -15,7 +15,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState } from "react";
 import type { BookingWithDetails } from "@/types/index";
-import ConversationChat from "@/components/ConversationChat";
+import EnhancedConversationChat from "@/components/EnhancedConversationChat";
 
 // Import modular components and hooks
 import {
@@ -43,6 +43,9 @@ export default function MyBookings() {
   const [showRescheduleModal, setShowRescheduleModal] = useState(false);
   const [selectedBookingForReschedule, setSelectedBookingForReschedule] =
     useState<BookingWithDetails | null>(null);
+  const [newBookingDate, setNewBookingDate] = useState("");
+  const [newBookingTime, setNewBookingTime] = useState("");
+  const [rescheduleReason, setRescheduleReason] = useState("");
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [selectedBookingForMessage, setSelectedBookingForMessage] =
     useState<BookingWithDetails | null>(null);
@@ -277,36 +280,27 @@ export default function MyBookings() {
         onClose={() => {
           setShowRescheduleModal(false);
           setSelectedBookingForReschedule(null);
+          setNewBookingDate("");
+          setNewBookingTime("");
+          setRescheduleReason("");
         }}
         booking={selectedBookingForReschedule}
-        onReschedule={handleRescheduleBooking}
+        newBookingDate={newBookingDate}
+        newBookingTime={newBookingTime}
+        rescheduleReason={rescheduleReason}
+        onNewDateChange={setNewBookingDate}
+        onNewTimeChange={setNewBookingTime}
+        onRescheduleReasonChange={setRescheduleReason}
+        onRescheduleBooking={() => handleRescheduleBooking(newBookingDate, newBookingTime, rescheduleReason)}
         isRescheduling={isRescheduling}
       />
 
       {/* Messaging Modal */}
-      <ConversationChat
+      <EnhancedConversationChat
         isOpen={showMessageModal}
         onClose={() => setShowMessageModal(false)}
-        booking={
-          selectedBookingForMessage
-            ? {
-                id: selectedBookingForMessage.id,
-                customer_name:
-                  `${currentUser?.first_name || ""} ${currentUser?.last_name || ""}`.trim() ||
-                  "Customer",
-                customer_email: currentUser?.email || "",
-                customer_phone: currentUser?.phone || "",
-                service_name: selectedBookingForMessage.service_name || "Service",
-                provider_name:
-                  `${selectedBookingForMessage.providers?.first_name || ""} ${selectedBookingForMessage.providers?.last_name || ""}`.trim() || "Provider",
-                business_id: selectedBookingForMessage.business_id || "",
-                customer_id: selectedBookingForMessage.customer_id,
-                // Include the actual database profile objects
-                customer_profiles: selectedBookingForMessage.customer_profiles,
-                providers: selectedBookingForMessage.providers,
-              }
-            : undefined
-        }
+        booking={selectedBookingForMessage}
+        currentUser={currentUser}
       />
     </div>
   );

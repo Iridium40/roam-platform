@@ -105,7 +105,9 @@ import BookingStatusIndicator, {
   RealtimeStatusUpdate,
 } from "@/components/BookingStatusIndicator";
 import { StaffManager } from "@/components/StaffManager";
-import type { Provider, Booking, BusinessProfile } from "@roam/shared";
+import type { Provider } from "@roam/shared/dist/types/database/tables/user";
+import type { Booking } from "@roam/shared/dist/types/database/tables/booking";
+import type { BusinessProfile } from "@roam/shared/dist/types/database/tables/business";
 
 // Import the new modular tab components
 import {

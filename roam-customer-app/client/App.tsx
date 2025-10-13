@@ -20,14 +20,19 @@ import { CustomerFavorites } from "@/components/CustomerFavorites";
 // Lazy load pages for better performance
 const Index = lazy(() => import("./pages/Index"));
 const SimpleHomeIndex = lazy(() => import("./pages/SimpleHomeIndex"));
-const SimpleMyBookings = lazy(() => import("./pages/SimpleMyBookings"));
+const IndexFixed = lazy(() => import("./pages/IndexFixed"));
+const MyBookingsFixed = lazy(() => import("./pages/MyBookingsFixed"));
 const ProgressiveIndex = lazy(() => import("./pages/ProgressiveIndex"));
 const SimpleIndex = lazy(() => import("./pages/SimpleIndex"));
+const SimpleMyBookingsTest = lazy(() => import("./pages/SimpleMyBookingsTest"));
+const MinimalMyBookings = lazy(() => import("./pages/MinimalMyBookings"));
+const WorkingMyBookings = lazy(() => import("./pages/WorkingMyBookings"));
 const MyBookings = lazy(() => import("./pages/MyBookings"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const BookService = lazy(() => import("./pages/BookService"));
 const BookingSuccess = lazy(() => import("./pages/BookingSuccess"));
 const BusinessProfile = lazy(() => import("./pages/BusinessProfile"));
+const TwilioMessagingTest = lazy(() => import("./components/TwilioMessagingTest"));
 const ProviderProfile = lazy(() => import("./pages/ProviderProfile"));
 const About = lazy(() => import("./pages/About"));
 const Contact = lazy(() => import("./pages/Contact"));
@@ -65,8 +70,8 @@ const App = () => (
           <AuthProvider>
             <Suspense fallback={<PageLoader />}>
               <Routes>
-                <Route path="/" element={<SimpleHomeIndex />} />
-                <Route path="/bookings" element={<SimpleMyBookings />} />
+                <Route path="/" element={<Index />} />
+                <Route path="/bookings" element={<MyBookings />} />
                 <Route path="/book-service/:serviceId" element={<BookService />} />
                 <Route path="/booking-success" element={<BookingSuccess />} />
                 <Route path="/business/:businessId" element={<BusinessProfile />} />
@@ -81,9 +86,29 @@ const App = () => (
                   path="/my-bookings"
                   element={
                     <ProtectedRoute>
-                      <SimpleMyBookings />
+                      <WorkingMyBookings />
                     </ProtectedRoute>
                   }
+                />
+                <Route
+                  path="/my-bookings-protected"
+                  element={
+                    <ProtectedRoute>
+                      <SimpleMyBookingsTest />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/my-bookings-full"
+                  element={<MinimalMyBookings />}
+                />
+                <Route
+                  path="/my-bookings-original"
+                  element={<MyBookings />}
+                />
+                <Route
+                  path="/test-twilio"
+                  element={<TwilioMessagingTest />}
                 />
                 <Route
                   path="/customer/favorites"

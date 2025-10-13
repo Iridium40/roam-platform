@@ -1,7 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
-export const runtime = 'edge';
-
 // Server-Sent Events (SSE) notification endpoint for Vercel edge runtime
 export default async function handler(request: VercelRequest, response: VercelResponse) {
   // Enable CORS for SSE

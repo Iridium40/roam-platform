@@ -3,7 +3,7 @@ import { AuthAPI, SignUpData, SignInData, ProfileUpdateData } from "@/lib/supaba
 import { StorageAPI } from "@/lib/supabase/storage";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "@/hooks/use-toast";
-import type { AuthCustomer } from "@roam/shared";
+import type { AuthCustomer } from "@roam/shared/dist/types/auth";
 
 interface CustomerAuthContextType {
   customer: AuthCustomer | null;

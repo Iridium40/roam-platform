@@ -29,7 +29,8 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth/AuthProvider";
 import { supabase } from "@/lib/supabase";
-import type { CalendarConnection, CalendarType } from "@roam/shared";
+import type { CalendarConnection } from "@roam/shared/dist/types/database/tables/calendar";
+import type { CalendarType } from "@roam/shared/dist/types/database/enums";
 
 interface CalendarIntegrationProps {
   providerId: string;

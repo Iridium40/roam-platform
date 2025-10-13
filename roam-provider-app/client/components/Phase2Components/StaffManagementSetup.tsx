@@ -42,7 +42,7 @@ import {
   Info,
   Trash2
 } from 'lucide-react';
-import type { UserRole, VerificationStatus } from '@roam/shared';
+import type { ProviderRole as UserRole, ProviderVerificationStatus as VerificationStatus } from '@roam/shared/dist/types/database/enums';
 
 interface StaffMember {
   id: string;

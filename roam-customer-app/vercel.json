@@ -205,6 +205,10 @@
       "destination": "/api/test/generate-phase2-token.ts"
     },
     {
+      "source": "/api/test-twilio",
+      "destination": "/api/test-twilio.ts"
+    },
+    {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
