@@ -1,0 +1,117 @@
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import ShareMenu from "@/components/ShareMenu";
+import { Footer } from "@/components/Footer";
+import Hero from "@/components/roam/Hero";
+import ValueProps from "@/components/roam/ValueProps";
+import MarketingHowItWorks from "@/components/roam/HowItWorks";
+import ServicesShowcase from "@/components/roam/ServicesShowcase";
+import TrustSafety from "@/components/roam/TrustSafety";
+import LocationBenefits from "@/components/roam/LocationBenefits";
+import SocialProof from "@/components/roam/SocialProof";
+import FAQ from "@/components/roam/FAQ";
+import { ChevronDown } from "lucide-react";
+import { Link } from "react-router-dom";
+
+export default function MarketingLanding() {
+  const handleSubscribe = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const email = new FormData(form).get("email");
+    if (!email || typeof email !== "string") return;
+
+    try {
+      const response = await fetch("/api/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      if (!response.ok) throw new Error("subscribe_failed");
+      await response.json();
+      (form.elements.namedItem("email") as HTMLInputElement).value = "";
+    } catch (error) {
+      console.error("Subscription failed", error);
+    }
+  };
+
+  return (
+    <div className="bg-background">
+      {/* Launch Hero */}
+      <section className="relative overflow-hidden">
+        <div className="absolute top-6 left-6 z-30">
+          <ShareMenu variant="secondary" />
+        </div>
+        <div className="container relative z-20 mx-auto flex min-h-[60vh] flex-col items-center justify-center gap-6 py-16 text-center">
+          <img
+            src="https://cdn.builder.io/api/v1/image/assets%2Fa42b6f9ec53e4654a92af75aad56d14f%2Fb039513f83c04be3b573c6e38287f9ab?format=webp&width=800"
+            alt="ROAM logo"
+            className="h-[6.75rem] w-auto object-contain md:h-[8.1rem]"
+          />
+          <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight text-white">
+            We’re launching soon.
+          </h1>
+          <p className="max-w-2xl text-white/90">
+            The new ROAM experience is almost here. Stay tuned for premium wellness services delivered anywhere you are.
+          </p>
+          <form onSubmit={handleSubscribe} className="mx-auto mt-2 w-full max-w-md">
+            <div className="flex items-center gap-2">
+              <Input
+                type="email"
+                name="email"
+                required
+                placeholder="Enter your email for news & announcements"
+                aria-label="Email address"
+                className="bg-white/95"
+              />
+              <Button type="submit" className="px-6">
+                Register
+              </Button>
+            </div>
+            <p className="mt-2 text-xs text-white/90">
+              By registering, you agree to our{" "}
+              <Link to="/privacy" className="underline">
+                Privacy Policy
+              </Link>
+              .
+            </p>
+          </form>
+        </div>
+        <div className="absolute inset-0 z-0 h-full w-full overflow-hidden">
+          <div className="absolute inset-0 h-full w-full">
+            <iframe
+              src="https://www.youtube.com/embed/-g5P96JAif0?autoplay=1&mute=1&loop=1&playlist=-g5P96JAif0&controls=0&showinfo=0&rel=0&modestbranding=1&playsinline=1"
+              className="absolute left-1/2 top-1/2 h-auto min-h-full w-auto min-w-full"
+              style={{
+                filter: "brightness(0.85)",
+                pointerEvents: "none",
+                aspectRatio: "16/9",
+                transform: "translate(-50%, -50%) scale(1.08)",
+              }}
+              frameBorder={0}
+              allow="autoplay; encrypted-media"
+              title="ROAM Coming Soon"
+            />
+          </div>
+        </div>
+        <div className="pointer-events-none absolute inset-0 z-10 bg-black/30" />
+        <div className="pointer-events-none absolute inset-0 z-10 bg-[radial-gradient(600px_300px_at_20%_10%,hsl(var(--primary)/0.12),transparent),radial-gradient(600px_300px_at_80%_20%,hsl(var(--secondary)/0.1),transparent)]" />
+        <div className="absolute left-1/2 bottom-6 z-20 -translate-x-1/2 text-white/90 animate-bounce" aria-hidden>
+          <ChevronDown className="h-6 w-6" />
+        </div>
+      </section>
+
+      {/* Marketing Sections */}
+      <Hero />
+      <ValueProps />
+      <MarketingHowItWorks />
+      <ServicesShowcase />
+      <TrustSafety />
+      <LocationBenefits />
+      <SocialProof />
+      <FAQ />
+      <Footer />
+    </div>
+  );
+}
+

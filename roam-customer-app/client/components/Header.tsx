@@ -2,7 +2,6 @@ import { Button } from "@/components/ui/button";
 import { Menu, X, Calendar } from "lucide-react";
 import { useState, useCallback, Suspense, lazy } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { EdgeNotificationCenter } from "@/components/EdgeNotificationCenter";
 import { CustomerAvatarDropdown } from "@/components/CustomerAvatarDropdown";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSystemConfig } from "@/hooks/useSystemConfig";
@@ -13,6 +12,13 @@ const CustomerAuthModal = lazy(() =>
     default: module.CustomerAuthModal
   }))
 );
+
+const navLinks = [
+  { to: "/how-it-works", label: "How It Works" },
+  { to: "/about", label: "About Us" },
+  { to: "/services", label: "Our Services" },
+  { to: "/contact", label: "Contact Us" },
+];
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -51,32 +57,21 @@ export function Header() {
           </div>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-8">
-            <Link
-              to="/how-it-works"
-              className="text-foreground/70 hover:text-roam-blue transition-colors"
-            >
-              How it Works
-            </Link>
-            <Link
-              to="/about"
-              className="text-foreground/70 hover:text-roam-blue transition-colors"
-            >
-              About
-            </Link>
-            <Link
-              to="/contact"
-              className="text-foreground/70 hover:text-roam-blue transition-colors"
-            >
-              Contact
-            </Link>
-            
+          <div className="hidden md:flex flex-1 items-center justify-center space-x-8">
+            {navLinks.map(({ to, label }) => (
+              <Link key={to} to={to} className="text-foreground/70 hover:text-roam-blue transition-colors">
+                {label}
+              </Link>
+            ))}
+          </div>
+
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex items-center space-x-4">
             {isAuthenticated ? (
               <>
-                <EdgeNotificationCenter />
                 <Button
                   variant="ghost"
-                  className="text-foreground hover:bg-foreground/10 border-2 border-gray-400"
+                  className="text-foreground hover:bg-foreground/10 border border-foreground/20"
                   onClick={handleSignInClick}
                 >
                   <Calendar className="w-4 h-4 mr-2" />
@@ -94,7 +89,7 @@ export function Header() {
                   Sign In
                 </Button>
                 <Button asChild className="bg-roam-blue hover:bg-roam-blue/90">
-                  <Link to="/become-a-provider">Become a Provider</Link>
+                  <Link to="/provider-portal">Become a Provider</Link>
                 </Button>
               </>
             )}
@@ -119,25 +114,12 @@ export function Header() {
         {/* Mobile Navigation */}
         {isMenuOpen && (
           <div className="md:hidden py-4 border-t">
-            <div className="flex flex-col space-y-4">
-              <Link
-                to="/how-it-works"
-                className="text-foreground/70 hover:text-roam-blue transition-colors"
-              >
-                How it Works
-              </Link>
-              <Link
-                to="/about"
-                className="text-foreground/70 hover:text-roam-blue transition-colors"
-              >
-                About
-              </Link>
-              <Link
-                to="/contact"
-                className="text-foreground/70 hover:text-roam-blue transition-colors"
-              >
-                Contact
-              </Link>
+            <div className="flex flex-col space-y-4 text-center">
+              {navLinks.map(({ to, label }) => (
+                <Link key={to} to={to} className="text-foreground/70 hover:text-roam-blue transition-colors">
+                  {label}
+                </Link>
+              ))}
               
               {isAuthenticated ? (
                 <>
@@ -145,8 +127,7 @@ export function Header() {
                     onClick={handleSignInClick}
                     className="text-foreground/70 hover:text-roam-blue transition-colors flex items-center"
                   >
-                    <Calendar className="w-4 h-4 mr-2" />
-                    My Bookings
+                    <Calendar className="w-4 h-4" />
                   </button>
                   <Link
                     to="/customer/profile"
@@ -171,7 +152,7 @@ export function Header() {
                     Sign In
                   </Button>
                   <Button asChild className="bg-roam-blue hover:bg-roam-blue/90">
-                    <Link to="/become-a-provider">Become a Provider</Link>
+                    <Link to="/provider-portal">Become a Provider</Link>
                   </Button>
                 </div>
               )}

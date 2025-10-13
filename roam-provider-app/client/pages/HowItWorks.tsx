@@ -1,53 +1,5 @@
-import { Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
-
-function Hero() {
-  return (
-    <div className="relative text-primary-foreground py-20 px-4">
-      <div className="absolute inset-0 w-full h-full overflow-hidden">
-        <div className="absolute inset-0 w-full h-full">
-          <iframe
-            src="https://www.youtube.com/embed/Z0A84Ev5Waw?autoplay=1&mute=1&loop=1&playlist=Z0A84Ev5Waw&controls=0&showinfo=0&rel=0&modestbranding=1&playsinline=1"
-            className="absolute top-1/2 left-1/2 min-w-full min-h-full w-auto h-auto"
-            style={{
-              filter: "brightness(0.7)",
-              pointerEvents: "none",
-              aspectRatio: "16/9",
-              transform: "translate(-50%, -50%) scale(1.1)",
-            }}
-            frameBorder="0"
-            allow="autoplay; encrypted-media"
-            title="Background Video"
-          />
-        </div>
-      </div>
-      <div className="relative z-10 max-w-7xl mx-auto text-center px-6 sm:px-8 md:px-12">
-        <img
-          src="https://cdn.builder.io/api/v1/image/assets%2Fa42b6f9ec53e4654a92af75aad56d14f%2F4b7dee81de554d3fb6de670e595f88d0?format=webp&width=800"
-          alt="ROAM Provider Management"
-          className="mx-auto block h-auto w-full max-w-[min(90%,520px)] object-contain"
-        />
-        <h1 className="sr-only">ROAM Provider Management</h1>
-        <p className="text-xl md:text-2xl mb-8 text-primary-foreground/90">
-          Everything you need to grow and manage your wellness business
-        </p>
-        <div className="mt-6 flex flex-col sm:flex-row gap-4 justify-center">
-          <Button asChild>
-            <Link to="/apply">Get Started Today</Link>
-          </Button>
-          <Button
-            asChild
-            className="bg-[#f88221] text-white hover:bg-[#f88221]/90"
-          >
-            <Link to="/demo">Watch Demo</Link>
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function Check({ className = "w-5 h-5 text-green-500 mr-2" }: { className?: string }) {
   return (
@@ -211,7 +163,6 @@ function Features() {
 export default function HowItWorks() {
   return (
     <div className="bg-background">
-      <Hero />
       <Features />
     </div>
   );

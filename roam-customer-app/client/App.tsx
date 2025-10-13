@@ -34,10 +34,10 @@ const BookingSuccess = lazy(() => import("./pages/BookingSuccess"));
 const BusinessProfile = lazy(() => import("./pages/BusinessProfile"));
 const TwilioMessagingTest = lazy(() => import("./components/TwilioMessagingTest"));
 const ProviderProfile = lazy(() => import("./pages/ProviderProfile"));
+const MarketingLanding = lazy(() => import("./pages/MarketingLanding"));
 const About = lazy(() => import("./pages/About"));
 const Contact = lazy(() => import("./pages/Contact"));
 const HowItWorks = lazy(() => import("./pages/HowItWorks"));
-const WhyRoam = lazy(() => import("./pages/WhyRoam"));
 const SignIn = lazy(() => import("./pages/SignIn"));
 const BecomeProvider = lazy(() => import("./pages/BecomeProvider"));
 const CustomerLocations = lazy(() => import("./pages/CustomerLocations"));
@@ -76,10 +76,12 @@ const App = () => (
                 <Route path="/booking-success" element={<BookingSuccess />} />
                 <Route path="/business/:businessId" element={<BusinessProfile />} />
                 <Route path="/provider/:providerId" element={<ProviderProfile />} />
+                <Route path="/landing" element={<MarketingLanding />} />
                 <Route path="/about" element={<About />} />
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/how-it-works" element={<HowItWorks />} />
-                <Route path="/whyroam" element={<WhyRoam />} />
+                <Route path="/whyroam" element={<MarketingLanding />} />
+                <Route path="/booknow" element={<Index />} />
                 <Route path="/sign-in" element={<SignIn />} />
                 <Route path="/become-a-provider" element={<BecomeProvider />} />
                 <Route

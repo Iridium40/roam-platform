@@ -17,7 +17,6 @@ import {
   Heart,
   MapPin,
   LogOut,
-  ChevronDown,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -36,31 +35,19 @@ export const CustomerAvatarDropdown: React.FC = () => {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          className="relative h-10 w-auto px-3 py-2 text-left font-normal border border-black/20 hover:border-black/30 rounded-md shadow-sm"
-        >
-          <div className="flex items-center gap-3">
-            <Avatar className="h-8 w-8">
-              <AvatarImage
-                src={
-                  customer.image_url ||
-                  `https://api.dicebear.com/7.x/initials/svg?seed=${customer.first_name}${customer.last_name}`
-                }
-                alt={`${customer.first_name} ${customer.last_name}`}
-              />
-              <AvatarFallback className="bg-roam-blue text-white text-xs">
-                {initials}
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex flex-col items-start">
-              <span className="text-sm font-medium">
-                {customer.first_name} {customer.last_name}
-              </span>
-              <span className="text-xs text-foreground/60">Customer</span>
-            </div>
-            <ChevronDown className="h-4 w-4 text-foreground/60" />
-          </div>
+        <Button variant="ghost" className="h-10 w-10 rounded-full border border-foreground/10 p-0">
+          <Avatar className="h-8 w-8">
+            <AvatarImage
+              src={
+                customer.image_url ||
+                `https://api.dicebear.com/7.x/initials/svg?seed=${customer.first_name}${customer.last_name}`
+              }
+              alt={`${customer.first_name} ${customer.last_name}`}
+            />
+            <AvatarFallback className="bg-roam-blue text-white text-xs">
+              {initials}
+            </AvatarFallback>
+          </Avatar>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-64" align="end" forceMount>

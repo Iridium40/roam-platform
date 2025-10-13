@@ -18,7 +18,6 @@ import {
   Play
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { Header } from "@/components/Header";
 
 export default function HowItWorks() {
   const customerSteps = [
@@ -104,7 +103,6 @@ export default function HowItWorks() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-accent/5 to-roam-light-blue/10">
-      <Header />
       
       {/* Hero Section */}
       <section className="py-16 bg-gradient-to-r from-roam-blue to-roam-light-blue text-white">
@@ -124,8 +122,8 @@ export default function HowItWorks() {
                   Get Started
                 </Link>
               </Button>
-              <Button asChild size="lg" variant="outline" className="border-white text-white hover:bg-white/10">
-                <Link to="/become-a-provider">
+              <Button asChild size="lg" variant="outline" className="border-white text-white bg-white/10 hover:bg-white/20">
+                <Link to="/provider-portal">
                   <Users className="w-5 h-5 mr-2" />
                   Become a Provider
                 </Link>
@@ -304,8 +302,8 @@ export default function HowItWorks() {
                     Find Services
                   </Link>
                 </Button>
-                <Button asChild size="lg" variant="outline">
-                  <Link to="/become-a-provider">
+                <Button asChild size="lg" variant="outline" className="border-roam-blue text-roam-blue hover:bg-roam-blue/10">
+                  <Link to="/provider-portal">
                     <Users className="w-5 h-5 mr-2" />
                     Become a Provider
                   </Link>
