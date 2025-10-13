@@ -106,34 +106,12 @@ export default function ProviderPortal() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-accent/5 to-roam-light-blue/10">
-      {/* Navigation */}
-      <nav className="border-b bg-background/80 backdrop-blur-md">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <img
-                src="https://cdn.builder.io/api/v1/image/assets%2Fa42b6f9ec53e4654a92af75aad56d14f%2F38446bf6c22b453fa45caf63b0513e21?format=webp&width=800"
-                alt="ROAM - Your Best Life. Everywhere."
-                className="h-8 w-auto"
-              />
-            </div>
-          </div>
-        </div>
-      </nav>
-
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-12">
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-center min-h-[60vh] lg:min-h-[80vh]">
             {/* Left Side - Branding */}
             <div className="text-center lg:text-left space-y-8">
               <div>
-                <div className="flex justify-center lg:justify-start mb-8">
-                  <img
-                    src="https://cdn.builder.io/api/v1/image/assets%2Fa42b6f9ec53e4654a92af75aad56d14f%2F38446bf6c22b453fa45caf63b0513e21?format=webp&width=800"
-                    alt="ROAM - Your Best Life. Everywhere."
-                    className="h-16 sm:h-20 lg:h-24 w-auto"
-                  />
-                </div>
                 <h1 className="text-2xl sm:text-4xl lg:text-6xl font-bold mb-4 sm:mb-6 text-roam-blue">
                   Provider Management
                 </h1>
@@ -337,59 +315,6 @@ export default function ProviderPortal() {
           </div>
         </div>
       </div>
-
-      {/* Footer */}
-      <footer className="bg-gray-50 border-t border-gray-200 py-8 mt-16">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-6xl mx-auto">
-            {/* Agreement Statement */}
-            <div className="text-center mb-6">
-              <p className="text-sm text-gray-600">
-                By entering and using this portal, you agree to comply with our
-                policies and terms.
-              </p>
-            </div>
-
-            {/* Footer Links */}
-            <div className="flex flex-wrap justify-center items-center gap-6 text-sm">
-              <a
-                href="#"
-                className="text-gray-600 hover:text-roam-blue transition-colors"
-              >
-                Terms of Service
-              </a>
-              <span className="text-gray-300">|</span>
-              <a
-                href="#"
-                className="text-gray-600 hover:text-roam-blue transition-colors"
-              >
-                Privacy Policy
-              </a>
-              <span className="text-gray-300">|</span>
-              <a
-                href="#"
-                className="text-gray-600 hover:text-roam-blue transition-colors"
-              >
-                Cookie Policy
-              </a>
-              <span className="text-gray-300">|</span>
-              <a
-                href="#"
-                className="text-gray-600 hover:text-roam-blue transition-colors"
-              >
-                Disclaimer
-              </a>
-            </div>
-
-            {/* Copyright */}
-            <div className="text-center mt-6 pt-6 border-t border-gray-200">
-              <p className="text-xs text-gray-500">
-                © {new Date().getFullYear()} ROAM. All rights reserved.
-              </p>
-            </div>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }

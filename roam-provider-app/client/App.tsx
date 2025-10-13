@@ -12,6 +12,7 @@ import { AuthProvider } from "@/contexts/auth/AuthProvider";
 import { ProtectedRoute, RoleBasedRedirect } from "@/components/ProtectedRoute";
 import SystemBrandingInitializer from "@/components/SystemBrandingInitializer";
 import AnnouncementPopup from "@/components/AnnouncementPopup";
+import Layout from "./components/layout/Layout";
 
 // Type declaration for React root container
 declare global {
@@ -36,6 +37,14 @@ import Phase2Test from "./pages/onboarding/Phase2Test";
 import StaffOnboardingFlow from "./pages/onboarding/StaffOnboardingFlow";
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
+import CancellationPolicy from "./pages/CancellationPolicy";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import ProviderAgreement from "./pages/ProviderAgreement";
+import Services from "./pages/Services";
+import TermsOfService from "./pages/TermsOfService";
+import HowItWorksPage from "./pages/HowItWorks";
+import AboutPage from "./pages/About";
+import Contact from "./pages/Contact";
 
 const queryClient = new QueryClient();
 
@@ -48,16 +57,28 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <Routes>
-            {/* Landing Page */}
+            {/* Public marketing pages */}
+            <Route element={<Layout />}>
+              <Route path="/landing" element={<LandingPage />} />
+              <Route path="/how-it-works" element={<HowItWorksPage />} />
+              <Route path="/about" element={<AboutPage />} />
+              <Route path="/services" element={<Services />} />
+              <Route path="/contact" element={<Contact />} />
+              <Route path="/provider-portal" element={<ProviderPortal />} />
+              <Route path="/privacy" element={<PrivacyPolicy />} />
+              <Route path="/terms" element={<TermsOfService />} />
+              <Route path="/provider-agreement" element={<ProviderAgreement />} />
+              <Route path="/cancellation" element={<CancellationPolicy />} />
+            </Route>
+
+            {/* Landing redirect */}
             <Route path="/" element={<Navigate to="/landing" replace />} />
-            <Route path="/landing" element={<LandingPage />} />
 
             {/* Blog */}
             <Route path="/blog" element={<Blog />} />
 
             {/* Provider Portal Authentication */}
             <Route path="/sign-in" element={<SignIn />} />
-            <Route path="/provider-portal" element={<ProviderPortal />} />
 
             {/* Development/Testing */}
             <Route path="/image-upload-test" element={<ImageUploadTest />} />
