@@ -59,7 +59,7 @@ const App = () => (
           <Routes>
             {/* Public marketing pages */}
             <Route element={<Layout />}>
-              <Route path="/landing" element={<LandingPage />} />
+              <Route path="/roampro" element={<LandingPage />} />
               <Route path="/how-it-works" element={<HowItWorksPage />} />
               <Route path="/about" element={<AboutPage />} />
               <Route path="/services" element={<Services />} />
@@ -72,7 +72,7 @@ const App = () => (
             </Route>
 
             {/* Landing redirect */}
-            <Route path="/" element={<Navigate to="/landing" replace />} />
+            <Route path="/" element={<Navigate to="/roampro" replace />} />
 
             {/* Blog */}
             <Route path="/blog" element={<Blog />} />

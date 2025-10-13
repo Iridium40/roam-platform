@@ -19,7 +19,7 @@ function MarketingHeader() {
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/60">
       <div className="container flex h-16 items-center justify-between">
-        <Link to="/landing" className="flex items-center">
+        <Link to="/roampro" className="flex items-center">
           <img
             src="https://cdn.builder.io/api/v1/image/assets%2Fa42b6f9ec53e4654a92af75aad56d14f%2F531be16729404882bb7cc0ddef6620dd?format=webp&width=800"
             alt="ROAM"

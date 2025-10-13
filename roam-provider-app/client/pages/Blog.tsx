@@ -110,7 +110,7 @@ export default function Blog() {
               />
             </div>
             <div className="flex items-center space-x-4">
-              <Link to="/landing">
+              <Link to="/roampro">
                 <Button variant="ghost" size="sm">
                   <ArrowLeft className="w-4 h-4 mr-2" />
                   Back to Landing
