@@ -132,6 +132,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const processingFee = 30; // Stripe processing fee in cents
     const totalAmountCents = Math.round(totalAmount * 100);
 
+    // Determine domain for redirect URLs
+    const isProd = process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production';
+    const DOMAIN = isProd
+      ? 'https://roamservices.app'
+      : (process.env.VITE_APP_URL || 'http://localhost:5174');
+
     // Create Checkout Session
     const session = await stripe.checkout.sessions.create({
       customer: stripeCustomerId,
@@ -158,8 +164,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         },
       ],
       mode: 'payment',
-      success_url: `${process.env.VITE_APP_URL || 'http://localhost:5174'}/booking-success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.VITE_APP_URL || 'http://localhost:5174'}/book-service?serviceId=${serviceId}&businessId=${businessId}`,
+      success_url: `${DOMAIN}/booking-success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${DOMAIN}/book-service?serviceId=${serviceId}&businessId=${businessId}`,
       metadata: {
         booking_id: bookingId || '',
         customer_id: customerId,
