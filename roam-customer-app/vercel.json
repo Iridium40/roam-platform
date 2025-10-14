@@ -207,11 +207,16 @@
     {
       "source": "/api/test-twilio",
       "destination": "/api/test-twilio.ts"
-    },
-    {
-      "source": "/((?!api/).*)",
-      "destination": "/index.html"
     }
   ],
-  "routes": []
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ]
 }
