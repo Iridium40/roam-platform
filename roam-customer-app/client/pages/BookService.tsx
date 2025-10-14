@@ -1123,43 +1123,46 @@ export default function BookService() {
     const businessDeliveryTypes = getDeliveryTypes(selectedBusiness);
     const deliveryType = selectedDeliveryType || businessDeliveryTypes[0] || 'business_location';
 
-    // Prepare booking details for checkout
+    // Prepare booking details for creation
     const bookingDetails = {
       serviceId: service.id,
       businessId: selectedBusiness.id,
       customerId: customer.id,
       providerId: selectedProvider?.id || null,
-      bookingDate: selectedDate.toISOString().split('T')[0], // Format as YYYY-MM-DD
+      bookingDate: selectedDate.toISOString().split('T')[0],
       startTime: selectedTime,
       guestName: `${customer.first_name} ${customer.last_name}`,
       guestEmail: customer.email,
       guestPhone: customer.phone || '',
       deliveryType: deliveryType,
       businessLocationId: selectedBusinessLocation?.id || null,
-      // Don't include temporary location IDs in the booking
       customerLocationId: selectedCustomerLocation?.id.startsWith('temp-') ? null : (selectedCustomerLocation?.id || null),
-      // Include address details for temporary/unsaved locations
-      specialInstructions: selectedCustomerLocation?.id.startsWith('temp-') 
+      specialInstructions: selectedCustomerLocation?.id.startsWith('temp-')
         ? `Service Address: ${selectedCustomerLocation.street_address}${selectedCustomerLocation.unit_number ? `, ${selectedCustomerLocation.unit_number}` : ''}, ${selectedCustomerLocation.city}, ${selectedCustomerLocation.state} ${selectedCustomerLocation.zip_code}`
-        : '', 
+        : '',
       promotionId: promotion?.id || null,
       totalAmount: calculateTotalAmount(),
       serviceName: service.name,
       businessName: selectedBusiness.business_name,
     };
 
-    console.log('💳 Creating Stripe Checkout Session with:', bookingDetails);
+    console.log('📝 Creating booking before Stripe Checkout:', bookingDetails);
 
     try {
-      // Call backend to create Stripe Checkout Session
-      console.log('🌐 Making API call to:', '/api/stripe/create-checkout-session');
+      // 1. Create booking record first
+      const bookingRecord = await import('../lib/api/bookings');
+      const createdBooking = await bookingRecord.bookingsAPI.createBooking(bookingDetails);
+      const bookingId = createdBooking.id;
 
+      // 2. Call backend to create Stripe Checkout Session with bookingId
+      const stripePayload = { ...bookingDetails, bookingId };
+      console.log('💳 Creating Stripe Checkout Session with:', stripePayload);
       const response = await fetch('/api/stripe/create-checkout-session', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(bookingDetails),
+        body: JSON.stringify(stripePayload),
       });
 
       console.log('📡 Response status:', response.status);
@@ -1176,7 +1179,6 @@ export default function BookService() {
 
       if (result.url) {
         console.log('✅ Checkout Session created successfully');
-        // Redirect to Stripe Checkout
         window.location.href = result.url;
       } else {
         console.error('❌ Failed to create Checkout Session:', result.error || result);
@@ -1187,16 +1189,13 @@ export default function BookService() {
         });
       }
     } catch (error) {
-      console.error('❌ Error during Checkout Session creation:', error);
-
-      // Provide more detailed error information
+      console.error('❌ Error during booking/Checkout Session creation:', error);
       let errorMessage = "An unexpected error occurred. Please try again.";
       if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
         errorMessage = "Network error: Could not connect to payment service. Please check your connection and try again.";
       } else if (error instanceof Error) {
         errorMessage = `Error: ${error.message}`;
       }
-
       toast({
         title: "Payment Setup Error",
         description: errorMessage,
