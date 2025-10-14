@@ -1129,6 +1129,15 @@ export default function BookService() {
     if (selectedTime && selectedTime.length === 5) {
       formattedStartTime = selectedTime + ':00';
     }
+    // Only set one of business_location_id or customer_location_id based on deliveryType
+    let business_location_id = null;
+    let customer_location_id = null;
+    if (deliveryType === 'business_location') {
+      business_location_id = selectedBusinessLocation?.id || null;
+    } else if (deliveryType === 'customer_location') {
+      customer_location_id = selectedCustomerLocation?.id && !selectedCustomerLocation.id.startsWith('temp-') ? selectedCustomerLocation.id : null;
+    }
+
     const bookingDetails = {
       service_id: service.id,
       business_id: selectedBusiness.id,
@@ -1140,8 +1149,8 @@ export default function BookService() {
       guest_email: customer.email,
       guest_phone: customer.phone || '',
       delivery_type: deliveryType,
-      business_location_id: selectedBusinessLocation?.id || null,
-      customer_location_id: selectedCustomerLocation?.id && !selectedCustomerLocation.id.startsWith('temp-') ? selectedCustomerLocation.id : null,
+      business_location_id,
+      customer_location_id,
       special_instructions: selectedCustomerLocation?.id && selectedCustomerLocation.id.startsWith('temp-')
         ? `Service Address: ${selectedCustomerLocation.street_address}${selectedCustomerLocation.unit_number ? `, ${selectedCustomerLocation.unit_number}` : ''}, ${selectedCustomerLocation.city}, ${selectedCustomerLocation.state} ${selectedCustomerLocation.zip_code}`
         : '',

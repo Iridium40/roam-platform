@@ -38,215 +38,91 @@ import {
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import ShareModal from "@/components/ShareModal";
-import BusinessDocumentUploadForm from "@/components/BusinessDocumentUploadForm";
 
-interface BusinessSettingsTabProps {
-  providerData: any;
-  business: any;
-}
-
-interface ServiceCategory {
-  id: string;
-  service_category_type: string;
-  description?: string;
-  is_active: boolean;
-}
-
-interface ServiceSubcategory {
-  id: string;
-  service_subcategory_type: string;
-  description?: string;
-  is_active: boolean;
-}
-
-interface BusinessServiceCategory {
-  id: string;
-  business_id: string;
-  category_id: string;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-  service_categories?: ServiceCategory;
-}
-
-interface BusinessServiceSubcategory {
-  id: string;
-  business_id: string;
-  subcategory_id: string;
-  category_id: string;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-  service_subcategories?: ServiceSubcategory;
-  service_categories?: ServiceCategory;
-}
-
-interface ServiceEligibilityData {
-  business_id: string;
-  approved_categories: BusinessServiceCategory[];
-  approved_subcategories: BusinessServiceSubcategory[];
-  subcategories_by_category: Record<string, BusinessServiceSubcategory[]>;
-  stats: {
-    total_categories: number;
-    total_subcategories: number;
-    categories_with_subcategories: number;
-    available_services_count: number;
-    last_updated: number | null;
-  };
-  last_fetched: string;
-}
-
-export default function BusinessSettingsTab({
-  providerData,
-  business,
-}: BusinessSettingsTabProps) {
-  const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
-  const [businessData, setBusinessData] = useState({
-    business_name: "",
-    business_type: "independent" as const,
-    contact_email: "",
-    phone: "",
-    website_url: "",
-    business_description: "",
-    logo_url: "",
-    cover_image_url: "",
-    business_hours: {
-      monday: { open: "09:00", close: "17:00", closed: false },
-      tuesday: { open: "09:00", close: "17:00", closed: false },
-      wednesday: { open: "09:00", close: "17:00", closed: false },
-      thursday: { open: "09:00", close: "17:00", closed: false },
-      friday: { open: "09:00", close: "17:00", closed: false },
-      saturday: { open: "10:00", close: "15:00", closed: false },
-      sunday: { open: "10:00", close: "15:00", closed: true },
-    },
-  });
-  const [isEditing, setIsEditing] = useState(false);
-  const [logoUploading, setLogoUploading] = useState(false);
-  const [coverUploading, setCoverUploading] = useState(false);
-  
-  // Business Locations State
-  const [locations, setLocations] = useState<any[]>([]);
-  const [showAddLocationModal, setShowAddLocationModal] = useState(false);
-  const [editingLocation, setEditingLocation] = useState<any>(null);
-  const [showShareModal, setShowShareModal] = useState(false);
-  const [showDocumentUploadModal, setShowDocumentUploadModal] = useState(false);
-  const [businessDocuments, setBusinessDocuments] = useState<any[]>([]);
-  const [documentsLoading, setDocumentsLoading] = useState(false);
-
-  // Service Eligibility State
-  const [serviceEligibility, setServiceEligibility] = useState<ServiceEligibilityData | null>(null);
-  const [eligibilityLoading, setEligibilityLoading] = useState(false);
-  const [eligibilityError, setEligibilityError] = useState<string | null>(null);
-  const [locationForm, setLocationForm] = useState({
-    location_name: "",
-    address_line1: "",
-    address_line2: "",
-    city: "",
-    state: "",
-    postal_code: "",
-    country: "",
-    latitude: "",
-    longitude: "",
-    is_primary: false,
-    offers_mobile_services: false,
-    mobile_service_radius: 25,
-  });
-
-  // Load service eligibility data
-  const loadServiceEligibility = async (checkMounted?: () => boolean) => {
-    if (!business?.id) {
-      console.warn('loadServiceEligibility: No business ID available');
-      return;
-    }
-
-    try {
-      setEligibilityLoading(true);
-      setEligibilityError(null);
-
-      console.log('Loading service eligibility for business:', business.id);
-
-      // Use cached auth headers (optimized)
-      const { getAuthHeaders } = await import('@/lib/api/authUtils');
-      const headers = await getAuthHeaders();
-
-      const response = await fetch(`/api/business/service-eligibility?business_id=${business.id}`, {
-        method: 'GET',
-        headers,
-      });
-
-      // Check if component is still mounted before proceeding
-      if (checkMounted && !checkMounted()) {
-        console.log('Component unmounted, aborting service eligibility load');
-        return;
-      }
-
-      // Check if response is ok before trying to parse JSON
-      if (!response.ok) {
-        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-
-        // Try to parse error response if it's JSON
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.error || errorMessage;
-        } catch (parseError) {
-          // If we can't parse the error response, use the status text
-          console.warn('Could not parse error response:', parseError);
-        }
-
-        throw new Error(errorMessage);
-      }
-
-      // Parse the successful response
-      const responseData = await response.json();
-
-      if (!responseData) {
-        throw new Error('No data received from server');
-      }
-
-      // Check if component is still mounted before setting state
-      if (checkMounted && !checkMounted()) {
-        console.log('Component unmounted, not setting service eligibility state');
-        return;
-      }
-
-      console.log('Service eligibility loaded successfully:', {
-        businessId: responseData.business_id,
-        categoriesCount: responseData.approved_categories?.length || 0,
-        subcategoriesCount: responseData.approved_subcategories?.length || 0,
-        debug: responseData._debug
-      });
-
-      // Ensure required fields exist with defaults
-      const normalizedData = {
-        business_id: responseData.business_id || business.id,
-        approved_categories: responseData.approved_categories || [],
-        approved_subcategories: responseData.approved_subcategories || [],
-        subcategories_by_category: responseData.subcategories_by_category || {},
-        stats: {
-          total_categories: 0,
-          total_subcategories: 0,
-          categories_with_subcategories: 0,
-          available_services_count: 0,
-          last_updated: null,
-          ...responseData.stats
-        },
-        last_fetched: responseData.last_fetched || new Date().toISOString()
-      };
-
-      setServiceEligibility(normalizedData);
-
-    } catch (error) {
-      console.error('Error loading service eligibility:', error);
-
-      // Check if component is still mounted before setting error state
-      if (checkMounted && !checkMounted()) {
-        console.log('Component unmounted, not setting error state');
-        return;
-      }
-
-      const errorMessage = error instanceof Error ? error.message : 'Failed to load service eligibility';
-      setEligibilityError(errorMessage);
+      {/* Approved Service Categories - Grouped List */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <Tags className="w-5 h-5 mr-2" />
+            Approved Service Categories
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {eligibilityLoading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="text-gray-600 mt-2">Loading service eligibility...</p>
+            </div>
+          ) : eligibilityError ? (
+            <div className="text-center py-8">
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Info className="w-6 h-6 text-red-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Error Loading Service Categories</h3>
+              <p className="text-gray-600 mb-4">{eligibilityError}</p>
+              <Button variant="outline" onClick={() => loadServiceEligibility()}>
+                Try Again
+              </Button>
+            </div>
+          ) : !serviceEligibility || serviceEligibility.approved_categories.length === 0 ? (
+            <div className="text-center py-8">
+              <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Tags className="w-6 h-6 text-gray-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">No Service Categories Approved</h3>
+              <p className="text-gray-600 mb-4">
+                Your business doesn't have any approved service categories yet. Contact platform administration to get approved for specific service categories.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {serviceEligibility.approved_categories.map((cat: any) => {
+                const category = cat.service_categories;
+                const subcategories = (serviceEligibility.subcategories_by_category?.[category.id] || []).map((subcat: any) => subcat.service_subcategories).filter(Boolean);
+                return (
+                  <div key={category.id} className="border border-gray-200 rounded-lg overflow-hidden">
+                    <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
+                      <h4 className="font-semibold text-gray-900 text-lg">
+                        {category.description || category.service_category_type || 'Category'}
+                      </h4>
+                      {category.description && (
+                        <p className="text-sm text-gray-600 mt-1">{category.description}</p>
+                      )}
+                    </div>
+                    {subcategories.length > 0 ? (
+                      <div className="p-4">
+                        <ul className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                          {subcategories.map((subcategory: any) => (
+                            <li key={subcategory.id} className="bg-white border border-gray-200 rounded-lg p-3">
+                              <div className="flex items-center">
+                                <span className="font-medium text-gray-900 text-sm">
+                                  {subcategory.description || subcategory.service_subcategory_type}
+                                </span>
+                                <CheckCircle className="w-4 h-4 text-green-600 ml-2 flex-shrink-0" />
+                              </div>
+                              {subcategory.description && (
+                                <p className="text-xs text-gray-600 mt-1 line-clamp-2">
+                                  {subcategory.description}
+                                </p>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : (
+                      <div className="p-4 text-center">
+                        <p className="text-sm text-gray-500">
+                          No specific subcategories approved for this category yet.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       toast({
         title: "Error",
