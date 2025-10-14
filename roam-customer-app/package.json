@@ -30,7 +30,8 @@
     "lint:check": "eslint client/**/*.{ts,tsx}",
     "refactor": "npm run cleanup-logs && npm run lint && npm run typecheck",
     "vercel-build": "npm run build",
-    "vercel-dev": "npm run dev"
+    "vercel-dev": "npm run dev",
+    "deploy:force": "vercel --prod --force"
   },
   "dependencies": {
     "@roam/shared": "file:../packages/shared",
