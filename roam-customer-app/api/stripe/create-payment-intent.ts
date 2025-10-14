@@ -81,9 +81,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // Calculate platform fee (2.9% platform fee)
-    const platformFeePercentage = 0.029;
-    const platformFee = Math.round(serviceAmount * platformFeePercentage * 100); // in cents
+    // Fetch platform fee from system configuration
+    let platformFeePercentage = 20; // Default to 20%
+    try {
+      const { data: feeConfig, error: feeError } = await supabase
+        .from('system_config')
+        .select('config_value')
+        .eq('config_key', 'platform_fee_percentage')
+        .single();
+      
+      if (!feeError && feeConfig) {
+        platformFeePercentage = parseFloat(feeConfig.config_value) || 20;
+        console.log(`✅ Platform fee loaded from config: ${platformFeePercentage}%`);
+      } else {
+        console.warn('⚠️ Could not load platform fee from config, using default 20%');
+      }
+    } catch (error) {
+      console.error('Error fetching platform fee configuration:', error);
+    }
+    
+    // Calculate platform fee (percentage of service amount)
+    const platformFee = Math.round(serviceAmount * (platformFeePercentage / 100) * 100); // in cents
     const processingFee = 30; // Stripe processing fee in cents
     
     // Apply any promotions (server-side validation)

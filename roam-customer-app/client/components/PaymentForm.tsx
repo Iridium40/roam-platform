@@ -482,7 +482,7 @@ const PaymentForm: React.FC<PaymentFormProps> = (props) => {
         setIsInitializing(true);
         setPaymentError(null);
 
-        const response = await fetch("/api/create-payment-intent", {
+        const response = await fetch("/api/stripe/create-payment-intent", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

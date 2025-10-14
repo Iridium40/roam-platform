@@ -240,6 +240,9 @@ export default function BookService() {
   // Auth modal state
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [pendingCheckout, setPendingCheckout] = useState(false);
+  
+  // Exit confirmation state
+  const [showExitConfirmation, setShowExitConfirmation] = useState(false);
 
   // Calculate total amount for booking (including any promotions)
   const calculateTotalAmount = (): number => {
@@ -1228,17 +1231,60 @@ export default function BookService() {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-4">
-              <Button
-                asChild
-                variant="ghost"
-                size="sm"
-                className="text-foreground hover:text-roam-blue"
-              >
-                <Link to="/">
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Back to Home
-                </Link>
-              </Button>
+              {/* Back to Home - with confirmation if mid-booking */}
+              {currentStep === 'datetime' ? (
+                <Button
+                  asChild
+                  variant="ghost"
+                  size="sm"
+                  className="text-foreground hover:text-roam-blue font-medium"
+                >
+                  <Link to="/">
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Back to Home
+                  </Link>
+                </Button>
+              ) : (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-foreground hover:text-roam-blue font-medium"
+                    onClick={() => setShowExitConfirmation(true)}
+                  >
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Exit Booking
+                  </Button>
+                  
+                  {/* Exit Confirmation Dialog */}
+                  <Dialog open={showExitConfirmation} onOpenChange={setShowExitConfirmation}>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Exit Booking Process?</DialogTitle>
+                      </DialogHeader>
+                      <p className="text-gray-600">
+                        Are you sure you want to exit? Your booking progress will be lost.
+                      </p>
+                      <div className="flex justify-end gap-3 mt-4">
+                        <Button
+                          variant="outline"
+                          onClick={() => setShowExitConfirmation(false)}
+                        >
+                          Continue Booking
+                        </Button>
+                        <Button
+                          asChild
+                          variant="destructive"
+                        >
+                          <Link to="/">
+                            Exit to Home
+                          </Link>
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </>
+              )}
               <img
                 src="https://cdn.builder.io/api/v1/image/assets%2Fa42b6f9ec53e4654a92af75aad56d14f%2F38446bf6c22b453fa45caf63b0513e21?format=webp&width=800"
                 alt="ROAM - Your Best Life. Everywhere."
