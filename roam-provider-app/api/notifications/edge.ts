@@ -1,6 +1,6 @@
 import type { VercelRequest } from "@vercel/node";
-
-export const runtime = 'edge';
+// Per project standards we avoid Edge runtime due to prior production issues.
+// Removed `export const runtime = 'edge'`.
 
 // Notification preferences interface
 interface NotificationConfig {
@@ -14,7 +14,17 @@ interface NotificationConfig {
 const connections = new Map<string, ReadableStreamDefaultController>();
 
 export default async function handler(request: VercelRequest, res: any) {
-  const { searchParams } = new URL(request.url);
+  // Safely build absolute URL for environments where request.url may be relative
+  const rawUrl = request.url || '/api/notifications/edge';
+  const host = (request.headers as any)?.host || process.env.VERCEL_URL || 'localhost';
+  const origin = host.startsWith('http') ? host : `https://${host}`;
+  let searchParams: URLSearchParams;
+  try {
+    ({ searchParams } = new URL(rawUrl.startsWith('http') ? rawUrl : `${origin}${rawUrl}`));
+  } catch (e) {
+    console.error('Provider notifications URL parse failed', { rawUrl, origin, error: e });
+    return res.status(400).json({ error: 'Invalid request URL' });
+  }
   const userId = searchParams.get('userId');
   const userType = searchParams.get('userType'); // 'customer', 'provider', 'owner', 'dispatcher'
 

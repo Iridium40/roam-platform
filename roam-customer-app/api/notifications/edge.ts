@@ -1,6 +1,9 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
-// Server-Sent Events (SSE) notification endpoint for Vercel edge runtime
+// NOTE: We intentionally use the Node serverless runtime (NOT Edge) per architecture guidance.
+// The build log error you saw (TypeError: Invalid URL) happens when `new URL()`
+// is given a relative path like "/api/notifications/edge?x=y" without a base.
+// We now always construct a fully-qualified URL using host / VERCEL_URL fallback.
 export default async function handler(request: VercelRequest, response: VercelResponse) {
   // Enable CORS for SSE
   response.setHeader('Access-Control-Allow-Origin', '*');
@@ -14,13 +17,19 @@ export default async function handler(request: VercelRequest, response: VercelRe
   }
 
   try {
-    // Handle relative URLs by constructing a full URL
-    const requestUrl = request.url || '';
-    const fullUrl = requestUrl.startsWith('http') 
-      ? requestUrl 
-      : `https://placeholder.com${requestUrl}`;
-    
-    const { searchParams } = new URL(fullUrl);
+    // Safely construct absolute URL (request.url may be relative in Vercel Node functions)
+    const rawUrl = request.url || '/api/notifications/edge';
+    const host = (request.headers?.host as string) || process.env.VERCEL_URL || 'localhost';
+    // VERCEL_URL has no protocol, so we prepend https:// in production
+    const origin = host.startsWith('http') ? host : `https://${host}`;
+    let fullUrl = rawUrl.startsWith('http') ? rawUrl : `${origin}${rawUrl}`;
+    let searchParams: URLSearchParams;
+    try {
+      ({ searchParams } = new URL(fullUrl));
+    } catch (e) {
+      console.error('Failed to parse URL in notifications handler', { rawUrl, origin, fullUrl, error: e });
+      return response.status(400).json({ error: 'Invalid request URL' });
+    }
     const userId = searchParams.get('userId');
     const userType = searchParams.get('userType');
 
