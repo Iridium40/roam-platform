@@ -13,7 +13,6 @@ import {
   User,
   Settings,
   CreditCard,
-  Calendar,
   Heart,
   MapPin,
   LogOut,
@@ -72,15 +71,6 @@ export const CustomerAvatarDropdown: React.FC = () => {
           </div>
         </div>
         <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
-          <Link
-            to="/my-bookings"
-            className="w-full flex items-center cursor-pointer"
-          >
-            <Calendar className="mr-2 h-4 w-4" />
-            <span>My Bookings</span>
-          </Link>
-        </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <Link
             to="/customer/favorites"
