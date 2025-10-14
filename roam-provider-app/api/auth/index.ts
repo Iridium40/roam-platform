@@ -1,18 +1,13 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { createAuthAPI, SupabaseAuthService } from '@roam/shared';
-import { EmailService } from '../services/emailService';
+// Correct path to server email service (was pointing to non-existent api/services path)
+import { EmailService } from '../../server/services/emailService';
 
 // Create email service adapter for the shared auth service
 class ProviderEmailService {
-  private emailService: EmailService;
-
-  constructor() {
-    this.emailService = new EmailService();
-  }
-
   async sendWelcomeEmail(email: string, firstName: string): Promise<boolean> {
     try {
-      return await this.emailService.sendWelcomeEmail(email, firstName);
+      return await EmailService.sendWelcomeEmail(email, firstName);
     } catch (error) {
       console.error('Error sending welcome email:', error);
       return false;
