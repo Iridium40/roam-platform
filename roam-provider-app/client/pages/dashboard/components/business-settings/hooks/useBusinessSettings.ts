@@ -106,7 +106,11 @@ export function useBusinessSettings(business: any) {
     setEligibilityError(null);
 
     try {
-      const response = await fetch(`/api/business/service-eligibility?business_id=${business.id}`);
+      // Use cached auth headers
+      const { getAuthHeaders } = await import('@/lib/api/authUtils');
+      const headers = await getAuthHeaders();
+
+      const response = await fetch(`/api/business/service-eligibility?business_id=${business.id}`, { headers });
       
       if (!response.ok) {
         throw new Error(`Failed to load service eligibility: ${response.statusText}`);

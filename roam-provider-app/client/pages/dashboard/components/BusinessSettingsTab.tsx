@@ -166,30 +166,13 @@ export default function BusinessSettingsTab({
 
       console.log('Loading service eligibility for business:', business.id);
 
-      // Get the access token from localStorage or Supabase session
-      const { supabase } = await import('@/lib/supabase');
-      const { data: { session } } = await supabase.auth.getSession();
-      const accessToken = session?.access_token || localStorage.getItem('roam_access_token');
-
-      console.log('Service eligibility auth debug:', {
-        hasSession: !!session,
-        hasSessionToken: !!session?.access_token,
-        hasStoredToken: !!localStorage.getItem('roam_access_token'),
-        tokenSource: session?.access_token ? 'session' : 'localStorage',
-        tokenLength: accessToken?.length,
-        businessId: business.id
-      });
-
-      if (!accessToken) {
-        throw new Error('Authentication required. Please sign in again.');
-      }
+      // Use cached auth headers (optimized)
+      const { getAuthHeaders } = await import('@/lib/api/authUtils');
+      const headers = await getAuthHeaders();
 
       const response = await fetch(`/api/business/service-eligibility?business_id=${business.id}`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
-        },
+        headers,
       });
 
       // Check if component is still mounted before proceeding
