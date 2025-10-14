@@ -165,9 +165,6 @@ function MarketingFooter() {
             <Link to="/support" className="hover:text-foreground">
               Support
             </Link>
-            <Link to="/press" className="hover:text-foreground">
-              Press
-            </Link>
           </div>
         </div>
       </div>
