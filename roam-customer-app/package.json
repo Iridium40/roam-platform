@@ -48,7 +48,6 @@
     "glob": "^11.0.3",
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.0.2",
-    "next": "^15.5.2",
     "plaid": "^38.0.0",
     "react-plaid-link": "^4.1.1",
     "react-qr-code": "^2.0.18",

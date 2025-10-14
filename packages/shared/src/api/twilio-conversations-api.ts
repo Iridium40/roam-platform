@@ -115,28 +115,101 @@ export class TwilioConversationsAPI {
     if (!bookingContext) {
       return res.status(404).json({ error: 'Booking not found' });
     }
+    const db = service.getDatabaseClient();
 
-    const twilioResult = await service.createConversationWithDB({ bookingId });
+    // 1. Attempt to find existing active conversation for this booking
+    let existingConversation: { id: string; twilio_conversation_sid: string } | null = null;
+    try {
+      const { data: existing, error: existingError } = await db
+        .from('conversation_metadata')
+        .select('id, twilio_conversation_sid')
+        .eq('booking_id', bookingId)
+        .eq('is_active', true)
+        .limit(1)
+        .maybeSingle<{ id: string; twilio_conversation_sid: string }>();
 
-    if (twilioResult.error || !twilioResult.conversationId || !twilioResult.metadataId) {
-      return res.status(500).json({ error: twilioResult.error || 'Failed to create conversation' });
+      if (!existingError && existing?.id) {
+        existingConversation = existing;
+      }
+    } catch (err) {
+      console.warn('Conversation lookup failed, will proceed to create new conversation:', err);
     }
 
-    const conversationId = twilioResult.conversationId;
-    const metadataId = twilioResult.metadataId;
-
+    let conversationId: string;
+    let metadataId: string;
+    let isNew = false;
     const enrichedParticipants: BookingConversationParticipant[] = [];
 
-    for (const participant of participants) {
-      try {
-      const identity = `${participant.userType}_${participant.userId}`;
-        const participantDetails = await this.fetchAndValidateParticipant(service, participant, bookingContext);
+    if (existingConversation) {
+      conversationId = existingConversation.twilio_conversation_sid;
+      metadataId = existingConversation.id;
+    } else {
+      // 2. Create new conversation
+      const twilioResult = await service.createConversationWithDB({ bookingId });
 
+      if (twilioResult.error || !twilioResult.conversationId || !twilioResult.metadataId) {
+        return res.status(500).json({ error: twilioResult.error || 'Failed to create conversation' });
+      }
+      conversationId = twilioResult.conversationId;
+      metadataId = twilioResult.metadataId;
+      isNew = true;
+    }
+
+    // 3. Load existing participants (if any) so we avoid duplicates and can return them
+    const existingParticipantRows: { user_id: string; user_type: BookingParticipantRole; twilio_participant_sid: string | null }[] = [];
+    try {
+      const { data: existingParts, error: partsError } = await db
+        .from('conversation_participants')
+        .select('user_id, user_type, twilio_participant_sid')
+        .eq('conversation_id', metadataId)
+        .eq('is_active', true);
+      if (!partsError && Array.isArray(existingParts)) {
+        existingParticipantRows.push(...existingParts as any);
+      }
+    } catch (err) {
+      console.warn('Failed to load existing participants (continuing):', err);
+    }
+
+    // Map for quick duplicate detection by user_id + type
+    const existingKey = new Set(existingParticipantRows.map(p => `${p.user_type}:${p.user_id}`));
+
+    // 4. Build enriched participants list for existing rows first
+    for (const row of existingParticipantRows) {
+      try {
+        const participantDetails = await this.fetchAndValidateParticipant(
+          service,
+          { userId: row.user_id, userType: row.user_type },
+          bookingContext,
+        );
+        enrichedParticipants.push({
+          userId: row.user_id,
+          userType: row.user_type,
+          userName: participantDetails?.name ?? null,
+          email: participantDetails?.email ?? null,
+          avatarUrl: participantDetails?.avatarUrl ?? null,
+          twilioParticipantSid: row.twilio_participant_sid ?? undefined,
+          conversationMetadataId: metadataId,
+          businessId: participantDetails?.businessId ?? null,
+          profileId: participantDetails?.profileId ?? null,
+        });
+      } catch (err) {
+        console.warn('Failed to enrich existing participant row:', row, err);
+      }
+    }
+
+    // 5. Add any requested participants not already present
+    for (const participant of participants) {
+      const key = `${participant.userType}:${participant.userId}`;
+      if (existingKey.has(key)) {
+        continue; // already included
+      }
+      try {
+        const identity = `${participant.userType}_${participant.userId}`;
+        const participantDetails = await this.fetchAndValidateParticipant(service, participant, bookingContext);
         if (!participantDetails) {
           console.warn('Skipping participant due to missing profile or validation failure', participant);
           continue;
         }
-
         const { userId: participantUserId, profileId, businessId, name, email, avatarUrl } = participantDetails;
         const result = await service.addParticipant(conversationId, {
           identity,
@@ -150,12 +223,10 @@ export class TwilioConversationsAPI {
             businessId,
           },
         });
-
         if (result.error) {
           console.error('Failed to add participant', participant, result.error);
         } else if (result.participantSid) {
-          await service
-            .getDatabaseClient()
+          await db
             .from('conversation_participants')
             .insert({
               conversation_id: metadataId,
@@ -163,7 +234,6 @@ export class TwilioConversationsAPI {
               user_type: participant.userType,
               twilio_participant_sid: result.participantSid,
             } as any);
-
           enrichedParticipants.push({
             userId: participantUserId,
             userType: participant.userType,
@@ -185,7 +255,7 @@ export class TwilioConversationsAPI {
       success: true,
       conversationSid: conversationId,
       conversationMetadataId: metadataId,
-      isNew: true,
+      isNew,
       participants: enrichedParticipants,
     });
   }
