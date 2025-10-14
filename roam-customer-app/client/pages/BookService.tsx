@@ -1,4 +1,4 @@
-import { useParams, useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Calendar as CalendarIcon, Clock, Building, User, CreditCard, Tag, ChevronDown, Info, ExternalLink, MapPin, Star, Smartphone, Video, Truck } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -182,6 +182,7 @@ interface Provider {
 export default function BookService() {
   const { serviceId } = useParams();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const { customer } = useAuth();
   const { toast } = useToast();
   
@@ -1038,6 +1039,10 @@ export default function BookService() {
 
   const handleBack = () => {
     switch (currentStep) {
+      case 'datetime':
+        // Navigate back to home page
+        navigate('/');
+        break;
       case 'business':
         setCurrentStep('datetime');
         break;
