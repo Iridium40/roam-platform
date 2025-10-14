@@ -1124,13 +1124,18 @@ export default function BookService() {
     const deliveryType = selectedDeliveryType || businessDeliveryTypes[0] || 'business_location';
 
     // Prepare booking details for creation (snake_case, DB schema compliant)
+    // Ensure start_time is always in HH:MM:SS format
+    let formattedStartTime = selectedTime;
+    if (selectedTime && selectedTime.length === 5) {
+      formattedStartTime = selectedTime + ':00';
+    }
     const bookingDetails = {
       service_id: service.id,
       business_id: selectedBusiness.id,
       customer_id: customer.id,
       provider_id: selectedProvider?.id || null,
       booking_date: selectedDate.toISOString().split('T')[0],
-      start_time: selectedTime,
+      start_time: formattedStartTime,
       guest_name: `${customer.first_name} ${customer.last_name}`,
       guest_email: customer.email,
       guest_phone: customer.phone || '',
@@ -1142,7 +1147,6 @@ export default function BookService() {
         : '',
       promotion_id: promotion?.id || null,
       total_amount: calculateTotalAmount(),
-      // Only include fields that exist in the bookings table
     };
 
     console.log('📝 Creating booking before Stripe Checkout:', bookingDetails);

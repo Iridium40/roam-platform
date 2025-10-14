@@ -1,3 +1,15 @@
+// Type for the raw booking row returned from Supabase
+type BookingDataRow = {
+  id: string;
+  booking_reference?: string;
+  booking_date: string;
+  start_time: string;
+  total_amount: number;
+  payment_status: string;
+  services?: { name?: string } | null;
+  business_profiles?: { business_name?: string } | null;
+  customer_profiles?: { first_name?: string; last_name?: string } | null;
+};
 import { useEffect, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -8,6 +20,7 @@ import { supabase } from '@/lib/supabase';
 
 interface BookingDetails {
   id: string;
+  booking_reference?: string;
   booking_date: string;
   start_time: string;
   total_amount: number;
@@ -35,11 +48,12 @@ export default function BookingSuccess() {
       }
 
       try {
-        // Fetch booking details from Supabase with corrected join syntax
+        // Explicitly type the Supabase query result
         const { data: bookingData, error: bookingError } = await supabase
           .from('bookings')
           .select(`
             id,
+            booking_reference,
             booking_date,
             start_time,
             total_amount,
@@ -52,20 +66,16 @@ export default function BookingSuccess() {
             customer_profiles!bookings_customer_id_fkey (first_name, last_name)
           `)
           .eq('stripe_checkout_session_id', sessionId)
-          .single();
+          .single<BookingDataRow>();
 
         if (bookingError) {
           console.error('Error fetching booking:', bookingError);
-          
           // If booking not found and we haven't retried too many times, retry
-          // The webhook might still be processing
           if (bookingError.code === 'PGRST116' && retryCount < 10) {
             console.log(`Booking not found yet, retrying in 2 seconds (attempt ${retryCount + 1}/10)...`);
             setTimeout(() => fetchBookingDetails(retryCount + 1), 2000);
             return;
           }
-          
-          // Set a generic message that doesn't alarm the user
           setError('Payment successful - processing booking details');
           setLoading(false);
           return;
@@ -74,6 +84,7 @@ export default function BookingSuccess() {
         if (bookingData) {
           setBooking({
             id: bookingData.id,
+            booking_reference: bookingData.booking_reference,
             booking_date: bookingData.booking_date,
             start_time: bookingData.start_time,
             total_amount: bookingData.total_amount,
@@ -91,7 +102,6 @@ export default function BookingSuccess() {
         setLoading(false);
       }
     };
-
     fetchBookingDetails();
   }, [sessionId]);
 
@@ -102,6 +112,7 @@ export default function BookingSuccess() {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-roam-blue mx-auto mb-4"></div>
           <p>Loading booking details...</p>
         </div>
+  {/* Spinner and loading message only */}
       </div>
     );
   }
@@ -123,7 +134,6 @@ export default function BookingSuccess() {
                 We're processing your booking details. You'll receive a confirmation email shortly.
               </p>
             </div>
-            
             <div className="space-y-3">
               <Button asChild className="w-full">
                 <Link to="/my-bookings">View My Bookings</Link>
@@ -132,7 +142,6 @@ export default function BookingSuccess() {
                 <Link to="/">Return to Home</Link>
               </Button>
             </div>
-            
             <div className="text-xs text-gray-400 pt-2 border-t">
               <p>Payment Session: {sessionId?.substring(0, 20)}...</p>
             </div>
@@ -146,74 +155,24 @@ export default function BookingSuccess() {
     <div className="min-h-screen bg-gradient-to-br from-background via-accent/5 to-roam-light-blue/10">
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-2xl mx-auto">
-          {/* Success Header */}
-          <div className="text-center mb-8">
-            <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Booking Confirmed!</h1>
-            <p className="text-gray-600">Your payment was successful and your booking is confirmed.</p>
-          </div>
 
-          {/* Booking Details Card */}
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="h-5 w-5" />
-                Booking Details
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex items-center gap-3">
-                  <User className="h-5 w-5 text-gray-500" />
-                  <div>
-                    <p className="text-sm text-gray-500">Customer</p>
-                    <p className="font-medium">{booking.customer_name}</p>
-                  </div>
+          {/* Next Steps */}
+          {/* Booking Reference Display */}
+          {booking.booking_reference && (
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle>Booking Reference</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-lg font-bold text-center text-roam-blue">
+                  {booking.booking_reference}
                 </div>
-
-                <div className="flex items-center gap-3">
-                  <MapPin className="h-5 w-5 text-gray-500" />
-                  <div>
-                    <p className="text-sm text-gray-500">Service</p>
-                    <p className="font-medium">{booking.service_name}</p>
-                  </div>
+                <div className="text-xs text-gray-500 text-center mt-2">
+                  Please save this reference for your records.
                 </div>
-
-                <div className="flex items-center gap-3">
-                  <Calendar className="h-5 w-5 text-gray-500" />
-                  <div>
-                    <p className="text-sm text-gray-500">Date</p>
-                    <p className="font-medium">{new Date(booking.booking_date).toLocaleDateString()}</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <Clock className="h-5 w-5 text-gray-500" />
-                  <div>
-                    <p className="text-sm text-gray-500">Time</p>
-                    <p className="font-medium">{booking.start_time}</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <CreditCard className="h-5 w-5 text-gray-500" />
-                  <div>
-                    <p className="text-sm text-gray-500">Amount Paid</p>
-                    <p className="font-medium">${booking.total_amount.toFixed(2)}</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <CheckCircle className="h-5 w-5 text-green-500" />
-                  <div>
-                    <p className="text-sm text-gray-500">Status</p>
-                    <p className="font-medium text-green-600 capitalize">{booking.payment_status}</p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
+              </CardContent>
+            </Card>
+          )}
           {/* Next Steps */}
           <Card className="mb-6">
             <CardHeader>
@@ -221,27 +180,21 @@ export default function BookingSuccess() {
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex items-start gap-3">
-                <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-medium mt-0.5">
-                  1
-                </div>
+                <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-medium mt-0.5">1</div>
                 <div>
                   <p className="font-medium">Confirmation Email</p>
                   <p className="text-sm text-gray-600">You'll receive a confirmation email with all the details.</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
-                <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-medium mt-0.5">
-                  2
-                </div>
+                <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-medium mt-0.5">2</div>
                 <div>
                   <p className="font-medium">Provider Notification</p>
                   <p className="text-sm text-gray-600">The service provider will be notified of your booking.</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
-                <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-medium mt-0.5">
-                  3
-                </div>
+                <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-medium mt-0.5">3</div>
                 <div>
                   <p className="font-medium">Booking Management</p>
                   <p className="text-sm text-gray-600">You can view and manage your booking in your account.</p>
