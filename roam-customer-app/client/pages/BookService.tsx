@@ -1157,11 +1157,14 @@ export default function BookService() {
       // 2. Call backend to create Stripe Checkout Session with bookingId
       const stripePayload = { ...bookingDetails, bookingId };
       console.log('💳 Creating Stripe Checkout Session with:', stripePayload);
+      
+      // Use cached auth for faster checkout
+      const { getAuthHeaders } = await import('../lib/api/authUtils');
+      const headers = await getAuthHeaders();
+      
       const response = await fetch('/api/stripe/create-checkout-session', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify(stripePayload),
       });
 

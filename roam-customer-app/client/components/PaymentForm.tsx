@@ -482,11 +482,13 @@ const PaymentForm: React.FC<PaymentFormProps> = (props) => {
         setIsInitializing(true);
         setPaymentError(null);
 
+        // Use cached auth for faster payment initialization
+        const { getAuthHeaders } = await import("../lib/api/authUtils");
+        const headers = await getAuthHeaders();
+
         const response = await fetch("/api/stripe/create-payment-intent", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers,
           body: JSON.stringify({
             totalAmount: props.totalAmount,
             serviceFee: props.serviceFee,
