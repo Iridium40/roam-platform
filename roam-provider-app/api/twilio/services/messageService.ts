@@ -9,7 +9,8 @@ import type {
 
 export class MessageService {
   private client: twilio.Twilio;
-  private conversationsService: twilio.Conversations.ConversationsServiceInstance;
+  // Loosen type; Twilio Conversations namespace types not exported in v5 layout used here.
+  private conversationsService: any;
 
   constructor(config: TwilioConfig) {
     this.client = twilio(config.accountSid, config.authToken);
@@ -113,7 +114,7 @@ export class MessageService {
         .messages
         .list({ limit });
 
-      const messageList = messages.map(message => ({
+  const messageList = messages.map((message: any) => ({
         sid: message.sid,
         body: message.body,
         author: message.author,
@@ -259,9 +260,9 @@ export class MessageService {
         .messages
         .list({ limit });
 
-      const filteredMessages = messages.filter(message => message.author === author);
+  const filteredMessages = messages.filter((message: any) => message.author === author);
 
-      const messageList = filteredMessages.map(message => ({
+  const messageList = filteredMessages.map((message: any) => ({
         sid: message.sid,
         body: message.body,
         author: message.author,
@@ -302,11 +303,11 @@ export class MessageService {
         .messages
         .list({ limit });
 
-      const filteredMessages = messages.filter(message => 
+      const filteredMessages = messages.filter((message: any) => 
         message.body?.toLowerCase().includes(query.toLowerCase())
       );
 
-      const messageList = filteredMessages.map(message => ({
+  const messageList = filteredMessages.map((message: any) => ({
         sid: message.sid,
         body: message.body,
         author: message.author,
@@ -373,11 +374,11 @@ export class MessageService {
         .list();
 
       const cutoffTime = new Date(Date.now() - hours * 60 * 60 * 1000);
-      const recentMessages = messages.filter(message => 
+      const recentMessages = messages.filter((message: any) => 
         new Date(message.dateCreated) > cutoffTime
       );
 
-      const messageList = recentMessages.map(message => ({
+  const messageList = recentMessages.map((message: any) => ({
         sid: message.sid,
         body: message.body,
         author: message.author,

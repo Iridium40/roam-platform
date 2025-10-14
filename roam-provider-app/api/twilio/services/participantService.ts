@@ -9,7 +9,9 @@ import type {
 
 export class ParticipantService {
   private client: twilio.Twilio;
-  private conversationsService: twilio.Conversations.ConversationsServiceInstance;
+  // See conversationService.ts for rationale: loosen type to any to avoid relying on
+  // non-exported Conversations namespace typings in twilio v5.
+  private conversationsService: any;
 
   constructor(config: TwilioConfig) {
     this.client = twilio(config.accountSid, config.authToken);
@@ -134,7 +136,7 @@ export class ParticipantService {
         .participants
         .list();
 
-      const participantList = participants.map(participant => ({
+  const participantList = participants.map((participant: any) => ({
         sid: participant.sid,
         identity: participant.identity,
         attributes: participant.attributes,
@@ -213,7 +215,7 @@ export class ParticipantService {
         .participants
         .list();
 
-      const participant = participants.find(p => p.identity === identity);
+  const participant = participants.find((p: any) => p.identity === identity);
 
       if (!participant) {
         return {
@@ -259,7 +261,7 @@ export class ParticipantService {
         .participants
         .list();
 
-      const exists = participants.some(p => p.identity === identity);
+  const exists = participants.some((p: any) => p.identity === identity);
 
       return {
         success: true,
@@ -316,9 +318,9 @@ export class ParticipantService {
         .participants
         .list();
 
-      const filteredParticipants = participants.filter(p => p.roleSid === role);
+  const filteredParticipants = participants.filter((p: any) => p.roleSid === role);
 
-      const participantList = filteredParticipants.map(participant => ({
+  const participantList = filteredParticipants.map((participant: any) => ({
         sid: participant.sid,
         identity: participant.identity,
         attributes: participant.attributes,

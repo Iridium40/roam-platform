@@ -9,7 +9,11 @@ import type {
 
 export class ConversationService {
   private client: twilio.Twilio;
-  private conversationsService: twilio.Conversations.ConversationsServiceInstance;
+  // Twilio v5 SDK does not expose a Conversations namespace type the way earlier
+  // community examples reference; using a broad type here to avoid TS2694 while
+  // still retaining runtime functionality. If stronger typing is needed, create
+  // a custom interface describing only the methods we actually call.
+  private conversationsService: any;
 
   constructor(config: TwilioConfig) {
     this.client = twilio(config.accountSid, config.authToken);
@@ -91,7 +95,7 @@ export class ConversationService {
 
       const conversations = await this.conversationsService.conversations.list({ limit });
 
-      const conversationList = conversations.map(conv => ({
+  const conversationList = conversations.map((conv: any) => ({
         sid: conv.sid,
         friendlyName: conv.friendlyName,
         uniqueName: conv.uniqueName,
@@ -252,12 +256,12 @@ export class ConversationService {
       const conversations = await this.conversationsService.conversations.list();
 
       // Filter conversations based on query
-      const filteredConversations = conversations.filter(conv => 
+      const filteredConversations = conversations.filter((conv: any) => 
         conv.friendlyName?.toLowerCase().includes(query.toLowerCase()) ||
         conv.uniqueName?.toLowerCase().includes(query.toLowerCase())
       );
 
-      const searchResults = filteredConversations.map(conv => ({
+      const searchResults = filteredConversations.map((conv: any) => ({
         sid: conv.sid,
         friendlyName: conv.friendlyName,
         uniqueName: conv.uniqueName,
