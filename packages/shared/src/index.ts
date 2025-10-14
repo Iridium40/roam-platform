@@ -10,6 +10,7 @@ export * from './contexts/UnifiedAuthContext';
 export * from './types/database';
 export * from './types/twilio';
 export * from './types/booking-conversations';
+export * from './branding/assets';
 // Unified Service Types (explicit exports to avoid conflicts)
 export type {
   UnifiedServiceBase,
