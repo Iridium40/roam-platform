@@ -1123,27 +1123,26 @@ export default function BookService() {
     const businessDeliveryTypes = getDeliveryTypes(selectedBusiness);
     const deliveryType = selectedDeliveryType || businessDeliveryTypes[0] || 'business_location';
 
-    // Prepare booking details for creation
+    // Prepare booking details for creation (snake_case, DB schema compliant)
     const bookingDetails = {
-      serviceId: service.id,
-      businessId: selectedBusiness.id,
-      customerId: customer.id,
-      providerId: selectedProvider?.id || null,
-      bookingDate: selectedDate.toISOString().split('T')[0],
-      startTime: selectedTime,
-      guestName: `${customer.first_name} ${customer.last_name}`,
-      guestEmail: customer.email,
-      guestPhone: customer.phone || '',
-      deliveryType: deliveryType,
-      businessLocationId: selectedBusinessLocation?.id || null,
-      customerLocationId: selectedCustomerLocation?.id.startsWith('temp-') ? null : (selectedCustomerLocation?.id || null),
-      specialInstructions: selectedCustomerLocation?.id.startsWith('temp-')
+      service_id: service.id,
+      business_id: selectedBusiness.id,
+      customer_id: customer.id,
+      provider_id: selectedProvider?.id || null,
+      booking_date: selectedDate.toISOString().split('T')[0],
+      start_time: selectedTime,
+      guest_name: `${customer.first_name} ${customer.last_name}`,
+      guest_email: customer.email,
+      guest_phone: customer.phone || '',
+      delivery_type: deliveryType,
+      business_location_id: selectedBusinessLocation?.id || null,
+      customer_location_id: selectedCustomerLocation?.id && !selectedCustomerLocation.id.startsWith('temp-') ? selectedCustomerLocation.id : null,
+      special_instructions: selectedCustomerLocation?.id && selectedCustomerLocation.id.startsWith('temp-')
         ? `Service Address: ${selectedCustomerLocation.street_address}${selectedCustomerLocation.unit_number ? `, ${selectedCustomerLocation.unit_number}` : ''}, ${selectedCustomerLocation.city}, ${selectedCustomerLocation.state} ${selectedCustomerLocation.zip_code}`
         : '',
-      promotionId: promotion?.id || null,
-      totalAmount: calculateTotalAmount(),
-      serviceName: service.name,
-      businessName: selectedBusiness.business_name,
+      promotion_id: promotion?.id || null,
+      total_amount: calculateTotalAmount(),
+      // Only include fields that exist in the bookings table
     };
 
     console.log('📝 Creating booking before Stripe Checkout:', bookingDetails);
