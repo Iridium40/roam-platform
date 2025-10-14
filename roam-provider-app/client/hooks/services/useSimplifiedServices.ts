@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth/AuthProvider';
 import { EligibleService, ServiceStats } from '@/types/services';
+import { getAuthHeaders } from '@/lib/api/authUtils';
 
 export function useSimplifiedServices() {
   const { provider } = useAuth();
@@ -64,7 +65,10 @@ export function useSimplifiedServices() {
       const businessId = provider!.provider!.business_id!;
       console.log('Loading eligible services for business:', businessId);
       
-      const response = await fetch(`/api/business-eligible-services?business_id=${businessId}`);
+      // Use cached auth headers (much faster - no Supabase call needed)
+      const headers = await getAuthHeaders();
+      
+      const response = await fetch(`/api/business-eligible-services?business_id=${businessId}`, { headers });
 
       if (!response.ok) {
         let errorMessage = 'Failed to load services';

@@ -46,6 +46,7 @@ import {
 } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 import ServicePriceModal from '@/components/ServicePriceModal';
+import { getAuthHeaders } from '@/lib/api/authUtils';
 
 interface EligibleService {
   id: string;
@@ -187,8 +188,11 @@ export default function ServicePricingSetup({
       setLoading(true);
       setError(null);
 
+      // Use cached auth headers (much faster - no Supabase call needed)
+      const headers = await getAuthHeaders();
+
       // Use the same API endpoint as ServicesTab.tsx
-      const response = await fetch(`/api/business-eligible-services?business_id=${businessId}`);
+      const response = await fetch(`/api/business-eligible-services?business_id=${businessId}`, { headers });
 
       if (!response.ok) {
         throw new Error(`Failed to fetch eligible services: ${response.statusText}`);

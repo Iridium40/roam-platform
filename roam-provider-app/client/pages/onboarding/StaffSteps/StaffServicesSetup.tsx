@@ -6,6 +6,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { DollarSign, ArrowRight, Info, Loader2, Package, CheckCircle, Clock } from 'lucide-react';
+import { getAuthHeaders } from '@/lib/api/authUtils';
 
 interface InvitationData {
   businessId: string;
@@ -63,9 +64,12 @@ export default function StaffServicesSetup({
     try {
       setLoading(true);
 
+      // Use cached auth headers (much faster - no Supabase call needed)
+      const headers = await getAuthHeaders();
+
       // Use API endpoint instead of direct Supabase query for onboarding
       // This bypasses RLS issues during the invitation flow
-      const response = await fetch(`/api/business-eligible-services?business_id=${invitationData.businessId}`);
+      const response = await fetch(`/api/business-eligible-services?business_id=${invitationData.businessId}`, { headers });
       
       if (!response.ok) {
         throw new Error('Failed to load business services');

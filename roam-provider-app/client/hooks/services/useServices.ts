@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth/AuthProvider';
 import { BusinessService, EligibleService, ServiceStats, ServiceFormData } from '@/types/services';
+import { getAuthHeaders } from '@/lib/api/authUtils';
 
 export function useServices() {
   const { provider } = useAuth();
@@ -65,9 +66,12 @@ export function useServices() {
       const businessId = provider!.provider!.business_id!;
       console.log('Loading services for business:', businessId);
       
+      // Use cached auth headers (much faster - no Supabase call needed)
+      const headers = await getAuthHeaders();
+      
       const [servicesRes, eligibleRes] = await Promise.all([
-        fetch(`/api/business/services?business_id=${businessId}&page=1&limit=50`),
-        fetch(`/api/business-eligible-services?business_id=${businessId}`)
+        fetch(`/api/business/services?business_id=${businessId}&page=1&limit=50`, { headers }),
+        fetch(`/api/business-eligible-services?business_id=${businessId}`, { headers })
       ]);
 
       // Handle services response
@@ -125,7 +129,10 @@ export function useServices() {
 
   const loadEligibleServices = async (businessId: string) => {
     try {
-      const response = await fetch(`/api/business-eligible-services?business_id=${businessId}`);
+      // Use cached auth headers
+      const headers = await getAuthHeaders();
+
+      const response = await fetch(`/api/business-eligible-services?business_id=${businessId}`, { headers });
       
       if (!response.ok) {
         const errorData = await safeJsonParse(response, 'eligible services');
