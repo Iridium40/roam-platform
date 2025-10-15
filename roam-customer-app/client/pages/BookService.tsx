@@ -1154,7 +1154,6 @@ export default function BookService() {
       special_instructions: selectedCustomerLocation?.id && selectedCustomerLocation.id.startsWith('temp-')
         ? `Service Address: ${selectedCustomerLocation.street_address}${selectedCustomerLocation.unit_number ? `, ${selectedCustomerLocation.unit_number}` : ''}, ${selectedCustomerLocation.city}, ${selectedCustomerLocation.state} ${selectedCustomerLocation.zip_code}`
         : '',
-      promotion_id: promotion?.id || null,
       total_amount: calculateTotalAmount(),
     };
 
@@ -1166,14 +1165,35 @@ export default function BookService() {
       const createdBooking = await bookingRecord.bookingsAPI.createBooking(bookingDetails);
       const bookingId = createdBooking.id;
 
-      // 2. Call backend to create Stripe Checkout Session with bookingId
+      // 2. If a promotion was used, create a promotion_usage record
+      if (promotion?.id) {
+        // Use 'as any' to bypass Supabase type error for insert
+        const { data: promoUsage, error: promoUsageError } = await supabase
+          .from('promotion_usage')
+          .insert([
+            {
+              promotion_id: promotion.id,
+              booking_id: bookingId,
+              discount_applied: promotion.savingsAmount,
+              original_amount: service.min_price,
+              final_amount: calculateTotalAmount(),
+            }
+          ] as any);
+        if (promoUsageError) {
+          console.error('❌ Error creating promotion_usage record:', promoUsageError);
+        } else {
+          console.log('✅ Promotion usage record created:', promoUsage);
+        }
+      }
+
+      // 3. Call backend to create Stripe Checkout Session with bookingId
       const stripePayload = { ...bookingDetails, bookingId };
       console.log('💳 Creating Stripe Checkout Session with:', stripePayload);
-      
+
       // Use cached auth for faster checkout
       const { getAuthHeaders } = await import('../lib/api/authUtils');
       const headers = await getAuthHeaders();
-      
+
       const response = await fetch('/api/stripe/create-checkout-session', {
         method: 'POST',
         headers,
@@ -1367,7 +1387,7 @@ export default function BookService() {
                 <div className="inline-flex items-center px-4 py-2 bg-green-50 border border-green-200 rounded-lg text-green-800">
                   <Tag className="w-4 h-4 mr-2" />
                   <span className="text-sm font-medium">
-                    Promotion Applied! Code: {promotion.code || 'HYD1234'} - {promotion.savingsType === 'percentage_off' ? `${promotion.savingsAmount}% off` : `$${promotion.savingsAmount} off`}
+                    Promotion Applied! Code: {promotion.promoCode || 'HYD1234'} - {promotion.savingsType === 'percentage' ? `${promotion.savingsAmount}% off` : `$${promotion.savingsAmount} off`}
                   </span>
                 </div>
               </div>
