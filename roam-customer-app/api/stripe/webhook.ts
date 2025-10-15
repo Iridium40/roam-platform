@@ -48,15 +48,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   console.log('Processing webhook event:', event.type);
+  console.log('Event data:', JSON.stringify(event, null, 2));
 
   try {
 
     switch (event.type) {
       case 'checkout.session.completed': {
+        console.log('🎯 Processing checkout.session.completed event');
         const session = event.data.object;
         const metadata = session.metadata;
+        
+        console.log('Session ID:', session.id);
+        console.log('Metadata:', JSON.stringify(metadata, null, 2));
 
         if (metadata && metadata.customer_id) {
+          console.log('✅ Metadata contains customer_id:', metadata.customer_id);
           // Generate booking reference (e.g., "BK25ABC10001")
           const today = new Date();
           const year = today.getFullYear().toString().slice(-2);
@@ -185,6 +191,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               await updateCustomerPaymentMethods(customerId, session.setup_intent as string);
             }
           }
+        } else {
+          console.log('❌ Missing customer_id in metadata or metadata is null');
+          console.log('Metadata:', metadata);
         }
         break;
       }
