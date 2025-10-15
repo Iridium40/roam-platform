@@ -30,10 +30,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   let event: Stripe.Event;
 
-  try {
-    // Get raw body for signature verification
-    const rawBody = await getRawBody(req);
+  // Get raw body for signature verification
+  const rawBody = await getRawBody(req);
 
+  try {
     // Verify webhook signature and construct event
     event = stripe.webhooks.constructEvent(
       rawBody,
