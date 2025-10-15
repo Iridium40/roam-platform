@@ -117,6 +117,8 @@ class BookingsAPI extends BaseAPI {
     bookingData: Omit<BookingRecord, "id">,
     accessToken?: string
   ): Promise<BookingRecord> {
+    logger.debug('Creating booking with data:', bookingData);
+    
     const response = await fetch(
       `${this.baseURL}/rest/v1/bookings?select=*`,
       {
@@ -126,11 +128,51 @@ class BookingsAPI extends BaseAPI {
       },
     );
 
+    logger.debug('Create booking response status:', response.status);
+
     if (!response.ok) {
-      throw new Error(`Failed to create booking: ${response.statusText}`);
+      // Try to get error details
+      let errorMessage = `Failed to create booking: ${response.statusText}`;
+      try {
+        const errorText = await response.text();
+        logger.error('Create booking error response:', errorText);
+        if (errorText) {
+          try {
+            const errorJson = JSON.parse(errorText);
+            errorMessage = errorJson.message || errorJson.error || errorMessage;
+          } catch {
+            errorMessage = errorText || errorMessage;
+          }
+        }
+      } catch (e) {
+        logger.error('Could not read error response:', e);
+      }
+      throw new Error(errorMessage);
     }
 
-    return response.json();
+    // Check if response has content
+    const contentType = response.headers.get('content-type');
+    const contentLength = response.headers.get('content-length');
+    
+    logger.debug('Response headers:', {
+      contentType,
+      contentLength
+    });
+
+    if (contentLength === '0' || !contentType?.includes('application/json')) {
+      logger.error('Invalid response - no JSON content');
+      throw new Error('Server returned invalid response (no JSON content)');
+    }
+
+    try {
+      const data = await response.json();
+      logger.debug('Booking created successfully:', data);
+      // Supabase returns an array when using select=*
+      return Array.isArray(data) ? data[0] : data;
+    } catch (jsonError) {
+      logger.error('Failed to parse booking response as JSON:', jsonError);
+      throw new Error('Invalid JSON response from server');
+    }
   }
 }
 

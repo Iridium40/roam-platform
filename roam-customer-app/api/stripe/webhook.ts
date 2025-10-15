@@ -49,12 +49,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const metadata = session.metadata;
 
         if (metadata && metadata.customer_id) {
-          // Generate booking reference (e.g., "BK-2025-001234")
-          const bookingReference = `BK-${new Date().getFullYear()}-${String(
-            Math.floor(Math.random() * 1000000)
-          ).padStart(6, '0')}`;
+          // Generate booking reference (e.g., "BK25ABC10001")
+          const today = new Date();
+          const year = today.getFullYear().toString().slice(-2);
+          const randomPart = Math.random().toString(36).substring(2, 7).toUpperCase();
+          const seqPart = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
+          const bookingReference = `BK${year}${randomPart}${seqPart}`;
 
           // Extract booking details from metadata
+          const totalAmount = parseFloat(metadata.total_amount);
+          const platformFee = parseFloat(metadata.platform_fee || '0');
+          const discountApplied = parseFloat(metadata.discount_applied || '0');
+          
           const bookingData = {
             customer_id: metadata.customer_id,
             service_id: metadata.service_id,
@@ -66,19 +72,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             business_location_id: metadata.business_location_id || null,
             customer_location_id: metadata.customer_location_id || null,
             special_instructions: metadata.special_instructions || '',
-            promotion_id: metadata.promotion_id || null,
+            guest_name: metadata.guest_name || '',
+            guest_email: metadata.guest_email || '',
             guest_phone: metadata.guest_phone || '',
-            total_amount: parseFloat(metadata.total_amount),
-            service_price: parseFloat(metadata.total_amount), // Use total_amount as service_price for now
-            service_fee: parseFloat(metadata.platform_fee || '0'),
-            discount_applied: 0, // Not passed in metadata yet
+            total_amount: totalAmount,
+            service_fee: platformFee,
             stripe_checkout_session_id: session.id,
-            stripe_payment_intent_id: session.payment_intent as string,
             payment_status: 'paid',
             booking_status: 'confirmed',
             booking_reference: bookingReference,
-            paid_at: new Date().toISOString()
           };
+
+          console.log('💾 Creating booking from checkout session:', bookingReference);
 
           // Create booking in database
           const { data: booking, error: bookingError } = await supabase
@@ -88,9 +93,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             .single();
 
           if (bookingError) {
-            console.error('Error creating booking:', bookingError);
+            console.error('❌ Error creating booking:', bookingError);
           } else {
             console.log('✅ Booking created successfully:', booking.id);
+
+            // Create promotion_usage record if promotion was applied
+            if (metadata.promotion_id && discountApplied > 0) {
+              const originalAmount = parseFloat(metadata.original_amount || metadata.total_amount);
+              const finalAmount = totalAmount;
+              
+              await supabase
+                .from('promotion_usage')
+                .insert({
+                  promotion_id: metadata.promotion_id,
+                  booking_id: booking.id,
+                  discount_applied: discountApplied,
+                  original_amount: originalAmount,
+                  final_amount: finalAmount
+                });
+              
+              console.log('✅ Promotion usage recorded for booking:', booking.id);
+            }
 
             // Create payment transaction record
             const platformFee = parseFloat(metadata.platform_fee || '0');
@@ -137,15 +160,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               .insert({
                 business_id: metadata.business_id,
                 booking_id: booking.id,
-                gross_amount: totalAmount,
-                platform_fee_amount: platformFee,
-                net_amount: businessAmount,
+                payment_date: new Date().toISOString().split('T')[0], // date only
+                gross_payment_amount: totalAmount,
+                platform_fee: platformFee,
+                net_payment_amount: businessAmount,
+                tax_year: new Date().getFullYear(),
                 stripe_payment_intent_id: session.payment_intent as string,
-                payment_status: 'completed',
-                payment_date: new Date().toISOString(),
-                payout_status: 'pending',
-                created_at: new Date().toISOString(),
+                booking_reference: bookingReference,
               });
+
+            console.log('✅ Business payment transaction recorded');
 
             // Update customer Stripe profile with payment method if saved
             if (session.customer && session.setup_intent) {

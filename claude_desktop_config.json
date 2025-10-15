@@ -1,0 +1,27 @@
+{
+  "mcpServers": {
+    "twilio": {
+      "command": "node",
+      "args": [
+        "/Users/alans/Desktop/ROAM/roam-platform/mcp/packages/mcp/build/index.js",
+        "AC903bee9e4a9ca6e911de718acbf5385f:34b7fbefcb5298dadd73ff66a0740b04",
+        "--services",
+        "twilio_api_v2010",
+        "twilio_messaging_v1",
+        "twilio_verify_v2",
+        "twilio_conversations_v1"
+      ]
+    },
+    "resend": {
+      "command": "node",
+      "args": [
+        "/Users/alans/Desktop/ROAM/roam-platform/mcp-send-email/build/index.js"
+      ],
+      "env": {
+        "RESEND_API_KEY": "re_JBNNe1T8_HFN82Wv52nUE1UxutPpPZTgT",
+        "SENDER_EMAIL_ADDRESS": "providersupport@roamyourbestlife.com",
+        "REPLY_TO_EMAIL_ADDRESS": "providersupport@roamyourbestlife.com"
+      }
+    }
+  }
+}

@@ -1157,42 +1157,25 @@ export default function BookService() {
       total_amount: calculateTotalAmount(),
     };
 
-    console.log('📝 Creating booking before Stripe Checkout:', bookingDetails);
+    console.log('💳 Preparing Stripe Checkout (no booking created yet):', bookingDetails);
 
     try {
-      // 1. Create booking record first
-      const bookingRecord = await import('../lib/api/bookings');
-      const createdBooking = await bookingRecord.bookingsAPI.createBooking(bookingDetails);
-      const bookingId = createdBooking.id;
-
-      // 2. If a promotion was used, create a promotion_usage record
-      if (promotion?.id) {
-        // Use 'as any' to bypass Supabase type error for insert
-        const { data: promoUsage, error: promoUsageError } = await supabase
-          .from('promotion_usage')
-          .insert([
-            {
-              promotion_id: promotion.id,
-              booking_id: bookingId,
-              discount_applied: promotion.savingsAmount,
-              original_amount: service.min_price,
-              final_amount: calculateTotalAmount(),
-            }
-          ] as any);
-        if (promoUsageError) {
-          console.error('❌ Error creating promotion_usage record:', promoUsageError);
-        } else {
-          console.log('✅ Promotion usage record created:', promoUsage);
-        }
-      }
-
-      // 3. Call backend to create Stripe Checkout Session with bookingId
-      const stripePayload = { ...bookingDetails, bookingId };
-      console.log('💳 Creating Stripe Checkout Session with:', stripePayload);
-
-      // Use cached auth for faster checkout
+      // Get cached auth headers for Stripe checkout
       const { getAuthHeaders } = await import('../lib/api/authUtils');
       const headers = await getAuthHeaders();
+
+      // Prepare Stripe payload with all booking data + promotion info
+      // The webhook will create the booking after successful payment
+      const stripePayload = {
+        ...bookingDetails,
+        serviceName: service.name,
+        businessName: selectedBusiness.business_name,
+        // Include promotion data if exists - webhook will handle promotion_usage creation
+        promotionId: promotion?.id || null,
+        promotionCode: promotion?.promoCode || null,
+        discountApplied: promotion?.savingsAmount || 0,
+        originalAmount: service.min_price,
+      };
 
       const response = await fetch('/api/stripe/create-checkout-session', {
         method: 'POST',
@@ -1210,10 +1193,10 @@ export default function BookService() {
       }
 
       const result = await response.json();
-      console.log('📦 Response data:', result);
+      console.log('📦 Checkout session result:', result);
 
       if (result.url) {
-        console.log('✅ Checkout Session created successfully');
+        console.log('✅ Redirecting to Stripe Checkout - booking will be created after payment');
         window.location.href = result.url;
       } else {
         console.error('❌ Failed to create Checkout Session:', result.error || result);
@@ -1224,7 +1207,7 @@ export default function BookService() {
         });
       }
     } catch (error) {
-      console.error('❌ Error during booking/Checkout Session creation:', error);
+      console.error('❌ Error creating Checkout Session:', error);
       let errorMessage = "An unexpected error occurred. Please try again.";
       if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
         errorMessage = "Network error: Could not connect to payment service. Please check your connection and try again.";
