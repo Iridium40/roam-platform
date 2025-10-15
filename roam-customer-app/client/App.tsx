@@ -88,7 +88,7 @@ const App = () => (
                   path="/my-bookings"
                   element={
                     <ProtectedRoute>
-                      <WorkingMyBookings />
+                      <MyBookings />
                     </ProtectedRoute>
                   }
                 />
@@ -103,6 +103,14 @@ const App = () => (
                 <Route
                   path="/my-bookings-full"
                   element={<MinimalMyBookings />}
+                />
+                <Route
+                  path="/my-bookings-mock"
+                  element={
+                    <ProtectedRoute>
+                      <WorkingMyBookings />
+                    </ProtectedRoute>
+                  }
                 />
                 <Route
                   path="/my-bookings-original"
