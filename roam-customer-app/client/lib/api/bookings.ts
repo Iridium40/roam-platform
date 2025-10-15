@@ -118,7 +118,7 @@ class BookingsAPI extends BaseAPI {
     accessToken?: string
   ): Promise<BookingRecord> {
     const response = await fetch(
-      `${this.baseURL}/rest/v1/bookings`,
+      `${this.baseURL}/rest/v1/bookings?select=*`,
       {
         method: "POST",
         headers: this.getHeaders(true, accessToken),
