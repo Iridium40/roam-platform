@@ -32,7 +32,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     event = stripe.webhooks.constructEvent(
       rawBody,
       signature,
-      process.env.STRIPE_WEBHOOK_SIGNING_SECRET!
+      process.env.STRIPE_WEBHOOK_SECRET!
     );
   } catch (err) {
     console.error('Webhook signature verification failed:', err);
@@ -116,8 +116,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
 
             // Create payment transaction record
-            const platformFee = parseFloat(metadata.platform_fee || '0');
-            const totalAmount = parseFloat(metadata.total_amount);
             const businessAmount = totalAmount - platformFee;
 
             await supabase
