@@ -19,12 +19,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const signature = req.headers['stripe-signature'] as string;
   if (!signature) {
-    console.log('⚠️ Missing Stripe signature - this might be a test call');
-    // For testing, allow requests without signature
-    if (req.body && typeof req.body === 'object' && req.body.type === 'test') {
-      console.log('🧪 Test webhook call detected');
-      return res.status(200).json({ received: true });
-    }
+    console.log('⚠️ Missing Stripe signature');
     return res.status(400).json({ error: 'Missing Stripe signature' });
   }
 
