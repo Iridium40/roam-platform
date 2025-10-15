@@ -31,6 +31,7 @@ export const useBookingsData = (currentUser: any) => {
   // Fetch bookings data on component mount
   useEffect(() => {
     if (!currentUser) {
+      console.log("⚠️ MY BOOKINGS DEBUG: No currentUser, loading=false");
       setLoading(false);
       return;
     }
@@ -40,7 +41,12 @@ export const useBookingsData = (currentUser: any) => {
         setLoading(true);
         setError(null);
 
-        console.log("Fetching bookings for user:", currentUser.id);
+        console.log("🔍 MY BOOKINGS DEBUG: Fetching bookings for user:", {
+          customer_id: currentUser.id,
+          user_id: currentUser.user_id,
+          email: currentUser.email,
+          full_customer_object: currentUser
+        });
         
         // First, try a simple query to just get bookings without joins
         const { data: simpleData, error: simpleError } = await supabase
@@ -49,14 +55,20 @@ export const useBookingsData = (currentUser: any) => {
           .eq("customer_id", currentUser.id)
           .order("booking_date", { ascending: false });
 
-        console.log("Simple query result:", { simpleData, simpleError });
+        console.log("📊 MY BOOKINGS DEBUG: Simple query result:", { 
+          bookings_count: simpleData?.length || 0,
+          simpleData, 
+          simpleError 
+        });
 
         if (simpleError) {
+          console.error("❌ MY BOOKINGS DEBUG: Error fetching bookings:", simpleError);
           throw simpleError;
         }
 
         if (!simpleData || simpleData.length === 0) {
-          console.log("No bookings found for user");
+          console.log("⚠️ MY BOOKINGS DEBUG: No bookings found for customer_id:", currentUser.id);
+          console.log("💡 MY BOOKINGS DEBUG: Try logging in as alan@roamyourbestlife.com or alan@smithhealthwellness.com");
           setBookings([]);
           return;
         }
@@ -111,9 +123,14 @@ export const useBookingsData = (currentUser: any) => {
           .eq("customer_id", currentUser.id)
           .order("booking_date", { ascending: false });
 
-        console.log("Full query result:", { data, error });
+        console.log("📋 MY BOOKINGS DEBUG: Full query with joins result:", { 
+          bookings_count: data?.length || 0,
+          data, 
+          error 
+        });
 
         if (error) {
+          console.error("❌ MY BOOKINGS DEBUG: Error in full query:", error);
           throw error;
         }
 
@@ -154,10 +171,13 @@ export const useBookingsData = (currentUser: any) => {
           updated_at: booking.created_at, // Use created_at as fallback since updated_at doesn't exist
         }));
         
-        console.log("Transformed bookings:", transformedBookings);
+        console.log("✅ MY BOOKINGS DEBUG: Successfully transformed bookings:", {
+          count: transformedBookings.length,
+          bookings: transformedBookings
+        });
         setBookings(transformedBookings);
       } catch (err: any) {
-        console.error("Error fetching bookings:", err);
+        console.error("❌ MY BOOKINGS DEBUG: Error fetching bookings:", err);
         
         // Retry logic for network errors
         if (retryCount < 3 && (err.code === "NETWORK_ERROR" || err.message?.includes("fetch"))) {

@@ -33,7 +33,14 @@ export default function MyBookings() {
   const { customer, loading: authLoading } = useAuth();
   const currentUser = customer;
 
-  // Debug logging removed to reduce console spam
+  // Enhanced debug logging to diagnose data issues
+  console.log("🔐 MY BOOKINGS PAGE DEBUG:", {
+    is_authenticated: !!customer,
+    auth_loading: authLoading,
+    customer_id: customer?.id,
+    customer_email: customer?.email,
+    customer_object: customer
+  });
 
   // State for modals
   const [showCancelModal, setShowCancelModal] = useState(false);
