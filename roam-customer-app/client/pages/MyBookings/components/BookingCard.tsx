@@ -167,7 +167,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({
               </div>
             </div>
 
-            {/* Middle Column - Location & Details */}
+            {/* Middle Column - Location */}
             <div className="col-span-4">
               <div className="space-y-4">
                 {/* Location */}
@@ -187,26 +187,58 @@ export const BookingCard: React.FC<BookingCardProps> = ({
                     </p>
                   </div>
                 </div>
-
-                {/* Status */}
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">
-                    Status:
-                  </span>
-                  <RealtimeStatusUpdate
-                    bookingId={booking.id}
-                    currentStatus={booking.booking_status}
-                    onStatusChange={(newStatus) => {
-                      // Booking status changed
-                    }}
-                  />
-                </div>
               </div>
             </div>
 
-            {/* Right Column - Rating, Price, Booking Reference & Actions */}
+            {/* Right Column - Rating, Price, Booking Reference & Hamburger Menu */}
             <div className="col-span-4">
               <div className="flex flex-col items-end space-y-4">
+                {/* Hamburger Menu - Top Right */}
+                {!isPastBooking && 
+                  (booking.status === "pending" || booking.status === "confirmed") &&
+                  booking.status !== "cancelled" &&
+                  booking.status !== "declined" &&
+                  booking.status !== "completed" &&
+                  booking.status !== "no_show" && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-gray-300 text-gray-600 hover:bg-gray-50"
+                        >
+                          <MoreHorizontal className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={() => onReschedule(booking)}
+                          className="cursor-pointer"
+                        >
+                          <Edit className="w-4 h-4 mr-2" />
+                          Reschedule
+                        </DropdownMenuItem>
+                        {canCancelBooking ? (
+                          <DropdownMenuItem
+                            onClick={() => onCancel(booking)}
+                            className="cursor-pointer text-red-600 focus:text-red-600"
+                          >
+                            <X className="w-4 h-4 mr-2" />
+                            Cancel
+                          </DropdownMenuItem>
+                        ) : isWithin24Hours(booking) ? (
+                          <DropdownMenuItem
+                            disabled
+                            className="cursor-not-allowed text-gray-400"
+                          >
+                            <X className="w-4 h-4 mr-2" />
+                            Cancel (Within 24h)
+                          </DropdownMenuItem>
+                        ) : null}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+
                 {/* Rating and Price */}
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-1">
@@ -220,13 +252,15 @@ export const BookingCard: React.FC<BookingCardProps> = ({
                   </span>
                 </div>
 
-                {/* Booking Reference */}
+                {/* Booking Reference - Stacked */}
                 {booking.booking_reference && (
-                  <div className="flex items-center gap-2">
-                    <Hash className="w-4 h-4 text-roam-blue" />
-                    <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">
-                      Booking Reference:
-                    </span>
+                  <div className="flex flex-col items-end gap-1">
+                    <div className="flex items-center gap-2">
+                      <Hash className="w-4 h-4 text-roam-blue" />
+                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">
+                        Booking Reference:
+                      </span>
+                    </div>
                     <span className="text-sm font-mono font-semibold text-gray-900">
                       {booking.booking_reference}
                     </span>
@@ -236,78 +270,63 @@ export const BookingCard: React.FC<BookingCardProps> = ({
             </div>
           </div>
 
-          {/* Desktop Action Buttons - Bottom Right */}
-          <div className="flex items-center justify-end gap-2 mt-4">
-            {!isPastBooking && (booking.status === "confirmed" || booking.status === "pending") && booking.providers && (
-              <Button
-                size="sm"
-                className="bg-roam-blue hover:bg-roam-blue/90 text-white font-medium"
-                onClick={() => onMessage(booking)}
-                title={`Message ${booking.providers.first_name} ${booking.providers.last_name} about this booking`}
-              >
-                <MessageCircle className="w-4 h-4" />
-              </Button>
-            )}
+          {/* Desktop Status and Progress Bar - Bottom Left to Right */}
+          <div className="flex items-center justify-between mt-6">
+            {/* Status and Progress Bar - Bottom Left */}
+            <div className="flex-1 mr-4">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">
+                  Status:
+                </span>
+                <RealtimeStatusUpdate
+                  bookingId={booking.id}
+                  currentStatus={booking.booking_status}
+                  onStatusChange={(newStatus) => {
+                    // Booking status changed
+                  }}
+                />
+              </div>
+              {/* Progress Bar */}
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div 
+                  className="bg-roam-blue h-2 rounded-full transition-all duration-300"
+                  style={{ width: booking.booking_status === 'pending' ? '25%' : booking.booking_status === 'confirmed' ? '50%' : booking.booking_status === 'in_progress' ? '75%' : '100%' }}
+                ></div>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                {booking.booking_status === 'pending' ? 'Awaiting confirmation' : 
+                 booking.booking_status === 'confirmed' ? 'Confirmed' :
+                 booking.booking_status === 'in_progress' ? 'In progress' : 'Completed'}
+              </p>
+            </div>
 
-            {/* Hamburger menu for Reschedule and Cancel actions */}
-            {!isPastBooking && 
-              (booking.status === "pending" || booking.status === "confirmed") &&
-              booking.status !== "cancelled" &&
-              booking.status !== "declined" &&
-              booking.status !== "completed" &&
-              booking.status !== "no_show" && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="border-gray-300 text-gray-600 hover:bg-gray-50"
-                    >
-                      <MoreHorizontal className="w-4 h-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem
-                      onClick={() => onReschedule(booking)}
-                      className="cursor-pointer"
-                    >
-                      <Edit className="w-4 h-4 mr-2" />
-                      Reschedule
-                    </DropdownMenuItem>
-                    {canCancelBooking ? (
-                      <DropdownMenuItem
-                        onClick={() => onCancel(booking)}
-                        className="cursor-pointer text-red-600 focus:text-red-600"
-                      >
-                        <X className="w-4 h-4 mr-2" />
-                        Cancel
-                      </DropdownMenuItem>
-                    ) : isWithin24Hours(booking) ? (
-                      <DropdownMenuItem
-                        disabled
-                        className="cursor-not-allowed text-gray-400"
-                      >
-                        <X className="w-4 h-4 mr-2" />
-                        Cancel (Within 24h)
-                      </DropdownMenuItem>
-                    ) : null}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+            {/* Message Button - Bottom Right */}
+            <div className="flex-shrink-0">
+              {!isPastBooking && (booking.status === "confirmed" || booking.status === "pending") && booking.providers && (
+                <Button
+                  size="sm"
+                  className="bg-roam-blue hover:bg-roam-blue/90 text-white font-medium"
+                  onClick={() => onMessage(booking)}
+                  title={`Message ${booking.providers.first_name} ${booking.providers.last_name} about this booking`}
+                >
+                  <MessageCircle className="w-4 h-4" />
+                </Button>
               )}
 
-            {isPastBooking && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="border-roam-blue text-roam-blue hover:bg-roam-blue hover:text-white"
-                onClick={() => {
-                  window.location.href = `/book-service/${booking.service_id}`;
-                }}
-              >
-                <RefreshCw className="w-4 h-4 mr-2" />
-                Book Again
-              </Button>
-            )}
+              {isPastBooking && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-roam-blue text-roam-blue hover:bg-roam-blue hover:text-white"
+                  onClick={() => {
+                    window.location.href = `/book-service/${booking.service_id}`;
+                  }}
+                >
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Book Again
+                </Button>
+              )}
+            </div>
           </div>
         </div>
 
