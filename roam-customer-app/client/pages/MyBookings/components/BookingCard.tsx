@@ -47,25 +47,25 @@ const getStatusConfig = (status: string) => {
   const configs = {
     confirmed: {
       label: "Confirmed",
-      color: "bg-green-100 text-green-800",
+      color: "bg-roam-blue/20 text-roam-blue",
       icon: CheckCircle,
       description: "Your booking is confirmed",
     },
     pending: {
       label: "Pending",
-      color: "bg-yellow-100 text-yellow-800",
+      color: "bg-roam-blue/20 text-roam-blue",
       icon: Clock,
       description: "Waiting for provider confirmation",
     },
     in_progress: {
       label: "In Progress",
-      color: "bg-blue-100 text-blue-800",
+      color: "bg-roam-blue/20 text-roam-blue",
       icon: RefreshCw,
       description: "Service is currently active",
     },
     completed: {
       label: "Completed",
-      color: "bg-gray-100 text-gray-800",
+      color: "bg-green-100 text-green-800",
       icon: CheckCircle,
       description: "Service completed successfully",
     },
