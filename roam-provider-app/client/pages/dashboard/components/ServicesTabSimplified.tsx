@@ -66,13 +66,6 @@ export default function ServicesTabSimplified({
     setEditingService(service);
   };
 
-  const handleToggleStatus = async (serviceId: string, isActive: boolean) => {
-    try {
-      await actions.toggleServiceStatus(serviceId, isActive);
-    } catch (error) {
-      console.error('Failed to toggle service status:', error);
-    }
-  };
 
   const handleSaveService = async (serviceForm: any) => {
     try {
@@ -127,7 +120,6 @@ export default function ServicesTabSimplified({
           <SimplifiedServiceListSection
             services={filteredServices}
             loading={loading}
-            onToggleStatus={handleToggleStatus}
             onEdit={handleEdit}
           />
         </TabsContent>

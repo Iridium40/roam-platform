@@ -215,10 +215,13 @@ export function useServices() {
       is_active: updates.is_active
     };
 
-    console.log('updateService API call:', {
+    console.log('🔍 useServices - updateService API call:', {
       url: '/api/business/services',
       method: 'PUT',
-      body: requestBody
+      body: requestBody,
+      updates,
+      business_duration_minutes: updates.business_duration_minutes,
+      business_duration_minutes_type: typeof updates.business_duration_minutes
     });
 
     try {

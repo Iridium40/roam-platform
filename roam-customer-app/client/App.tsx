@@ -45,6 +45,8 @@ const CustomerTransactions = lazy(() => import("./pages/CustomerTransactions"));
 const CustomerProfile = lazy(() => import("./pages/CustomerProfile"));
 const CustomerSettings = lazy(() => import("./pages/CustomerSettings"));
 const Test = lazy(() => import("./pages/Test"));
+const TipSuccess = lazy(() => import("./pages/TipSuccess"));
+const TipCancel = lazy(() => import("./pages/TipCancel"));
 
 // Loading component for Suspense fallback
 const PageLoader = () => (
@@ -161,6 +163,8 @@ const App = () => (
                   }
                 />
                 <Route path="/test" element={<Test />} />
+                <Route path="/tip-success" element={<TipSuccess />} />
+                <Route path="/tip-cancel" element={<TipCancel />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>

@@ -2,7 +2,6 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
 import {
   Table,
   TableBody,
@@ -42,7 +41,6 @@ const formatSubcategoryName = (name: string | undefined): string => {
 interface ServiceListSectionProps {
   services: BusinessService[];
   loading: boolean;
-  onToggleStatus: (serviceId: string, isActive: boolean) => Promise<void>;
   onEdit: (service: BusinessService) => void;
   onDelete: (serviceId: string) => Promise<void>;
 }
@@ -50,7 +48,6 @@ interface ServiceListSectionProps {
 export function ServiceListSection({
   services,
   loading,
-  onToggleStatus,
   onEdit,
   onDelete,
 }: ServiceListSectionProps) {
@@ -175,19 +172,11 @@ export function ServiceListSection({
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center space-x-2">
-                      <Switch
-                        checked={service.is_active}
-                        onCheckedChange={(checked) =>
-                          onToggleStatus(service.id, checked)
-                        }
-                      />
-                      <Badge
-                        variant={service.is_active ? 'default' : 'secondary'}
-                      >
-                        {service.is_active ? 'Active' : 'Inactive'}
-                      </Badge>
-                    </div>
+                    <Badge
+                      variant={service.is_active ? 'default' : 'secondary'}
+                    >
+                      {service.is_active ? 'Active' : 'Inactive'}
+                    </Badge>
                   </TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>

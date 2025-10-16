@@ -169,6 +169,18 @@ export function createServer() {
     }
   );
 
+  app.post("/api/stripe/create-tip-checkout-session",
+    async (req, res) => {
+      try {
+        const tipCheckoutHandler = await import("../api/stripe/create-tip-checkout-session");
+        await tipCheckoutHandler.default(req, res);
+      } catch (error) {
+        console.error("Error importing tip checkout session handler:", error);
+        res.status(500).json({ error: "Failed to load tip checkout session handler" });
+      }
+    }
+  );
+
   // Webhook handler function (used by both routes)
   const handleStripeWebhook = async (req: any, res: any) => {
     console.log('🎯 [WEBHOOK] Received webhook request from Stripe');

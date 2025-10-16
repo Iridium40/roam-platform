@@ -1437,6 +1437,22 @@ export function createServer() {
       try {
         console.log("Production mode: Adding/updating business service in database");
         
+        // Fetch the service to get default duration if needed
+        const { data: serviceData, error: serviceError } = await supabase
+          .from('services')
+          .select('duration_minutes')
+          .eq('id', service_id)
+          .single();
+
+        if (serviceError || !serviceData) {
+          return res.status(404).json({ error: 'Service not found' });
+        }
+
+        // Determine the final duration - use custom value or default to service duration
+        const finalDuration = business_duration_minutes !== undefined && business_duration_minutes !== null && business_duration_minutes !== ''
+          ? parseInt(business_duration_minutes)
+          : serviceData.duration_minutes;
+        
         // Check if service already exists
         const { data: existingService, error: checkError } = await supabase
           .from('business_services')
@@ -1452,7 +1468,7 @@ export function createServer() {
             .from('business_services')
             .update({
               business_price: parseFloat(business_price),
-              business_duration_minutes: business_duration_minutes ? parseInt(business_duration_minutes) : 60,
+              business_duration_minutes: finalDuration,
               delivery_type: delivery_type || 'customer_location',
               is_active: is_active !== false,
               updated_at: new Date().toISOString()
@@ -1471,7 +1487,7 @@ export function createServer() {
               business_id,
               service_id,
               business_price: parseFloat(business_price),
-              business_duration_minutes: business_duration_minutes ? parseInt(business_duration_minutes) : 60,
+              business_duration_minutes: finalDuration,
               delivery_type: delivery_type || 'customer_location',
               is_active: is_active !== false
             })
@@ -1526,6 +1542,17 @@ export function createServer() {
       try {
         console.log("Production mode: Updating business service in database");
         
+        // Fetch the service to get default duration if needed
+        const { data: serviceData, error: serviceError } = await supabase
+          .from('services')
+          .select('duration_minutes')
+          .eq('id', service_id)
+          .single();
+
+        if (serviceError || !serviceData) {
+          return res.status(404).json({ error: 'Service not found' });
+        }
+        
         // Build upsert object with all required fields
         const upsertData: any = {
           business_id,
@@ -1533,7 +1560,14 @@ export function createServer() {
         };
         
         if (business_price !== undefined) upsertData.business_price = parseFloat(business_price);
-        if (business_duration_minutes !== undefined) upsertData.business_duration_minutes = parseInt(business_duration_minutes);
+        
+        // Handle business_duration_minutes - use custom value or default to service duration
+        if (business_duration_minutes !== undefined && business_duration_minutes !== null && business_duration_minutes !== '') {
+          upsertData.business_duration_minutes = parseInt(business_duration_minutes);
+        } else {
+          upsertData.business_duration_minutes = serviceData.duration_minutes;
+        }
+        
         if (delivery_type !== undefined) upsertData.delivery_type = delivery_type;
         if (is_active !== undefined) upsertData.is_active = is_active;
 

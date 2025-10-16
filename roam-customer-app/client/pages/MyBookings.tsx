@@ -168,9 +168,23 @@ export default function MyBookings() {
               </Link>
             </div>
 
-            <h1 className="text-3xl sm:text-4xl font-bold mb-4">
-              My <span className="text-roam-blue">Bookings</span>
-            </h1>
+            <div className="flex items-center justify-between mb-4">
+              <h1 className="text-3xl sm:text-4xl font-bold">
+                My <span className="text-roam-blue">Bookings</span>
+              </h1>
+              <Button
+                onClick={() => {
+                  console.log("🔄 MANUAL REFRESH TRIGGERED");
+                  refreshBookings();
+                }}
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2"
+              >
+                <RefreshCw className="w-4 h-4" />
+                Refresh
+              </Button>
+            </div>
             <p className="text-lg text-foreground/70 mb-8">
               Manage your service appointments and view your booking history.
             </p>
@@ -220,6 +234,7 @@ export default function MyBookings() {
                   onCancel={handleCancel}
                   onReschedule={handleReschedule}
                   onMessage={handleMessage}
+                  onRefresh={refreshBookings}
                   onNextPage={() => nextPage("present")}
                   onPrevPage={() => prevPage("present")}
                   onPageChange={(page) => {
@@ -239,6 +254,7 @@ export default function MyBookings() {
                   onCancel={handleCancel}
                   onReschedule={handleReschedule}
                   onMessage={handleMessage}
+                  onRefresh={refreshBookings}
                   onNextPage={() => nextPage("future")}
                   onPrevPage={() => prevPage("future")}
                   onPageChange={(page) => {
@@ -258,6 +274,7 @@ export default function MyBookings() {
                   onCancel={handleCancel}
                   onReschedule={handleReschedule}
                   onMessage={handleMessage}
+                  onRefresh={refreshBookings}
                   onNextPage={() => nextPage("past")}
                   onPrevPage={() => prevPage("past")}
                   onPageChange={(page) => {

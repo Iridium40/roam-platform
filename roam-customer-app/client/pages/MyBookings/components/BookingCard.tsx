@@ -26,6 +26,7 @@ import {
   Edit,
   Hash,
   Map,
+  CreditCard,
 } from "lucide-react";
 import type { BookingWithDetails } from "@/types/index";
 import { formatBookingDate, isWithin24Hours, getDeliveryTypeLabel, getDeliveryTypeIcon } from "../utils/bookingCalculations";
@@ -36,6 +37,7 @@ interface BookingCardProps {
   onCancel: (booking: BookingWithDetails) => void;
   onReschedule: (booking: BookingWithDetails) => void;
   onMessage: (booking: BookingWithDetails) => void;
+  onRefresh?: () => void;
 }
 
 
@@ -53,22 +55,24 @@ export const BookingCard: React.FC<BookingCardProps> = ({
   onCancel,
   onReschedule,
   onMessage,
+  onRefresh,
 }) => {
   const [showReviewModal, setShowReviewModal] = useState(false);
+  const [showTipModal, setShowTipModal] = useState(false);
 
   const DeliveryIcon = getDeliveryIcon(booking.deliveryType);
   const deliveryLabel = getDeliveryTypeLabel(booking.deliveryType);
 
   // Check if booking is within 24 hours and cannot be cancelled
   const canCancelBooking =
-    (booking.status === "pending" || booking.status === "confirmed") &&
+    (booking.booking_status === "pending" || booking.booking_status === "confirmed") &&
     !isWithin24Hours(booking);
 
   // Check if booking is in the past (completed, cancelled, no_show, or past date)
   const isPastBooking = 
-    booking.status === "completed" ||
-    booking.status === "cancelled" || 
-    booking.status === "no_show" ||
+    booking.booking_status === "completed" ||
+    booking.booking_status === "cancelled" || 
+    booking.booking_status === "no_show" ||
     new Date(`${booking.date} ${booking.time}`) < new Date();
 
   return (
@@ -119,7 +123,15 @@ export const BookingCard: React.FC<BookingCardProps> = ({
                 {/* Business Name */}
                 {booking.business_profiles?.business_name && (
                   <div className="flex items-center gap-2">
-                    <Building className="w-5 h-5 text-roam-blue" />
+                    {booking.business_profiles.logo_url ? (
+                      <img 
+                        src={booking.business_profiles.logo_url} 
+                        alt={`${booking.business_profiles.business_name} logo`}
+                        className="w-10 h-10 rounded object-cover"
+                      />
+                    ) : (
+                      <Building className="w-5 h-5 text-roam-blue" />
+                    )}
                     <div className="flex-1">
                       <p className="text-sm font-medium text-gray-900">
                         {booking.business_profiles.business_name}
@@ -175,11 +187,11 @@ export const BookingCard: React.FC<BookingCardProps> = ({
               <div className="flex flex-col items-end space-y-4">
                 {/* Hamburger Menu - Top Right */}
                 {!isPastBooking && 
-                  (booking.status === "pending" || booking.status === "confirmed") &&
-                  booking.status !== "cancelled" &&
-                  booking.status !== "declined" &&
-                  booking.status !== "completed" &&
-                  booking.status !== "no_show" && (
+                  (booking.booking_status === "pending" || booking.booking_status === "confirmed") &&
+                  booking.booking_status !== "cancelled" &&
+                  booking.booking_status !== "declined" &&
+                  booking.booking_status !== "completed" &&
+                  booking.booking_status !== "no_show" && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button
@@ -300,7 +312,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({
                   isPastBooking,
                   bookingDate: booking.date,
                   bookingTime: booking.time,
-                  bookingStatus: booking.status,
+                  bookingStatus: booking.booking_status,
                   bookingBookingStatus: booking.booking_status,
                   isFinalStatus,
                   shouldShow,
@@ -320,6 +332,65 @@ export const BookingCard: React.FC<BookingCardProps> = ({
               )}
             </div>
           </div>
+
+          {/* Review and Tip Buttons for Completed Bookings - Desktop */}
+          {booking.booking_status === "completed" && (
+            <div className="flex justify-center mt-4">
+              {(() => {
+                console.log('🔍 Review Check Debug:', {
+                  bookingId: booking.id,
+                  bookingStatus: booking.booking_status,
+                  reviews: booking.reviews,
+                  reviewsLength: booking.reviews?.length,
+                  hasReviews: booking.reviews && booking.reviews.length > 0,
+                  tips: booking.tips,
+                  tipsLength: booking.tips?.length,
+                  hasTips: booking.tips && booking.tips.length > 0
+                });
+                return booking.reviews && booking.reviews.length > 0;
+              })() ? (
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-green-500 text-green-600 hover:bg-green-50"
+                    onClick={() => setShowReviewModal(true)}
+                  >
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    View Review & Tip
+                  </Button>
+                  <span className="text-xs text-gray-500">
+                    {booking.reviews[0].overall_rating}/5 stars
+                  </span>
+                  {booking.tips && booking.tips.length > 0 && (
+                    <span className="text-xs text-gray-500">
+                      • ${booking.tips[0].tip_amount} tip
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-purple-500 text-purple-600 hover:bg-purple-50"
+                    onClick={() => setShowTipModal(true)}
+                  >
+                    <CreditCard className="w-4 h-4 mr-2" />
+                    Send Tip
+                  </Button>
+                  <Button
+                    size="sm" 
+                    className="bg-roam-blue hover:bg-roam-blue/90"
+                    onClick={() => setShowReviewModal(true)}
+                  >
+                    <Star className="w-4 h-4 mr-2" />
+                    Leave Review
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Mobile Layout - Vertical (unchanged) */}
@@ -343,7 +414,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({
                   <p className="text-foreground/60">
                     with {booking.providers?.first_name} {booking.providers?.last_name}
                   </p>
-                  {booking.status === "confirmed" && (
+                  {booking.booking_status === "confirmed" && (
                     <div className="flex items-center gap-1 text-xs text-roam-blue bg-roam-blue/10 px-2 py-1 rounded-full">
                       <MessageCircle className="w-3 h-3" />
                       <span>Messaging Available</span>
@@ -441,7 +512,15 @@ export const BookingCard: React.FC<BookingCardProps> = ({
           {/* Mobile Business Name Section */}
           {booking.business_profiles?.business_name && (
             <div className="flex items-center gap-2 mb-3">
-              <Building className="w-4 h-4 text-roam-blue" />
+              {booking.business_profiles.logo_url ? (
+                <img 
+                  src={booking.business_profiles.logo_url} 
+                  alt={`${booking.business_profiles.business_name} logo`}
+                  className="w-8 h-8 rounded object-cover"
+                />
+              ) : (
+                <Building className="w-4 h-4 text-roam-blue" />
+              )}
               <div className="flex-1">
                 <p className="text-sm font-medium text-gray-900">
                   {booking.business_profiles.business_name}
@@ -496,7 +575,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({
           <div className="flex flex-wrap items-center justify-between gap-2">
             {/* Primary action - Message Provider (only for future bookings) */}
             <div className="flex gap-2">
-              {!isPastBooking && (booking.status === "confirmed" || booking.status === "pending") && booking.providers && (
+              {!isPastBooking && (booking.booking_status === "confirmed" || booking.booking_status === "pending") && booking.providers && (
                 <Button
                   size="sm"
                   className="bg-roam-blue hover:bg-roam-blue/90 text-white font-medium"
@@ -511,11 +590,11 @@ export const BookingCard: React.FC<BookingCardProps> = ({
             {/* Hamburger menu for Reschedule and Cancel actions */}
             <div className="flex gap-2">
               {!isPastBooking && 
-                (booking.status === "pending" || booking.status === "confirmed") &&
-                booking.status !== "cancelled" &&
-                booking.status !== "declined" &&
-                booking.status !== "completed" &&
-                booking.status !== "no_show" && (
+                (booking.booking_status === "pending" || booking.booking_status === "confirmed") &&
+                booking.booking_status !== "cancelled" &&
+                booking.booking_status !== "declined" &&
+                booking.booking_status !== "completed" &&
+                booking.booking_status !== "no_show" && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button
@@ -555,9 +634,21 @@ export const BookingCard: React.FC<BookingCardProps> = ({
                   </DropdownMenu>
                 )}
             </div>
-            {booking.status === "completed" && (
+            {booking.booking_status === "completed" && (
               <>
-                {booking.reviews && booking.reviews.length > 0 ? (
+                {(() => {
+                  console.log('🔍 Mobile Review Check Debug:', {
+                    bookingId: booking.id,
+                    bookingStatus: booking.booking_status,
+                    reviews: booking.reviews,
+                    reviewsLength: booking.reviews?.length,
+                    hasReviews: booking.reviews && booking.reviews.length > 0,
+                    tips: booking.tips,
+                    tipsLength: booking.tips?.length,
+                    hasTips: booking.tips && booking.tips.length > 0
+                  });
+                  return booking.reviews && booking.reviews.length > 0;
+                })() ? (
                   <div className="flex items-center gap-2">
                     <Button 
                       size="sm" 
@@ -578,14 +669,25 @@ export const BookingCard: React.FC<BookingCardProps> = ({
                     )}
                   </div>
                 ) : (
-                  <Button 
-                    size="sm" 
-                    className="bg-roam-blue hover:bg-roam-blue/90"
-                    onClick={() => setShowReviewModal(true)}
-                  >
-                    <Star className="w-4 h-4 mr-2" />
-                    Leave Review and Tip
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-purple-500 text-purple-600 hover:bg-purple-50"
+                      onClick={() => setShowTipModal(true)}
+                    >
+                      <CreditCard className="w-4 h-4 mr-2" />
+                      Send Tip
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      className="bg-roam-blue hover:bg-roam-blue/90"
+                      onClick={() => setShowReviewModal(true)}
+                    >
+                      <Star className="w-4 h-4 mr-2" />
+                      Leave Review
+                    </Button>
+                  </div>
                 )}
               </>
             )}
@@ -608,8 +710,28 @@ export const BookingCard: React.FC<BookingCardProps> = ({
     {/* Review and Tip Modal */}
     <ReviewAndTipModal
       isOpen={showReviewModal}
-      onClose={() => setShowReviewModal(false)}
+      onClose={() => {
+        setShowReviewModal(false);
+        // Refresh booking data to get updated reviews/tips
+        if (onRefresh) {
+          onRefresh();
+        }
+      }}
       booking={booking}
+    />
+
+    {/* Tip Modal */}
+    <ReviewAndTipModal
+      isOpen={showTipModal}
+      onClose={() => {
+        setShowTipModal(false);
+        // Refresh booking data to get updated tips
+        if (onRefresh) {
+          onRefresh();
+        }
+      }}
+      booking={booking}
+      initialStep="tip"
     />
   </>
   );

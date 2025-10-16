@@ -19,7 +19,7 @@ export const useBookingsData = (currentUser: any) => {
           booking.id === bookingUpdate.id
             ? {
                 ...booking,
-                status: bookingUpdate.status,
+                booking_status: bookingUpdate.status,
                 updated_at: bookingUpdate.updated_at,
               }
             : booking,

@@ -13,6 +13,7 @@ interface BookingListProps {
   onCancel: (booking: BookingWithDetails) => void;
   onReschedule: (booking: BookingWithDetails) => void;
   onMessage: (booking: BookingWithDetails) => void;
+  onRefresh?: () => void;
   onNextPage: () => void;
   onPrevPage: () => void;
   onPageChange: (page: number) => void;
@@ -28,6 +29,7 @@ export const BookingList: React.FC<BookingListProps> = ({
   onCancel,
   onReschedule,
   onMessage,
+  onRefresh,
   onNextPage,
   onPrevPage,
   onPageChange,
@@ -75,6 +77,7 @@ export const BookingList: React.FC<BookingListProps> = ({
             onCancel={onCancel}
             onReschedule={onReschedule}
             onMessage={onMessage}
+            onRefresh={onRefresh}
           />
         ))}
       </div>

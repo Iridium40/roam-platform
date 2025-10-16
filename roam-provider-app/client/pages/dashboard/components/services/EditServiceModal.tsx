@@ -75,13 +75,23 @@ export function EditServiceModal({
 
     try {
       setSaving(true);
-      await onSave({
+      
+      const formData = {
         service_id: service.id,
         business_price: businessPrice,
         business_duration_minutes: businessDurationMinutes,
         delivery_type: deliveryType,
         is_active: isActive,
+      };
+      
+      console.log('🔍 EditServiceModal - Form data being sent:', {
+        formData,
+        businessDurationMinutes,
+        businessDurationMinutesType: typeof businessDurationMinutes,
+        businessDurationMinutesValue: businessDurationMinutes
       });
+      
+      await onSave(formData);
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save service');

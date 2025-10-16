@@ -13,12 +13,14 @@ interface ReviewAndTipModalProps {
   isOpen: boolean;
   onClose: () => void;
   booking: BookingWithDetails | null;
+  initialStep?: 'review' | 'tip';
 }
 
 const ReviewAndTipModal: React.FC<ReviewAndTipModalProps> = ({
   isOpen,
   onClose,
   booking,
+  initialStep = 'review',
 }) => {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -39,34 +41,38 @@ const ReviewAndTipModal: React.FC<ReviewAndTipModalProps> = ({
     tip_percentage: 0,
     customer_message: '',
   });
+  const [customTipAmount, setCustomTipAmount] = useState<string>('');
 
   // Check if review and tip already exist
-  const existingReview = booking?.reviews && booking.reviews.length > 0 ? booking.reviews[0] : null;
+  // Handle both array and single object cases for reviews
+  const existingReview = booking?.reviews 
+    ? (Array.isArray(booking.reviews) && booking.reviews.length > 0 
+        ? booking.reviews[0] 
+        : !Array.isArray(booking.reviews) 
+          ? booking.reviews 
+          : null)
+    : null;
+    
   const existingTip = booking?.tips && booking.tips.length > 0 ? booking.tips[0] : null;
   const hasSubmittedReview = !!existingReview;
   const hasSubmittedTip = !!existingTip;
 
-  // Tip amount options (percentage-based)
-  const tipOptions = [
-    { amount: 5, percentage: 5 },
-    { amount: 10, percentage: 10 },
-    { amount: 15, percentage: 15 },
-    { amount: 20, percentage: 20 },
-    { amount: 25, percentage: 25 },
-  ];
+  // Debug logging to understand the data
+  console.log('🔍 REVIEW MODAL DEBUG:', {
+    bookingId: booking?.id,
+    bookingReviews: booking?.reviews,
+    isReviewsArray: Array.isArray(booking?.reviews),
+    reviewsLength: booking?.reviews?.length,
+    existingReview,
+    hasSubmittedReview,
+    bookingTips: booking?.tips,
+    tipsLength: booking?.tips?.length,
+    existingTip,
+    hasSubmittedTip
+  });
 
-  // Calculate tip amounts based on booking total
-  const calculatedTipAmounts = tipOptions.map(option => ({
-    ...option,
-    amount: Math.round((booking?.total_amount || 0) * (option.percentage / 100) * 100) / 100
-  }));
-
-  // Preset dollar amount options
-  const presetTipAmounts = [
-    { amount: 20, label: '$20' },
-    { amount: 40, label: '$40' },
-    { amount: 60, label: '$60' },
-  ];
+  // Quick pick tip amounts
+  const quickPickAmounts = [10, 20, 40];
 
   const handleReviewChange = (field: keyof ReviewFormData, value: number | string) => {
     setReviewData(prev => ({
@@ -110,33 +116,27 @@ const ReviewAndTipModal: React.FC<ReviewAndTipModalProps> = ({
     }));
   };
 
-  // Set initial step based on existing review/tip
+  // Set initial step based on existing review/tip or initialStep prop
   useEffect(() => {
-    if (hasSubmittedReview) {
+    if (!isOpen) return; // Only set step when modal opens
+    
+    // If user specifically wants to tip (initialStep="tip"), show tip step
+    if (initialStep === 'tip') {
+      setCurrentStep('tip');
+    } else if (hasSubmittedReview) {
       setCurrentStep('view');
     } else {
-      setCurrentStep('review');
+      setCurrentStep(initialStep);
     }
-  }, [hasSubmittedReview]);
+  }, [isOpen, hasSubmittedReview, initialStep]);
 
   const submitReview = async () => {
     if (!booking) return;
 
     try {
-      // First, check if a review already exists for this booking
-      const { data: existingReview, error: checkError } = await supabase
-        .from('reviews')
-        .select('id')
-        .eq('booking_id', booking.id)
-        .single();
-
-      if (checkError && checkError.code !== 'PGRST116') {
-        // PGRST116 is "not found" error, which is expected if no review exists
-        throw checkError;
-      }
-
-      if (existingReview) {
-        // Review already exists, show appropriate message
+      // If the booking data already shows there are reviews, don't proceed
+      if (hasSubmittedReview) {
+        console.log('⚠️ SUBMIT REVIEW DEBUG: Booking data shows review already exists, not proceeding');
         toast({
           title: "Review already submitted",
           description: "You have already submitted a review for this booking.",
@@ -144,6 +144,41 @@ const ReviewAndTipModal: React.FC<ReviewAndTipModalProps> = ({
         });
         throw new Error('Review already exists for this booking');
       }
+
+      // First, check if a review already exists for this booking
+      console.log('🔍 DATABASE CHECK DEBUG: Checking for existing review for booking:', booking.id);
+      
+      const { data: existingReview, error: checkError } = await supabase
+        .from('reviews')
+        .select('id')
+        .eq('booking_id', booking.id)
+        .maybeSingle();
+
+      console.log('🔍 DATABASE CHECK DEBUG: Database query result:', {
+        existingReview,
+        checkError,
+        errorCode: checkError?.code,
+        errorMessage: checkError?.message
+      });
+
+      if (checkError && checkError.code !== 'PGRST116') {
+        // PGRST116 is "not found" error, which is expected if no review exists
+        console.log('❌ DATABASE CHECK DEBUG: Unexpected error:', checkError);
+        throw checkError;
+      }
+
+      if (existingReview) {
+        // Review already exists, show appropriate message
+        console.log('⚠️ DATABASE CHECK DEBUG: Review found in database, showing error');
+        toast({
+          title: "Review already submitted",
+          description: "You have already submitted a review for this booking.",
+          variant: "destructive",
+        });
+        throw new Error('Review already exists for this booking');
+      }
+
+      console.log('✅ DATABASE CHECK DEBUG: No existing review found, proceeding with submission');
 
       // No existing review, proceed with insertion
       const { data, error } = await supabase
@@ -185,60 +220,62 @@ const ReviewAndTipModal: React.FC<ReviewAndTipModalProps> = ({
   };
 
   const submitTip = async () => {
-    if (!booking || !booking.providers || tipData.tip_amount <= 0) return;
+    if (!booking || !booking.providers || tipData.tip_amount < 10) return;
 
     try {
-      // For now, just insert the tip record without payment processing
-      const { data, error } = await supabase
-        .from('tips')
-        .insert({
+      // Create Stripe checkout session for tip payment
+      const response = await fetch('/api/stripe/create-tip-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          tip_amount: tipData.tip_amount,
           booking_id: booking.id,
           customer_id: booking.customer_id,
           provider_id: booking.providers.id,
           business_id: booking.business_id,
-          tip_amount: tipData.tip_amount,
-          tip_percentage: tipData.tip_percentage,
-          payment_status: 'pending',
-          platform_fee_amount: Math.round(tipData.tip_amount * 0.10 * 100) / 100, // 10% platform fee
-          provider_net_amount: Math.round(tipData.tip_amount * 0.90 * 100) / 100, // 90% to provider
           customer_message: tipData.customer_message,
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      toast({
-        title: "Tip submitted successfully!",
-        description: "Payment processing will be implemented soon.",
+          success_url: `${window.location.origin}/my-bookings?tip_success=true`,
+          cancel_url: `${window.location.origin}/my-bookings?tip_cancel=true`,
+        }),
       });
 
-      return data;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.details || 'Failed to create checkout session');
+      }
+
+      const { checkout_url } = await response.json();
+
+      // Redirect to Stripe checkout
+      window.location.href = checkout_url;
+
     } catch (error) {
-      console.error('Error submitting tip:', error);
+      console.error('Error creating tip checkout:', error);
       toast({
         title: "Error processing tip",
-        description: "Please try again.",
+        description: error instanceof Error ? error.message : "Please try again.",
         variant: "destructive",
       });
       throw error;
     }
   };
 
-  const handleSubmit = async () => {
+  const handleReviewSubmit = async () => {
     if (!booking) return;
 
     setIsSubmitting(true);
     try {
-      // Submit review first
+      // Submit review
       await submitReview();
-
-      // If there's a tip, proceed to tip step
-      if (tipData.tip_amount > 0) {
-        setCurrentStep('tip');
-      } else {
-        setCurrentStep('success');
+      
+      // If there's a tip amount, also submit the tip
+      if (tipData.tip_amount >= 10) {
+        await submitTip();
       }
+      
+      setCurrentStep('success');
     } catch (error) {
       console.error('Error in submission:', error);
     } finally {
@@ -260,6 +297,14 @@ const ReviewAndTipModal: React.FC<ReviewAndTipModalProps> = ({
 
   const handleSkipTip = () => {
     setCurrentStep('success');
+  };
+
+  const handleProceedToTip = () => {
+    setCurrentStep('tip');
+  };
+
+  const handleProceedToReview = () => {
+    setCurrentStep('review');
   };
 
   const handleClose = () => {
@@ -381,7 +426,8 @@ const ReviewAndTipModal: React.FC<ReviewAndTipModalProps> = ({
 
               <div className="flex gap-3">
                 <Button
-                  onClick={handleSubmit}
+                  variant="outline"
+                  onClick={handleReviewSubmit}
                   disabled={isSubmitting || reviewData.overall_rating === 0}
                   className="flex-1"
                 >
@@ -390,7 +436,15 @@ const ReviewAndTipModal: React.FC<ReviewAndTipModalProps> = ({
                   ) : (
                     <CheckCircle className="w-4 h-4 mr-2" />
                   )}
-                  Submit Review
+                  Submit Review Only
+                </Button>
+                <Button
+                  onClick={handleProceedToTip}
+                  disabled={isSubmitting || reviewData.overall_rating === 0}
+                  className="flex-1"
+                >
+                  <DollarSign className="w-4 h-4 mr-2" />
+                  Review + Tip
                 </Button>
               </div>
             </div>
@@ -406,66 +460,81 @@ const ReviewAndTipModal: React.FC<ReviewAndTipModalProps> = ({
                 </p>
               </div>
 
+              {/* Booking Total Display */}
+              <div className="bg-gray-50 rounded-lg p-4 border">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium text-gray-600">Service Total:</span>
+                  <span className="text-lg font-semibold text-gray-900">
+                    ${booking?.total_amount?.toFixed(2) || '0.00'}
+                  </span>
+                </div>
+              </div>
+
               <div className="space-y-4">
+                {/* Quick Pick Buttons */}
                 <div>
-                  <Label className="text-sm font-medium mb-3 block">Preset Tip Amounts</Label>
+                  <Label className="text-sm font-medium mb-3 block">Quick Pick</Label>
                   <div className="grid grid-cols-3 gap-3">
-                    {presetTipAmounts.map((option) => (
+                    {quickPickAmounts.map((amount) => (
                       <button
-                        key={option.amount}
+                        key={amount}
                         type="button"
-                        onClick={() => handlePresetTipSelect(option.amount)}
+                        onClick={() => {
+                          setTipData(prev => ({ ...prev, tip_amount: amount }));
+                          setCustomTipAmount('');
+                        }}
                         className={`p-3 rounded-lg border-2 transition-colors ${
-                          tipData.tip_amount === option.amount
+                          tipData.tip_amount === amount
                             ? 'border-roam-blue bg-roam-blue/10'
                             : 'border-gray-200 hover:border-gray-300'
                         }`}
                       >
-                        <div className="text-lg font-semibold">{option.label}</div>
-                        <div className="text-sm text-gray-600">Fixed amount</div>
+                        <div className="text-lg font-semibold">${amount}</div>
                       </button>
                     ))}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTipData(prev => ({ ...prev, tip_amount: 0 }));
+                        setCustomTipAmount('');
+                      }}
+                      className={`p-3 rounded-lg border-2 transition-colors ${
+                        tipData.tip_amount === 0 && customTipAmount === ''
+                          ? 'border-roam-blue bg-roam-blue/10'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="text-lg font-semibold">Custom</div>
+                    </button>
                   </div>
                 </div>
 
-                <div>
-                  <Label className="text-sm font-medium mb-3 block">Percentage-Based Tips</Label>
-                  <div className="grid grid-cols-3 gap-3">
-                    {calculatedTipAmounts.map((option) => (
-                      <button
-                        key={option.percentage}
-                        type="button"
-                        onClick={() => handleTipOptionSelect(option.amount, option.percentage)}
-                        className={`p-3 rounded-lg border-2 transition-colors ${
-                          tipData.tip_amount === option.amount
-                            ? 'border-roam-blue bg-roam-blue/10'
-                            : 'border-gray-200 hover:border-gray-300'
-                        }`}
-                      >
-                        <div className="text-lg font-semibold">${option.amount}</div>
-                        <div className="text-sm text-gray-600">{option.percentage}%</div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
+                {/* Custom Amount Input */}
                 <div className="space-y-2">
                   <Label htmlFor="custom-tip" className="text-sm font-medium">
-                    Custom Amount
+                    Custom Amount (Minimum $10)
                   </Label>
                   <div className="relative">
                     <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                     <Input
                       id="custom-tip"
                       type="number"
-                      placeholder="0.00"
-                      value={tipData.tip_amount || ''}
-                      onChange={(e) => handleCustomTipChange(e.target.value)}
+                      placeholder="10.00"
+                      value={customTipAmount}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setCustomTipAmount(value);
+                        const numValue = parseFloat(value) || 0;
+                        setTipData(prev => ({ ...prev, tip_amount: numValue }));
+                      }}
                       className="pl-10"
-                      min="0"
+                      min="10"
                       step="0.01"
                     />
                   </div>
+                  {tipData.tip_amount > 0 && tipData.tip_amount < 10 && (
+                    <p className="text-sm text-red-600">Minimum tip amount is $10</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -491,8 +560,9 @@ const ReviewAndTipModal: React.FC<ReviewAndTipModalProps> = ({
                   Skip Tip
                 </Button>
                 <Button
+                  variant="outline"
                   onClick={handleTipSubmit}
-                  disabled={isSubmitting || tipData.tip_amount <= 0}
+                  disabled={isSubmitting || tipData.tip_amount < 10}
                   className="flex-1"
                 >
                   {isSubmitting ? (
@@ -500,7 +570,15 @@ const ReviewAndTipModal: React.FC<ReviewAndTipModalProps> = ({
                   ) : (
                     <DollarSign className="w-4 h-4 mr-2" />
                   )}
-                  Send ${tipData.tip_amount} Tip
+                  Send Tip Only
+                </Button>
+                <Button
+                  onClick={handleProceedToReview}
+                  disabled={isSubmitting || tipData.tip_amount < 10}
+                  className="flex-1"
+                >
+                  <Star className="w-4 h-4 mr-2" />
+                  Tip + Review
                 </Button>
               </div>
             </div>

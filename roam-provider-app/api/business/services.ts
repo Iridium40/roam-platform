@@ -114,10 +114,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       // CRITICAL: Validate that the service is eligible for this business
-      // Step 1: Get the service's subcategory
+      // Step 1: Get the service's subcategory and default duration
       const { data: service, error: serviceError } = await supabase
         .from('services')
-        .select('id, subcategory_id, name')
+        .select('id, subcategory_id, name, duration_minutes')
         .eq('id', service_id)
         .eq('is_active', true)
         .single();
@@ -171,13 +171,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       // Step 5: Add the service
+      // Use custom duration if provided, otherwise use service's default duration
+      const finalDuration = business_duration_minutes !== undefined && business_duration_minutes !== null && business_duration_minutes !== ''
+        ? parseInt(business_duration_minutes)
+        : service.duration_minutes;
+
       const { data: newService, error: insertError } = await supabase
         .from('business_services')
         .insert({
           business_id,
           service_id,
           business_price: parseFloat(business_price),
-          business_duration_minutes: parseInt(business_duration_minutes),
+          business_duration_minutes: finalDuration,
           delivery_type,
           is_active
         })
@@ -216,8 +221,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method === 'PUT') {
       const { business_id, service_id, business_price, business_duration_minutes, delivery_type, is_active } = req.body;
 
+      console.log('🔍 API - PUT /api/business/services received:', {
+        business_id,
+        service_id,
+        business_price,
+        business_duration_minutes,
+        business_duration_minutes_type: typeof business_duration_minutes,
+        delivery_type,
+        is_active,
+        fullBody: req.body
+      });
+
       if (!business_id || !service_id) {
         return res.status(400).json({ error: 'business_id and service_id are required' });
+      }
+
+      // Fetch the service to get default duration if needed
+      const { data: serviceData, error: serviceError } = await supabase
+        .from('services')
+        .select('duration_minutes')
+        .eq('id', service_id)
+        .single();
+
+      if (serviceError || !serviceData) {
+        return res.status(404).json({ error: 'Service not found' });
       }
 
       const updates: any = {};
@@ -228,13 +255,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
         updates.business_price = price;
       }
-      if (business_duration_minutes !== undefined) {
+      
+      // Handle business_duration_minutes
+      if (business_duration_minutes !== undefined && business_duration_minutes !== null && business_duration_minutes !== '') {
+        console.log('🔍 API - Processing custom business_duration_minutes:', {
+          business_duration_minutes,
+          type: typeof business_duration_minutes,
+          parsed: parseInt(business_duration_minutes)
+        });
+        
         const duration = parseInt(business_duration_minutes);
         if (duration <= 0) {
           return res.status(400).json({ error: 'business_duration_minutes must be greater than 0' });
         }
         updates.business_duration_minutes = duration;
+        console.log('🔍 API - Added custom duration to updates:', { business_duration_minutes: duration });
+      } else {
+        // If no custom duration provided, use the service's default duration
+        console.log('🔍 API - No custom duration, using service default:', serviceData.duration_minutes);
+        updates.business_duration_minutes = serviceData.duration_minutes;
       }
+      
       if (delivery_type !== undefined) updates.delivery_type = delivery_type;
       if (is_active !== undefined) updates.is_active = is_active;
 

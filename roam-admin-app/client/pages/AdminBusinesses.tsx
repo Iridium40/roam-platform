@@ -212,6 +212,7 @@ interface BusinessService {
   business_id: string;
   service_id: string;
   business_price: number;
+  business_duration_minutes: number | null;
   is_active: boolean;
   created_at: string;
   delivery_type: DeliveryType | null;
@@ -1093,6 +1094,7 @@ export default function AdminBusinesses() {
           business_id,
           service_id,
           business_price,
+          business_duration_minutes,
           is_active,
           created_at,
           delivery_type,
@@ -2782,6 +2784,82 @@ export default function AdminBusinesses() {
                 </ROAMCard>
               </div>
 
+              {/* Business Services Overview */}
+              {(() => {
+                const currentBusinessServices = businessServices.filter(
+                  (service) => service.business_id === selectedBusiness.id,
+                );
+                
+                if (currentBusinessServices.length === 0) return null;
+                
+                const servicesWithCustomDuration = currentBusinessServices.filter(
+                  (service) => service.business_duration_minutes && 
+                  service.business_duration_minutes !== service.services?.duration_minutes
+                );
+                
+                const avgBusinessDuration = currentBusinessServices
+                  .filter(s => s.business_duration_minutes)
+                  .reduce((sum, s) => sum + (s.business_duration_minutes || 0), 0) / 
+                  currentBusinessServices.filter(s => s.business_duration_minutes).length;
+                
+                const avgPlatformDuration = currentBusinessServices
+                  .reduce((sum, s) => sum + (s.services?.duration_minutes || 0), 0) / 
+                  currentBusinessServices.length;
+
+                return (
+                  <ROAMCard>
+                    <ROAMCardHeader>
+                      <ROAMCardTitle className="text-base flex items-center gap-2">
+                        <Clock className="w-4 h-4" />
+                        Service Duration Overview
+                      </ROAMCardTitle>
+                    </ROAMCardHeader>
+                    <ROAMCardContent>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="text-center p-4 bg-muted/50 rounded-lg">
+                          <div className="text-2xl font-bold text-roam-blue">
+                            {currentBusinessServices.length}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            Total Services
+                          </div>
+                        </div>
+                        
+                        <div className="text-center p-4 bg-muted/50 rounded-lg">
+                          <div className="text-2xl font-bold text-green-600">
+                            {servicesWithCustomDuration.length}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            Custom Durations
+                          </div>
+                        </div>
+                        
+                        <div className="text-center p-4 bg-muted/50 rounded-lg">
+                          <div className="text-2xl font-bold text-orange-600">
+                            {avgBusinessDuration ? `${Math.round(avgBusinessDuration)}min` : `${Math.round(avgPlatformDuration)}min`}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            Avg Duration
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {servicesWithCustomDuration.length > 0 && (
+                        <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
+                          <div className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">
+                            Custom Duration Services
+                          </div>
+                          <div className="text-xs text-blue-600 dark:text-blue-300">
+                            This business has customized the duration for {servicesWithCustomDuration.length} service(s), 
+                            showing their specific business requirements.
+                          </div>
+                        </div>
+                      )}
+                    </ROAMCardContent>
+                  </ROAMCard>
+                );
+              })()}
+
               {/* Service Categories and Subcategories */}
               {(selectedBusiness.service_categories?.length > 0 ||
                 selectedBusiness.service_subcategories?.length > 0) && (
@@ -3221,18 +3299,21 @@ export default function AdminBusinesses() {
                                   </div>
                                 )}
 
-                                {businessService.services?.duration_minutes && (
+                                {(businessService.business_duration_minutes || businessService.services?.duration_minutes) && (
                                   <div>
                                     <div className="font-medium text-muted-foreground">
                                       Duration
                                     </div>
                                     <div className="text-foreground flex items-center gap-1">
                                       <Clock className="w-3 h-3" />
-                                      {
-                                        businessService.services
-                                          .duration_minutes
-                                      }{" "}
+                                      {businessService.business_duration_minutes || businessService.services?.duration_minutes}{" "}
                                       min
+                                      {businessService.business_duration_minutes && businessService.services?.duration_minutes && 
+                                       businessService.business_duration_minutes !== businessService.services.duration_minutes && (
+                                        <span className="text-xs text-muted-foreground ml-1">
+                                          (Platform: {businessService.services.duration_minutes}min)
+                                        </span>
+                                      )}
                                     </div>
                                   </div>
                                 )}

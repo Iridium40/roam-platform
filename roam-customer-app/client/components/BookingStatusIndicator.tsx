@@ -367,7 +367,7 @@ export function RealtimeStatusUpdate({
   const { getLatestBookingStatus } = useRealtimeBookings({
     onStatusChange: (booking) => {
       if (booking.id === bookingId && onStatusChange) {
-        onStatusChange(booking.status);
+        onStatusChange(booking.booking_status);
       }
     },
   });

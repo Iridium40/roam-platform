@@ -53,6 +53,12 @@ export default function BusinessProfile() {
   const { customer } = useAuth();
   const { toast } = useToast();
   
+  console.log('🔍 BusinessProfile Debug:', {
+    businessId,
+    url: window.location.href,
+    pathname: window.location.pathname
+  });
+  
   const [business, setBusiness] = useState<Business | null>(null);
   const [services, setServices] = useState<Service[]>([]);
   const [staff, setStaff] = useState<Provider[]>([]);
@@ -98,6 +104,7 @@ export default function BusinessProfile() {
         });
 
         // Load services for this business with business-specific pricing and duration
+        console.log('🔍 Loading services for business ID:', businessId);
         const { data: servicesData, error: servicesError } = await supabase
           .from('business_services')
           .select(`
@@ -115,19 +122,33 @@ export default function BusinessProfile() {
           .eq('business_id', businessId)
           .eq('is_active', true);
 
-        if (!servicesError && servicesData) {
+        console.log('📊 Services query result:', { 
+          servicesData, 
+          servicesError,
+          servicesCount: servicesData?.length || 0
+        });
+
+        if (servicesError) {
+          console.error('❌ Error loading services:', servicesError);
+          console.error('Error details:', JSON.stringify(servicesError, null, 2));
+          setServices([]); // Set empty array on error
+        } else if (servicesData && servicesData.length > 0) {
           // Transform business_services data to Service interface
           const transformedServices = servicesData.map((item: any) => ({
             id: item.services.id,
             name: item.services.name,
             description: item.services.description,
             min_price: item.services.min_price,
-            duration_minutes: item.services.duration_minutes,
+            duration_minutes: item.business_duration_minutes || item.services.duration_minutes,
             business_price: item.business_price,
             business_duration_minutes: item.business_duration_minutes,
             image_url: item.services.image_url,
           }));
+          console.log('✅ Transformed services:', transformedServices);
           setServices(transformedServices);
+        } else {
+          console.log('⚠️ No services found for business');
+          setServices([]);
         }
 
         // Load staff members (owners and providers) for this business

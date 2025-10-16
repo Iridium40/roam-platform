@@ -55,15 +55,15 @@ export function useRealtimeBookings(options: UseRealtimeBookingsOptions = {}) {
       };
 
       const message =
-        statusMessages[booking.status as keyof typeof statusMessages] ||
-        `Booking status updated to ${booking.status}`;
+        statusMessages[booking.booking_status as keyof typeof statusMessages] ||
+        `Booking status updated to ${booking.booking_status}`;
 
       const variant =
-        booking.status === "cancelled" ? "destructive" : "default";
+        booking.booking_status === "cancelled" ? "destructive" : "default";
 
       toast({
         title: "Booking Update",
-        description: `${message} - ${booking.service_name || "Service"}`,
+        description: `${message}`,
         variant,
       });
     },
@@ -98,16 +98,16 @@ export function useRealtimeBookings(options: UseRealtimeBookingsOptions = {}) {
 
           const bookingUpdate: BookingUpdate = {
             id: newBooking.id,
-            status: newBooking.status,
-            previous_status: oldBooking?.status,
-            updated_at: newBooking.updated_at,
+            status: newBooking.booking_status,
+            previous_status: oldBooking?.booking_status,
+            updated_at: newBooking.created_at,
             customer_id: newBooking.customer_id,
             provider_id: newBooking.provider_id,
             business_id: newBooking.business_id,
-            service_name: newBooking.service_name,
-            business_name: newBooking.business_name,
-            scheduled_date: newBooking.scheduled_date,
-            scheduled_time: newBooking.scheduled_time,
+            service_name: undefined,
+            business_name: undefined,
+            scheduled_date: newBooking.booking_date,
+            scheduled_time: newBooking.start_time,
           };
 
           // Update state
@@ -115,7 +115,7 @@ export function useRealtimeBookings(options: UseRealtimeBookingsOptions = {}) {
           setLastUpdate(new Date());
 
           // Show notification if status actually changed
-          if (oldBooking?.status !== newBooking.status) {
+          if (oldBooking?.booking_status !== newBooking.booking_status) {
             showStatusNotification(bookingUpdate);
           }
 
@@ -145,15 +145,15 @@ export function useRealtimeBookings(options: UseRealtimeBookingsOptions = {}) {
 
           const bookingUpdate: BookingUpdate = {
             id: newBooking.id,
-            status: newBooking.status,
+            status: newBooking.booking_status,
             updated_at: newBooking.created_at,
             customer_id: newBooking.customer_id,
             provider_id: newBooking.provider_id,
             business_id: newBooking.business_id,
-            service_name: newBooking.service_name,
-            business_name: newBooking.business_name,
-            scheduled_date: newBooking.scheduled_date,
-            scheduled_time: newBooking.scheduled_time,
+            service_name: undefined,
+            business_name: undefined,
+            scheduled_date: newBooking.booking_date,
+            scheduled_time: newBooking.start_time,
           };
 
           // Update state
@@ -164,7 +164,7 @@ export function useRealtimeBookings(options: UseRealtimeBookingsOptions = {}) {
           if (userType === "provider" || userType === "business") {
             toast({
               title: "New Booking",
-              description: `New booking received for ${bookingUpdate.service_name || "service"}`,
+              description: `New booking received`,
             });
           }
 
@@ -195,15 +195,13 @@ export function useRealtimeBookings(options: UseRealtimeBookingsOptions = {}) {
         .select(
           `
           id,
-          status,
-          updated_at,
+          booking_status,
+          created_at,
           customer_id,
           provider_id,
           business_id,
-          service_name,
-          business_name,
-          scheduled_date,
-          scheduled_time
+          booking_date,
+          start_time
         `,
         )
         .or(
@@ -215,7 +213,7 @@ export function useRealtimeBookings(options: UseRealtimeBookingsOptions = {}) {
                 ? `business_id.eq.${userId}`
                 : `customer_id.eq.${userId},provider_id.eq.${userId},business_id.eq.${userId}`,
         )
-        .order("updated_at", { ascending: false })
+        .order("created_at", { ascending: false })
         .limit(10);
 
       if (error) {
@@ -234,15 +232,15 @@ export function useRealtimeBookings(options: UseRealtimeBookingsOptions = {}) {
 
       const updates: BookingUpdate[] = data.map((booking) => ({
         id: booking.id,
-        status: booking.status,
-        updated_at: booking.updated_at,
+        status: booking.booking_status,
+        updated_at: booking.created_at,
         customer_id: booking.customer_id,
         provider_id: booking.provider_id,
         business_id: booking.business_id,
-        service_name: booking.service_name,
-        business_name: booking.business_name,
-        scheduled_date: booking.scheduled_date,
-        scheduled_time: booking.scheduled_time,
+        service_name: undefined,
+        business_name: undefined,
+        scheduled_date: booking.booking_date,
+        scheduled_time: booking.start_time,
       }));
 
       setBookingUpdates(updates);

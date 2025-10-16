@@ -552,6 +552,7 @@ Services offered by businesses with pricing.
 - `business_id` (uuid, FK → business_profiles.id)
 - `service_id` (uuid, FK → services.id)
 - `business_price` (numeric)
+- `business_duration_minutes` (integer) - Custom duration for this business service
 - `is_active` (boolean, default: true)
 - `delivery_type` (delivery_type enum: `business_location`, `customer_location`, `virtual`, `both_locations`)
 - `created_at` (timestamptz)
