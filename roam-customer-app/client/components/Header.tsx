@@ -125,9 +125,10 @@ export function Header() {
                 <>
                   <button
                     onClick={handleSignInClick}
-                    className="text-foreground/70 hover:text-roam-blue transition-colors flex items-center"
+                    className="text-foreground/70 hover:text-roam-blue transition-colors flex items-center justify-center gap-2"
                   >
                     <Calendar className="w-4 h-4" />
+                    <span>My Bookings</span>
                   </button>
                   <Link
                     to="/customer/profile"
