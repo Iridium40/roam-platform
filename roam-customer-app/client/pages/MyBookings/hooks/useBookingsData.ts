@@ -102,6 +102,31 @@ export const useBookingsData = (currentUser: any) => {
               email,
               phone
             ),
+            business_locations!left (
+              id,
+              business_id,
+              location_name,
+              address_line1,
+              address_line2,
+              city,
+              state,
+              postal_code,
+              country,
+              is_primary,
+              offers_mobile_services
+            ),
+            customer_locations!left (
+              id,
+              customer_id,
+              location_name,
+              street_address,
+              unit_number,
+              city,
+              state,
+              zip_code,
+              is_primary,
+              access_instructions
+            ),
             reviews!left (
               id,
               overall_rating,

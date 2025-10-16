@@ -176,10 +176,10 @@ export const BookingCard: React.FC<BookingCardProps> = ({
                   <div className="flex-1">
                     <p className="text-sm font-medium">{deliveryLabel}</p>
                     <p className="text-sm text-foreground/60">
-                      {booking.delivery_type === 'business_location' && booking.business_location_id 
-                        ? `Business Location: ${booking.business_locations?.address || 'Address TBD'}`
-                        : booking.delivery_type === 'mobile' 
-                        ? `Mobile Service: ${booking.customer_locations?.address || 'Address TBD'}`
+                      {booking.delivery_type === 'business_location' && booking.business_locations 
+                        ? `${booking.business_locations.location_name || 'Business Location'}: ${booking.business_locations.address_line1}${booking.business_locations.address_line2 ? `, ${booking.business_locations.address_line2}` : ''}, ${booking.business_locations.city}, ${booking.business_locations.state} ${booking.business_locations.postal_code}`
+                        : booking.delivery_type === 'mobile' && booking.customer_locations
+                        ? `${booking.customer_locations.location_name || 'Customer Location'}: ${booking.customer_locations.street_address}${booking.customer_locations.unit_number ? `, Unit ${booking.customer_locations.unit_number}` : ''}, ${booking.customer_locations.city}, ${booking.customer_locations.state} ${booking.customer_locations.zip_code}`
                         : booking.delivery_type === 'virtual'
                         ? 'Virtual Service - Link will be provided'
                         : 'Location TBD'
@@ -462,10 +462,10 @@ export const BookingCard: React.FC<BookingCardProps> = ({
               <p className="text-sm font-medium">{deliveryLabel}</p>
               <div className="flex items-start gap-2">
                 <p className="text-sm text-foreground/60 flex-1">
-                  {booking.delivery_type === 'business_location' && booking.business_location_id 
-                    ? `Business Location: ${booking.business_locations?.address || 'Address TBD'}`
-                    : booking.delivery_type === 'mobile' 
-                    ? `Mobile Service: ${booking.customer_locations?.address || 'Address TBD'}`
+                  {booking.delivery_type === 'business_location' && booking.business_locations 
+                    ? `${booking.business_locations.location_name || 'Business Location'}: ${booking.business_locations.address_line1}${booking.business_locations.address_line2 ? `, ${booking.business_locations.address_line2}` : ''}, ${booking.business_locations.city}, ${booking.business_locations.state} ${booking.business_locations.postal_code}`
+                    : booking.delivery_type === 'mobile' && booking.customer_locations
+                    ? `${booking.customer_locations.location_name || 'Customer Location'}: ${booking.customer_locations.street_address}${booking.customer_locations.unit_number ? `, Unit ${booking.customer_locations.unit_number}` : ''}, ${booking.customer_locations.city}, ${booking.customer_locations.state} ${booking.customer_locations.zip_code}`
                     : booking.delivery_type === 'virtual'
                     ? 'Virtual Service - Link will be provided'
                     : 'Location TBD'
