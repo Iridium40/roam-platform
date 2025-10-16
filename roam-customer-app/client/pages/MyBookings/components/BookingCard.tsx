@@ -17,7 +17,7 @@ import {
   MoreHorizontal,
   Video,
   Building,
-  Smartphone,
+  Car,
   CheckCircle,
   XCircle,
   RefreshCw,
@@ -93,11 +93,11 @@ const getStatusConfig = (status: string) => {
 
 const getDeliveryIcon = (type: string) => {
   const icons = {
-    mobile: Smartphone,
+    mobile: Car,
     business_location: Building,
     virtual: Video,
   };
-  return icons[type as keyof typeof icons] || Smartphone;
+  return icons[type as keyof typeof icons] || Car;
 };
 
 export const BookingCard: React.FC<BookingCardProps> = ({
