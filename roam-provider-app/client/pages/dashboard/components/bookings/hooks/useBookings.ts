@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api/endpoints";
+import { useAuth } from "@/contexts/auth/AuthProvider";
 
 interface BookingStats {
   totalBookings: number;
@@ -17,6 +18,7 @@ interface BookingStats {
 
 export function useBookings(providerData: any, business: any) {
   const { toast } = useToast();
+  const { user } = useAuth();
   
   // State management
   const [bookings, setBookings] = useState<any[]>([]);
@@ -252,11 +254,22 @@ export function useBookings(providerData: any, business: any) {
   // Update booking status
   const updateBookingStatus = async (bookingId: string, newStatus: string) => {
     try {
+      console.log('Frontend: Updating booking status', {
+        bookingId,
+        newStatus,
+        updatedBy: user?.id || 'provider',
+        reason: `Status updated to ${newStatus}`
+      });
+      
       // Use API endpoint instead of direct Supabase call
       const response = await api.bookings.updateStatus({
         bookingId,
-        status: newStatus
+        status: newStatus,
+        updatedBy: user?.id || 'provider',
+        reason: `Status updated to ${newStatus}`
       });
+      
+      console.log('Frontend: API response', response);
 
       if (response.data) {
         // Update local state

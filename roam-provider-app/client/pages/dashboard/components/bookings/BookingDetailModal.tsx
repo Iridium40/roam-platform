@@ -27,10 +27,8 @@ import {
   Users,
   MessageCircle,
   Hash,
-  DollarSign,
   Phone,
   Mail,
-  X,
   UserCheck,
 } from "lucide-react";
 
@@ -127,7 +125,10 @@ export default function BookingDetailModal({
           : "Provider assigned successfully",
       });
 
-      // Notify parent component to refresh data
+      // Close the popup after successful assignment
+      setSelectedBooking(null);
+      
+      // Notify parent component to refresh data in background
       onBookingUpdate?.();
     } catch (error) {
       console.error('Error assigning provider:', error);
@@ -147,18 +148,9 @@ export default function BookingDetailModal({
     <Dialog open={!!selectedBooking} onOpenChange={() => setSelectedBooking(null)}>
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle className="text-xl font-semibold">
-              Booking Details
-            </DialogTitle>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setSelectedBooking(null)}
-            >
-              <X className="w-4 h-4" />
-            </Button>
-          </div>
+          <DialogTitle className="text-xl font-semibold">
+            Booking Details
+          </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6">
@@ -179,12 +171,6 @@ export default function BookingDetailModal({
             </div>
             <div className="flex items-center space-x-2">
               <BookingStatusIndicator status={selectedBooking.booking_status} />
-              {selectedBooking.total_amount && (
-                <Badge variant="outline" className="flex items-center space-x-1">
-                  <DollarSign className="w-3 h-3" />
-                  <span>${selectedBooking.total_amount}</span>
-                </Badge>
-              )}
             </div>
           </div>
 
@@ -272,17 +258,6 @@ export default function BookingDetailModal({
                 </div>
               </div>
 
-              {selectedBooking.services?.description && (
-                <div className="space-y-2 md:col-span-2">
-                  <div className="flex items-center space-x-2">
-                    <MessageCircle className="h-4 w-4 text-gray-500" />
-                    <span className="text-sm font-medium">Service Description</span>
-                  </div>
-                  <div className="ml-6">
-                    <p className="text-sm text-gray-600">{selectedBooking.services.description}</p>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
 
@@ -323,39 +298,6 @@ export default function BookingDetailModal({
             </div>
           )}
 
-          {/* Pricing Information */}
-          {(selectedBooking.total_amount || selectedBooking.services?.min_price || selectedBooking.services?.max_price) && (
-            <div className="space-y-3">
-              <h3 className="font-semibold text-lg">Pricing</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {selectedBooking.total_amount && (
-                  <div className="space-y-2">
-                    <div className="flex items-center space-x-2">
-                      <DollarSign className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm font-medium">Total Amount</span>
-                    </div>
-                    <div className="ml-6">
-                      <p className="text-sm font-semibold text-green-600">${selectedBooking.total_amount}</p>
-                    </div>
-                  </div>
-                )}
-
-                {(selectedBooking.services?.min_price || selectedBooking.services?.max_price) && (
-                  <div className="space-y-2">
-                    <div className="flex items-center space-x-2">
-                      <DollarSign className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm font-medium">Service Price Range</span>
-                    </div>
-                    <div className="ml-6">
-                      <p className="text-sm">
-                        ${selectedBooking.services.min_price || 0} - ${selectedBooking.services.max_price || 0}
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
           {/* Provider Assignment (Owners and Dispatchers Only) */}
           {canAssignBookings && (
             <div className="space-y-3">

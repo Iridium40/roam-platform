@@ -22,6 +22,14 @@ import {
   Filter,
   Plus,
   RefreshCw,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  Star,
+  Building,
+  Hash,
+  MessageCircle,
+  UserCheck,
 } from "lucide-react";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -34,7 +42,7 @@ interface Booking {
   service_name: string;
   scheduled_time: string;
   duration: number;
-  status: "pending" | "confirmed" | "in_progress" | "completed" | "cancelled";
+  status: "pending" | "confirmed" | "in_progress" | "completed" | "cancelled" | "declined" | "no_show";
   location: string;
   price: number;
 }
@@ -57,6 +65,8 @@ export const BookingWidget: React.FC<BookingWidgetProps> = ({ data, onRefresh })
       in_progress: { label: "In Progress", color: "bg-purple-100 text-purple-800" },
       completed: { label: "Completed", color: "bg-green-100 text-green-800" },
       cancelled: { label: "Cancelled", color: "bg-red-100 text-red-800" },
+      declined: { label: "Declined", color: "bg-gray-100 text-gray-800" },
+      no_show: { label: "No Show", color: "bg-orange-100 text-orange-800" },
     };
 
     const config = statusConfig[status as keyof typeof statusConfig];
@@ -92,6 +102,27 @@ export const BookingWidget: React.FC<BookingWidgetProps> = ({ data, onRefresh })
     setLoading(true);
     onRefresh();
     setTimeout(() => setLoading(false), 1000);
+  };
+
+  const getStatusActions = (status: string) => {
+    switch (status) {
+      case "pending":
+        return [
+          { label: "Accept", status: "confirmed", icon: CheckCircle, variant: "default" as const },
+          { label: "Decline", status: "declined", icon: XCircle, variant: "destructive" as const },
+        ];
+      case "confirmed":
+        return [
+          { label: "Start", status: "in_progress", icon: Clock, variant: "default" as const },
+        ];
+      case "in_progress":
+        return [
+          { label: "Complete", status: "completed", icon: CheckCircle, variant: "default" as const },
+          { label: "No Show", status: "no_show", icon: AlertCircle, variant: "destructive" as const },
+        ];
+      default:
+        return [];
+    }
   };
 
   return (
@@ -140,6 +171,8 @@ export const BookingWidget: React.FC<BookingWidgetProps> = ({ data, onRefresh })
                 <SelectItem value="in_progress">In Progress</SelectItem>
                 <SelectItem value="completed">Completed</SelectItem>
                 <SelectItem value="cancelled">Cancelled</SelectItem>
+                <SelectItem value="declined">Declined</SelectItem>
+                <SelectItem value="no_show">No Show</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -174,54 +207,160 @@ export const BookingWidget: React.FC<BookingWidgetProps> = ({ data, onRefresh })
           ) : (
             <div className="grid gap-4">
               {filteredBookings.map((booking) => (
-                <Card key={booking.id}>
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-3 mb-2">
-                          <h3 className="font-semibold text-lg">{booking.customer_name}</h3>
-                          {getStatusBadge(booking.status)}
-                        </div>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-600">
-                          <div className="flex items-center space-x-2">
-                            <Calendar className="w-4 h-4" />
-                            <span>{new Date(booking.scheduled_time).toLocaleDateString()}</span>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <Clock className="w-4 h-4" />
-                            <span>{new Date(booking.scheduled_time).toLocaleTimeString()}</span>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <MapPin className="w-4 h-4" />
-                            <span>{booking.location}</span>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <span className="font-medium">${booking.price}</span>
+                <Card key={booking.id} className="bg-white rounded-lg shadow-sm border border-gray-200">
+                  <CardContent className="p-6">
+                    {/* Top Section - Service Info */}
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-start space-x-4">
+                        {/* Customer Avatar */}
+                        <div className="w-16 h-16 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
+                          <div className="w-full h-full bg-blue-600 rounded-lg flex items-center justify-center">
+                            <span className="text-white font-semibold text-lg">
+                              {booking.customer_name?.[0] || "C"}
+                            </span>
                           </div>
                         </div>
-                        <div className="mt-2 text-sm text-gray-500">
-                          <p>{booking.service_name} • {booking.duration} minutes</p>
+                        
+                        {/* Service Details */}
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                            {booking.service_name}
+                          </h3>
+                          <div className="flex items-center space-x-4 text-sm text-gray-600">
+                            <div className="flex items-center space-x-1">
+                              <Calendar className="w-4 h-4" />
+                              <span>{new Date(booking.scheduled_time).toLocaleDateString()}</span>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                              <Clock className="w-4 h-4" />
+                              <span>{new Date(booking.scheduled_time).toLocaleTimeString()} ({booking.duration} min)</span>
+                            </div>
+                          </div>
                         </div>
                       </div>
-                      <div className="flex flex-col space-y-2">
+
+                      {/* Top Right - Price */}
+                      <div className="text-right">
+                        <div className="text-2xl font-bold text-blue-600">
+                          ${booking.price}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Business & Location Info */}
+                    <div className="flex items-start space-x-6 mb-4">
+                      <div className="flex items-start space-x-2">
+                        <Building className="w-4 h-4 text-gray-500 mt-0.5" />
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">Business</div>
+                          <div className="text-sm text-gray-600">Main Location</div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-start space-x-2">
+                        <MapPin className="w-4 h-4 text-gray-500 mt-0.5" />
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">Location</div>
+                          <div className="text-sm text-gray-600 max-w-xs">
+                            <a
+                              href={`https://maps.google.com/maps?q=${encodeURIComponent(booking.location)}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                              title="Click to open in Google Maps"
+                            >
+                              {booking.location}
+                            </a>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Customer and Provider Info */}
+                    <div className="flex items-start justify-between mb-4">
+                      {/* Customer Info */}
+                      <div className="flex items-start space-x-2">
+                        <User className="w-4 h-4 text-gray-500 mt-0.5" />
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">Customer</div>
+                          <div className="text-sm text-gray-600">{booking.customer_name}</div>
+                          {booking.customer_email && (
+                            <div className="text-xs text-gray-500 mt-1">{booking.customer_email}</div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Provider Info */}
+                      <div className="flex items-start space-x-2">
+                        <UserCheck className="w-4 h-4 text-gray-500 mt-0.5" />
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">Provider</div>
+                          <div className="text-sm text-gray-600">Provider Name</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Booking Reference */}
+                    <div className="flex items-center space-x-2 mb-4">
+                      <Hash className="w-4 h-4 text-gray-500" />
+                      <span className="text-sm font-medium text-gray-900">BOOKING REFERENCE:</span>
+                      <span className="text-sm font-bold text-gray-900">
+                        BK{Math.random().toString(36).substr(2, 4).toUpperCase()}
+                      </span>
+                    </div>
+
+                    {/* Status Section */}
+                    <div className="mb-4">
+                      <div className="text-center mb-2">
+                        <p className="text-sm text-gray-600">
+                          {booking.status === 'pending' && "Pending - Awaiting your response"}
+                          {booking.status === 'confirmed' && "Confirmed - Ready to start"}
+                          {booking.status === 'in_progress' && "In Progress - Service ongoing"}
+                          {booking.status === 'completed' && "Completed - Service finished"}
+                          {booking.status === 'declined' && "Declined - Service declined"}
+                          {booking.status === 'no_show' && "No Show - Customer didn't arrive"}
+                        </p>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <div className="flex-1 bg-gray-200 rounded-full h-2">
+                          <div 
+                            className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                            style={{ 
+                              width: `${booking.status === 'pending' ? 20 : booking.status === 'confirmed' ? 60 : booking.status === 'in_progress' ? 80 : booking.status === 'completed' ? 100 : 0}%` 
+                            }}
+                          ></div>
+                        </div>
                         <Button
-                          variant="outline"
                           size="sm"
-                          onClick={() => handleStatusUpdate(booking.id, "confirmed")}
-                          disabled={loading}
+                          className="bg-blue-600 hover:bg-blue-700 text-white p-2 h-8 w-8 rounded-lg"
                         >
-                          Confirm
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleStatusUpdate(booking.id, "cancelled")}
-                          disabled={loading}
-                        >
-                          Cancel
+                          <MessageCircle className="w-4 h-4" />
                         </Button>
                       </div>
                     </div>
+
+                    {/* Action Buttons */}
+                    {getStatusActions(booking.status).length > 0 && (
+                      <div className="flex items-center justify-center space-x-2 mb-4">
+                        {getStatusActions(booking.status).map((action) => {
+                          const Icon = action.icon;
+                          return (
+                            <Button
+                              key={action.status}
+                              variant={action.variant}
+                              size="sm"
+                              onClick={() => handleStatusUpdate(booking.id, action.status)}
+                              disabled={loading}
+                              className="flex items-center space-x-2 px-4 py-2"
+                            >
+                              <Icon className="w-4 h-4" />
+                              <span>{action.label}</span>
+                            </Button>
+                          );
+                        })}
+                      </div>
+                    )}
+
                   </CardContent>
                 </Card>
               ))}

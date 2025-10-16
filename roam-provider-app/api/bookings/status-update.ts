@@ -1,4 +1,3 @@
-import type { VercelRequest } from "@vercel/node";
 import { createClient } from '@supabase/supabase-js';
 import { createNotificationService } from '@roam/shared';
 
@@ -9,9 +8,9 @@ const supabaseUrl = process.env.VITE_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-export default async function handler(request: VercelRequest, res: any) {
+export default async function handler(request: Request) {
   try {
-    const body = typeof request.body === 'string' ? JSON.parse(request.body) : request.body;
+    const body = await request.json();
     const { 
       bookingId, 
       newStatus, 
@@ -23,7 +22,10 @@ export default async function handler(request: VercelRequest, res: any) {
 
     // Validate required fields
     if (!bookingId || !newStatus || !updatedBy) {
-      return res.status(400).json({ error: 'Missing required fields' });
+      return new Response(JSON.stringify({ error: 'Missing required fields' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
 
     // Update booking status in Supabase
@@ -63,7 +65,10 @@ export default async function handler(request: VercelRequest, res: any) {
 
     if (updateError) {
       console.error('Error updating booking:', updateError);
-      return res.status(500).json({ error: 'Failed to update booking' });
+      return new Response(JSON.stringify({ error: 'Failed to update booking' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
 
     // Create status update record
@@ -97,14 +102,20 @@ export default async function handler(request: VercelRequest, res: any) {
       console.error('Error sending notifications:', error);
     }
 
-    return res.status(200).json({ 
+    return new Response(JSON.stringify({ 
       success: true, 
       booking
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
     });
 
   } catch (error) {
     console.error('Status update error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    return new Response(JSON.stringify({ error: 'Internal server error' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 }
 

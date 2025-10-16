@@ -251,8 +251,13 @@ export const bookingsAPI = {
   },
   
   // Update booking status
-  updateStatus: (data: { bookingId: string; status: string }) =>
-    apiClient.post("/bookings/status-update", data),
+  updateStatus: (data: { bookingId: string; status: string; updatedBy?: string; reason?: string }) =>
+    apiClient.post("/bookings/status-update", {
+      bookingId: data.bookingId,
+      newStatus: data.status,
+      updatedBy: data.updatedBy || 'provider',
+      reason: data.reason
+    }),
 };
 
 // Twilio API endpoints

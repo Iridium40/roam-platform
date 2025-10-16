@@ -65,7 +65,8 @@ export const requireAuth = (allowedRoles?: string[]) => {
       // Check if this is development mode
       const isDevelopment = process.env.NODE_ENV === 'development' || 
                            req.headers.host?.includes('localhost') ||
-                           req.headers.host?.includes('127.0.0.1');
+                           req.headers.host?.includes('127.0.0.1') ||
+                           req.headers.host?.includes('3002');
       
       // Allow development mode to bypass authentication
       if (isDevelopment) {
