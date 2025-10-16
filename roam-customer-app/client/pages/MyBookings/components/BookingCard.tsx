@@ -167,23 +167,49 @@ export const BookingCard: React.FC<BookingCardProps> = ({
                 </div>
               </div>
 
-              {/* More Info Button with indicators */}
+              {/* Booking Reference - Always Visible */}
+              {booking.booking_reference && (
+                <div className="flex items-center gap-2 mb-2">
+                  <Hash className="w-4 h-4 text-roam-blue" />
+                  <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">
+                    Booking Reference:
+                  </span>
+                  <span className="text-sm font-mono font-semibold text-gray-900">
+                    {booking.booking_reference}
+                  </span>
+                </div>
+              )}
+
+              {/* Current Status - Always Visible */}
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">
+                  Status:
+                </span>
+                <RealtimeStatusUpdate
+                  bookingId={booking.id}
+                  currentStatus={booking.booking_status}
+                  onStatusChange={(newStatus) => {
+                    // Booking status changed
+                  }}
+                />
+              </div>
+
+              {/* Rating and Price - Always Visible */}
+              <div className="flex items-center gap-4 mb-2">
+                <div className="flex items-center gap-1">
+                  <Star className="w-4 h-4 text-roam-warning fill-current" />
+                  <span className="text-sm font-medium">
+                    {booking.providers?.average_rating || "No rating"} stars
+                  </span>
+                </div>
+                <span className="text-lg font-semibold text-roam-blue">
+                  ${booking.total_amount}
+                </span>
+              </div>
+
+              {/* More Info Button for additional details */}
               <div className="flex items-center gap-2">
                 <div className="flex items-center gap-1">
-                  {booking.booking_reference && (
-                    <div
-                      className="w-2 h-2 bg-roam-blue rounded-full"
-                      title="Booking Reference Available"
-                    />
-                  )}
-                  <div
-                    className="w-2 h-2 bg-green-500 rounded-full"
-                    title="Status Details Available"
-                  />
-                  <div
-                    className="w-2 h-2 bg-yellow-500 rounded-full"
-                    title="Rating & Price Available"
-                  />
                   {booking.reschedule_count > 0 && (
                     <div
                       className="w-2 h-2 bg-amber-500 rounded-full"
@@ -245,55 +271,13 @@ export const BookingCard: React.FC<BookingCardProps> = ({
           </div>
         </div>
 
-        {/* Collapsible More Info Section */}
+        {/* Collapsible More Info Section - Only for additional details */}
         {showMoreInfo && (
           <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200 space-y-3">
             <h4 className="font-medium text-sm text-gray-800 mb-3 flex items-center gap-2">
               <Info className="w-4 h-4" />
               Additional Details
             </h4>
-
-            {/* Booking Reference */}
-            {booking.booking_reference && (
-              <div className="flex items-center gap-2 p-2 bg-white rounded-lg border-l-4 border-roam-blue">
-                <Hash className="w-4 h-4 text-roam-blue" />
-                <div>
-                  <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">
-                    Booking Reference
-                  </span>
-                  <p className="text-sm font-mono font-semibold text-gray-900">
-                    {booking.booking_reference}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Status Update */}
-            <div className="p-2 bg-white rounded-lg">
-              <span className="text-xs font-medium text-gray-600 uppercase tracking-wide block mb-2">
-                Current Status
-              </span>
-              <RealtimeStatusUpdate
-                bookingId={booking.id}
-                currentStatus={booking.booking_status}
-                onStatusChange={(newStatus) => {
-                  // Booking status changed
-                }}
-              />
-            </div>
-
-            {/* Rating and Price */}
-            <div className="flex items-center justify-between p-2 bg-white rounded-lg">
-              <div className="flex items-center gap-2">
-                <Star className="w-4 h-4 text-roam-warning fill-current" />
-                <span className="text-sm font-medium">
-                  {booking.providers?.average_rating || "No rating"} stars
-                </span>
-              </div>
-              <span className="text-lg font-semibold text-roam-blue">
-                ${booking.total_amount}
-              </span>
-            </div>
 
             {/* Reschedule History */}
             {booking.reschedule_count > 0 && (
@@ -326,6 +310,30 @@ export const BookingCard: React.FC<BookingCardProps> = ({
                     </p>
                   )}
                 </div>
+              </div>
+            )}
+
+            {/* Additional service details if available */}
+            {booking.services?.description && (
+              <div className="p-2 bg-white rounded-lg">
+                <span className="text-xs font-medium text-gray-600 uppercase tracking-wide block mb-2">
+                  Service Description
+                </span>
+                <p className="text-sm text-gray-700">
+                  {booking.services.description}
+                </p>
+              </div>
+            )}
+
+            {/* Special Instructions if available */}
+            {booking.special_instructions && (
+              <div className="p-2 bg-white rounded-lg">
+                <span className="text-xs font-medium text-gray-600 uppercase tracking-wide block mb-2">
+                  Special Instructions
+                </span>
+                <p className="text-sm text-gray-700">
+                  {booking.special_instructions}
+                </p>
               </div>
             )}
           </div>
