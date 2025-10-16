@@ -188,19 +188,6 @@ export const BookingCard: React.FC<BookingCardProps> = ({
                   </div>
                 </div>
 
-                {/* Booking Reference */}
-                {booking.booking_reference && (
-                  <div className="flex items-center gap-2">
-                    <Hash className="w-4 h-4 text-roam-blue" />
-                    <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">
-                      Booking Reference:
-                    </span>
-                    <span className="text-sm font-mono font-semibold text-gray-900">
-                      {booking.booking_reference}
-                    </span>
-                  </div>
-                )}
-
                 {/* Status */}
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">
@@ -217,7 +204,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({
               </div>
             </div>
 
-            {/* Right Column - Rating, Price & Actions */}
+            {/* Right Column - Rating, Price, Booking Reference & Actions */}
             <div className="col-span-4">
               <div className="flex flex-col items-end space-y-4">
                 {/* Rating and Price */}
@@ -232,6 +219,19 @@ export const BookingCard: React.FC<BookingCardProps> = ({
                     ${booking.total_amount}
                   </span>
                 </div>
+
+                {/* Booking Reference */}
+                {booking.booking_reference && (
+                  <div className="flex items-center gap-2">
+                    <Hash className="w-4 h-4 text-roam-blue" />
+                    <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">
+                      Booking Reference:
+                    </span>
+                    <span className="text-sm font-mono font-semibold text-gray-900">
+                      {booking.booking_reference}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
