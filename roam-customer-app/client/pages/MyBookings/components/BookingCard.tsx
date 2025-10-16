@@ -3,6 +3,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Calendar,
   Clock,
   MapPin,
@@ -125,15 +131,15 @@ export const BookingCard: React.FC<BookingCardProps> = ({
       <CardContent className="p-4">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
           <div className="flex items-start gap-4 min-w-0 flex-1">
+            {/* Service Image instead of Provider Avatar */}
             <Avatar className="w-12 h-12 flex-shrink-0">
               <AvatarImage
-                src={booking.providers?.image}
-                alt={booking.providers?.first_name}
+                src={booking.services?.image_url || booking.service_image}
+                alt={booking.service_name}
                 className="object-cover"
               />
               <AvatarFallback className="bg-gradient-to-br from-roam-blue to-roam-light-blue text-white text-sm font-semibold">
-                {booking.providers?.first_name?.[0]?.toUpperCase() || ""}
-                {booking.providers?.last_name?.[0]?.toUpperCase() || ""}
+                {booking.service_name?.[0]?.toUpperCase() || "S"}
               </AvatarFallback>
             </Avatar>
             <div className="min-w-0 flex-1">
@@ -226,7 +232,14 @@ export const BookingCard: React.FC<BookingCardProps> = ({
             <p className="text-sm font-medium">{deliveryLabel}</p>
             <div className="flex items-start gap-2">
               <p className="text-sm text-foreground/60 flex-1">
-                Location TBD
+                {booking.delivery_type === 'business_location' && booking.business_location_id 
+                  ? `Business Location: ${booking.business_locations?.address || 'Address TBD'}`
+                  : booking.delivery_type === 'mobile' 
+                  ? `Mobile Service: ${booking.customer_locations?.address || 'Address TBD'}`
+                  : booking.delivery_type === 'virtual'
+                  ? 'Virtual Service - Link will be provided'
+                  : 'Location TBD'
+                }
               </p>
             </div>
           </div>
@@ -342,7 +355,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({
             )}
           </div>
 
-          {/* Secondary actions - Cancel and Reschedule (only for future bookings) */}
+          {/* Hamburger menu for Reschedule and Cancel actions */}
           <div className="flex gap-2">
             {!isPastBooking && 
               (booking.status === "pending" || booking.status === "confirmed") &&
@@ -350,43 +363,43 @@ export const BookingCard: React.FC<BookingCardProps> = ({
               booking.status !== "declined" &&
               booking.status !== "completed" &&
               booking.status !== "no_show" && (
-                <>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="border-roam-blue text-roam-blue hover:bg-roam-blue hover:text-white"
-                    onClick={() => onReschedule(booking)}
-                  >
-                    <Edit className="w-4 h-4 mr-2" />
-                    Reschedule
-                  </Button>
-                  {canCancelBooking ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
                     <Button
                       size="sm"
                       variant="outline"
-                      className="border-red-500 text-red-600 hover:bg-red-500 hover:text-white"
-                      onClick={() => onCancel(booking)}
+                      className="border-gray-300 text-gray-600 hover:bg-gray-50"
                     >
-                      <X className="w-4 h-4 mr-2" />
-                      Cancel
+                      <MoreHorizontal className="w-4 h-4" />
                     </Button>
-                  ) : isWithin24Hours(booking) ? (
-                    <div className="flex flex-col items-end">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="border-gray-300 text-gray-400 cursor-not-allowed"
-                        disabled
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      onClick={() => onReschedule(booking)}
+                      className="cursor-pointer"
+                    >
+                      <Edit className="w-4 h-4 mr-2" />
+                      Reschedule
+                    </DropdownMenuItem>
+                    {canCancelBooking ? (
+                      <DropdownMenuItem
+                        onClick={() => onCancel(booking)}
+                        className="cursor-pointer text-red-600 focus:text-red-600"
                       >
                         <X className="w-4 h-4 mr-2" />
                         Cancel
-                      </Button>
-                      <p className="text-xs text-red-600 mt-1 max-w-[120px] text-right">
-                        Cannot cancel within 24 hours
-                      </p>
-                    </div>
-                  ) : null}
-                </>
+                      </DropdownMenuItem>
+                    ) : isWithin24Hours(booking) ? (
+                      <DropdownMenuItem
+                        disabled
+                        className="cursor-not-allowed text-gray-400"
+                      >
+                        <X className="w-4 h-4 mr-2" />
+                        Cancel (Within 24h)
+                      </DropdownMenuItem>
+                    ) : null}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               )}
           </div>
           {booking.status === "completed" && (
