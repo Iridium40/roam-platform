@@ -20,7 +20,6 @@ import {
   Car,
   CheckCircle,
   XCircle,
-  RefreshCw,
   ChevronLeft,
   ChevronRight,
   X,
@@ -239,10 +238,10 @@ export const BookingCard: React.FC<BookingCardProps> = ({
             </div>
           </div>
 
-          {/* Desktop Status Section - Bottom Left to Right */}
-          <div className="flex items-center justify-between mt-6">
-            {/* Status Text and Progress Bar - Bottom Left */}
-            <div className="flex-1 mr-4">
+          {/* Desktop Status Section - Full Width */}
+          <div className="mt-6">
+            {/* Status Text and Progress Bar */}
+            <div className="w-full">
               {/* Status Text - Centered Above Progress Bar */}
               <div className="text-center mb-2">
                 <span className="text-sm font-medium text-gray-700">
@@ -261,7 +260,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({
                   className={`h-3 rounded-full transition-all duration-300 ${
                     booking.booking_status === 'pending' ? 'bg-yellow-500' :
                     booking.booking_status === 'confirmed' ? 'bg-blue-500' :
-                    booking.booking_status === 'in_progress' ? 'bg-blue-600' :
+                    booking.booking_status === 'in_progress' ? 'bg-purple-500' :
                     booking.booking_status === 'completed' ? 'bg-green-500' :
                     'bg-red-500'
                   }`}
@@ -275,30 +274,36 @@ export const BookingCard: React.FC<BookingCardProps> = ({
               </div>
             </div>
 
-            {/* Message Button - Bottom Right */}
-            <div className="flex-shrink-0">
-              {!isPastBooking && (booking.status === "confirmed" || booking.status === "pending") && booking.providers && (
+            {/* Message Button - Centered Below Progress Bar */}
+            <div className="flex justify-center mt-4">
+              {(() => {
+                // Show message button for all bookings that are not in final status (completed, cancelled, declined, no_show)
+                const isFinalStatus = booking.booking_status === 'completed' || 
+                                     booking.booking_status === 'cancelled' || 
+                                     booking.booking_status === 'declined' || 
+                                     booking.booking_status === 'no_show';
+                const shouldShow = !isFinalStatus;
+                
+                console.log('🔍 Message Button Debug:', {
+                  isPastBooking,
+                  bookingDate: booking.date,
+                  bookingTime: booking.time,
+                  bookingStatus: booking.status,
+                  bookingBookingStatus: booking.booking_status,
+                  isFinalStatus,
+                  shouldShow,
+                  currentDate: new Date().toISOString()
+                });
+                return shouldShow;
+              })() && (
                 <Button
                   size="sm"
                   className="bg-roam-blue hover:bg-roam-blue/90 text-white font-medium"
                   onClick={() => onMessage(booking)}
-                  title={`Message ${booking.providers.first_name} ${booking.providers.last_name} about this booking`}
+                  title={booking.providers ? `Message ${booking.providers.first_name} ${booking.providers.last_name} about this booking` : "Message about this booking"}
                 >
-                  <MessageCircle className="w-4 h-4" />
-                </Button>
-              )}
-
-              {isPastBooking && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="border-roam-blue text-roam-blue hover:bg-roam-blue hover:text-white"
-                  onClick={() => {
-                    window.location.href = `/book-service/${booking.service_id}`;
-                  }}
-                >
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                  Book Again
+                  <MessageCircle className="w-4 h-4 mr-2" />
+                  Message
                 </Button>
               )}
             </div>
@@ -378,7 +383,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({
                       className={`h-3 rounded-full transition-all duration-300 ${
                         booking.booking_status === 'pending' ? 'bg-yellow-500' :
                         booking.booking_status === 'confirmed' ? 'bg-blue-500' :
-                        booking.booking_status === 'in_progress' ? 'bg-blue-600' :
+                        booking.booking_status === 'in_progress' ? 'bg-purple-500' :
                         booking.booking_status === 'completed' ? 'bg-green-500' :
                         'bg-red-500'
                       }`}
@@ -408,18 +413,14 @@ export const BookingCard: React.FC<BookingCardProps> = ({
               </div>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0 self-start">
-              {isPastBooking ? (
+              {isPastBooking && booking.providers ? (
                 <Button
                   size="sm"
-                  variant="outline"
-                  className="border-roam-blue text-roam-blue hover:bg-roam-blue hover:text-white"
-                  onClick={() => {
-                    // Navigate to book the same service again
-                    window.location.href = `/book-service/${booking.service_id}`;
-                  }}
+                  className="bg-roam-blue hover:bg-roam-blue/90 text-white font-medium"
+                  onClick={() => onMessage(booking)}
+                  title={`Message ${booking.providers.first_name} ${booking.providers.last_name} about this booking`}
                 >
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                  Book Again
+                  <MessageCircle className="w-4 h-4" />
                 </Button>
               ) : null}
             </div>

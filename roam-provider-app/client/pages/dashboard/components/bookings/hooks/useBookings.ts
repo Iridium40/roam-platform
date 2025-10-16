@@ -26,6 +26,12 @@ export function useBookings(providerData: any, business: any) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatusFilter, setSelectedStatusFilter] = useState("all");
   const [activeTab, setActiveTab] = useState("present");
+  
+  // Debug wrapper for setActiveTab
+  const handleSetActiveTab = (tab: string) => {
+    console.log('🎯 setActiveTab called:', { from: activeTab, to: tab });
+    setActiveTab(tab);
+  };
   const [selectedBooking, setSelectedBooking] = useState<any>(null);
   
   // Pagination state
@@ -146,8 +152,11 @@ export function useBookings(providerData: any, business: any) {
       const todayStr = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
       const finalStatuses = new Set(['completed', 'cancelled', 'declined', 'no_show']);
       
+      // Only check for transitions if we're currently on the future tab
+      if (activeTab !== 'future') return;
+      
       // Check if any future bookings should move to present (when date becomes today or past)
-      const shouldRedirect = bookings.some((booking: any) => {
+      const bookingsToMove = bookings.filter((booking: any) => {
         const bookingDate = booking.booking_date;
         const bookingStatus = booking.booking_status;
         
@@ -157,9 +166,10 @@ export function useBookings(providerData: any, business: any) {
         return (bookingDate <= todayStr) && !finalStatuses.has(bookingStatus);
       });
 
-      // If there are bookings that should move to present, redirect to present tab
-      if (shouldRedirect && activeTab === 'future') {
-        setActiveTab('present');
+      // Only redirect if there are actually bookings that need to move
+      if (bookingsToMove.length > 0) {
+        console.log('📅 Auto-redirecting due to time transitions:', bookingsToMove.length, 'bookings');
+        handleSetActiveTab('present');
         toast({
           title: "Bookings Updated",
           description: "Some bookings have moved to the Present tab.",
@@ -167,10 +177,7 @@ export function useBookings(providerData: any, business: any) {
       }
     };
 
-    // Check immediately
-    checkForTimeTransitions();
-
-    // Set up interval to check every minute
+    // Only run the check on an interval, not immediately on every render
     const interval = setInterval(checkForTimeTransitions, 60000); // Check every minute
 
     return () => clearInterval(interval);
@@ -338,7 +345,10 @@ export function useBookings(providerData: any, business: any) {
       
       console.log('Frontend: API response', response);
 
-      if (response.data) {
+      // Check if the response indicates success (handle both response.data.success and response.success)
+      const isSuccess = response?.data?.success || response?.success;
+      
+      if (isSuccess) {
         // Update local state
         setBookings(prev => prev.map(booking => 
           booking.id === bookingId 
@@ -419,7 +429,7 @@ export function useBookings(providerData: any, business: any) {
     selectedStatusFilter,
     setSelectedStatusFilter,
     activeTab,
-    setActiveTab,
+    setActiveTab: handleSetActiveTab,
     selectedBooking,
     setSelectedBooking,
     

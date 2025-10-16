@@ -136,7 +136,7 @@ export default function DashboardTab({
     const configs = {
       pending: { label: "Pending", className: "bg-orange-100 text-orange-800 border-orange-300" },
       confirmed: { label: "Confirmed", className: "bg-green-100 text-green-800 border-green-300" },
-      in_progress: { label: "In Progress", className: "bg-blue-100 text-blue-800 border-blue-300" },
+      in_progress: { label: "In Progress", className: "bg-purple-100 text-purple-800 border-purple-300" },
       completed: { label: "Completed", className: "bg-emerald-100 text-emerald-800 border-emerald-300" },
       cancelled: { label: "Cancelled", className: "bg-red-100 text-red-800 border-red-300" },
       declined: { label: "Declined", className: "bg-gray-100 text-gray-800 border-gray-300" },

@@ -32,15 +32,12 @@ export default async function handler(request: Request) {
     const { data: booking, error: updateError } = await supabase
       .from('bookings')
       .update({
-        booking_status: newStatus,
-        updated_at: new Date().toISOString(),
-        status_updated_by: updatedBy,
-        status_update_reason: reason
+        booking_status: newStatus
       })
       .eq('id', bookingId)
       .select(`
         *,
-        customers (
+        customer_profiles (
           id,
           first_name,
           last_name,
@@ -57,7 +54,7 @@ export default async function handler(request: Request) {
         ),
         business_profiles (
           id,
-          name,
+          business_name,
           email
         )
       `)

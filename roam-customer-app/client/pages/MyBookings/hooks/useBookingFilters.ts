@@ -3,47 +3,91 @@ import type { BookingWithDetails } from "@/types/index";
 
 export const useBookingFilters = (bookings: BookingWithDetails[]) => {
   const [currentPage, setCurrentPage] = useState({
-    upcoming: 1,
-    active: 1,
+    present: 1,
+    future: 1,
     past: 1,
   });
   const ITEMS_PER_PAGE = 10;
 
-  // Filter bookings by status
+  // Filter bookings by status - Updated to match provider app logic
   const filteredBookings = useMemo(() => {
-    const now = new Date();
-    const currentTime = now.getTime();
+    // Ensure bookings is an array
+    const safeBookings = Array.isArray(bookings) ? bookings : [];
+    
+    const finalStatuses = new Set(['completed', 'cancelled', 'declined', 'no_show']);
+    const todayStr = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
 
     console.log("Filtering bookings:", {
-      totalBookings: bookings.length,
-      currentTime: now.toISOString(),
-      sampleBooking: bookings[0]
+      totalBookings: safeBookings.length,
+      currentTime: new Date().toISOString(),
+      todayStr,
+      sampleBooking: safeBookings[0]
     });
-    console.log("Filtering - full bookings array:", bookings);
+    console.log("Filtering - full bookings array:", safeBookings);
 
     const result = {
-      upcoming: bookings.filter((booking) => {
-        const bookingDateTime = new Date(`${booking.date} ${booking.time}`);
-        return bookingDateTime.getTime() > currentTime && booking.status !== "cancelled";
+      // PRESENT = Today's date or in the past (including final status bookings from today)
+      present: safeBookings.filter((booking) => {
+        const status = booking.status || booking.booking_status || 'pending';
+        const dateStr = booking.date || booking.booking_date || '';
+        
+        // If date is today or past, include in present (regardless of status)
+        return dateStr <= todayStr;
+      }).sort((a, b) => {
+        // Sort present bookings: 'in_progress' first, then by date
+        const statusA = a.status || a.booking_status || 'pending';
+        const statusB = b.status || b.booking_status || 'pending';
+        
+        // If one is 'in_progress' and the other isn't, prioritize 'in_progress'
+        if (statusA === 'in_progress' && statusB !== 'in_progress') return -1;
+        if (statusB === 'in_progress' && statusA !== 'in_progress') return 1;
+        
+        // Otherwise, sort by date (most recent first)
+        const dateA = a.date || a.booking_date || '';
+        const dateB = b.date || b.booking_date || '';
+        return dateB.localeCompare(dateA);
       }),
-      active: bookings.filter((booking) => {
-        const bookingDateTime = new Date(`${booking.date} ${booking.time}`);
-        const bookingEndTime = new Date(bookingDateTime.getTime() + (parseInt(booking.duration || "60") * 60 * 1000));
-        return bookingDateTime.getTime() <= currentTime && bookingEndTime.getTime() > currentTime && booking.status !== "cancelled";
+      
+      // FUTURE = Future dates (not in final status)
+      future: safeBookings.filter((booking) => {
+        const status = booking.status || booking.booking_status || 'pending';
+        const dateStr = booking.date || booking.booking_date || '';
+        
+        // If status is final, don't include in future
+        if (finalStatuses.has(status)) {
+          return false;
+        }
+        
+        // If date is in the future, include in future
+        return dateStr > todayStr;
+      }).sort((a, b) => {
+        // Sort future bookings by date (earliest first)
+        const dateA = a.date || a.booking_date || '';
+        const dateB = b.date || b.booking_date || '';
+        return dateA.localeCompare(dateB);
       }),
-      past: bookings.filter((booking) => {
-        const bookingDateTime = new Date(`${booking.date} ${booking.time}`);
-        const bookingEndTime = new Date(bookingDateTime.getTime() + (parseInt(booking.duration || "60") * 60 * 1000));
-        return bookingEndTime.getTime() <= currentTime || booking.status === "cancelled";
+      
+      // PAST = Final status states with past dates only
+      past: safeBookings.filter((booking) => {
+        const status = booking.status || booking.booking_status || 'pending';
+        const dateStr = booking.date || booking.booking_date || '';
+        
+        // Only include final status bookings that have past dates
+        return finalStatuses.has(status) && dateStr < todayStr;
+      }).sort((a, b) => {
+        // Sort past bookings by date (most recent first)
+        const dateA = a.date || a.booking_date || '';
+        const dateB = b.date || b.booking_date || '';
+        return dateB.localeCompare(dateA);
       }),
     };
 
     console.log("Filtered bookings result:", {
-      upcoming: result.upcoming.length,
-      active: result.active.length,
+      present: result.present.length,
+      future: result.future.length,
       past: result.past.length,
-      sampleUpcoming: result.upcoming[0],
-      sampleActive: result.active[0],
+      samplePresent: result.present[0],
+      sampleFuture: result.future[0],
       samplePast: result.past[0]
     });
 
@@ -62,14 +106,14 @@ export const useBookingFilters = (bookings: BookingWithDetails[]) => {
   };
 
   // Page navigation functions
-  const goToPage = (category: "upcoming" | "active" | "past", page: number) => {
+  const goToPage = (category: "present" | "future" | "past", page: number) => {
     setCurrentPage((prev) => ({
       ...prev,
       [category]: page,
     }));
   };
 
-  const nextPage = (category: "upcoming" | "active" | "past") => {
+  const nextPage = (category: "present" | "future" | "past") => {
     const currentBookings = filteredBookings[category];
     const totalPages = getTotalPages(currentBookings.length);
     const currentPageNum = currentPage[category];
@@ -79,7 +123,7 @@ export const useBookingFilters = (bookings: BookingWithDetails[]) => {
     }
   };
 
-  const prevPage = (category: "upcoming" | "active" | "past") => {
+  const prevPage = (category: "present" | "future" | "past") => {
     const currentPageNum = currentPage[category];
     if (currentPageNum > 1) {
       goToPage(category, currentPageNum - 1);
@@ -88,23 +132,23 @@ export const useBookingFilters = (bookings: BookingWithDetails[]) => {
 
   // Get paginated results
   const paginatedBookings = {
-    upcoming: getPaginatedBookings(filteredBookings.upcoming, currentPage.upcoming),
-    active: getPaginatedBookings(filteredBookings.active, currentPage.active),
+    present: getPaginatedBookings(filteredBookings.present, currentPage.present),
+    future: getPaginatedBookings(filteredBookings.future, currentPage.future),
     past: getPaginatedBookings(filteredBookings.past, currentPage.past),
   };
 
   console.log("Pagination results:", {
-    upcoming: {
-      filtered: filteredBookings.upcoming.length,
-      paginated: paginatedBookings.upcoming.length,
-      currentPage: currentPage.upcoming,
-      totalPages: getTotalPages(filteredBookings.upcoming.length)
+    present: {
+      filtered: filteredBookings.present.length,
+      paginated: paginatedBookings.present.length,
+      currentPage: currentPage.present,
+      totalPages: getTotalPages(filteredBookings.present.length)
     },
-    active: {
-      filtered: filteredBookings.active.length,
-      paginated: paginatedBookings.active.length,
-      currentPage: currentPage.active,
-      totalPages: getTotalPages(filteredBookings.active.length)
+    future: {
+      filtered: filteredBookings.future.length,
+      paginated: paginatedBookings.future.length,
+      currentPage: currentPage.future,
+      totalPages: getTotalPages(filteredBookings.future.length)
     },
     past: {
       filtered: filteredBookings.past.length,
@@ -116,8 +160,8 @@ export const useBookingFilters = (bookings: BookingWithDetails[]) => {
 
   // Get total pages for each category
   const totalPages = {
-    upcoming: getTotalPages(filteredBookings.upcoming.length),
-    active: getTotalPages(filteredBookings.active.length),
+    present: getTotalPages(filteredBookings.present.length),
+    future: getTotalPages(filteredBookings.future.length),
     past: getTotalPages(filteredBookings.past.length),
   };
 

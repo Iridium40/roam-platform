@@ -818,6 +818,46 @@ export function createServer() {
           return res.status(400).json({ error: 'Missing required fields' });
         }
 
+        // Development mode bypass
+        if (process.env.NODE_ENV === 'development') {
+          console.log("Development mode: Mock booking status update");
+          
+          const mockBooking = {
+            id: bookingId,
+            booking_status: newStatus,
+            updated_by: updatedBy,
+            reason: reason,
+            updated_at: new Date().toISOString(),
+            customer_profiles: {
+              id: 'customer-1',
+              first_name: 'John',
+              last_name: 'Doe',
+              email: 'john.doe@example.com',
+              phone: '+1234567890'
+            },
+            providers: {
+              id: 'provider-1',
+              first_name: 'Jane',
+              last_name: 'Smith',
+              email: 'jane.smith@example.com',
+              phone: '+1234567890',
+              user_id: 'user-1'
+            },
+            business_profiles: {
+              id: 'business-1',
+              name: 'Test Business',
+              email: 'business@example.com'
+            }
+          };
+
+          return res.status(200).json({ 
+            success: true, 
+            booking: mockBooking,
+            testMode: true,
+            message: 'Development mode: Mock booking status update'
+          });
+        }
+
         // Update booking status in Supabase
         console.log('Attempting to update booking:', {
           bookingId,
@@ -826,26 +866,10 @@ export function createServer() {
           reason
         });
         
-        // For development mode, return success without database update
-        if (process.env.NODE_ENV === 'development' || req.headers.host?.includes('localhost')) {
-          console.log('Development mode: Bypassing database update');
-          return res.status(200).json({
-            success: true,
-            booking: {
-              id: bookingId,
-              booking_status: newStatus,
-              updated_at: new Date().toISOString()
-            }
-          });
-        }
-        
-        const { data: booking, error: updateError } = await supabase
+        const { data: booking, error: updateError} = await supabase
           .from('bookings')
           .update({
-            booking_status: newStatus,
-            updated_at: new Date().toISOString(),
-            status_updated_by: updatedBy,
-            status_update_reason: reason
+            booking_status: newStatus
           })
           .eq('id', bookingId)
           .select(`

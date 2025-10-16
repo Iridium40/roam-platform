@@ -96,9 +96,6 @@ export const useBookingsData = (currentUser: any) => {
               duration_minutes,
               image_url
             ),
-            business_services!left (
-              business_duration_minutes
-            ),
             customer_profiles!left (
               id,
               first_name,
@@ -159,50 +156,60 @@ export const useBookingsData = (currentUser: any) => {
         });
 
         if (error) {
-          console.error("❌ MY BOOKINGS DEBUG: Error in full query:", error);
+          console.error("❌ MY BOOKINGS DEBUG: Error in full query:", {
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+            code: error.code,
+            fullError: error
+          });
           throw error;
         }
 
         // Transform the data to match the expected format
         const transformedBookings: BookingWithDetails[] = (data || []).map((booking) => ({
           ...booking,
+          // Ensure all required fields are present with fallbacks
+          id: booking.id || '',
+          booking_status: booking.booking_status || 'pending',
+          booking_date: booking.booking_date || '',
+          start_time: booking.start_time || '',
+          total_amount: booking.total_amount || 0,
           service_name: booking.services?.name || "Service",
           service: booking.services?.name || "Service",
           service_image: booking.services?.image_url,
           serviceId: booking.service_id,
           provider: {
-            id: booking.providers?.id,
-            name: `${booking.providers?.first_name || ""} ${booking.providers?.last_name || ""}`.trim(),
-            firstName: booking.providers?.first_name,
-            lastName: booking.providers?.last_name,
-            email: booking.providers?.email,
-            phone: booking.providers?.phone,
+            id: booking.providers?.id || '',
+            name: `${booking.providers?.first_name || ""} ${booking.providers?.last_name || ""}`.trim() || 'Provider TBD',
+            firstName: booking.providers?.first_name || '',
+            lastName: booking.providers?.last_name || '',
+            email: booking.providers?.email || '',
+            phone: booking.providers?.phone || '',
             image: booking.providers?.image_url,
             rating: booking.providers?.average_rating || 0,
           },
           providers: booking.providers,
           customer_profiles: booking.customer_profiles,
-          date: booking.booking_date,
-          time: booking.start_time,
-          status: booking.booking_status,
-          deliveryType: booking.delivery_type,
+          date: booking.booking_date || '',
+          time: booking.start_time || '',
+          status: booking.booking_status || 'pending',
+          deliveryType: booking.delivery_type || 'customer_location',
           location: "Location TBD", // Simplified since location data isn't in bookings table
           locationDetails: null,
           price: booking.total_amount ? `$${booking.total_amount}` : "Price TBD",
-          duration: booking.business_services?.[0]?.business_duration_minutes 
-            ? `${booking.business_services[0].business_duration_minutes} min` 
-            : booking.services?.duration_minutes 
+          duration: booking.services?.duration_minutes 
             ? `${booking.services.duration_minutes} min` 
             : "60 min",
-          notes: booking.admin_notes,
-          bookingReference: booking.booking_reference,
+          notes: booking.admin_notes || '',
+          bookingReference: booking.booking_reference || '',
           reschedule_count: booking.reschedule_count || 0,
           original_booking_date: booking.original_booking_date,
           original_start_time: booking.original_start_time,
           reschedule_reason: booking.reschedule_reason,
           // Add missing fields that might be expected
-          booking_time: booking.start_time, // For backward compatibility
-          updated_at: booking.created_at, // Use created_at as fallback since updated_at doesn't exist
+          booking_time: booking.start_time || '', // For backward compatibility
+          updated_at: booking.created_at || new Date().toISOString(), // Use created_at as fallback since updated_at doesn't exist
         }));
         
         console.log("✅ MY BOOKINGS DEBUG: Successfully transformed bookings:", {

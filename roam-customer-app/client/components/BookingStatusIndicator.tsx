@@ -65,8 +65,8 @@ export default function BookingStatusIndicator({
       in_progress: {
         label: "In Progress",
         icon: Loader2,
-        color: "bg-blue-100 text-blue-700 border-blue-200",
-        progressColor: "bg-blue-500",
+        color: "bg-purple-100 text-purple-700 border-purple-200",
+        progressColor: "bg-purple-500",
         description: "Service in progress",
         spin: true,
       },

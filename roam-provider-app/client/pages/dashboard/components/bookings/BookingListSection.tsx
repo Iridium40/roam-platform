@@ -106,11 +106,32 @@ export default function BookingListSection({
   );
 
   return (
-    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+    <Tabs value={activeTab} onValueChange={(value) => {
+      console.log('🔄 Tab change requested:', { from: activeTab, to: value });
+      setActiveTab(value);
+    }} className="w-full">
       <TabsList className="grid w-full grid-cols-3">
-        <TabsTrigger value="present">Present ({presentBookings.length})</TabsTrigger>
-        <TabsTrigger value="future">Future ({futureBookings.length})</TabsTrigger>
-        <TabsTrigger value="past">Past ({pastBookings.length})</TabsTrigger>
+        <TabsTrigger 
+          value="present"
+          onClick={() => console.log('🖱️ Present tab clicked')}
+          className={activeTab === 'present' ? 'bg-blue-500 text-white' : ''}
+        >
+          Present ({presentBookings.length})
+        </TabsTrigger>
+        <TabsTrigger 
+          value="future"
+          onClick={() => console.log('🖱️ Future tab clicked')}
+          className={activeTab === 'future' ? 'bg-blue-500 text-white' : ''}
+        >
+          Future ({futureBookings.length})
+        </TabsTrigger>
+        <TabsTrigger 
+          value="past"
+          onClick={() => console.log('🖱️ Past tab clicked')}
+          className={activeTab === 'past' ? 'bg-blue-500 text-white' : ''}
+        >
+          Past ({pastBookings.length})
+        </TabsTrigger>
       </TabsList>
 
       {/* Present Bookings Tab */}

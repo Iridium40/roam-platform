@@ -38,6 +38,13 @@ export default function BookingCard({
 }: BookingCardProps) {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const getStatusActions = (status: string) => {
+    // Check if booking is scheduled for today or in the past
+    const isBookingDateTodayOrPast = () => {
+      if (!booking.booking_date) return false;
+      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+      return booking.booking_date <= today;
+    };
+
     switch (status) {
       case "pending":
         return [
@@ -45,9 +52,13 @@ export default function BookingCard({
           { label: "Decline", status: "declined", icon: XCircle, variant: "destructive" as const },
         ];
       case "confirmed":
-        return [
-          { label: "Start Service", status: "in_progress", icon: Clock, variant: "default" as const },
-        ];
+        // Only show "Start Service" if booking is scheduled for today or in the past AND has an assigned provider
+        if (isBookingDateTodayOrPast() && booking.providers && booking.providers.id) {
+          return [
+            { label: "Start Service", status: "in_progress", icon: Clock, variant: "default" as const },
+          ];
+        }
+        return []; // No actions for future confirmed bookings or unassigned bookings
       case "in_progress":
         return [
           { label: "Complete", status: "completed", icon: CheckCircle, variant: "default" as const },
@@ -61,11 +72,26 @@ export default function BookingCard({
   const statusActions = getStatusActions(booking.booking_status);
 
   const getStatusMessage = (status: string) => {
+    // Check if booking is scheduled for today or in the past
+    const isBookingDateTodayOrPast = () => {
+      if (!booking.booking_date) return false;
+      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+      return booking.booking_date <= today;
+    };
+
     switch (status) {
       case "pending":
         return "Pending - Awaiting your response";
       case "confirmed":
-        return "Confirmed - Ready to start";
+        if (isBookingDateTodayOrPast()) {
+          if (booking.providers && booking.providers.id) {
+            return "Confirmed - Ready to start";
+          } else {
+            return "Confirmed - Awaiting provider assignment";
+          }
+        } else {
+          return "Confirmed - Scheduled for future";
+        }
       case "in_progress":
         return "In Progress - Service ongoing";
       case "completed":
@@ -280,7 +306,13 @@ export default function BookingCard({
           <div className="flex items-center space-x-3">
             <div className="flex-1 bg-gray-200 rounded-full h-2">
               <div 
-                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                className={`h-2 rounded-full transition-all duration-300 ${
+                  booking.booking_status === 'pending' ? 'bg-yellow-500' :
+                  booking.booking_status === 'confirmed' ? 'bg-blue-500' :
+                  booking.booking_status === 'in_progress' ? 'bg-purple-500' :
+                  booking.booking_status === 'completed' ? 'bg-green-500' :
+                  'bg-red-500'
+                }`}
                 style={{ width: `${getProgressPercentage(booking.booking_status)}%` }}
               ></div>
             </div>
