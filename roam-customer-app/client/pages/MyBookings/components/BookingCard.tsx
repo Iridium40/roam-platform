@@ -23,9 +23,6 @@ import {
   RefreshCw,
   ChevronLeft,
   ChevronRight,
-  ChevronDown,
-  ChevronUp,
-  Info,
   X,
   Edit,
   Hash,
@@ -58,7 +55,6 @@ export const BookingCard: React.FC<BookingCardProps> = ({
   onReschedule,
   onMessage,
 }) => {
-  const [showMoreInfo, setShowMoreInfo] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
 
   const DeliveryIcon = getDeliveryIcon(booking.deliveryType);
@@ -409,31 +405,6 @@ export const BookingCard: React.FC<BookingCardProps> = ({
                   </span>
                 </div>
 
-                {/* More Info Button for additional details */}
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-1">
-                    {booking.reschedule_count > 0 && (
-                      <div
-                        className="w-2 h-2 bg-amber-500 rounded-full"
-                        title="Reschedule History Available"
-                      />
-                    )}
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowMoreInfo(!showMoreInfo)}
-                    className="text-roam-blue hover:text-roam-blue/80 hover:bg-roam-blue/10 p-1 h-auto"
-                  >
-                    <Info className="w-4 h-4 mr-1" />
-                    <span className="text-xs">More Info</span>
-                    {showMoreInfo ? (
-                      <ChevronUp className="w-4 h-4 ml-1" />
-                    ) : (
-                      <ChevronDown className="w-4 h-4 ml-1" />
-                    )}
-                  </Button>
-                </div>
               </div>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0 self-start">
@@ -597,73 +568,6 @@ export const BookingCard: React.FC<BookingCardProps> = ({
         </div>
 
 
-        {/* Collapsible More Info Section - Only for additional details */}
-        {showMoreInfo && (
-          <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200 space-y-3">
-            <h4 className="font-medium text-sm text-gray-800 mb-3 flex items-center gap-2">
-              <Info className="w-4 h-4" />
-              Additional Details
-            </h4>
-
-            {/* Reschedule History */}
-            {booking.reschedule_count > 0 && (
-              <div className="flex items-center gap-2 p-2 bg-amber-50 rounded-lg border-l-4 border-amber-400">
-                <RefreshCw className="w-4 h-4 text-amber-600" />
-                <div className="flex-1">
-                  <span className="text-xs font-medium text-amber-700 uppercase tracking-wide">
-                    Rescheduled {booking.reschedule_count} time
-                    {booking.reschedule_count > 1 ? "s" : ""}
-                  </span>
-                  {booking.original_booking_date &&
-                    booking.original_start_time && (
-                      <p className="text-xs text-amber-600">
-                        Originally:{" "}
-                        {new Date(
-                          booking.original_booking_date,
-                        ).toLocaleDateString()}{" "}
-                        at{" "}
-                        {new Date(
-                          `1970-01-01T${booking.original_start_time}`,
-                        ).toLocaleTimeString([], {
-                          hour: "numeric",
-                          minute: "2-digit",
-                        })}
-                      </p>
-                    )}
-                  {booking.reschedule_reason && (
-                    <p className="text-xs text-amber-600 mt-1">
-                      Reason: {booking.reschedule_reason}
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Additional service details if available */}
-            {booking.services?.description && (
-              <div className="p-2 bg-white rounded-lg">
-                <span className="text-xs font-medium text-gray-600 uppercase tracking-wide block mb-2">
-                  Service Description
-                </span>
-                <p className="text-sm text-gray-700">
-                  {booking.services.description}
-                </p>
-              </div>
-            )}
-
-            {/* Special Instructions if available */}
-            {booking.special_instructions && (
-              <div className="p-2 bg-white rounded-lg">
-                <span className="text-xs font-medium text-gray-600 uppercase tracking-wide block mb-2">
-                  Special Instructions
-                </span>
-                <p className="text-sm text-gray-700">
-                  {booking.special_instructions}
-                </p>
-              </div>
-            )}
-          </div>
-        )}
 
         {booking.admin_notes && (
           <div className="bg-accent/20 rounded-lg p-3 mb-4">
