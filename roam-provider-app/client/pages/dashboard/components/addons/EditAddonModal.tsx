@@ -47,8 +47,14 @@ export function EditAddonModal({
 
     // Validation
     const price = parseFloat(customPrice);
-    if (isNaN(price) || price < 0) {
-      setError('Price must be a valid positive number');
+    if (isNaN(price) || price <= 0) {
+      setError('Price must be a valid positive number greater than 0');
+      return;
+    }
+
+    // If trying to activate without a valid price, show error
+    if (isAvailable && price <= 0) {
+      setError('A price greater than $0 is required to activate this add-on');
       return;
     }
 
@@ -144,17 +150,23 @@ export function EditAddonModal({
                 <p className="text-sm text-muted-foreground">
                   Make this add-on available to customers
                 </p>
+                {parseFloat(customPrice) <= 0 && (
+                  <p className="text-xs text-destructive">
+                    A price greater than $0 is required to activate
+                  </p>
+                )}
               </div>
               <Switch
                 id="is_available"
                 checked={isAvailable}
                 onCheckedChange={setIsAvailable}
+                disabled={parseFloat(customPrice) <= 0}
               />
             </div>
 
             {/* Info Box */}
             <div className="rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 p-3">
-              <p className="text-sm text-blue-900 dark:text-blue-100">
+              <p className="text-sm text-blue-800 dark:text-blue-200 font-medium">
                 <strong>Note:</strong> This add-on will be available for selection with {addon.compatible_service_count || 0} of your active services.
               </p>
             </div>

@@ -50,7 +50,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const limitNum = Math.min(Math.max(parseInt(limit as string, 10), 1), 100);
       let query = supabase
         .from('business_services')
-        .select('id, business_id, service_id, business_price, is_active, delivery_type, created_at', { count: 'exact' })
+        .select('id, business_id, service_id, business_price, business_duration_minutes, is_active, delivery_type, created_at', { count: 'exact' })
         .eq('business_id', business_id);
 
       if (status === 'active') query = query.eq('is_active', true);
@@ -103,7 +103,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // POST - Add a new service to business
     if (req.method === 'POST') {
-      const { business_id, service_id, business_price, delivery_type = 'both', is_active = true } = req.body;
+      const { business_id, service_id, business_price, business_duration_minutes, delivery_type = 'both', is_active = true } = req.body;
 
       if (!business_id || !service_id) {
         return res.status(400).json({ error: 'business_id and service_id are required' });
@@ -177,6 +177,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           business_id,
           service_id,
           business_price: parseFloat(business_price),
+          business_duration_minutes: parseInt(business_duration_minutes),
           delivery_type,
           is_active
         })
@@ -185,6 +186,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           business_id,
           service_id,
           business_price,
+          business_duration_minutes,
           delivery_type,
           is_active,
           created_at,
@@ -212,7 +214,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // PUT - Update an existing business service
     if (req.method === 'PUT') {
-      const { business_id, service_id, business_price, delivery_type, is_active } = req.body;
+      const { business_id, service_id, business_price, business_duration_minutes, delivery_type, is_active } = req.body;
 
       if (!business_id || !service_id) {
         return res.status(400).json({ error: 'business_id and service_id are required' });
@@ -225,6 +227,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           return res.status(400).json({ error: 'business_price must be greater than 0' });
         }
         updates.business_price = price;
+      }
+      if (business_duration_minutes !== undefined) {
+        const duration = parseInt(business_duration_minutes);
+        if (duration <= 0) {
+          return res.status(400).json({ error: 'business_duration_minutes must be greater than 0' });
+        }
+        updates.business_duration_minutes = duration;
       }
       if (delivery_type !== undefined) updates.delivery_type = delivery_type;
       if (is_active !== undefined) updates.is_active = is_active;
@@ -243,6 +252,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           business_id,
           service_id,
           business_price,
+          business_duration_minutes,
           delivery_type,
           is_active,
           created_at,

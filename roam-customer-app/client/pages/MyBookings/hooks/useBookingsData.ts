@@ -96,6 +96,9 @@ export const useBookingsData = (currentUser: any) => {
               duration_minutes,
               image_url
             ),
+            business_services!left (
+              business_duration_minutes
+            ),
             customer_profiles!left (
               id,
               first_name,
@@ -186,7 +189,11 @@ export const useBookingsData = (currentUser: any) => {
           location: "Location TBD", // Simplified since location data isn't in bookings table
           locationDetails: null,
           price: booking.total_amount ? `$${booking.total_amount}` : "Price TBD",
-          duration: booking.services?.duration_minutes ? `${booking.services.duration_minutes} min` : "60 min",
+          duration: booking.business_services?.[0]?.business_duration_minutes 
+            ? `${booking.business_services[0].business_duration_minutes} min` 
+            : booking.services?.duration_minutes 
+            ? `${booking.services.duration_minutes} min` 
+            : "60 min",
           notes: booking.admin_notes,
           bookingReference: booking.booking_reference,
           reschedule_count: booking.reschedule_count || 0,

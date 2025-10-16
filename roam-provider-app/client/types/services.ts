@@ -3,6 +3,7 @@ export interface BusinessService {
   business_id: string;
   service_id: string;
   business_price: number;
+  business_duration_minutes: number;
   is_active: boolean;
   delivery_type: 'customer_location' | 'business_location' | 'virtual' | 'both_locations' | null;
   created_at: string;
@@ -40,6 +41,7 @@ export interface EligibleService {
   // Business configuration fields (when service is configured for this business)
   is_configured?: boolean;
   business_price?: number | null;
+  business_duration_minutes?: number | null;
   delivery_type?: 'customer_location' | 'business_location' | 'virtual' | 'both_locations' | null;
   business_is_active?: boolean | null;
 }
@@ -54,6 +56,7 @@ export interface ServiceStats {
 export interface ServiceFormData {
   service_id: string;
   business_price: string;
+  business_duration_minutes: string;
   delivery_type: 'customer_location' | 'business_location' | 'virtual' | 'both_locations';
   is_active: boolean;
 }

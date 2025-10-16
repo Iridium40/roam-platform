@@ -959,6 +959,7 @@ export function createServer() {
             subcategory_id: 'house-cleaning',
             is_configured: true,
             business_price: 75,
+            business_duration_minutes: 150,
             delivery_type: 'customer_location',
             business_is_active: true,
             service_subcategories: {
@@ -978,6 +979,7 @@ export function createServer() {
             subcategory_id: 'lawn-care',
             is_configured: false,
             business_price: null,
+            business_duration_minutes: null,
             delivery_type: null,
             business_is_active: null,
             service_subcategories: {
@@ -997,6 +999,7 @@ export function createServer() {
             subcategory_id: 'deep-cleaning',
             is_configured: false,
             business_price: null,
+            business_duration_minutes: null,
             delivery_type: null,
             business_is_active: null,
             service_subcategories: {
@@ -1380,7 +1383,7 @@ export function createServer() {
   // Add/Update business service route
   app.post("/api/business/services", async (req, res) => {
     try {
-      const { business_id, service_id, business_price, delivery_type, is_active } = req.body;
+      const { business_id, service_id, business_price, business_duration_minutes, delivery_type, is_active } = req.body;
       
       if (!business_id || !service_id || !business_price) {
         return res.status(400).json({ error: "Business ID, service ID, and price are required" });
@@ -1395,6 +1398,7 @@ export function createServer() {
           business_id,
           service_id,
           business_price: parseFloat(business_price),
+          business_duration_minutes: business_duration_minutes ? parseInt(business_duration_minutes) : 60,
           delivery_type: delivery_type || 'customer_location',
           is_active: is_active !== false,
           created_at: new Date().toISOString(),
@@ -1424,6 +1428,7 @@ export function createServer() {
             .from('business_services')
             .update({
               business_price: parseFloat(business_price),
+              business_duration_minutes: business_duration_minutes ? parseInt(business_duration_minutes) : 60,
               delivery_type: delivery_type || 'customer_location',
               is_active: is_active !== false,
               updated_at: new Date().toISOString()
@@ -1442,6 +1447,7 @@ export function createServer() {
               business_id,
               service_id,
               business_price: parseFloat(business_price),
+              business_duration_minutes: business_duration_minutes ? parseInt(business_duration_minutes) : 60,
               delivery_type: delivery_type || 'customer_location',
               is_active: is_active !== false
             })
@@ -1466,14 +1472,14 @@ export function createServer() {
   // Update business service route (PUT)
   app.put("/api/business/services", async (req, res) => {
     try {
-      const { business_id, service_id, business_price, delivery_type, is_active } = req.body;
+      const { business_id, service_id, business_price, business_duration_minutes, delivery_type, is_active } = req.body;
       
       if (!business_id || !service_id) {
         return res.status(400).json({ error: "Business ID and service ID are required" });
       }
 
       // Development mode bypass
-      if (false && process.env.NODE_ENV === 'development') {
+      if (process.env.NODE_ENV === 'development') {
         console.log("Development mode: Mock updating business service");
         
         const mockService = {
@@ -1481,6 +1487,7 @@ export function createServer() {
           business_id,
           service_id,
           business_price: business_price ? parseFloat(business_price) : null,
+          business_duration_minutes: business_duration_minutes ? parseInt(business_duration_minutes) : null,
           delivery_type: delivery_type || null,
           is_active: is_active !== undefined ? is_active : true,
           created_at: new Date().toISOString(),
@@ -1502,6 +1509,7 @@ export function createServer() {
         };
         
         if (business_price !== undefined) upsertData.business_price = parseFloat(business_price);
+        if (business_duration_minutes !== undefined) upsertData.business_duration_minutes = parseInt(business_duration_minutes);
         if (delivery_type !== undefined) upsertData.delivery_type = delivery_type;
         if (is_active !== undefined) upsertData.is_active = is_active;
 

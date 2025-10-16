@@ -62,13 +62,6 @@ export default function AddonsTabSimplified({
     setEditingAddon(addon);
   };
 
-  const handleToggleStatus = async (addonId: string, isAvailable: boolean) => {
-    try {
-      await actions.toggleAddonStatus(addonId, isAvailable);
-    } catch (error) {
-      console.error('Failed to toggle addon status:', error);
-    }
-  };
 
   const handleSaveAddon = async (addonForm: any) => {
     try {
@@ -107,7 +100,6 @@ export default function AddonsTabSimplified({
       <SimplifiedAddonListSection
         addons={filteredAddons}
         loading={loading}
-        onToggleStatus={handleToggleStatus}
         onEdit={handleEdit}
       />
 

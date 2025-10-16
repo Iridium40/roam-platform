@@ -168,6 +168,7 @@ export function useServices() {
           business_id: provider!.provider!.business_id!,
           service_id: serviceForm.service_id,
           business_price: parseFloat(serviceForm.business_price),
+          business_duration_minutes: parseInt(serviceForm.business_duration_minutes),
           delivery_type: serviceForm.delivery_type,
           is_active: serviceForm.is_active
         }),
@@ -205,25 +206,37 @@ export function useServices() {
       throw new Error('Business profile setup required. Please complete your business registration.');
     }
 
+    const requestBody = {
+      business_id: provider!.provider!.business_id!,
+      service_id: serviceId,
+      business_price: updates.business_price,
+      business_duration_minutes: updates.business_duration_minutes,
+      delivery_type: updates.delivery_type,
+      is_active: updates.is_active
+    };
+
+    console.log('updateService API call:', {
+      url: '/api/business/services',
+      method: 'PUT',
+      body: requestBody
+    });
+
     try {
       const response = await fetch(`/api/business/services`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          business_id: provider!.provider!.business_id!,
-          service_id: serviceId,
-          business_price: updates.business_price,
-          delivery_type: updates.delivery_type,
-          is_active: updates.is_active
-        }),
+        body: JSON.stringify(requestBody),
       });
 
+      console.log('updateService response status:', response.status);
+      
       if (!response.ok) {
         let errorMessage = 'Failed to update service';
         try {
           const errorData = await safeJsonParse(response, 'update service error');
+          console.log('updateService error response:', errorData);
           errorMessage = errorData.error || errorMessage;
         } catch (parseError) {
           console.warn('Could not parse error response from update service API');
@@ -231,7 +244,9 @@ export function useServices() {
         throw new Error(errorMessage);
       }
 
-      const { service } = await safeJsonParse(response, 'update service');
+      const responseData = await safeJsonParse(response, 'update service');
+      console.log('updateService success response:', responseData);
+      const { service } = responseData;
 
       // Update local state
       setBusinessServices(prev => prev.map(s => s.service_id === serviceId ? service : s));

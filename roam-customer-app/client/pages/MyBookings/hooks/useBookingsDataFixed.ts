@@ -52,6 +52,36 @@ export const useBookingsDataFixed = (currentUser: any) => {
         // Fetch services data (using correct field name: 'name' not 'service_name')
         let servicesData = [];
         if (serviceIds.length > 0) {
+          // Fetch services with business duration
+          const { data: businessServices, error: businessServicesError } = await supabase
+            .from("business_services")
+            .select(`
+              service_id,
+              business_duration_minutes,
+              services (
+                id,
+                name,
+                description,
+                min_price,
+                duration_minutes,
+                image_url
+              )
+            `)
+            .in("service_id", serviceIds);
+          
+          if (businessServicesError) {
+            console.warn("Business services query failed:", businessServicesError);
+          }
+          
+          // Create a map of service_id to business duration
+          const businessDurationMap = new Map();
+          if (businessServices) {
+            businessServices.forEach(bs => {
+              businessDurationMap.set(bs.service_id, bs.business_duration_minutes);
+            });
+          }
+          
+          // Fallback to services table if business_services fails
           const { data: services, error: servicesError } = await supabase
             .from("services")
             .select(`
@@ -202,7 +232,11 @@ export const useBookingsDataFixed = (currentUser: any) => {
             location: "Service Location", // Simplified since location data requires separate query
             locationDetails: null,
             price: booking.total_amount ? `$${booking.total_amount.toFixed(2)}` : "Price TBD",
-            duration: service?.duration_minutes ? `${service.duration_minutes} min` : "60 min",
+            duration: businessDurationMap.get(booking.service_id) 
+              ? `${businessDurationMap.get(booking.service_id)} min` 
+              : service?.duration_minutes 
+              ? `${service.duration_minutes} min` 
+              : "60 min",
             notes: booking.admin_notes,
             bookingReference: booking.booking_reference,
 

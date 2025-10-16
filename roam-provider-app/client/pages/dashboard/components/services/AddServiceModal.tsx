@@ -39,6 +39,7 @@ export function AddServiceModal({
   const [serviceForm, setServiceForm] = useState<ServiceFormData>({
     service_id: '',
     business_price: '',
+    business_duration_minutes: '',
     delivery_type: 'customer_location',
     is_active: true,
   });
@@ -60,6 +61,15 @@ export function AddServiceModal({
       }
     }
 
+    if (!serviceForm.business_duration_minutes) {
+      newErrors.business_duration_minutes = 'Please enter a duration';
+    } else {
+      const duration = parseInt(serviceForm.business_duration_minutes);
+      if (isNaN(duration) || duration <= 0) {
+        newErrors.business_duration_minutes = 'Please enter a valid duration';
+      }
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -78,6 +88,7 @@ export function AddServiceModal({
       setServiceForm({
         service_id: '',
         business_price: '',
+        business_duration_minutes: '',
         delivery_type: 'customer_location',
         is_active: true,
       });
@@ -196,6 +207,33 @@ export function AddServiceModal({
             {selectedService && (
               <p className="text-sm text-muted-foreground">
                 Recommended minimum: ${selectedService.min_price}
+              </p>
+            )}
+          </div>
+
+          {/* Duration */}
+          <div className="space-y-2">
+            <Label htmlFor="duration">Duration (minutes) *</Label>
+            <div className="relative">
+              <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                id="duration"
+                type="number"
+                min="1"
+                placeholder="60"
+                value={serviceForm.business_duration_minutes}
+                onChange={(e) =>
+                  setServiceForm(prev => ({ ...prev, business_duration_minutes: e.target.value }))
+                }
+                className="pl-10"
+              />
+            </div>
+            {errors.business_duration_minutes && (
+              <p className="text-sm text-destructive">{errors.business_duration_minutes}</p>
+            )}
+            {selectedService && (
+              <p className="text-sm text-muted-foreground">
+                Platform default: {selectedService.duration_minutes} minutes
               </p>
             )}
           </div>

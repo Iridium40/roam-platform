@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { DollarSign, MapPin, Home, Video, Users } from 'lucide-react';
+import { DollarSign, Car, Building, Video, Users, Clock } from 'lucide-react';
 import { EligibleService } from '@/types/services';
 
 interface EditServiceModalProps {
@@ -27,6 +27,7 @@ interface EditServiceModalProps {
   onSave: (data: {
     service_id: string;
     business_price: string;
+    business_duration_minutes: string;
     delivery_type: string;
     is_active: boolean;
   }) => Promise<void>;
@@ -42,6 +43,9 @@ export function EditServiceModal({
 }: EditServiceModalProps) {
   const [businessPrice, setBusinessPrice] = useState<string>(
     service.business_price?.toString() || service.min_price.toString()
+  );
+  const [businessDurationMinutes, setBusinessDurationMinutes] = useState<string>(
+    service.business_duration_minutes?.toString() || service.duration_minutes.toString()
   );
   const [deliveryType, setDeliveryType] = useState<string>(
     service.delivery_type || 'customer_location'
@@ -63,11 +67,18 @@ export function EditServiceModal({
       return;
     }
 
+    const duration = parseInt(businessDurationMinutes);
+    if (isNaN(duration) || duration <= 0) {
+      setError('Duration must be a valid positive number');
+      return;
+    }
+
     try {
       setSaving(true);
       await onSave({
         service_id: service.id,
         business_price: businessPrice,
+        business_duration_minutes: businessDurationMinutes,
         delivery_type: deliveryType,
         is_active: isActive,
       });
@@ -83,13 +94,13 @@ export function EditServiceModal({
     {
       value: 'customer_location',
       label: 'Customer Location',
-      icon: <MapPin className="h-4 w-4" />,
+      icon: <Car className="h-4 w-4" />,
       description: 'Service provided at customer\'s location',
     },
     {
       value: 'business_location',
       label: 'Business Location',
-      icon: <Home className="h-4 w-4" />,
+      icon: <Building className="h-4 w-4" />,
       description: 'Customer comes to your business',
     },
     {
@@ -169,6 +180,30 @@ export function EditServiceModal({
               </div>
               <p className="text-xs text-muted-foreground">
                 Minimum price: ${service.min_price}
+              </p>
+            </div>
+
+            {/* Business Duration */}
+            <div className="space-y-2">
+              <Label htmlFor="business_duration">
+                Duration (minutes)
+                <span className="text-destructive ml-1">*</span>
+              </Label>
+              <div className="relative">
+                <Clock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="business_duration"
+                  type="number"
+                  min="1"
+                  value={businessDurationMinutes}
+                  onChange={(e) => setBusinessDurationMinutes(e.target.value)}
+                  className="pl-9"
+                  placeholder={`Default: ${service.duration_minutes}`}
+                  required
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Platform default: {service.duration_minutes} minutes
               </p>
             </div>
 

@@ -140,6 +140,42 @@ export function useBookings(providerData: any, business: any) {
     if (activeTab === "past") setPastPage(1);
   }, [activeTab]);
 
+  // Auto-redirect functionality: Move bookings from Future to Present when date arrives
+  useEffect(() => {
+    const checkForTimeTransitions = () => {
+      const todayStr = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
+      const finalStatuses = new Set(['completed', 'cancelled', 'declined', 'no_show']);
+      
+      // Check if any future bookings should move to present (when date becomes today or past)
+      const shouldRedirect = bookings.some((booking: any) => {
+        const bookingDate = booking.booking_date;
+        const bookingStatus = booking.booking_status;
+        
+        if (!bookingDate || !bookingStatus) return false;
+        
+        // If booking date is today or past, and NOT in final status, it should be in present
+        return (bookingDate <= todayStr) && !finalStatuses.has(bookingStatus);
+      });
+
+      // If there are bookings that should move to present, redirect to present tab
+      if (shouldRedirect && activeTab === 'future') {
+        setActiveTab('present');
+        toast({
+          title: "Bookings Updated",
+          description: "Some bookings have moved to the Present tab.",
+        });
+      }
+    };
+
+    // Check immediately
+    checkForTimeTransitions();
+
+    // Set up interval to check every minute
+    const interval = setInterval(checkForTimeTransitions, 60000); // Check every minute
+
+    return () => clearInterval(interval);
+  }, [bookings, activeTab, toast]);
+
   // Filter bookings based on search and status
   const filteredBookings = useMemo(() => {
     let filtered = bookings;
@@ -176,25 +212,56 @@ export function useBookings(providerData: any, business: any) {
     const present: any[] = [];
     const future: any[] = [];
     const past: any[] = [];
-    const presentSet = new Set(['pending','confirmed','in_progress']);
-    const futureSet = new Set(['pending','confirmed']);
-    const pastSet = new Set(['completed','cancelled','declined','no_show']);
-    const todayStr = new Date().toLocaleDateString('en-CA');
+    const finalStatuses = new Set(['completed', 'cancelled', 'declined', 'no_show']);
+    const todayStr = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
+    
+    console.log('=== BOOKING CATEGORIZATION START ===');
+    console.log('Today is:', todayStr);
+    console.log('Total filtered bookings:', filteredBookings.length);
 
-    filteredBookings.forEach(b => {
+    filteredBookings.forEach((b: any, index: number) => {
       const status = b.booking_status;
       const dateStr: string = b.booking_date || '';
       
-      if (dateStr === todayStr && presentSet.has(status)) {
-        present.push(b);
-      } else if (dateStr > todayStr && futureSet.has(status)) {
-        future.push(b);
-      } else if (dateStr < todayStr || pastSet.has(status)) {
+      console.log(`\n[Booking ${index + 1}]`, {
+        id: b.id,
+        service: b.services?.name,
+        status,
+        dateStr,
+        todayStr,
+      });
+      
+      // PAST = Final status states (completed, cancelled, declined, no_show)
+      if (finalStatuses.has(status)) {
+        console.log(`  ✓ PAST - Final status: ${status}`);
         past.push(b);
-      } else {
-        past.push(b);
+        return;
       }
+      
+      // FUTURE = Future dates (not in final status)
+      if (dateStr > todayStr) {
+        console.log('  ✓ FUTURE - Date is in the future');
+        future.push(b);
+        return;
+      }
+      
+      // PRESENT = Today's date or in the past (not in final status)
+      if (dateStr <= todayStr) {
+        console.log(`  ✓ PRESENT - Date is ${dateStr === todayStr ? 'today' : 'past'}`);
+        present.push(b);
+        return;
+      }
+      
+      // Fallback (should never reach here)
+      console.log('  ⚠ FALLBACK - Defaulting to PRESENT');
+      present.push(b);
     });
+    
+    console.log('\n=== CATEGORIZATION RESULTS ===');
+    console.log(`Present: ${present.length} bookings`);
+    console.log(`Future: ${future.length} bookings`);
+    console.log(`Past: ${past.length} bookings`);
+    console.log('===========================\n');
 
     return { present, future, past };
   }, [filteredBookings]);

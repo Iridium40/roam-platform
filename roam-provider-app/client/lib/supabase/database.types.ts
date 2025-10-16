@@ -295,6 +295,7 @@ export interface Database {
           business_id: string
           service_id: string
           business_price: number
+          business_duration_minutes: number
           delivery_type: string
           is_active: boolean
           created_at: string
@@ -305,6 +306,7 @@ export interface Database {
           business_id: string
           service_id: string
           business_price: number
+          business_duration_minutes: number
           delivery_type: string
           is_active?: boolean
           created_at?: string
@@ -315,6 +317,7 @@ export interface Database {
           business_id?: string
           service_id?: string
           business_price?: number
+          business_duration_minutes?: number
           delivery_type?: string
           is_active?: boolean
           created_at?: string

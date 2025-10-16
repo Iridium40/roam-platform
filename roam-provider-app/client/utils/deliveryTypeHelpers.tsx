@@ -1,4 +1,4 @@
-import { MapPin, Home, Video, ArrowLeftRight } from 'lucide-react';
+import { Car, Building, Video, ArrowLeftRight } from 'lucide-react';
 
 /**
  * Delivery Type Helper Utilities
@@ -15,15 +15,15 @@ export type DeliveryType = 'business_location' | 'customer_location' | 'virtual'
 export function getDeliveryTypeIcon(type: string | null) {
   switch (type) {
     case 'business_location':
-      return <Home className="h-4 w-4" />;
+      return <Building className="h-4 w-4" />;
     case 'customer_location':
-      return <MapPin className="h-4 w-4" />;
+      return <Car className="h-4 w-4" />;
     case 'virtual':
       return <Video className="h-4 w-4" />;
     case 'both_locations':
       return <ArrowLeftRight className="h-4 w-4" />;
     default:
-      return <MapPin className="h-4 w-4" />;
+      return <Car className="h-4 w-4" />;
   }
 }
 
@@ -71,13 +71,13 @@ export const DELIVERY_TYPE_OPTIONS = [
     value: 'business_location',
     label: 'Business',
     description: 'Service at business location',
-    icon: Home,
+    icon: Building,
   },
   {
     value: 'customer_location',
     label: 'Mobile',
     description: 'Service at customer location',
-    icon: MapPin,
+    icon: Car,
   },
   {
     value: 'virtual',

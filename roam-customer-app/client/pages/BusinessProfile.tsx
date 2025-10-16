@@ -29,6 +29,8 @@ interface Service {
   description: string;
   min_price: number;
   duration_minutes: number;
+  business_price?: number;
+  business_duration_minutes?: number;
   image_url?: string;
 }
 
@@ -95,21 +97,37 @@ export default function BusinessProfile() {
           review_count: 25, // Mock data
         });
 
-        // Load services for this business
+        // Load services for this business with business-specific pricing and duration
         const { data: servicesData, error: servicesError } = await supabase
-          .from('services')
+          .from('business_services')
           .select(`
-            id,
-            name,
-            description,
-            min_price,
-            duration_minutes,
-            image_url
+            business_price,
+            business_duration_minutes,
+            services (
+              id,
+              name,
+              description,
+              min_price,
+              duration_minutes,
+              image_url
+            )
           `)
+          .eq('business_id', businessId)
           .eq('is_active', true);
 
         if (!servicesError && servicesData) {
-          setServices(servicesData);
+          // Transform business_services data to Service interface
+          const transformedServices = servicesData.map((item: any) => ({
+            id: item.services.id,
+            name: item.services.name,
+            description: item.services.description,
+            min_price: item.services.min_price,
+            duration_minutes: item.services.duration_minutes,
+            business_price: item.business_price,
+            business_duration_minutes: item.business_duration_minutes,
+            image_url: item.services.image_url,
+          }));
+          setServices(transformedServices);
         }
 
         // Load staff members (owners and providers) for this business
@@ -389,7 +407,7 @@ export default function BusinessProfile() {
                                     ${service.min_price} Starting
                                   </Badge>
                                   <Badge variant="outline" className="text-sm">
-                                    {service.duration_minutes} Minutes
+                                    {service.business_duration_minutes || service.duration_minutes} Minutes
                                   </Badge>
                                 </div>
                               </div>

@@ -50,6 +50,7 @@ interface Business {
   delivery_types?: string[];
   business_type?: string;
   service_price?: number;
+  service_duration_minutes?: number;
   business_hours?: any;
 }
 
@@ -509,6 +510,7 @@ export default function BookService() {
         .select(`
           business_id,
           business_price,
+          business_duration_minutes,
           is_active,
           business_profiles (
             id,
@@ -597,6 +599,7 @@ export default function BookService() {
         logo_url: item.business_profiles.logo_url,
         business_type: item.business_profiles.business_type,
         service_price: item.business_price || service?.min_price || 0,
+        service_duration_minutes: item.business_duration_minutes || service?.duration_minutes || 60,
         business_hours: item.business_profiles.business_hours,
         rating: 4.5, // Mock data - would come from reviews table
         review_count: 25, // Mock data
@@ -2181,7 +2184,7 @@ export default function BookService() {
                     )}
                     <div className="flex justify-between">
                       <span className="text-gray-600">Duration:</span>
-                      <span className="font-medium">{service.duration_minutes} minutes</span>
+                      <span className="font-medium">{selectedBusiness?.service_duration_minutes || service.duration_minutes} minutes</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Service Price:</span>

@@ -2,7 +2,6 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
 import {
   Table,
   TableBody,
@@ -22,14 +21,12 @@ import { EligibleAddon } from '@/types/addons';
 interface SimplifiedAddonListSectionProps {
   addons: EligibleAddon[];
   loading: boolean;
-  onToggleStatus: (addonId: string, isAvailable: boolean) => Promise<void>;
   onEdit: (addon: EligibleAddon) => void;
 }
 
 export function SimplifiedAddonListSection({
   addons,
   loading,
-  onToggleStatus,
   onEdit,
 }: SimplifiedAddonListSectionProps) {
 
@@ -139,20 +136,11 @@ export function SimplifiedAddonListSection({
                       )}
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          checked={isAvailable}
-                          onCheckedChange={(checked) =>
-                            onToggleStatus(addon.id, checked)
-                          }
-                          disabled={!isConfigured}
-                        />
-                        <Badge
-                          variant={isAvailable ? 'default' : 'secondary'}
-                        >
-                          {isAvailable ? 'Available' : 'Unavailable'}
-                        </Badge>
-                      </div>
+                      <Badge
+                        variant={isAvailable ? 'default' : 'secondary'}
+                      >
+                        {isAvailable ? 'Available' : 'Unavailable'}
+                      </Badge>
                     </TableCell>
                     <TableCell className="text-right">
                       <Button

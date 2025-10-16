@@ -39,8 +39,8 @@ import {
   Users,
   Settings,
   Package,
-  MapPin,
-  Building2,
+  Car,
+  Building,
   Video,
   RefreshCw
 } from 'lucide-react';
@@ -170,15 +170,15 @@ export default function ServicePricingSetup({
   const getDeliveryTypeInfo = (deliveryType: string) => {
     switch (deliveryType) {
       case 'business_location':
-        return { icon: Building2, label: 'Business', color: 'text-blue-600' };
+        return { icon: Building, label: 'Business', color: 'text-blue-600' };
       case 'customer_location':
-        return { icon: MapPin, label: 'Mobile', color: 'text-green-600' };
+        return { icon: Car, label: 'Mobile', color: 'text-green-600' };
       case 'virtual':
         return { icon: Video, label: 'Virtual', color: 'text-purple-600' };
       case 'both_locations':
         return { icon: RefreshCw, label: 'Both', color: 'text-orange-600' };
       default:
-        return { icon: MapPin, label: 'Unknown', color: 'text-gray-600' };
+        return { icon: Car, label: 'Unknown', color: 'text-gray-600' };
     }
   };
 

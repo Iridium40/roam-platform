@@ -49,6 +49,17 @@ export function BookingsTab({ providerData, business }: BookingsTabProps) {
     formatDisplayTime,
   } = useBookings(providerData, business);
 
+  // Debug: Log tab data
+  console.log('📊 BookingsTab render:', {
+    activeTab,
+    presentCount: presentBookings.length,
+    futureCount: futureBookings.length,
+    pastCount: pastBookings.length,
+    paginatedPresent: paginatedData.present.items.length,
+    paginatedFuture: paginatedData.future.items.length,
+    paginatedPast: paginatedData.past.items.length,
+  });
+
   if (loading) {
     return (
       <div className="space-y-6">
