@@ -61,7 +61,6 @@ export const BookingCard: React.FC<BookingCardProps> = ({
   const [showMoreInfo, setShowMoreInfo] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
 
-  const statusConfig = getStatusConfig(booking.status);
   const DeliveryIcon = getDeliveryIcon(booking.deliveryType);
   const deliveryLabel = getDeliveryTypeLabel(booking.deliveryType);
 
