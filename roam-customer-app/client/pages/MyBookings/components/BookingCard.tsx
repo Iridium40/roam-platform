@@ -33,7 +33,6 @@ import {
 } from "lucide-react";
 import type { BookingWithDetails } from "@/types/index";
 import { formatBookingDate, isWithin24Hours, getDeliveryTypeLabel, getDeliveryTypeIcon } from "../utils/bookingCalculations";
-import { RealtimeStatusUpdate } from "@/components/BookingStatusIndicator";
 import ReviewAndTipModal from "./ReviewAndTipModal";
 
 interface BookingCardProps {
@@ -43,53 +42,6 @@ interface BookingCardProps {
   onMessage: (booking: BookingWithDetails) => void;
 }
 
-const getStatusConfig = (status: string) => {
-  const configs = {
-    confirmed: {
-      label: "Confirmed",
-      color: "bg-roam-blue/20 text-roam-blue",
-      icon: CheckCircle,
-      description: "Your booking is confirmed",
-    },
-    pending: {
-      label: "Pending",
-      color: "bg-roam-blue/20 text-roam-blue",
-      icon: Clock,
-      description: "Waiting for provider confirmation",
-    },
-    in_progress: {
-      label: "In Progress",
-      color: "bg-roam-blue/20 text-roam-blue",
-      icon: RefreshCw,
-      description: "Service is currently active",
-    },
-    completed: {
-      label: "Completed",
-      color: "bg-green-100 text-green-800",
-      icon: CheckCircle,
-      description: "Service completed successfully",
-    },
-    cancelled: {
-      label: "Cancelled",
-      color: "bg-red-100 text-red-800",
-      icon: XCircle,
-      description: "Booking was cancelled",
-    },
-    declined: {
-      label: "Declined",
-      color: "bg-red-100 text-red-800",
-      icon: XCircle,
-      description: "Booking was declined by provider",
-    },
-    no_show: {
-      label: "No Show",
-      color: "bg-gray-100 text-gray-800",
-      icon: XCircle,
-      description: "Customer did not show up",
-    },
-  };
-  return configs[status as keyof typeof configs] || configs.pending;
-};
 
 const getDeliveryIcon = (type: string) => {
   const icons = {
@@ -292,34 +244,38 @@ export const BookingCard: React.FC<BookingCardProps> = ({
             </div>
           </div>
 
-          {/* Desktop Status and Progress Bar - Bottom Left to Right */}
+          {/* Desktop Status Bar - Bottom Left to Right */}
           <div className="flex items-center justify-between mt-6">
-            {/* Status and Progress Bar - Bottom Left */}
+            {/* Simplified Status Bar - Bottom Left */}
             <div className="flex-1 mr-4">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">
-                  Status:
-                </span>
-                <RealtimeStatusUpdate
-                  bookingId={booking.id}
-                  currentStatus={booking.booking_status}
-                  onStatusChange={(newStatus) => {
-                    // Booking status changed
-                  }}
-                />
-              </div>
-              {/* Progress Bar */}
-              <div className="w-full bg-gray-200 rounded-full h-2">
+              <div className="w-full bg-gray-200 rounded-full h-3 relative overflow-hidden">
                 <div 
-                  className="bg-roam-blue h-2 rounded-full transition-all duration-300"
-                  style={{ width: booking.booking_status === 'pending' ? '25%' : booking.booking_status === 'confirmed' ? '50%' : booking.booking_status === 'in_progress' ? '75%' : '100%' }}
+                  className={`h-3 rounded-full transition-all duration-300 ${
+                    booking.booking_status === 'pending' ? 'bg-yellow-500' :
+                    booking.booking_status === 'confirmed' ? 'bg-blue-500' :
+                    booking.booking_status === 'in_progress' ? 'bg-blue-600' :
+                    booking.booking_status === 'completed' ? 'bg-green-500' :
+                    'bg-red-500'
+                  }`}
+                  style={{ 
+                    width: booking.booking_status === 'pending' ? '25%' : 
+                           booking.booking_status === 'confirmed' ? '50%' : 
+                           booking.booking_status === 'in_progress' ? '75%' : 
+                           '100%' 
+                  }}
                 ></div>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-xs font-medium text-white drop-shadow-sm">
+                    {booking.booking_status === 'pending' ? 'Awaiting confirmation' : 
+                     booking.booking_status === 'confirmed' ? 'Confirmed - Provider will arrive' :
+                     booking.booking_status === 'in_progress' ? 'Service in progress' : 
+                     booking.booking_status === 'completed' ? 'Service completed' :
+                     booking.booking_status === 'cancelled' ? 'Booking cancelled' :
+                     booking.booking_status === 'declined' ? 'Booking declined' :
+                     'No show'}
+                  </span>
+                </div>
               </div>
-              <p className="text-xs text-gray-500 mt-1">
-                {booking.booking_status === 'pending' ? 'Awaiting confirmation' : 
-                 booking.booking_status === 'confirmed' ? 'Confirmed' :
-                 booking.booking_status === 'in_progress' ? 'In progress' : 'Completed'}
-              </p>
             </div>
 
             {/* Message Button - Bottom Right */}
@@ -405,18 +361,34 @@ export const BookingCard: React.FC<BookingCardProps> = ({
                   </div>
                 )}
 
-                {/* Current Status - Always Visible */}
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">
-                    Status:
-                  </span>
-                  <RealtimeStatusUpdate
-                    bookingId={booking.id}
-                    currentStatus={booking.booking_status}
-                    onStatusChange={(newStatus) => {
-                      // Booking status changed
+                {/* Mobile Status Bar */}
+                <div className="w-full bg-gray-200 rounded-full h-3 relative overflow-hidden mb-2">
+                  <div 
+                    className={`h-3 rounded-full transition-all duration-300 ${
+                      booking.booking_status === 'pending' ? 'bg-yellow-500' :
+                      booking.booking_status === 'confirmed' ? 'bg-blue-500' :
+                      booking.booking_status === 'in_progress' ? 'bg-blue-600' :
+                      booking.booking_status === 'completed' ? 'bg-green-500' :
+                      'bg-red-500'
+                    }`}
+                    style={{ 
+                      width: booking.booking_status === 'pending' ? '25%' : 
+                             booking.booking_status === 'confirmed' ? '50%' : 
+                             booking.booking_status === 'in_progress' ? '75%' : 
+                             '100%' 
                     }}
-                  />
+                  ></div>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-xs font-medium text-white drop-shadow-sm">
+                      {booking.booking_status === 'pending' ? 'Awaiting confirmation' : 
+                       booking.booking_status === 'confirmed' ? 'Confirmed - Provider will arrive' :
+                       booking.booking_status === 'in_progress' ? 'Service in progress' : 
+                       booking.booking_status === 'completed' ? 'Service completed' :
+                       booking.booking_status === 'cancelled' ? 'Booking cancelled' :
+                       booking.booking_status === 'declined' ? 'Booking declined' :
+                       'No show'}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Rating and Price - Always Visible */}
