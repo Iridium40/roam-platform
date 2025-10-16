@@ -56,7 +56,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     switch (event.type) {
       case 'checkout.session.completed': {
         console.log('🎯 Processing checkout.session.completed event');
-        console.log('🔐 Using updated webhook secret for test mode');
+        console.log('🔐 Using webhook secret for live/production mode');
         const session = event.data.object;
         const metadata = session.metadata;
         
