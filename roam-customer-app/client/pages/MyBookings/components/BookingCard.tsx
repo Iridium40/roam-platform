@@ -232,81 +232,83 @@ export const BookingCard: React.FC<BookingCardProps> = ({
                     ${booking.total_amount}
                   </span>
                 </div>
+              </div>
+            </div>
+          </div>
 
-                {/* Action Buttons */}
-                <div className="flex items-center gap-3">
-                  {!isPastBooking && (booking.status === "confirmed" || booking.status === "pending") && booking.providers && (
-                    <Button
-                      size="sm"
-                      className="bg-roam-blue hover:bg-roam-blue/90 text-white font-medium"
-                      onClick={() => onMessage(booking)}
-                      title={`Message ${booking.providers.first_name} ${booking.providers.last_name} about this booking`}
-                    >
-                      <MessageCircle className="w-4 h-4 mr-2" />
-                      Message Provider
-                    </Button>
-                  )}
+          {/* Desktop Action Buttons - Bottom Right */}
+          <div className="flex items-center justify-end gap-2 mt-4">
+            {!isPastBooking && (booking.status === "confirmed" || booking.status === "pending") && booking.providers && (
+              <Button
+                size="sm"
+                className="bg-roam-blue hover:bg-roam-blue/90 text-white font-medium"
+                onClick={() => onMessage(booking)}
+                title={`Message ${booking.providers.first_name} ${booking.providers.last_name} about this booking`}
+              >
+                <MessageCircle className="w-4 h-4" />
+              </Button>
+            )}
 
-                  {/* Hamburger menu for Reschedule and Cancel actions */}
-                  {!isPastBooking && 
-                    (booking.status === "pending" || booking.status === "confirmed") &&
-                    booking.status !== "cancelled" &&
-                    booking.status !== "declined" &&
-                    booking.status !== "completed" &&
-                    booking.status !== "no_show" && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="border-gray-300 text-gray-600 hover:bg-gray-50"
-                          >
-                            <MoreHorizontal className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() => onReschedule(booking)}
-                            className="cursor-pointer"
-                          >
-                            <Edit className="w-4 h-4 mr-2" />
-                            Reschedule
-                          </DropdownMenuItem>
-                          {canCancelBooking ? (
-                            <DropdownMenuItem
-                              onClick={() => onCancel(booking)}
-                              className="cursor-pointer text-red-600 focus:text-red-600"
-                            >
-                              <X className="w-4 h-4 mr-2" />
-                              Cancel
-                            </DropdownMenuItem>
-                          ) : isWithin24Hours(booking) ? (
-                            <DropdownMenuItem
-                              disabled
-                              className="cursor-not-allowed text-gray-400"
-                            >
-                              <X className="w-4 h-4 mr-2" />
-                              Cancel (Within 24h)
-                            </DropdownMenuItem>
-                          ) : null}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
-
-                  {isPastBooking && (
+            {/* Hamburger menu for Reschedule and Cancel actions */}
+            {!isPastBooking && 
+              (booking.status === "pending" || booking.status === "confirmed") &&
+              booking.status !== "cancelled" &&
+              booking.status !== "declined" &&
+              booking.status !== "completed" &&
+              booking.status !== "no_show" && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
                     <Button
                       size="sm"
                       variant="outline"
-                      className="border-roam-blue text-roam-blue hover:bg-roam-blue hover:text-white"
-                      onClick={() => {
-                        window.location.href = `/book-service/${booking.service_id}`;
-                      }}
+                      className="border-gray-300 text-gray-600 hover:bg-gray-50"
                     >
-                      <RefreshCw className="w-4 h-4 mr-2" />
-                      Book Again
+                      <MoreHorizontal className="w-4 h-4" />
                     </Button>
-                  )}
-                </div>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      onClick={() => onReschedule(booking)}
+                      className="cursor-pointer"
+                    >
+                      <Edit className="w-4 h-4 mr-2" />
+                      Reschedule
+                    </DropdownMenuItem>
+                    {canCancelBooking ? (
+                      <DropdownMenuItem
+                        onClick={() => onCancel(booking)}
+                        className="cursor-pointer text-red-600 focus:text-red-600"
+                      >
+                        <X className="w-4 h-4 mr-2" />
+                        Cancel
+                      </DropdownMenuItem>
+                    ) : isWithin24Hours(booking) ? (
+                      <DropdownMenuItem
+                        disabled
+                        className="cursor-not-allowed text-gray-400"
+                      >
+                        <X className="w-4 h-4 mr-2" />
+                        Cancel (Within 24h)
+                      </DropdownMenuItem>
+                    ) : null}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+
+            {isPastBooking && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-roam-blue text-roam-blue hover:bg-roam-blue hover:text-white"
+                onClick={() => {
+                  window.location.href = `/book-service/${booking.service_id}`;
+                }}
+              >
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Book Again
+              </Button>
+            )}
+          </div>
               </div>
             </div>
           </div>
@@ -468,8 +470,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({
                   onClick={() => onMessage(booking)}
                   title={`Message ${booking.providers.first_name} ${booking.providers.last_name} about this booking`}
                 >
-                  <MessageCircle className="w-4 h-4 mr-2" />
-                  Message Provider
+                  <MessageCircle className="w-4 h-4" />
                 </Button>
               )}
             </div>
