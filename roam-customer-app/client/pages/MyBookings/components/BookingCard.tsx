@@ -309,9 +309,6 @@ export const BookingCard: React.FC<BookingCardProps> = ({
               </Button>
             )}
           </div>
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Mobile Layout - Vertical (unchanged) */}
