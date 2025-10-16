@@ -67,13 +67,13 @@ export const useBookingFilters = (bookings: BookingWithDetails[]) => {
         return dateA.localeCompare(dateB);
       }),
       
-      // PAST = Final status states with past dates only
+      // PAST = Final status states (regardless of date - handles data inconsistencies)
       past: safeBookings.filter((booking) => {
         const status = booking.status || booking.booking_status || 'pending';
         const dateStr = booking.date || booking.booking_date || '';
         
-        // Only include final status bookings that have past dates
-        return finalStatuses.has(status) && dateStr < todayStr;
+        // Include final status bookings (handles future dates with final status)
+        return finalStatuses.has(status);
       }).sort((a, b) => {
         // Sort past bookings by date (most recent first)
         const dateA = a.date || a.booking_date || '';

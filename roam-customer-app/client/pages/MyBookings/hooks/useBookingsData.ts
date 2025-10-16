@@ -116,6 +116,14 @@ export const useBookingsData = (currentUser: any) => {
               is_primary,
               offers_mobile_services
             ),
+            business_profiles!left (
+              id,
+              business_name,
+              business_type,
+              business_description,
+              image_url,
+              logo_url
+            ),
             customer_locations!left (
               id,
               customer_id,

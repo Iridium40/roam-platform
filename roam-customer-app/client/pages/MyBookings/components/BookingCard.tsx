@@ -116,6 +116,18 @@ export const BookingCard: React.FC<BookingCardProps> = ({
             {/* Middle Column - Location */}
             <div className="col-span-4">
               <div className="space-y-4">
+                {/* Business Name */}
+                {booking.business_profiles?.business_name && (
+                  <div className="flex items-center gap-2">
+                    <Building className="w-5 h-5 text-roam-blue" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-900">
+                        {booking.business_profiles.business_name}
+                      </p>
+                    </div>
+                  </div>
+                )}
+                
                 {/* Location */}
                 <div className="flex items-start gap-2">
                   <DeliveryIcon className="w-5 h-5 text-roam-blue mt-0.5" />
@@ -425,6 +437,18 @@ export const BookingCard: React.FC<BookingCardProps> = ({
               ) : null}
             </div>
           </div>
+
+          {/* Mobile Business Name Section */}
+          {booking.business_profiles?.business_name && (
+            <div className="flex items-center gap-2 mb-3">
+              <Building className="w-4 h-4 text-roam-blue" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-gray-900">
+                  {booking.business_profiles.business_name}
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Mobile Location Section */}
           <div className="flex items-start gap-2 mb-4">
