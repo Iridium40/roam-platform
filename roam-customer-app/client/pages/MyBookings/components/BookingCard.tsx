@@ -243,11 +243,24 @@ export const BookingCard: React.FC<BookingCardProps> = ({
             </div>
           </div>
 
-          {/* Desktop Status Bar - Bottom Left to Right */}
+          {/* Desktop Status Section - Bottom Left to Right */}
           <div className="flex items-center justify-between mt-6">
-            {/* Simplified Status Bar - Bottom Left */}
+            {/* Status Text and Progress Bar - Bottom Left */}
             <div className="flex-1 mr-4">
-              <div className="w-full bg-gray-200 rounded-full h-3 relative overflow-hidden">
+              {/* Status Text - Centered Above Progress Bar */}
+              <div className="text-center mb-2">
+                <span className="text-sm font-medium text-gray-700">
+                  {booking.booking_status === 'pending' ? 'Awaiting confirmation' : 
+                   booking.booking_status === 'confirmed' ? 'Confirmed - Provider will arrive' :
+                   booking.booking_status === 'in_progress' ? 'Service in progress' : 
+                   booking.booking_status === 'completed' ? 'Service completed' :
+                   booking.booking_status === 'cancelled' ? 'Booking cancelled' :
+                   booking.booking_status === 'declined' ? 'Booking declined' :
+                   'No show'}
+                </span>
+              </div>
+              {/* Progress Bar */}
+              <div className="w-full bg-gray-200 rounded-full h-3">
                 <div 
                   className={`h-3 rounded-full transition-all duration-300 ${
                     booking.booking_status === 'pending' ? 'bg-yellow-500' :
@@ -263,17 +276,6 @@ export const BookingCard: React.FC<BookingCardProps> = ({
                            '100%' 
                   }}
                 ></div>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-xs font-medium text-white drop-shadow-sm">
-                    {booking.booking_status === 'pending' ? 'Awaiting confirmation' : 
-                     booking.booking_status === 'confirmed' ? 'Confirmed - Provider will arrive' :
-                     booking.booking_status === 'in_progress' ? 'Service in progress' : 
-                     booking.booking_status === 'completed' ? 'Service completed' :
-                     booking.booking_status === 'cancelled' ? 'Booking cancelled' :
-                     booking.booking_status === 'declined' ? 'Booking declined' :
-                     'No show'}
-                  </span>
-                </div>
               </div>
             </div>
 
@@ -360,25 +362,11 @@ export const BookingCard: React.FC<BookingCardProps> = ({
                   </div>
                 )}
 
-                {/* Mobile Status Bar */}
-                <div className="w-full bg-gray-200 rounded-full h-3 relative overflow-hidden mb-2">
-                  <div 
-                    className={`h-3 rounded-full transition-all duration-300 ${
-                      booking.booking_status === 'pending' ? 'bg-yellow-500' :
-                      booking.booking_status === 'confirmed' ? 'bg-blue-500' :
-                      booking.booking_status === 'in_progress' ? 'bg-blue-600' :
-                      booking.booking_status === 'completed' ? 'bg-green-500' :
-                      'bg-red-500'
-                    }`}
-                    style={{ 
-                      width: booking.booking_status === 'pending' ? '25%' : 
-                             booking.booking_status === 'confirmed' ? '50%' : 
-                             booking.booking_status === 'in_progress' ? '75%' : 
-                             '100%' 
-                    }}
-                  ></div>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-xs font-medium text-white drop-shadow-sm">
+                {/* Mobile Status Section */}
+                <div className="mb-2">
+                  {/* Status Text - Centered Above Progress Bar */}
+                  <div className="text-center mb-2">
+                    <span className="text-sm font-medium text-gray-700">
                       {booking.booking_status === 'pending' ? 'Awaiting confirmation' : 
                        booking.booking_status === 'confirmed' ? 'Confirmed - Provider will arrive' :
                        booking.booking_status === 'in_progress' ? 'Service in progress' : 
@@ -387,6 +375,24 @@ export const BookingCard: React.FC<BookingCardProps> = ({
                        booking.booking_status === 'declined' ? 'Booking declined' :
                        'No show'}
                     </span>
+                  </div>
+                  {/* Progress Bar */}
+                  <div className="w-full bg-gray-200 rounded-full h-3">
+                    <div 
+                      className={`h-3 rounded-full transition-all duration-300 ${
+                        booking.booking_status === 'pending' ? 'bg-yellow-500' :
+                        booking.booking_status === 'confirmed' ? 'bg-blue-500' :
+                        booking.booking_status === 'in_progress' ? 'bg-blue-600' :
+                        booking.booking_status === 'completed' ? 'bg-green-500' :
+                        'bg-red-500'
+                      }`}
+                      style={{ 
+                        width: booking.booking_status === 'pending' ? '25%' : 
+                               booking.booking_status === 'confirmed' ? '50%' : 
+                               booking.booking_status === 'in_progress' ? '75%' : 
+                               '100%' 
+                      }}
+                    ></div>
                   </div>
                 </div>
 
