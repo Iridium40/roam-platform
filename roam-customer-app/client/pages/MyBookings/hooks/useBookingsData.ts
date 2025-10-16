@@ -93,7 +93,8 @@ export const useBookingsData = (currentUser: any) => {
               name,
               description,
               min_price,
-              duration_minutes
+              duration_minutes,
+              image_url
             ),
             customer_profiles!left (
               id,
@@ -164,6 +165,7 @@ export const useBookingsData = (currentUser: any) => {
           ...booking,
           service_name: booking.services?.name || "Service",
           service: booking.services?.name || "Service",
+          service_image: booking.services?.image_url,
           serviceId: booking.service_id,
           provider: {
             id: booking.providers?.id,
