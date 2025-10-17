@@ -267,14 +267,7 @@ const ReviewAndTipModal: React.FC<ReviewAndTipModalProps> = ({
 
     setIsSubmitting(true);
     try {
-      // Submit review
       await submitReview();
-      
-      // If there's a tip amount, also submit the tip
-      if (tipData.tip_amount >= 10) {
-        await submitTip();
-      }
-      
       setCurrentStep('success');
     } catch (error) {
       console.error('Error in submission:', error);
@@ -293,18 +286,6 @@ const ReviewAndTipModal: React.FC<ReviewAndTipModalProps> = ({
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const handleSkipTip = () => {
-    setCurrentStep('success');
-  };
-
-  const handleProceedToTip = () => {
-    setCurrentStep('tip');
-  };
-
-  const handleProceedToReview = () => {
-    setCurrentStep('review');
   };
 
   const handleClose = () => {
@@ -427,6 +408,13 @@ const ReviewAndTipModal: React.FC<ReviewAndTipModalProps> = ({
               <div className="flex gap-3">
                 <Button
                   variant="outline"
+                  onClick={onClose}
+                  className="flex-1"
+                >
+                  <X className="w-4 h-4 mr-2" />
+                  Close
+                </Button>
+                <Button
                   onClick={handleReviewSubmit}
                   disabled={isSubmitting || reviewData.overall_rating === 0}
                   className="flex-1"
@@ -436,15 +424,7 @@ const ReviewAndTipModal: React.FC<ReviewAndTipModalProps> = ({
                   ) : (
                     <CheckCircle className="w-4 h-4 mr-2" />
                   )}
-                  Submit Review Only
-                </Button>
-                <Button
-                  onClick={handleProceedToTip}
-                  disabled={isSubmitting || reviewData.overall_rating === 0}
-                  className="flex-1"
-                >
-                  <DollarSign className="w-4 h-4 mr-2" />
-                  Review + Tip
+                  Submit
                 </Button>
               </div>
             </div>
@@ -554,13 +534,13 @@ const ReviewAndTipModal: React.FC<ReviewAndTipModalProps> = ({
               <div className="flex gap-3">
                 <Button
                   variant="outline"
-                  onClick={handleSkipTip}
+                  onClick={onClose}
                   className="flex-1"
                 >
-                  Skip Tip
+                  <X className="w-4 h-4 mr-2" />
+                  Close
                 </Button>
                 <Button
-                  variant="outline"
                   onClick={handleTipSubmit}
                   disabled={isSubmitting || tipData.tip_amount < 10}
                   className="flex-1"
@@ -570,15 +550,7 @@ const ReviewAndTipModal: React.FC<ReviewAndTipModalProps> = ({
                   ) : (
                     <DollarSign className="w-4 h-4 mr-2" />
                   )}
-                  Send Tip Only
-                </Button>
-                <Button
-                  onClick={handleProceedToReview}
-                  disabled={isSubmitting || tipData.tip_amount < 10}
-                  className="flex-1"
-                >
-                  <Star className="w-4 h-4 mr-2" />
-                  Tip + Review
+                  Submit
                 </Button>
               </div>
             </div>
