@@ -1111,30 +1111,7 @@ export default function AdminPromotions() {
             )}
           </div>
         </div>
-      ),
-    },
-    {
-      key: "date_range",
-      header: "Active Period",
-      render: (value: any, row: Promotion) => (
-        <div className="space-y-1">
-          {row.start_date && (
-            <div className="flex items-center gap-2 text-sm">
-              <Calendar className="w-3 h-3 text-muted-foreground" />
-              <span>Start: {formatDate(row.start_date)}</span>
-            </div>
-          )}
-          {row.end_date && (
-            <div className="flex items-center gap-2 text-sm">
-              <Calendar className="w-3 h-3 text-muted-foreground" />
-              <span>End: {formatDate(row.end_date)}</span>
-            </div>
-          )}
-          {!row.start_date && !row.end_date && (
-            <span className="text-sm text-muted-foreground">No time limit</span>
-          )}
-        </div>
-      ),
+      )
     },
     {
       key: "promo_code",
@@ -1196,33 +1173,7 @@ export default function AdminPromotions() {
             </div>
           )}
         </div>
-      ),
-    },
-    {
-      key: "usage_stats",
-      header: "Usage",
-      render: (value: any, row: Promotion) => {
-        const usageCount = promotionUsage.filter(
-          (u) => u.promotion_id === row.id,
-        ).length;
-        const totalDiscount = promotionUsage
-          .filter((u) => u.promotion_id === row.id)
-          .reduce((sum, u) => sum + u.discount_applied, 0);
-
-        return (
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-muted-foreground" />
-              <span className="font-medium">{usageCount} uses</span>
-            </div>
-            {totalDiscount > 0 && (
-              <div className="text-sm text-muted-foreground">
-                {formatPrice(totalDiscount)} discount given
-              </div>
-            )}
-          </div>
-        );
-      },
+      )
     },
     {
       key: "status",
@@ -1568,7 +1519,7 @@ export default function AdminPromotions() {
 
         {/* Tab Content */}
         {activeTab === "promotions" && (
-          <div className="space-y-4">
+          <div className="space-y-4 w-full overflow-hidden">
             {/* Filter Controls */}
             <div className="flex gap-4 items-center bg-muted/30 p-4 rounded-lg">
               <div className="flex items-center gap-2">

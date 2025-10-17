@@ -104,7 +104,7 @@ export function ROAMDataTable({
   return (
     <div
       className={cn(
-        "bg-card rounded-lg border border-border overflow-hidden",
+        "bg-card rounded-lg border border-border overflow-hidden w-full",
         className,
       )}
     >
@@ -152,8 +152,8 @@ export function ROAMDataTable({
       )}
 
       {/* Table - Desktop View */}
-      <div className="hidden md:block overflow-x-auto">
-        <table className="w-full">
+      <div className="hidden md:block overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100" style={{ minWidth: '1200px' }}>
+        <table className="w-full min-w-max">
           <thead>
             <tr className="bg-muted border-b border-border">
               {columns.map((column) => (
@@ -186,13 +186,11 @@ export function ROAMDataTable({
                 {columns.map((column) => (
                   <td
                     key={column.key}
-                    className="px-4 lg:px-6 py-4 text-sm text-foreground"
+                    className="px-4 lg:px-6 py-4 text-sm text-foreground whitespace-nowrap"
                   >
-                    <div className="max-w-xs truncate">
-                      {column.render
-                        ? column.render(row[column.key], row)
-                        : row[column.key]}
-                    </div>
+                    {column.render
+                      ? column.render(row[column.key], row)
+                      : row[column.key]}
                   </td>
                 ))}
               </tr>

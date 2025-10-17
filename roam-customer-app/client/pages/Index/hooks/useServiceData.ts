@@ -17,9 +17,26 @@ export const useServiceData = () => {
         console.log('🔍 Checking services table structure...');
         const testResponse = await supabase
           .from("services")
-          .select("id, name, subcategory_id")
-          .limit(3);
+          .select("id, name, subcategory_id, is_featured")
+          .limit(5);
         console.log('🔍 Test services query:', testResponse);
+
+        // Check if there are any featured services at all
+        const featuredTestResponse = await supabase
+          .from("services")
+          .select("id, name, is_featured")
+          .eq("is_featured", true)
+          .limit(5);
+        console.log('🔍 Featured services test:', featuredTestResponse);
+
+        // First try a simple query to get basic service data
+        console.log('🔍 Testing simple service query...');
+        const simpleServicesResponse = await supabase
+          .from("services")
+          .select("id, name, description, is_featured")
+          .eq("is_featured", true)
+          .limit(3);
+        console.log('🔍 Simple services query result:', simpleServicesResponse);
 
         // Fetch featured services with proper category information
         const featuredServicesResponse = await supabase
@@ -65,9 +82,16 @@ export const useServiceData = () => {
         if (!featuredError && featuredData) {
           console.log('🔍 Featured Services Raw Data:', featuredData);
           const transformedFeaturedServices = featuredData.map((service: any) => {
+            // Check if we have basic service data
+            if (!service.name) {
+              console.error('❌ Service missing name:', service);
+            }
+            
             const category = service.service_subcategories?.service_categories?.service_category_type || 'general';
             console.log('🔍 Service Category Debug:', {
               serviceName: service.name,
+              serviceId: service.id,
+              subcategoryId: service.subcategory_id,
               rawService: service,
               subcategory: service.service_subcategories,
               category: service.service_subcategories?.service_categories,
@@ -75,20 +99,22 @@ export const useServiceData = () => {
             });
             return {
               id: service.id,
-              name: service.name,
+              name: service.name || 'Unknown Service',
               category: category,
-              description: service.description,
-              price_min: service.min_price,
-              price_max: service.max_price,
-              duration: service.duration,
-              location_type: service.location_type,
+              description: service.description || '',
+              price_min: service.min_price || 0,
+              price_max: service.max_price || 0,
+              duration: service.duration || '60 min',
+              location_type: service.location_type || 'both',
               image_url: service.image_url,
-              provider_name: service.business_profiles?.business_name,
+              provider_name: service.business_profiles?.business_name || 'Unknown Provider',
               provider_id: service.business_profiles?.id,
             };
           });
           console.log('🔍 Transformed Featured Services:', transformedFeaturedServices);
           setFeaturedServices(transformedFeaturedServices);
+        } else {
+          console.error('❌ Featured services query failed:', featuredError);
         }
 
         // Fetch popular services with proper category information
@@ -124,6 +150,12 @@ export const useServiceData = () => {
           .limit(12);
 
         const { data: popularData, error: popularError } = popularServicesResponse;
+
+        console.log('🔍 Popular Services Query Result:', {
+          data: popularData,
+          error: popularError,
+          count: popularData?.length
+        });
 
         if (!popularError && popularData) {
           console.log('🔍 Popular Services Raw Data:', popularData);
