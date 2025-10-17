@@ -141,6 +141,13 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
 
     console.log(`📋 Confirming booking: ${bookingId}`);
 
+    // Get booking details for transaction recording
+    const { data: booking } = await supabase
+      .from('bookings')
+      .select('business_id, total_amount')
+      .eq('id', bookingId)
+      .single();
+
     // Update booking status to confirmed
     const { error: updateError } = await supabase
       .from('bookings')
@@ -158,6 +165,55 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
     }
 
     console.log(`✅ Booking ${bookingId} confirmed successfully`);
+
+    // Record in financial_transactions (overall payment ledger)
+    const totalAmount = paymentIntent.amount / 100;
+    await supabase.from('financial_transactions').insert({
+      booking_id: bookingId,
+      amount: totalAmount,
+      currency: paymentIntent.currency.toUpperCase(),
+      stripe_transaction_id: paymentIntent.id,
+      payment_method: 'card',
+      description: 'Service booking payment received',
+      transaction_type: 'service_payment',
+      status: 'completed',
+      processed_at: new Date().toISOString(),
+      metadata: {
+        charge_id: paymentIntent.latest_charge,
+        customer_id: paymentIntent.customer,
+        payment_method_types: paymentIntent.payment_method_types
+      }
+    });
+
+    // Record payment splits in payment_transactions
+    const platformFee = totalAmount * 0.12; // 12% platform fee
+    const providerAmount = totalAmount - platformFee;
+
+    // Platform fee transaction
+    await supabase.from('payment_transactions').insert({
+      booking_id: bookingId,
+      transaction_type: 'service_fee',
+      amount: platformFee,
+      destination_account: 'roam_platform',
+      stripe_payment_intent_id: paymentIntent.id,
+      stripe_charge_id: paymentIntent.latest_charge as string,
+      status: 'completed',
+      processed_at: new Date().toISOString()
+    });
+
+    // Provider payment transaction (pending transfer)
+    await supabase.from('payment_transactions').insert({
+      booking_id: bookingId,
+      transaction_type: 'remaining_balance',
+      amount: providerAmount,
+      destination_account: 'provider_connected',
+      stripe_payment_intent_id: paymentIntent.id,
+      stripe_charge_id: paymentIntent.latest_charge as string,
+      status: 'pending', // Will be completed when transferred to provider
+      processed_at: null
+    });
+
+    console.log(`✅ Financial transactions recorded for booking ${bookingId}`);
 
   } catch (error) {
     console.error('Error handling payment intent succeeded:', error);
