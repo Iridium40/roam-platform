@@ -7,16 +7,26 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 });
 
 const supabase = createClient(
-  process.env.VITE_SUPABASE_URL!,
+  process.env.VITE_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
 export default async function handler(req: Request, res: Response) {
+  // Enable CORS
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
+    console.log('💰 Fetching Stripe balance for business:', req.query.business_id);
     const { business_id } = req.query;
 
     if (!business_id) {
@@ -68,10 +78,18 @@ export default async function handler(req: Request, res: Response) {
     });
 
   } catch (error: any) {
-    console.error('Error fetching Stripe balance:', error);
+    console.error('❌ Error fetching Stripe balance:', error);
+    console.error('Error details:', {
+      message: error.message,
+      type: error.type,
+      code: error.code,
+      stack: error.stack
+    });
+    
     return res.status(500).json({ 
       error: 'Failed to fetch balance',
-      details: error.message 
+      details: error.message,
+      code: error.code || 'BALANCE_FETCH_ERROR'
     });
   }
 }

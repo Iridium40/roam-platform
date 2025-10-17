@@ -1,4 +1,4 @@
-import { supabase, supabaseAdmin } from "./index";
+import { supabase, supabaseAdmin } from "./supabase";
 import type { AuthCustomer, AuthProvider } from "@roam/shared/dist/types/auth";
 
 export interface SignUpData {
