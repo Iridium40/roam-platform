@@ -83,20 +83,26 @@ export default async function handler(request: Request) {
       console.error('Error creating status history:', historyError);
     }
 
-    // Send notifications using shared service
-    const notificationService = createNotificationService();
-    
+    // Send notifications using shared service (non-blocking)
+    // Wrap in try-catch to prevent notification failures from breaking status update
     try {
-      const notificationResults = await notificationService.sendBookingStatusUpdate(
+      const notificationService = createNotificationService();
+      
+      // Run notification async without blocking the response
+      notificationService.sendBookingStatusUpdate(
         booking,
         newStatus,
         notifyCustomer,
         notifyProvider
-      );
-
-      console.log('Notification results:', notificationResults);
+      ).then((results) => {
+        console.log('✅ Notification results:', results);
+      }).catch((error) => {
+        console.error('⚠️ Notification error (non-blocking):', error);
+        // Don't throw - notifications are optional
+      });
     } catch (error) {
-      console.error('Error sending notifications:', error);
+      console.error('⚠️ Notification service initialization error:', error);
+      // Continue anyway - notification failure shouldn't block status update
     }
 
     return new Response(JSON.stringify({ 
