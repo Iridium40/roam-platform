@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
@@ -10,6 +10,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@/components/ui/alert";
 import {
   DollarSign,
   TrendingUp,
@@ -25,6 +45,15 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   User,
+  ExternalLink,
+  Clock,
+  Zap,
+  AlertCircle,
+  CheckCircle,
+  XCircle,
+  RefreshCw,
+  Settings,
+  Building2,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
@@ -44,7 +73,22 @@ export default function FinancialsTab({
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState("30");
-  const [selectedView, setSelectedView] = useState("overview");
+  const [activeTab, setActiveTab] = useState("overview");
+
+  // Stripe-specific state
+  const [stripeBalance, setStripeBalance] = useState<any>(null);
+  const [stripePayouts, setStripePayouts] = useState<any[]>([]);
+  const [stripeTransactions, setStripeTransactions] = useState<any[]>([]);
+  const [stripeLoading, setStripeLoading] = useState(false);
+  const [payoutSchedule, setPayoutSchedule] = useState<any>(null);
+
+  // Payout request state
+  const [payoutDialogOpen, setPayoutDialogOpen] = useState(false);
+  const [payoutAmount, setPayoutAmount] = useState("");
+  const [payoutMethod, setPayoutMethod] = useState<"standard" | "instant">("standard");
+  const [requestingPayout, setRequestingPayout] = useState(false);
+
+  const businessId = business?.id || providerData?.business_id;
 
   // Load financial data
   const loadFinancialData = async () => {
@@ -52,7 +96,6 @@ export default function FinancialsTab({
 
     try {
       setLoading(true);
-      const businessId = business?.id || providerData?.business_id;
 
       // Load bookings for financial calculations
       const { data: bookingsData, error: bookingsError } = await supabase
@@ -80,9 +123,177 @@ export default function FinancialsTab({
     }
   };
 
+  // Load Stripe balance
+  const loadStripeBalance = async () => {
+    try {
+      const res = await fetch(`/api/stripe/balance?business_id=${businessId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setStripeBalance(data);
+      } else {
+        const error = await res.json();
+        if (!error.needsOnboarding) {
+          console.error('Failed to load Stripe balance:', error);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading Stripe balance:', error);
+    }
+  };
+
+  // Load Stripe payouts
+  const loadStripePayouts = async () => {
+    try {
+      const res = await fetch(`/api/stripe/payouts?business_id=${businessId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setStripePayouts(data.payouts || []);
+      }
+    } catch (error) {
+      console.error('Error loading Stripe payouts:', error);
+    }
+  };
+
+  // Load Stripe transactions
+  const loadStripeTransactions = async () => {
+    try {
+      const res = await fetch(`/api/stripe/transactions?business_id=${businessId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setStripeTransactions(data.transactions || []);
+      }
+    } catch (error) {
+      console.error('Error loading Stripe transactions:', error);
+    }
+  };
+
+  // Load payout schedule
+  const loadPayoutSchedule = async () => {
+    try {
+      const res = await fetch(`/api/stripe/payout-schedule?business_id=${businessId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setPayoutSchedule(data.schedule);
+      }
+    } catch (error) {
+      console.error('Error loading payout schedule:', error);
+    }
+  };
+
+  // Request payout
+  const requestPayout = async () => {
+    try {
+      setRequestingPayout(true);
+      const amount = parseFloat(payoutAmount);
+
+      if (isNaN(amount) || amount <= 0) {
+        toast({
+          title: "Invalid Amount",
+          description: "Please enter a valid amount",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (amount > stripeBalance?.available) {
+        toast({
+          title: "Insufficient Balance",
+          description: `You only have $${stripeBalance?.available?.toFixed(2)} available`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const res = await fetch('/api/stripe/payouts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          business_id: businessId,
+          amount,
+          method: payoutMethod,
+        }),
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Failed to request payout');
+      }
+
+      const data = await res.json();
+      
+      toast({
+        title: "Payout Requested",
+        description: payoutMethod === 'instant' 
+          ? `$${amount.toFixed(2)} will arrive in ~30 minutes (fee: $${data.payout.fee.toFixed(2)})`
+          : `$${amount.toFixed(2)} will arrive in 2 business days`,
+      });
+
+      setPayoutDialogOpen(false);
+      setPayoutAmount("");
+      
+      // Reload data
+      await loadStripeBalance();
+      await loadStripePayouts();
+
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to request payout",
+        variant: "destructive",
+      });
+    } finally {
+      setRequestingPayout(false);
+    }
+  };
+
+  // Open Stripe Express Dashboard
+  const openStripeDashboard = async () => {
+    try {
+      setStripeLoading(true);
+      const res = await fetch('/api/stripe/dashboard-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ business_id: businessId }),
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Failed to create dashboard link');
+      }
+
+      const data = await res.json();
+      window.open(data.url, '_blank');
+
+      toast({
+        title: "Dashboard Opened",
+        description: "Opening Stripe Express Dashboard in a new tab",
+      });
+
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to open dashboard",
+        variant: "destructive",
+      });
+    } finally {
+      setStripeLoading(false);
+    }
+  };
+
+  // Refresh all Stripe data
+  const refreshStripeData = async () => {
+    setStripeLoading(true);
+    await Promise.all([
+      loadStripeBalance(),
+      loadStripePayouts(),
+      loadStripeTransactions(),
+      loadPayoutSchedule(),
+    ]);
+    setStripeLoading(false);
+  };
+
   // Export data function
   const onExportData = (type: string, dateRange: string) => {
-    // Placeholder implementation
     toast({
       title: "Export Feature",
       description: `${type} export for ${dateRange} coming soon`,
@@ -91,6 +302,10 @@ export default function FinancialsTab({
 
   useEffect(() => {
     loadFinancialData();
+    loadStripeBalance();
+    loadStripePayouts();
+    loadStripeTransactions();
+    loadPayoutSchedule();
   }, [providerData, business]);
 
   // Calculate financial metrics
@@ -172,7 +387,7 @@ export default function FinancialsTab({
   };
 
   // Show loading state
-  if (loading) {
+  if (loading && !stripeBalance) {
     return (
       <div className="space-y-6">
         <div>
@@ -193,60 +408,283 @@ export default function FinancialsTab({
     );
   }
 
+  const instantPayoutFee = payoutAmount ? (parseFloat(payoutAmount) * 0.015).toFixed(2) : "0.00";
+  const instantPayoutNet = payoutAmount ? (parseFloat(payoutAmount) - parseFloat(instantPayoutFee)).toFixed(2) : "0.00";
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Financials</h1>
-          <p className="text-sm text-gray-600">Track your business performance and revenue</p>
+          <p className="text-sm text-gray-600">Manage your earnings, payouts, and tax information</p>
         </div>
-        <div className="flex items-center space-x-2 mt-4 sm:mt-0">
-          <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
-            <SelectTrigger className="w-32">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="7">Last 7 days</SelectItem>
-              <SelectItem value="30">Last 30 days</SelectItem>
-              <SelectItem value="90">Last 90 days</SelectItem>
-              <SelectItem value="365">Last year</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button variant="outline" onClick={() => onExportData('revenue', selectedPeriod)}>
-            <Download className="w-4 h-4 mr-2" />
-            Export
+        <div className="flex items-center space-x-2">
+          <Button 
+            variant="outline" 
+            onClick={refreshStripeData}
+            disabled={stripeLoading}
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${stripeLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={openStripeDashboard}
+            disabled={stripeLoading || !stripeBalance}
+          >
+            <ExternalLink className="w-4 h-4 mr-2" />
+            Open Stripe Dashboard
           </Button>
         </div>
       </div>
 
-      {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="p-6">
+      {/* Alert if Stripe not connected */}
+      {!stripeBalance?.payoutsEnabled && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Payouts Not Enabled</AlertTitle>
+          <AlertDescription>
+            Complete your Stripe verification to enable payouts. 
+            <Button 
+              variant="link" 
+              className="p-0 h-auto ml-1"
+              onClick={openStripeDashboard}
+            >
+              Complete verification now
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Stripe Balance Cards - Primary Focus */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card className="p-6 border-2 border-green-200 bg-green-50">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Total Revenue</p>
-              <p className="text-3xl font-bold text-gray-900">
-                ${financialMetrics.totalRevenue.toFixed(2)}
+              <p className="text-sm text-gray-600 flex items-center gap-2">
+                Available Balance
+                <Badge variant="outline" className="bg-white">Ready</Badge>
               </p>
-              <div className="flex items-center mt-2">
-                {financialMetrics.revenueChange >= 0 ? (
-                  <ArrowUpRight className="w-4 h-4 text-green-600 mr-1" />
-                ) : (
-                  <ArrowDownRight className="w-4 h-4 text-red-600 mr-1" />
-                )}
-                <span className={`text-sm ${financialMetrics.revenueChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {Math.abs(financialMetrics.revenueChange).toFixed(1)}%
-                </span>
-                <span className="text-sm text-gray-500 ml-1">vs previous period</span>
-              </div>
+              <p className="text-4xl font-bold text-gray-900 mt-2">
+                ${stripeBalance?.available?.toFixed(2) || "0.00"}
+              </p>
+              <p className="text-sm text-gray-500 mt-2">Can be withdrawn now</p>
             </div>
-            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-              <DollarSign className="w-6 h-6 text-green-600" />
+            <div className="w-14 h-14 bg-green-600 rounded-lg flex items-center justify-center">
+              <Wallet className="w-7 h-7 text-white" />
             </div>
           </div>
         </Card>
 
+        <Card className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600 flex items-center gap-2">
+                Pending Balance
+                <Badge variant="outline">Processing</Badge>
+              </p>
+              <p className="text-4xl font-bold text-gray-900 mt-2">
+                ${stripeBalance?.pending?.toFixed(2) || "0.00"}
+              </p>
+              <p className="text-sm text-gray-500 mt-2">2-7 days to available</p>
+            </div>
+            <div className="w-14 h-14 bg-blue-100 rounded-lg flex items-center justify-center">
+              <Clock className="w-7 h-7 text-blue-600" />
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Total Earnings (YTD)</p>
+              <p className="text-4xl font-bold text-gray-900 mt-2">
+                ${financialMetrics.totalRevenue.toFixed(2)}
+              </p>
+              <p className="text-sm text-gray-500 mt-2">{financialMetrics.completedCount} bookings</p>
+            </div>
+            <div className="w-14 h-14 bg-purple-100 rounded-lg flex items-center justify-center">
+              <TrendingUp className="w-7 h-7 text-purple-600" />
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card className="p-6">
+          <div className="flex items-start justify-between mb-4">
+            <div>
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <Zap className="w-5 h-5 text-yellow-600" />
+                Request Instant Payout
+              </h3>
+              <p className="text-sm text-gray-500 mt-1">Get funds in ~30 minutes (1.5% fee)</p>
+            </div>
+          </div>
+          <Dialog open={payoutDialogOpen} onOpenChange={setPayoutDialogOpen}>
+            <DialogTrigger asChild>
+              <Button 
+                className="w-full" 
+                disabled={!stripeBalance?.payoutsEnabled || (stripeBalance?.available || 0) <= 0}
+              >
+                <Zap className="w-4 h-4 mr-2" />
+                Request Payout
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Request Payout</DialogTitle>
+                <DialogDescription>
+                  Choose your payout method and amount. Available balance: ${stripeBalance?.available?.toFixed(2) || "0.00"}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Payout Method</label>
+                  <Select value={payoutMethod} onValueChange={(v: any) => setPayoutMethod(v)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="standard">
+                        <div className="flex items-center gap-2">
+                          <Clock className="w-4 h-4" />
+                          <div>
+                            <div>Standard (Free)</div>
+                            <div className="text-xs text-gray-500">2 business days</div>
+                          </div>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="instant">
+                        <div className="flex items-center gap-2">
+                          <Zap className="w-4 h-4 text-yellow-600" />
+                          <div>
+                            <div>Instant (1.5% fee)</div>
+                            <div className="text-xs text-gray-500">~30 minutes</div>
+                          </div>
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Amount</label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max={stripeBalance?.available || 0}
+                    value={payoutAmount}
+                    onChange={(e) => setPayoutAmount(e.target.value)}
+                    placeholder="0.00"
+                  />
+                  <Button
+                    variant="link"
+                    size="sm"
+                    className="p-0 h-auto mt-1"
+                    onClick={() => setPayoutAmount(stripeBalance?.available?.toString() || "0")}
+                  >
+                    Use full balance
+                  </Button>
+                </div>
+                {payoutMethod === 'instant' && payoutAmount && (
+                  <Alert>
+                    <AlertDescription>
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-sm">
+                          <span>Payout amount:</span>
+                          <span className="font-medium">${parseFloat(payoutAmount).toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm text-gray-600">
+                          <span>Instant fee (1.5%):</span>
+                          <span>-${instantPayoutFee}</span>
+                        </div>
+                        <div className="flex justify-between text-sm font-semibold border-t pt-1">
+                          <span>You'll receive:</span>
+                          <span>${instantPayoutNet}</span>
+                        </div>
+                      </div>
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setPayoutDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={requestPayout} disabled={requestingPayout || !payoutAmount}>
+                  {requestingPayout ? "Processing..." : "Request Payout"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </Card>
+
+        <Card className="p-6">
+          <div className="mb-4">
+            <h3 className="text-lg font-semibold flex items-center gap-2">
+              <Settings className="w-5 h-5" />
+              Payout Schedule
+            </h3>
+            <p className="text-sm text-gray-500 mt-1">Automatic payout frequency</p>
+            </div>
+          <div className="space-y-2">
+            {payoutSchedule && (
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div className="text-sm">
+                  <div className="font-medium capitalize">{payoutSchedule.interval} Payouts</div>
+                  {payoutSchedule.weekly_anchor && (
+                    <div className="text-gray-500">Every {payoutSchedule.weekly_anchor}</div>
+                  )}
+                  {payoutSchedule.monthly_anchor && (
+                    <div className="text-gray-500">On day {payoutSchedule.monthly_anchor}</div>
+                  )}
+            </div>
+                <Badge variant="outline">Active</Badge>
+              </div>
+            )}
+            <Button 
+              variant="outline" 
+              className="w-full mt-2"
+              onClick={openStripeDashboard}
+            >
+              Manage Schedule
+            </Button>
+          </div>
+        </Card>
+      </div>
+
+      {/* Tabs for detailed views */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="payouts">Payouts</TabsTrigger>
+          <TabsTrigger value="transactions">Transactions</TabsTrigger>
+          <TabsTrigger value="settings">Settings</TabsTrigger>
+        </TabsList>
+
+        {/* Overview Tab */}
+        <TabsContent value="overview" className="space-y-6 mt-6">
+
+          {/* Business Performance Metrics */}
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold">Business Performance</h3>
+            <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+              <SelectTrigger className="w-32">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="7">Last 7 days</SelectItem>
+                <SelectItem value="30">Last 30 days</SelectItem>
+                <SelectItem value="90">Last 90 days</SelectItem>
+                <SelectItem value="365">Last year</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card className="p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -261,7 +699,6 @@ export default function FinancialsTab({
                 <span className={`text-sm ${financialMetrics.bookingsChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                   {Math.abs(financialMetrics.bookingsChange).toFixed(1)}%
                 </span>
-                <span className="text-sm text-gray-500 ml-1">vs previous period</span>
               </div>
             </div>
             <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -277,12 +714,10 @@ export default function FinancialsTab({
               <p className="text-3xl font-bold text-gray-900">
                 ${financialMetrics.averageOrderValue.toFixed(2)}
               </p>
-              <p className="text-sm text-gray-500 mt-2">
-                {financialMetrics.completedCount} completed orders
-              </p>
+                  <p className="text-sm text-gray-500 mt-2">Per completed booking</p>
             </div>
             <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-              <TrendingUp className="w-6 h-6 text-purple-600" />
+                  <DollarSign className="w-6 h-6 text-purple-600" />
             </div>
           </div>
         </Card>
@@ -303,11 +738,26 @@ export default function FinancialsTab({
             </div>
           </div>
         </Card>
+
+            <Card className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">Revenue Growth</p>
+                  <p className="text-3xl font-bold text-gray-900">
+                    {financialMetrics.revenueChange >= 0 ? '+' : ''}
+                    {financialMetrics.revenueChange.toFixed(1)}%
+                  </p>
+                  <p className="text-sm text-gray-500 mt-2">vs previous period</p>
+                </div>
+                <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${financialMetrics.revenueChange >= 0 ? 'bg-green-100' : 'bg-red-100'}`}>
+                  <TrendingUp className={`w-6 h-6 ${financialMetrics.revenueChange >= 0 ? 'text-green-600' : 'text-red-600'}`} />
+                </div>
+              </div>
+            </Card>
       </div>
 
       {/* Revenue Breakdown */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Top Services by Revenue */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
@@ -317,7 +767,8 @@ export default function FinancialsTab({
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {getRevenueByService().map((service, index) => (
+                  {getRevenueByService().length > 0 ? (
+                    getRevenueByService().map((service, index) => (
                 <div key={service.name} className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
@@ -332,12 +783,14 @@ export default function FinancialsTab({
                   </div>
                   <p className="font-semibold text-gray-900">${service.revenue.toFixed(2)}</p>
                 </div>
-              ))}
+                    ))
+                  ) : (
+                    <p className="text-sm text-gray-500 text-center py-4">No completed bookings yet</p>
+                  )}
             </div>
           </CardContent>
         </Card>
 
-        {/* Monthly Revenue Trend */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
@@ -347,7 +800,8 @@ export default function FinancialsTab({
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {getRevenueByMonth().map((month) => (
+                  {getRevenueByMonth().length > 0 ? (
+                    getRevenueByMonth().map((month) => (
                 <div key={month.month} className="flex items-center justify-between">
                   <div>
                     <p className="font-medium text-sm">
@@ -359,99 +813,267 @@ export default function FinancialsTab({
                   </div>
                   <p className="font-semibold text-gray-900">${month.revenue.toFixed(2)}</p>
                 </div>
-              ))}
+                    ))
+                  ) : (
+                    <p className="text-sm text-gray-500 text-center py-4">No revenue data yet</p>
+                  )}
             </div>
           </CardContent>
         </Card>
       </div>
+        </TabsContent>
 
-      {/* Recent Transactions */}
+        {/* Payouts Tab */}
+        <TabsContent value="payouts" className="space-y-6 mt-6">
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
-            <Receipt className="w-5 h-5" />
-            <span>Recent Transactions</span>
+                <Wallet className="w-5 h-5" />
+                <span>Payout History</span>
           </CardTitle>
+              <CardDescription>View all your past and pending payouts</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {financialMetrics.completedBookings.slice(0, 10).map((booking) => (
-              <div key={booking.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <div className="space-y-3">
+                {stripePayouts.length > 0 ? (
+                  stripePayouts.map((payout) => (
+                    <div key={payout.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                 <div className="flex items-center space-x-3">
-                  {/* Customer Avatar */}
-                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
-                    {booking.customer_profiles?.image_url ? (
-                      <img
-                        src={booking.customer_profiles.image_url}
-                        alt={`${booking.customer_profiles.first_name || ""} ${booking.customer_profiles.last_name || ""}`}
-                        className="w-full h-full object-cover rounded-lg"
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-blue-600 rounded-lg flex items-center justify-center">
-                        {booking.customer_profiles?.first_name?.[0] || booking.customer_profiles?.last_name?.[0] ? (
-                          <span className="text-white font-semibold text-sm">
-                            {booking.customer_profiles.first_name[0] || booking.customer_profiles.last_name[0]}
-                          </span>
-                        ) : (
-                          <User className="w-5 h-5 text-white" />
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                          payout.status === 'paid' ? 'bg-green-100' :
+                          payout.status === 'pending' ? 'bg-yellow-100' :
+                          payout.status === 'in_transit' ? 'bg-blue-100' :
+                          'bg-red-100'
+                        }`}>
+                          {payout.status === 'paid' ? (
+                            <CheckCircle className="w-5 h-5 text-green-600" />
+                          ) : payout.status === 'pending' || payout.status === 'in_transit' ? (
+                            <Clock className="w-5 h-5 text-yellow-600" />
+                          ) : (
+                            <XCircle className="w-5 h-5 text-red-600" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-medium text-sm flex items-center gap-2">
+                            ${payout.amount.toFixed(2)}
+                            {payout.method === 'instant' && (
+                              <Badge variant="outline" className="text-xs">
+                                <Zap className="w-3 h-3 mr-1" />
+                                Instant
+                              </Badge>
+                            )}
+                          </p>
+                          <p className="text-xs text-gray-600">
+                            {new Date(payout.created * 1000).toLocaleDateString()} • 
+                            Arrives {new Date(payout.arrival_date * 1000).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+                      <Badge variant={
+                        payout.status === 'paid' ? 'default' :
+                        payout.status === 'pending' || payout.status === 'in_transit' ? 'secondary' :
+                        'destructive'
+                      }>
+                        {payout.status === 'paid' ? 'Paid' :
+                         payout.status === 'pending' ? 'Pending' :
+                         payout.status === 'in_transit' ? 'In Transit' :
+                         payout.status}
+                      </Badge>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8">
+                    <Wallet className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                    <p className="text-sm text-gray-500">No payouts yet</p>
+                    <p className="text-xs text-gray-400 mt-1">Request your first payout above</p>
+                  </div>
                         )}
                       </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Transactions Tab */}
+        <TabsContent value="transactions" className="space-y-6 mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Receipt className="w-5 h-5" />
+                <span>Transaction History</span>
+              </CardTitle>
+              <CardDescription>All charges, fees, and balance changes</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {stripeTransactions.length > 0 ? (
+                  stripeTransactions.map((transaction) => (
+                    <div key={transaction.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                          transaction.type === 'charge' ? 'bg-green-100' :
+                          transaction.type === 'payout' ? 'bg-blue-100' :
+                          transaction.type === 'refund' ? 'bg-red-100' :
+                          'bg-gray-100'
+                        }`}>
+                          {transaction.type === 'charge' ? (
+                            <ArrowDownRight className="w-5 h-5 text-green-600" />
+                          ) : transaction.type === 'payout' ? (
+                            <ArrowUpRight className="w-5 h-5 text-blue-600" />
+                          ) : (
+                            <Receipt className="w-5 h-5 text-gray-600" />
                     )}
                   </div>
                   <div>
-                    <p className="font-medium text-sm">
-                      {booking.customer_profiles?.first_name && booking.customer_profiles?.last_name
-                        ? `${booking.customer_profiles.first_name} ${booking.customer_profiles.last_name}`
-                        : booking.guest_name || "Guest"}
-                    </p>
+                          <p className="font-medium text-sm capitalize">{transaction.type}</p>
                     <p className="text-xs text-gray-600">
-                      {booking.services?.name || "Service"} • {booking.created_at}
+                            {new Date(transaction.created * 1000).toLocaleDateString()}
+                            {transaction.description && ` • ${transaction.description}`}
                     </p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="font-semibold text-gray-900">${booking.total_amount || 0}</p>
-                  <Badge className="bg-green-100 text-green-800 border-green-300 text-xs">
-                    Completed
-                  </Badge>
+                        <p className={`font-semibold ${transaction.amount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {transaction.amount >= 0 ? '+' : ''}${Math.abs(transaction.amount).toFixed(2)}
+                        </p>
+                        <p className="text-xs text-gray-500">Net: ${transaction.net.toFixed(2)}</p>
                 </div>
               </div>
-            ))}
+                  ))
+                ) : (
+                  <div className="text-center py-8">
+                    <Receipt className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                    <p className="text-sm text-gray-500">No transactions yet</p>
+                  </div>
+                )}
           </div>
         </CardContent>
       </Card>
+        </TabsContent>
 
-      {/* Stripe Tax / 1099 Information */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span className="flex items-center space-x-2">
-              <Receipt className="w-5 h-5" />
-              <span>Tax Information<br /></span>
-            </span>
-            <Badge variant="outline">Required for payouts & 1099s</Badge>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <TaxInformationSection businessId={business?.id || providerData?.business_id} />
-        </CardContent>
-      </Card>
+        {/* Settings Tab */}
+        <TabsContent value="settings" className="space-y-6 mt-6">
 
-      {/* Bank Account Management */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <CreditCard className="w-5 h-5" />
-            <span>Bank Account Management</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <BankAccountManager
-            userId={providerData?.user_id}
-            businessId={business?.id || providerData?.business_id}
-          />
-        </CardContent>
-      </Card>
+          {/* Tax Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span className="flex items-center space-x-2">
+                  <Building2 className="w-5 h-5" />
+                  <span>Tax Information</span>
+                </span>
+                <Badge variant="outline">Required for 1099s</Badge>
+              </CardTitle>
+              <CardDescription>
+                Your tax information is used for IRS reporting and must be accurate
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <TaxInformationSection businessId={businessId} />
+            </CardContent>
+          </Card>
+
+          {/* Bank Account Management */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <CreditCard className="w-5 h-5" />
+                <span>Bank Account</span>
+              </CardTitle>
+              <CardDescription>
+                Manage where you receive your payouts
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <BankAccountManager
+                userId={providerData?.user_id}
+                businessId={businessId}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Tax Documents Info */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Receipt className="w-5 h-5" />
+                <span>Tax Documents & 1099s</span>
+              </CardTitle>
+              <CardDescription>
+                Access your tax forms and year-end statements
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>1099-K Forms</AlertTitle>
+                  <AlertDescription>
+                    If you earn $600 or more in a calendar year, you'll automatically receive a 1099-K form 
+                    by January 31st. Forms are emailed and available in your Stripe Dashboard.
+                  </AlertDescription>
+                </Alert>
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                  <div>
+                    <p className="font-medium text-sm">Year-to-Date Earnings</p>
+                    <p className="text-2xl font-bold text-gray-900 mt-1">
+                      ${financialMetrics.totalRevenue.toFixed(2)}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {financialMetrics.totalRevenue >= 600 ? (
+                        <span className="text-green-600 font-medium">✓ Qualifies for 1099-K</span>
+                      ) : (
+                        <span>Need ${(600 - financialMetrics.totalRevenue).toFixed(2)} more to qualify</span>
+                      )}
+                    </p>
+                  </div>
+                  <Button variant="outline" onClick={openStripeDashboard}>
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    View in Dashboard
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Helpful Resources */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <AlertCircle className="w-5 h-5" />
+                <span>Help & Resources</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="p-3 bg-blue-50 rounded-lg">
+                  <p className="text-sm font-medium text-blue-900">💡 How Payouts Work</p>
+                  <p className="text-xs text-blue-700 mt-1">
+                    • Standard payouts are free and arrive in 2 business days<br />
+                    • Instant payouts arrive in ~30 minutes for a 1.5% fee<br />
+                    • Automatic payouts follow your schedule (daily/weekly/monthly)
+                  </p>
+                </div>
+                <div className="p-3 bg-green-50 rounded-lg">
+                  <p className="text-sm font-medium text-green-900">💳 Transaction Fees</p>
+                  <p className="text-xs text-green-700 mt-1">
+                    • Platform fee: 12% per booking<br />
+                    • Stripe processing: 2.9% + $0.30 per transaction<br />
+                    • No monthly fees or hidden charges
+                  </p>
+                </div>
+                <div className="p-3 bg-purple-50 rounded-lg">
+                  <p className="text-sm font-medium text-purple-900">📊 Tax Reporting</p>
+                  <p className="text-xs text-purple-700 mt-1">
+                    • 1099-K forms generated automatically for earnings $600+<br />
+                    • Forms available by January 31st each year<br />
+                    • Automatically filed with the IRS by Stripe
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

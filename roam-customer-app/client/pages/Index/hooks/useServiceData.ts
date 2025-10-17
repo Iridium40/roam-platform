@@ -56,6 +56,12 @@ export const useServiceData = () => {
 
         const { data: featuredData, error: featuredError } = featuredServicesResponse;
 
+        console.log('🔍 Featured Services Query Result:', {
+          data: featuredData,
+          error: featuredError,
+          count: featuredData?.length
+        });
+
         if (!featuredError && featuredData) {
           console.log('🔍 Featured Services Raw Data:', featuredData);
           const transformedFeaturedServices = featuredData.map((service: any) => {
