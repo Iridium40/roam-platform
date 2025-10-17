@@ -132,6 +132,12 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
   console.log('✅ Payment intent succeeded:', paymentIntent.id);
   
   try {
+    // Check if this is a tip payment
+    if (paymentIntent.metadata?.type === 'tip') {
+      await handleTipPaymentIntent(paymentIntent);
+      return;
+    }
+
     const bookingId = paymentIntent.metadata.bookingId;
     
     if (!bookingId) {
@@ -217,6 +223,91 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
 
   } catch (error) {
     console.error('Error handling payment intent succeeded:', error);
+    throw error;
+  }
+}
+
+async function handleTipPaymentIntent(paymentIntent: Stripe.PaymentIntent) {
+  const {
+    booking_id,
+    customer_id,
+    provider_id,
+    business_id,
+    tip_amount,
+    stripe_fee,
+    provider_net,
+    customer_message,
+  } = paymentIntent.metadata;
+
+  try {
+    console.log('💳 Processing tip payment intent:', {
+      paymentIntentId: paymentIntent.id,
+      bookingId: booking_id,
+      tipAmount: tip_amount,
+    });
+
+    // Create tip record in database
+    const { data, error } = await supabase
+      .from('tips')
+      .insert({
+        booking_id,
+        customer_id,
+        provider_id,
+        business_id,
+        tip_amount: parseFloat(tip_amount),
+        tip_percentage: 0, // We'll calculate this if needed
+        payment_status: 'completed',
+        stripe_payment_intent_id: paymentIntent.id,
+        platform_fee_amount: parseFloat(stripe_fee), // Stripe processing fees only
+        provider_net_amount: parseFloat(provider_net), // Tip minus Stripe fees
+        customer_message: customer_message || '',
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('❌ Error creating tip record:', error);
+      throw error;
+    }
+
+    console.log('✅ Tip record created successfully:', data.id);
+
+    // Update booking with tip information
+    await supabase
+      .from('bookings')
+      .update({
+        has_tip: true,
+        tip_amount: parseFloat(tip_amount),
+      })
+      .eq('id', booking_id);
+
+    // Record in financial_transactions
+    await supabase.from('financial_transactions').insert({
+      booking_id,
+      amount: parseFloat(tip_amount),
+      currency: paymentIntent.currency.toUpperCase(),
+      stripe_transaction_id: paymentIntent.id,
+      payment_method: 'card',
+      description: 'Tip payment received',
+      transaction_type: 'tip_payment',
+      status: 'completed',
+      processed_at: new Date().toISOString(),
+      metadata: {
+        charge_id: paymentIntent.latest_charge,
+        customer_id: paymentIntent.customer,
+        provider_id,
+        business_id,
+        tip_amount: parseFloat(tip_amount),
+        stripe_fee: parseFloat(stripe_fee),
+        provider_net: parseFloat(provider_net),
+        customer_message: customer_message || ''
+      }
+    });
+
+    console.log('✅ Tip payment processed successfully');
+
+  } catch (error) {
+    console.error('❌ Error processing tip payment intent:', error);
     throw error;
   }
 }

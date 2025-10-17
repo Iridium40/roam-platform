@@ -8,6 +8,9 @@ import { Star, DollarSign, MessageCircle, X, CheckCircle, Loader2 } from "lucide
 import type { BookingWithDetails, ReviewFormData, TipFormData } from "@/types/index";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
+import { Elements } from '@stripe/react-stripe-js';
+import { loadStripe } from '@stripe/stripe-js';
+import { TipCheckoutForm } from '@/components/TipCheckoutForm';
 
 interface ReviewAndTipModalProps {
   isOpen: boolean;
@@ -15,6 +18,9 @@ interface ReviewAndTipModalProps {
   booking: BookingWithDetails | null;
   initialStep?: 'review' | 'tip';
 }
+
+// Initialize Stripe
+const stripePromise = loadStripe(import.meta.env.VITE_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
 const ReviewAndTipModal: React.FC<ReviewAndTipModalProps> = ({
   isOpen,
@@ -24,7 +30,11 @@ const ReviewAndTipModal: React.FC<ReviewAndTipModalProps> = ({
 }) => {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [currentStep, setCurrentStep] = useState<'review' | 'tip' | 'success' | 'view'>('review');
+  const [currentStep, setCurrentStep] = useState<'review' | 'tip' | 'checkout' | 'success' | 'view'>('review');
+  
+  // Tip checkout state
+  const [clientSecret, setClientSecret] = useState<string>('');
+  const [tipCheckoutLoading, setTipCheckoutLoading] = useState(false);
   
   // Review form state
   const [reviewData, setReviewData] = useState<ReviewFormData>({
@@ -219,16 +229,45 @@ const ReviewAndTipModal: React.FC<ReviewAndTipModalProps> = ({
     }
   };
 
-  const submitTip = async () => {
+  const handleTipSubmit = async () => {
     if (!booking || !booking.providers || tipData.tip_amount < 10) return;
 
+    setTipCheckoutLoading(true);
     try {
-      // Create Stripe checkout session for tip payment
-      const response = await fetch('/api/stripe/create-tip-checkout-session', {
+      // Get auth headers - try multiple methods for Vercel compatibility
+      let token: string | null = null;
+      
+      // Method 1: Try getting fresh session
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.access_token) {
+          token = session.access_token;
+          console.log('✅ Using session token for tip');
+        }
+      } catch (error) {
+        console.warn('⚠️ Session retrieval failed for tip, trying localStorage:', error);
+      }
+      
+      // Method 2: Fallback to localStorage cached token
+      if (!token) {
+        token = localStorage.getItem('roam_access_token');
+        if (token) {
+          console.log('✅ Using cached token for tip');
+        }
+      }
+      
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      // Create Payment Intent for tip
+      const response = await fetch('/api/stripe/create-tip-payment-intent', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({
           tip_amount: tipData.tip_amount,
           booking_id: booking.id,
@@ -236,29 +275,26 @@ const ReviewAndTipModal: React.FC<ReviewAndTipModalProps> = ({
           provider_id: booking.providers.id,
           business_id: booking.business_id,
           customer_message: tipData.customer_message,
-          success_url: `${window.location.origin}/my-bookings?tip_success=true`,
-          cancel_url: `${window.location.origin}/my-bookings?tip_cancel=true`,
         }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.details || 'Failed to create checkout session');
+        throw new Error(errorData.details || 'Failed to create payment intent');
       }
 
-      const { checkout_url } = await response.json();
-
-      // Redirect to Stripe checkout
-      window.location.href = checkout_url;
-
+      const { clientSecret } = await response.json();
+      setClientSecret(clientSecret);
+      setCurrentStep('checkout');
     } catch (error) {
-      console.error('Error creating tip checkout:', error);
+      console.error('Error creating tip payment intent:', error);
       toast({
         title: "Error processing tip",
-        description: error instanceof Error ? error.message : "Please try again.",
+        description: "Please try again.",
         variant: "destructive",
       });
-      throw error;
+    } finally {
+      setTipCheckoutLoading(false);
     }
   };
 
@@ -276,16 +312,24 @@ const ReviewAndTipModal: React.FC<ReviewAndTipModalProps> = ({
     }
   };
 
-  const handleTipSubmit = async () => {
-    setIsSubmitting(true);
-    try {
-      await submitTip();
-      setCurrentStep('success');
-    } catch (error) {
-      console.error('Error submitting tip:', error);
-    } finally {
-      setIsSubmitting(false);
-    }
+  const handleTipSubmitClick = async () => {
+    await handleTipSubmit();
+  };
+
+  const handleTipCheckoutSuccess = () => {
+    setCurrentStep('success');
+    toast({
+      title: "Tip sent successfully!",
+      description: "Thank you for your generosity.",
+    });
+  };
+
+  const handleTipCheckoutError = (error: string) => {
+    toast({
+      title: "Tip payment failed",
+      description: error,
+      variant: "destructive",
+    });
   };
 
   const handleClose = () => {
@@ -541,16 +585,59 @@ const ReviewAndTipModal: React.FC<ReviewAndTipModalProps> = ({
                   Close
                 </Button>
                 <Button
-                  onClick={handleTipSubmit}
-                  disabled={isSubmitting || tipData.tip_amount < 10}
+                  onClick={handleTipSubmitClick}
+                  disabled={tipCheckoutLoading || tipData.tip_amount < 10}
                   className="flex-1"
                 >
-                  {isSubmitting ? (
+                  {tipCheckoutLoading ? (
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   ) : (
                     <DollarSign className="w-4 h-4 mr-2" />
                   )}
                   Submit
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Tip Checkout Step */}
+          {currentStep === 'checkout' && clientSecret && (
+            <div className="space-y-6">
+              <div className="text-center">
+                <h3 className="text-lg font-semibold mb-2">Complete Your Tip</h3>
+                <p className="text-gray-600">
+                  Secure payment for {booking?.providers?.first_name}
+                </p>
+              </div>
+
+              <Elements 
+                stripe={stripePromise} 
+                options={{ 
+                  clientSecret,
+                  appearance: {
+                    theme: 'stripe',
+                    variables: {
+                      colorPrimary: '#3B82F6',
+                    }
+                  }
+                }}
+              >
+                <TipCheckoutForm
+                  tipAmount={tipData.tip_amount}
+                  providerName={booking?.providers?.first_name || 'Provider'}
+                  onSuccess={handleTipCheckoutSuccess}
+                  onError={handleTipCheckoutError}
+                />
+              </Elements>
+
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setCurrentStep('tip')}
+                  className="flex-1"
+                >
+                  <X className="w-4 h-4 mr-2" />
+                  Back
                 </Button>
               </div>
             </div>
