@@ -161,13 +161,28 @@ export default function BankAccountManager({ userId, businessId }: BankAccountMa
     try {
       setPlaidLoading(true);
       
-      // Create link token for Plaid
-      const { data: linkTokenData, error: linkTokenError } = await supabase.functions.invoke('create-plaid-link-token', {
-        body: { user_id: userId, business_id: businessId }
+      // Create link token for Plaid using Vercel Edge Function
+      const response = await fetch('/api/plaid/create-link-token-edge', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId,
+          businessId,
+          businessType: 'individual', // Default for now
+          products: ['auth'],
+          country_codes: ['US'],
+        }),
       });
 
-      if (linkTokenError) throw linkTokenError;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create Plaid link token');
+      }
 
+      const linkTokenData = await response.json();
+      
       // Initialize Plaid Link
       const { Plaid } = await import('react-plaid-link');
       
@@ -373,6 +388,9 @@ export default function BankAccountManager({ userId, businessId }: BankAccountMa
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>Add Bank Account</DialogTitle>
+              <DialogDescription>
+                Connect your bank account to receive payouts from your services.
+              </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div className="text-sm text-gray-600">
@@ -534,6 +552,9 @@ export default function BankAccountManager({ userId, businessId }: BankAccountMa
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Connect with Plaid</DialogTitle>
+            <DialogDescription>
+              Securely connect your bank account using Plaid's encrypted connection.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="text-sm text-gray-600">
