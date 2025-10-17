@@ -1181,9 +1181,18 @@ export default function BookService() {
     console.log('💳 Creating booking with pending status (payment to follow):', bookingDetails);
 
     try {
-      // Get cached auth headers
-      const { getAuthHeaders } = await import('../lib/api/authUtils');
-      const headers = await getAuthHeaders();
+      // Refresh session and get auth headers with fresh token
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session) {
+        throw new Error('Please sign in again to continue');
+      }
+
+      // Use fresh token directly
+      const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`
+      };
 
       // Step 1: Create the booking in pending status
       const { data: newBooking, error: bookingError } = await supabase
