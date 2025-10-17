@@ -77,6 +77,7 @@ export default function MyBookings() {
   const safePaginatedBookings = paginatedBookings || { present: [], future: [], past: [] };
   const safeCurrentPage = currentPage || { present: 1, future: 1, past: 1 };
   const safeTotalPages = totalPages || { present: 1, future: 1, past: 1 };
+
   const { cancelBooking, rescheduleBooking, isCancelling, isRescheduling } = useBookingActions(
     currentUser,
     setBookings,

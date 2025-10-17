@@ -9,7 +9,7 @@ export const useBookingsData = (currentUser: any) => {
   const [error, setError] = useState<string | null>(null);
 
   // Real-time booking updates
-  const { isConnected, refreshBookings } = useRealtimeBookings({
+  const { isConnected } = useRealtimeBookings({
     userId: currentUser?.id,
     userType: "customer",
     onStatusChange: (bookingUpdate) => {
@@ -27,6 +27,167 @@ export const useBookingsData = (currentUser: any) => {
       );
     },
   });
+
+  // Manual refresh function that re-fetches all bookings
+  const refreshBookings = async () => {
+    if (!currentUser) return;
+    
+    try {
+      setLoading(true);
+      setError(null);
+
+      console.log("🔄 REFRESH DEBUG: Manually refreshing bookings for user:", currentUser.id);
+      
+      const { data, error } = await supabase
+        .from("bookings")
+        .select(`
+          *,
+          providers!left (
+            id,
+            first_name,
+            last_name,
+            email,
+            phone,
+            image_url,
+            business_id,
+            average_rating
+          ),
+          services!left (
+            id,
+            name,
+            description,
+            min_price,
+            duration_minutes,
+            image_url
+          ),
+          customer_profiles!left (
+            id,
+            first_name,
+            last_name,
+            email,
+            phone
+          ),
+          business_locations!left (
+            id,
+            business_id,
+            location_name,
+            address_line1,
+            address_line2,
+            city,
+            state,
+            postal_code,
+            country,
+            is_primary,
+            offers_mobile_services
+          ),
+          business_profiles!left (
+            id,
+            business_name,
+            business_type,
+            business_description,
+            image_url,
+            logo_url
+          ),
+          customer_locations!left (
+            id,
+            customer_id,
+            location_name,
+            street_address,
+            unit_number,
+            city,
+            state,
+            zip_code,
+            is_primary,
+            access_instructions
+          ),
+          reviews!left (
+            id,
+            overall_rating,
+            service_rating,
+            communication_rating,
+            punctuality_rating,
+            review_text,
+            created_at
+          ),
+          tips!left (
+            id,
+            tip_amount,
+            tip_percentage,
+            customer_message,
+            payment_status,
+            created_at
+          )
+        `)
+        .eq("customer_id", currentUser.id)
+        .order("booking_date", { ascending: false });
+
+      if (error) {
+        console.error("❌ REFRESH DEBUG: Error refreshing bookings:", error);
+        throw error;
+      }
+
+      // Transform the data to match the expected format
+      const transformedBookings: BookingWithDetails[] = (data || []).map((booking) => ({
+        ...booking,
+        id: booking.id || '',
+        booking_status: booking.booking_status || 'pending',
+        booking_date: booking.booking_date || '',
+        start_time: booking.start_time || '',
+        total_amount: booking.total_amount || 0,
+        service_name: booking.services?.name || "Service",
+        service: booking.services?.name || "Service",
+        service_image: booking.services?.image_url,
+        serviceId: booking.service_id,
+        provider: {
+          id: booking.providers?.id || '',
+          name: `${booking.providers?.first_name || ""} ${booking.providers?.last_name || ""}`.trim() || 'Provider TBD',
+          firstName: booking.providers?.first_name || '',
+          lastName: booking.providers?.last_name || '',
+          email: booking.providers?.email || '',
+          phone: booking.providers?.phone || '',
+          image: booking.providers?.image_url,
+          rating: booking.providers?.average_rating || 0,
+        },
+        providers: booking.providers,
+        customer_profiles: booking.customer_profiles,
+        date: booking.booking_date || '',
+        time: booking.start_time || '',
+        status: booking.booking_status || 'pending',
+        deliveryType: booking.delivery_type || 'customer_location',
+        location: "Location TBD",
+        locationDetails: null,
+        price: booking.total_amount ? `$${booking.total_amount}` : "Price TBD",
+        duration: booking.services?.duration_minutes 
+          ? `${booking.services.duration_minutes} min` 
+          : "60 min",
+        notes: booking.admin_notes || '',
+        bookingReference: booking.booking_reference || '',
+        reschedule_count: booking.reschedule_count || 0,
+        original_booking_date: booking.original_booking_date,
+        original_start_time: booking.original_start_time,
+        reschedule_reason: booking.reschedule_reason,
+        booking_time: booking.start_time || '',
+        updated_at: booking.created_at || new Date().toISOString(),
+      }));
+      
+      console.log("✅ REFRESH DEBUG: Successfully refreshed bookings:", {
+        count: transformedBookings.length,
+        bookings: transformedBookings
+      });
+      
+      setBookings(transformedBookings);
+    } catch (err: any) {
+      console.error("❌ REFRESH DEBUG: Error refreshing bookings:", err);
+      setError(
+        err.message || 
+        err.details || 
+        err.hint || 
+        "Failed to refresh bookings. Please try again."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Fetch bookings data on component mount
   useEffect(() => {
