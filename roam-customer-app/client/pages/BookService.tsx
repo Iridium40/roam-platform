@@ -1178,7 +1178,7 @@ export default function BookService() {
       total_amount: calculateTotalAmount(),
     };
 
-    console.log('💳 Creating booking with pending payment status:', bookingDetails);
+    console.log('💳 Creating booking with pending status (payment to follow):', bookingDetails);
 
     try {
       // Get cached auth headers
@@ -1190,7 +1190,7 @@ export default function BookService() {
         .from('bookings')
         .insert({
           ...bookingDetails,
-          booking_status: 'pending_payment',
+          booking_status: 'pending',  // Using 'pending' - payment will be processed immediately
           payment_status: 'pending'
         })
         .select('id')
