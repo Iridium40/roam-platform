@@ -30,6 +30,7 @@ import {
   Phone,
   Mail,
   UserCheck,
+  User,
 } from "lucide-react";
 
 interface BookingDetailModalProps {
@@ -165,7 +166,7 @@ export default function BookingDetailModal({
                   <Hash className="w-3 h-3" />
                   <span>{selectedBooking.booking_reference || `BK${Math.random().toString(36).substr(2, 4).toUpperCase()}`}</span>
                 </span>
-                <span>{new Date(selectedBooking.booking_date).toLocaleDateString()}</span>
+                <span>{selectedBooking.booking_date}</span>
                 <span>{formatDisplayTime(selectedBooking.start_time)}</span>
               </div>
             </div>
@@ -181,15 +182,39 @@ export default function BookingDetailModal({
               <div className="space-y-2">
                 <div className="flex items-center space-x-2">
                   <Users className="h-4 w-4 text-gray-500" />
-                  <span className="text-sm font-medium">Name</span>
+                  <span className="text-sm font-medium">Customer</span>
                 </div>
                 <div className="ml-6">
-                  <p className="text-sm">
-                    {selectedBooking.customer_profiles
-                      ? `${selectedBooking.customer_profiles.first_name || ""} ${selectedBooking.customer_profiles.last_name || ""}`
-                      : "Unknown Customer"
-                    }
-                  </p>
+                  <div className="flex items-center space-x-3">
+                    {/* Customer Avatar */}
+                    <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
+                      {selectedBooking.customer_profiles?.image_url ? (
+                        <img
+                          src={selectedBooking.customer_profiles.image_url}
+                          alt={`${selectedBooking.customer_profiles.first_name || ""} ${selectedBooking.customer_profiles.last_name || ""}`}
+                          className="w-full h-full object-cover rounded-lg"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-blue-600 rounded-lg flex items-center justify-center">
+                          {selectedBooking.customer_profiles?.first_name?.[0] || selectedBooking.customer_profiles?.last_name?.[0] ? (
+                            <span className="text-white font-semibold text-lg">
+                              {selectedBooking.customer_profiles.first_name[0] || selectedBooking.customer_profiles.last_name[0]}
+                            </span>
+                          ) : (
+                            <User className="w-6 h-6 text-white" />
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">
+                        {selectedBooking.customer_profiles
+                          ? `${selectedBooking.customer_profiles.first_name || ""} ${selectedBooking.customer_profiles.last_name || ""}`
+                          : "Unknown Customer"
+                        }
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -230,12 +255,7 @@ export default function BookingDetailModal({
                 </div>
                 <div className="ml-6">
                   <p className="text-sm">
-                    {new Date(selectedBooking.booking_date).toLocaleDateString('en-US', {
-                      weekday: 'long',
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric'
-                    })}
+                    {selectedBooking.booking_date}
                   </p>
                   <p className="text-sm text-gray-600">
                     {formatDisplayTime(selectedBooking.start_time)} - {formatDisplayTime(selectedBooking.end_time)}

@@ -59,15 +59,15 @@ export default function BusinessProfile() {
     pathname: window.location.pathname
   });
   
+  // Check if user wants to book directly
+  const shouldBook = searchParams.get('book') === 'true';
+  
   const [business, setBusiness] = useState<Business | null>(null);
   const [services, setServices] = useState<Service[]>([]);
   const [staff, setStaff] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState(shouldBook ? 'services' : 'overview');
   const [shareModalOpen, setShareModalOpen] = useState(false);
-
-  // Check if user wants to book directly
-  const shouldBook = searchParams.get('book') === 'true';
 
   // Load business details and services
   useEffect(() => {
@@ -194,12 +194,8 @@ export default function BusinessProfile() {
           setStaff([]);
         }
 
-        // If user wants to book and there are services, redirect to first service
-        if (shouldBook && servicesData && servicesData.length > 0) {
-          const firstService = servicesData[0];
-          window.location.href = `/book-service/${firstService.id}?business_id=${businessId}`;
-          return;
-        }
+        // If user wants to book, they'll see the services tab by default
+        // No automatic redirect - let them choose which service to book
 
       } catch (error) {
         console.error('Error loading business:', error);

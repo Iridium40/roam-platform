@@ -73,7 +73,8 @@ export function useBookings(providerData: any, business: any) {
               first_name,
               last_name,
               email,
-              phone
+              phone,
+              image_url
             ),
             customer_locations (
               id,

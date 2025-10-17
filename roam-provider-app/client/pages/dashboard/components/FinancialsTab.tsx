@@ -24,6 +24,7 @@ import {
   Receipt,
   ArrowUpRight,
   ArrowDownRight,
+  User,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
@@ -59,7 +60,7 @@ export default function FinancialsTab({
         .select(`
           *,
           services:service_id(*),
-          customer:customer_id(*)
+          customer_profiles:customer_id(*)
         `)
         .eq('business_id', businessId)
         .order('created_at', { ascending: false });
@@ -377,8 +378,25 @@ export default function FinancialsTab({
             {financialMetrics.completedBookings.slice(0, 10).map((booking) => (
               <div key={booking.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                    <DollarSign className="w-5 h-5 text-green-600" />
+                  {/* Customer Avatar */}
+                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
+                    {booking.customer_profiles?.image_url ? (
+                      <img
+                        src={booking.customer_profiles.image_url}
+                        alt={`${booking.customer_profiles.first_name || ""} ${booking.customer_profiles.last_name || ""}`}
+                        className="w-full h-full object-cover rounded-lg"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-blue-600 rounded-lg flex items-center justify-center">
+                        {booking.customer_profiles?.first_name?.[0] || booking.customer_profiles?.last_name?.[0] ? (
+                          <span className="text-white font-semibold text-sm">
+                            {booking.customer_profiles.first_name[0] || booking.customer_profiles.last_name[0]}
+                          </span>
+                        ) : (
+                          <User className="w-5 h-5 text-white" />
+                        )}
+                      </div>
+                    )}
                   </div>
                   <div>
                     <p className="font-medium text-sm">
@@ -387,7 +405,7 @@ export default function FinancialsTab({
                         : booking.guest_name || "Guest"}
                     </p>
                     <p className="text-xs text-gray-600">
-                      {booking.services?.name || "Service"} • {new Date(booking.created_at).toLocaleDateString()}
+                      {booking.services?.name || "Service"} • {booking.created_at}
                     </p>
                   </div>
                 </div>

@@ -663,6 +663,12 @@ export default function Index() {
 
   // Filter services based on selected category, search query, and delivery type
   const getFilteredServices = useCallback((services: FeaturedService[]) => {
+    console.log('🔍 Filtering Services Debug:', {
+      selectedCategory,
+      totalServices: services.length,
+      services: services.map(s => ({ name: s.name, category: s.category }))
+    });
+    
     return services.filter((service: FeaturedService) => {
       // Category filter
       let categoryMatch = true;
@@ -673,10 +679,16 @@ export default function Index() {
         const serviceCategory = service.category?.toLowerCase() || "";
         const serviceTitle = service.title?.toLowerCase() || "";
 
+        console.log('🔍 Category Filter Debug:', {
+          serviceName: service.name,
+          serviceCategory,
+          selectedCategory,
+          categoryKeywords,
+          willMatch: categoryKeywords.some(keyword => serviceCategory === keyword.toLowerCase())
+        });
+
         categoryMatch = categoryKeywords.some(
-          (keyword) =>
-            serviceCategory.includes(keyword.toLowerCase()) ||
-            serviceTitle.includes(keyword.toLowerCase()),
+          (keyword) => serviceCategory === keyword.toLowerCase()
         );
       }
 

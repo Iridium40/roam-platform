@@ -13,7 +13,15 @@ export const useServiceData = () => {
       try {
         setLoading(true);
 
-        // Fetch featured services
+        // First, let's check what services exist and their structure
+        console.log('🔍 Checking services table structure...');
+        const testResponse = await supabase
+          .from("services")
+          .select("id, name, subcategory_id")
+          .limit(3);
+        console.log('🔍 Test services query:', testResponse);
+
+        // Fetch featured services with proper category information
         const featuredServicesResponse = await supabase
           .from("services")
           .select(
@@ -21,17 +29,25 @@ export const useServiceData = () => {
             id,
             name,
             description,
-            category,
             min_price,
             max_price,
             duration,
             location_type,
             image_url,
             is_featured,
+            subcategory_id,
             business_profiles (
               id,
               business_name,
               logo_url
+            ),
+            service_subcategories!subcategory_id (
+              id,
+              service_subcategory_type,
+              service_categories (
+                id,
+                service_category_type
+              )
             )
           `,
           )
@@ -41,23 +57,35 @@ export const useServiceData = () => {
         const { data: featuredData, error: featuredError } = featuredServicesResponse;
 
         if (!featuredError && featuredData) {
-          const transformedFeaturedServices = featuredData.map((service: any) => ({
-            id: service.id,
-            name: service.name,
-            category: service.category,
-            description: service.description,
-            price_min: service.min_price,
-            price_max: service.max_price,
-            duration: service.duration,
-            location_type: service.location_type,
-            image_url: service.image_url,
-            provider_name: service.business_profiles?.business_name,
-            provider_id: service.business_profiles?.id,
-          }));
+          console.log('🔍 Featured Services Raw Data:', featuredData);
+          const transformedFeaturedServices = featuredData.map((service: any) => {
+            const category = service.service_subcategories?.service_categories?.service_category_type || 'general';
+            console.log('🔍 Service Category Debug:', {
+              serviceName: service.name,
+              rawService: service,
+              subcategory: service.service_subcategories,
+              category: service.service_subcategories?.service_categories,
+              finalCategory: category
+            });
+            return {
+              id: service.id,
+              name: service.name,
+              category: category,
+              description: service.description,
+              price_min: service.min_price,
+              price_max: service.max_price,
+              duration: service.duration,
+              location_type: service.location_type,
+              image_url: service.image_url,
+              provider_name: service.business_profiles?.business_name,
+              provider_id: service.business_profiles?.id,
+            };
+          });
+          console.log('🔍 Transformed Featured Services:', transformedFeaturedServices);
           setFeaturedServices(transformedFeaturedServices);
         }
 
-        // Fetch popular services
+        // Fetch popular services with proper category information
         const popularServicesResponse = await supabase
           .from("services")
           .select(
@@ -65,16 +93,24 @@ export const useServiceData = () => {
             id,
             name,
             description,
-            category,
             min_price,
             max_price,
             duration,
             location_type,
             image_url,
+            subcategory_id,
             business_profiles (
               id,
               business_name,
               logo_url
+            ),
+            service_subcategories!subcategory_id (
+              id,
+              service_subcategory_type,
+              service_categories (
+                id,
+                service_category_type
+              )
             )
           `,
           )
@@ -84,20 +120,32 @@ export const useServiceData = () => {
         const { data: popularData, error: popularError } = popularServicesResponse;
 
         if (!popularError && popularData) {
-          const transformedPopularServices = popularData.map((service: any) => ({
-            id: service.id,
-            name: service.name,
-            category: service.category,
-            description: service.description,
-            price_min: service.min_price,
-            price_max: service.max_price,
-            duration: service.duration,
-            location_type: service.location_type,
-            image_url: service.image_url,
-            provider_name: service.business_profiles?.business_name,
-            provider_id: service.business_profiles?.id,
-            popularity_score: Math.random() * 100, // Mock popularity score
-          }));
+          console.log('🔍 Popular Services Raw Data:', popularData);
+          const transformedPopularServices = popularData.map((service: any) => {
+            const category = service.service_subcategories?.service_categories?.service_category_type || 'general';
+            console.log('🔍 Popular Service Category Debug:', {
+              serviceName: service.name,
+              subcategoryId: service.subcategory_id,
+              subcategory: service.service_subcategories,
+              category: service.service_subcategories?.service_categories,
+              finalCategory: category
+            });
+            return {
+              id: service.id,
+              name: service.name,
+              category: category,
+              description: service.description,
+              price_min: service.min_price,
+              price_max: service.max_price,
+              duration: service.duration,
+              location_type: service.location_type,
+              image_url: service.image_url,
+              provider_name: service.business_profiles?.business_name,
+              provider_id: service.business_profiles?.id,
+              popularity_score: Math.random() * 100, // Mock popularity score
+            };
+          });
+          console.log('🔍 Transformed Popular Services:', transformedPopularServices);
           setPopularServices(transformedPopularServices);
         }
 

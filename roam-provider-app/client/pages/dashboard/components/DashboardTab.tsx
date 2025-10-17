@@ -12,6 +12,7 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
+  User,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
@@ -49,13 +50,23 @@ export default function DashboardTab({
         .select(`
           *,
           services:service_id(*),
-          customer:customer_id(*),
-          provider:provider_id(*)
+          customer_profiles:customer_id(*),
+          providers:provider_id(*)
         `)
         .eq('business_id', businessId)
         .order('created_at', { ascending: false });
 
       if (bookingsError) throw bookingsError;
+      
+      // Debug: Log the booking data to see customer profile structure
+      console.log("🔍 BOOKING DATA DEBUG:", {
+        bookingsCount: bookingsData?.length || 0,
+        sampleBooking: bookingsData?.[0],
+        customerProfiles: bookingsData?.[0]?.customer_profiles,
+        hasImageUrl: !!bookingsData?.[0]?.customer_profiles?.image_url,
+        imageUrl: bookingsData?.[0]?.customer_profiles?.image_url
+      });
+      
       setBookings(bookingsData || []);
 
       // Load staff members
@@ -258,7 +269,26 @@ export default function DashboardTab({
                 recentBookings.map((booking) => (
                   <div key={booking.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div className="flex items-center space-x-3">
-                      {getStatusIcon(booking.booking_status)}
+                      {/* Customer Avatar */}
+                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
+                        {booking.customer_profiles?.image_url ? (
+                          <img
+                            src={booking.customer_profiles.image_url}
+                            alt={`${booking.customer_profiles.first_name || ""} ${booking.customer_profiles.last_name || ""}`}
+                            className="w-full h-full object-cover rounded-lg"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-blue-600 rounded-lg flex items-center justify-center">
+                            {booking.customer_profiles?.first_name?.[0] || booking.customer_profiles?.last_name?.[0] ? (
+                              <span className="text-white font-semibold text-sm">
+                                {booking.customer_profiles.first_name[0] || booking.customer_profiles.last_name[0]}
+                              </span>
+                            ) : (
+                              <User className="w-5 h-5 text-white" />
+                            )}
+                          </div>
+                        )}
+                      </div>
                       <div>
                         <p className="font-medium text-sm">
                           {booking.customer_profiles?.first_name && booking.customer_profiles?.last_name
@@ -266,7 +296,7 @@ export default function DashboardTab({
                             : booking.guest_name || "Guest"}
                         </p>
                         <p className="text-xs text-gray-600">
-                          {booking.services?.name || "Service"} • {new Date(booking.booking_date).toLocaleDateString()}
+                          {booking.services?.name || "Service"} • {booking.booking_date}
                         </p>
                       </div>
                     </div>

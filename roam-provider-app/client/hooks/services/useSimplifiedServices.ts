@@ -110,6 +110,7 @@ export function useSimplifiedServices() {
 
   const updateService = async (serviceId: string, updates: {
     business_price?: number;
+    business_duration_minutes?: number;
     delivery_type?: string;
     is_active?: boolean;
   }): Promise<void> => {
@@ -127,6 +128,7 @@ export function useSimplifiedServices() {
           business_id: provider!.provider!.business_id!,
           service_id: serviceId,
           business_price: updates.business_price,
+          business_duration_minutes: updates.business_duration_minutes,
           delivery_type: updates.delivery_type,
           is_active: updates.is_active
         }),

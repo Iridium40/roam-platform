@@ -92,11 +92,11 @@ export const getCategoryColor = (category: string) => {
   return "bg-gradient-to-r from-gray-500 to-gray-600";
 };
 
-// Category mapping for filtering
+// Category mapping for filtering - matches database enum values
 export const categoryMapping = {
   all: [],
-  beauty: ["beauty", "wellness", "spa", "salon", "cosmetic"],
-  fitness: ["fitness", "gym", "workout", "exercise", "training"],
-  therapy: ["therapy", "therapeutic", "massage", "counseling"],
-  healthcare: ["healthcare", "medical", "health", "dental", "vision"],
+  beauty: ["beauty"],
+  fitness: ["fitness"],
+  therapy: ["therapy"],
+  healthcare: ["healthcare"],
 };

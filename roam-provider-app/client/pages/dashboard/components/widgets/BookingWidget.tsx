@@ -229,7 +229,7 @@ export const BookingWidget: React.FC<BookingWidgetProps> = ({ data, onRefresh })
                           <div className="flex items-center space-x-4 text-sm text-gray-600">
                             <div className="flex items-center space-x-1">
                               <Calendar className="w-4 h-4" />
-                              <span>{new Date(booking.scheduled_time).toLocaleDateString()}</span>
+                              <span>{booking.scheduled_time}</span>
                             </div>
                             <div className="flex items-center space-x-1">
                               <Clock className="w-4 h-4" />

@@ -129,23 +129,44 @@ export default function BookingCard({
           <div className="flex items-start space-x-4">
             {/* Customer Avatar */}
             <div className="w-16 h-16 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
-              {booking.customer_profiles?.image_url ? (
-                <img
-                  src={booking.customer_profiles.image_url}
-                  alt={`${booking.customer_profiles.first_name || ""} ${booking.customer_profiles.last_name || ""}`}
-                  className="w-full h-full object-cover rounded-lg"
-                />
-              ) : (
-                <div className="w-full h-full bg-blue-600 rounded-lg flex items-center justify-center">
-                  {booking.customer_profiles?.first_name?.[0] || booking.customer_profiles?.last_name?.[0] ? (
-                    <span className="text-white font-semibold text-lg">
-                      {booking.customer_profiles.first_name[0] || booking.customer_profiles.last_name[0]}
-                    </span>
-                  ) : (
-                    <User className="w-8 h-8 text-white" />
-                  )}
-                </div>
-              )}
+              {(() => {
+                // Debug logging
+                console.log("🔍 BOOKINGS TAB AVATAR DEBUG:", {
+                  bookingId: booking.id,
+                  customerProfiles: booking.customer_profiles,
+                  imageUrl: booking.customer_profiles?.image_url,
+                  firstName: booking.customer_profiles?.first_name,
+                  lastName: booking.customer_profiles?.last_name,
+                  hasImage: !!booking.customer_profiles?.image_url,
+                  fullBookingData: booking
+                });
+                
+                if (booking.customer_profiles?.image_url) {
+                  return (
+                    <img
+                      src={booking.customer_profiles.image_url}
+                      alt={`${booking.customer_profiles.first_name || ""} ${booking.customer_profiles.last_name || ""}`}
+                      className="w-full h-full object-cover rounded-lg"
+                      onError={(e) => {
+                        console.log("❌ IMAGE LOAD ERROR:", booking.customer_profiles.image_url);
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  );
+                } else {
+                  return (
+                    <div className="w-full h-full bg-blue-600 rounded-lg flex items-center justify-center">
+                      {booking.customer_profiles?.first_name?.[0] || booking.customer_profiles?.last_name?.[0] ? (
+                        <span className="text-white font-semibold text-lg">
+                          {booking.customer_profiles.first_name[0] || booking.customer_profiles.last_name[0]}
+                        </span>
+                      ) : (
+                        <User className="w-8 h-8 text-white" />
+                      )}
+                    </div>
+                  );
+                }
+              })()}
             </div>
             
             {/* Service Details */}
@@ -156,7 +177,7 @@ export default function BookingCard({
               <div className="flex items-center space-x-4 text-sm text-gray-600">
                 <div className="flex items-center space-x-1">
                   <Calendar className="w-4 h-4" />
-                  <span>{new Date(booking.booking_date).toLocaleDateString()}</span>
+                  <span>{booking.booking_date}</span>
                 </div>
                 <div className="flex items-center space-x-1">
                   <Clock className="w-4 h-4" />

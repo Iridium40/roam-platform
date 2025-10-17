@@ -405,7 +405,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({
               <div className="flex items-center gap-4 text-sm text-foreground/60">
                 <div className="flex items-center gap-1">
                   <Calendar className="w-4 h-4" />
-                  {new Date(booking.booking_date).toLocaleDateString()}
+                  {booking.booking_date}
                 </div>
                 <div className="flex items-center gap-1">
                   <Clock className="w-4 h-4" />

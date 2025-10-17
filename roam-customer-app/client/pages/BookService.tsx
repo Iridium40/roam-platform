@@ -687,10 +687,6 @@ export default function BookService() {
             const sorted = sortAndFilterBusinesses(transformedSimple, sortBy, sortOrder);
             setFilteredAndSortedBusinesses(sorted);
 
-            toast({
-              title: "Businesses loaded",
-              description: `Found ${transformedSimple.length} available businesses`,
-            });
             return;
           }
         } catch (fallbackError) {

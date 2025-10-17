@@ -98,7 +98,8 @@ export default function MessagesTab({ providerData, business }: MessagesTabProps
             id,
             first_name,
             last_name,
-            email
+            email,
+            image_url
           ),
           providers (
             id,
@@ -268,7 +269,7 @@ export default function MessagesTab({ providerData, business }: MessagesTabProps
                     className="flex items-center gap-3 p-3 rounded-lg border hover:bg-gray-50 cursor-pointer transition-colors"
                   >
                     <Avatar className="h-10 w-10">
-                      <AvatarImage src="" />
+                      <AvatarImage src={conversation.booking.customer_profiles?.image_url || ""} />
                       <AvatarFallback>
                         {getCustomerInitials(conversation.booking.customer_profiles)}
                       </AvatarFallback>
@@ -300,7 +301,7 @@ export default function MessagesTab({ providerData, business }: MessagesTabProps
                         </span>
                         <span className="text-xs text-gray-400">•</span>
                         <span className="text-xs text-gray-400">
-                          {new Date(conversation.booking.booking_date).toLocaleDateString()}
+                          {conversation.booking.booking_date}
                         </span>
                       </div>
                       

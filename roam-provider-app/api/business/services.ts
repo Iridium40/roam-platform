@@ -283,6 +283,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(400).json({ error: 'No updates provided' });
       }
 
+      console.log('🔍 API - About to update business_services with:', {
+        business_id,
+        service_id,
+        updates,
+        updatesKeys: Object.keys(updates)
+      });
+
       const { data: updatedService, error: updateError } = await supabase
         .from('business_services')
         .update(updates)
@@ -307,6 +314,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           )
         `)
         .single();
+
+      console.log('🔍 API - Update result:', {
+        updatedService,
+        updateError,
+        success: !updateError && updatedService
+      });
 
       if (updateError) {
         console.error('Error updating business service:', updateError);

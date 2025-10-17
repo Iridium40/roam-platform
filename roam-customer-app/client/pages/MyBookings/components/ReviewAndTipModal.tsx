@@ -378,7 +378,7 @@ const ReviewAndTipModal: React.FC<ReviewAndTipModalProps> = ({
               with {booking.providers?.first_name} {booking.providers?.last_name}
             </p>
             <p className="text-sm text-gray-600">
-              {new Date(booking.date).toLocaleDateString()} at {booking.time}
+              {booking.date} at {booking.time}
             </p>
           </div>
 

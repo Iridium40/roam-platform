@@ -106,7 +106,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 text-sm text-foreground/60">
                       <Calendar className="w-4 h-4" />
-                      {new Date(booking.date).toLocaleDateString()}
+                      {booking.date}
                     </div>
                     <div className="flex items-center gap-2 text-sm text-foreground/60">
                       <Clock className="w-4 h-4" />
@@ -425,7 +425,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({
                 <div className="flex items-center gap-4 text-sm text-foreground/60 mb-2">
                   <div className="flex items-center gap-1">
                     <Calendar className="w-4 h-4" />
-                    {new Date(booking.date).toLocaleDateString()}
+                    {booking.date}
                   </div>
                   <div className="flex items-center gap-1">
                     <Clock className="w-4 h-4" />
