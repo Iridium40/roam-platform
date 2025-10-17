@@ -1,6 +1,12 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { stripe } from '../../server/lib/stripe-server';
+import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
+
+// Initialize Stripe directly (not from server lib for Vercel compatibility)
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: '2024-11-20.acacia' as any,
+  typescript: true,
+});
 
 const supabase = createClient(
   process.env.VITE_PUBLIC_SUPABASE_URL!,
@@ -23,6 +29,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
+    console.log('📝 Payment Intent request received');
+    console.log('Environment check:', {
+      hasStripeKey: !!process.env.STRIPE_SECRET_KEY,
+      hasSupabaseUrl: !!process.env.VITE_PUBLIC_SUPABASE_URL,
+      hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY
+    });
     const {
       bookingId,
       serviceId,
@@ -229,10 +241,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
 
   } catch (error: any) {
-    console.error('Payment intent creation failed:', error);
+    console.error('❌ Payment intent creation failed:', error);
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      type: error.type,
+      code: error.code
+    });
+    
     return res.status(500).json({
       error: 'Payment setup failed',
-      details: error.message
+      details: error.message,
+      code: error.code || 'PAYMENT_INTENT_ERROR'
     });
   }
 }
