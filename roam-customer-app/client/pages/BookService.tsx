@@ -1064,6 +1064,26 @@ export default function BookService() {
       case 'summary':
         setCurrentStep('provider');
         break;
+      case 'checkout':
+        setCurrentStep('summary');
+        // Clean up created booking and payment intent
+        if (createdBookingId) {
+          supabase
+            .from('bookings')
+            .delete()
+            .eq('id', createdBookingId)
+            .then(() => {
+              console.log('🗑️ Cancelled pending booking:', createdBookingId);
+            });
+          setCreatedBookingId(null);
+          setClientSecret('');
+          setPaymentBreakdown(null);
+        }
+        toast({
+          title: "Checkout Cancelled",
+          description: "You can update your booking details and try again.",
+        });
+        break;
     }
   };
 
@@ -1158,30 +1178,68 @@ export default function BookService() {
       total_amount: calculateTotalAmount(),
     };
 
-    console.log('💳 Preparing Stripe Checkout (no booking created yet):', bookingDetails);
+    console.log('💳 Creating booking with pending payment status:', bookingDetails);
 
     try {
-      // Get cached auth headers for Stripe checkout
+      // Get cached auth headers
       const { getAuthHeaders } = await import('../lib/api/authUtils');
       const headers = await getAuthHeaders();
 
-      // Prepare Stripe payload with all booking data + promotion info
-      // The webhook will create the booking after successful payment
-      const stripePayload = {
-        ...bookingDetails,
-        serviceName: service.name,
-        businessName: selectedBusiness.business_name,
-        // Include promotion data if exists - webhook will handle promotion_usage creation
-        promotionId: promotion?.id || null,
-        promotionCode: promotion?.promoCode || null,
-        discountApplied: promotion?.savingsAmount || 0,
-        originalAmount: service.min_price,
+      // Step 1: Create the booking in pending status
+      const { data: newBooking, error: bookingError } = await supabase
+        .from('bookings')
+        .insert({
+          ...bookingDetails,
+          booking_status: 'pending_payment',
+          payment_status: 'pending'
+        })
+        .select('id')
+        .single();
+
+      if (bookingError || !newBooking) {
+        throw new Error(bookingError?.message || 'Failed to create booking');
+      }
+
+      console.log('✅ Booking created with ID:', newBooking.id);
+      setCreatedBookingId(newBooking.id);
+
+      // Step 2: Create promotion usage if promotion was applied
+      if (promotion) {
+        await supabase
+          .from('promotion_usage')
+          .insert({
+            promotion_id: promotion.id,
+            user_id: customer.user_id,
+            booking_id: newBooking.id,
+            discount_applied: promotion.savingsAmount
+          });
+
+        await supabase
+          .from('promotions')
+          .update({ current_uses: promotion.current_uses + 1 })
+          .eq('id', promotion.id);
+      }
+
+      // Step 3: Create Payment Intent
+      const paymentPayload = {
+        bookingId: newBooking.id,
+        serviceId: service.id,
+        businessId: selectedBusiness.id,
+        customerId: customer.id,
+        bookingDate: bookingDetails.booking_date,
+        startTime: formattedStartTime,
+        guestName: bookingDetails.guest_name,
+        guestEmail: bookingDetails.guest_email,
+        guestPhone: bookingDetails.guest_phone,
+        deliveryType,
+        specialInstructions: bookingDetails.special_instructions,
+        promotionId: promotion?.id || null
       };
 
-      const response = await fetch('/api/stripe/create-checkout-session', {
+      const response = await fetch('/api/stripe/create-payment-intent', {
         method: 'POST',
         headers,
-        body: JSON.stringify(stripePayload),
+        body: JSON.stringify(paymentPayload),
       });
 
       console.log('📡 Response status:', response.status);
@@ -1193,30 +1251,40 @@ export default function BookService() {
         throw new Error(`HTTP ${response.status}: ${errorText}`);
       }
 
-      const result = await response.json();
-      console.log('📦 Checkout session result:', result);
+      const paymentData = await response.json();
+      console.log('✅ Payment Intent created:', paymentData);
 
-      if (result.url) {
-        console.log('✅ Redirecting to Stripe Checkout - booking will be created after payment');
-        window.location.href = result.url;
-      } else {
-        console.error('❌ Failed to create Checkout Session:', result.error || result);
-        toast({
-          title: "Payment Setup Failed",
-          description: result.error || "Could not initialize payment. Please try again.",
-          variant: "destructive",
-        });
-      }
+      // Store client secret and payment breakdown
+      setClientSecret(paymentData.clientSecret);
+      setPaymentBreakdown(paymentData.breakdown);
+
+      // Move to checkout step (embedded form)
+      setCurrentStep('checkout');
+      setCheckoutLoading(false);
+
+      toast({
+        title: "Ready for Payment",
+        description: "Please complete your payment to confirm the booking.",
+      });
     } catch (error) {
-      console.error('❌ Error creating Checkout Session:', error);
+      console.error('❌ Error preparing checkout:', error);
+      setCheckoutLoading(false);
+      
+      // Clean up booking if it was created
+      if (createdBookingId) {
+        await supabase.from('bookings').delete().eq('id', createdBookingId);
+        setCreatedBookingId(null);
+      }
+
       let errorMessage = "An unexpected error occurred. Please try again.";
       if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
         errorMessage = "Network error: Could not connect to payment service. Please check your connection and try again.";
       } else if (error instanceof Error) {
-        errorMessage = `Error: ${error.message}`;
+        errorMessage = error.message;
       }
+      
       toast({
-        title: "Payment Setup Error",
+        title: "Checkout Error",
         description: errorMessage,
         variant: "destructive",
       });
@@ -2223,6 +2291,92 @@ export default function BookService() {
                       </span>
                     </div>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* CHECKOUT STEP - Embedded Payment Form */}
+            {currentStep === 'checkout' && clientSecret && (
+              <div className="space-y-6">
+                <h2 className="text-2xl font-semibold mb-6 flex items-center">
+                  <CreditCard className="w-6 h-6 mr-2" />
+                  Complete Your Payment
+                </h2>
+
+                <Card className="bg-blue-50 border-blue-200">
+                  <CardContent className="pt-6">
+                    <div className="flex items-start space-x-3">
+                      <Info className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                      <div className="text-sm">
+                        <p className="font-medium text-blue-900">Booking Reserved</p>
+                        <p className="text-blue-700 mt-1">
+                          Reference: {createdBookingId?.slice(-8).toUpperCase()}
+                        </p>
+                        <p className="text-blue-600 mt-1 text-xs">
+                          Complete payment to confirm your booking
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Embedded Stripe Checkout Form */}
+                <div className="bg-white rounded-lg">
+                  <Elements 
+                    stripe={stripePromise} 
+                    options={{ 
+                      clientSecret,
+                      appearance: {
+                        theme: 'stripe',
+                        variables: {
+                          colorPrimary: '#3b82f6',
+                          colorBackground: '#ffffff',
+                          colorText: '#1f2937',
+                          colorDanger: '#ef4444',
+                          fontFamily: 'system-ui, sans-serif',
+                          borderRadius: '8px',
+                        }
+                      }
+                    }}
+                  >
+                    <CheckoutForm
+                      bookingDetails={{
+                        id: createdBookingId || '',
+                        serviceName: service?.name || '',
+                        providerName: selectedProvider 
+                          ? `${selectedProvider.first_name} ${selectedProvider.last_name}` 
+                          : '',
+                        businessName: selectedBusiness?.business_name || '',
+                        scheduledDate: selectedDate 
+                          ? `${selectedDate.toISOString().split('T')[0]} ${selectedTime}` 
+                          : '',
+                        serviceAmount: paymentBreakdown?.serviceAmount || calculateDiscountedPrice(),
+                        platformFee: paymentBreakdown?.platformFee || calculateServiceFee(),
+                        discountAmount: paymentBreakdown?.discountAmount || 0,
+                        total: paymentBreakdown?.total || calculateTotalWithFees(),
+                      }}
+                      onSuccess={(paymentIntent) => {
+                        console.log('✅ Payment successful!', paymentIntent);
+                        
+                        toast({
+                          title: "Payment Successful!",
+                          description: "Your booking has been confirmed.",
+                        });
+
+                        // Redirect to success page
+                        navigate(`/booking-success?booking_id=${createdBookingId}`);
+                      }}
+                      onError={(error) => {
+                        console.error('❌ Payment error:', error);
+                        
+                        toast({
+                          title: "Payment Failed",
+                          description: error,
+                          variant: "destructive",
+                        });
+                      }}
+                    />
+                  </Elements>
                 </div>
               </div>
             )}
