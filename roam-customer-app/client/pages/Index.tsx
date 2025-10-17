@@ -277,7 +277,7 @@ export default function Index() {
       try {
         setLoading(true);
 
-        // Fetch featured services using is_featured flag
+        // Fetch featured services using is_featured flag with proper category information
         const featuredServicesResponse = await supabase
           .from("services")
           .select(
@@ -290,7 +290,15 @@ export default function Index() {
             image_url,
             is_active,
             is_featured,
-            subcategory_id
+            subcategory_id,
+            service_subcategories!subcategory_id (
+              id,
+              service_subcategory_type,
+              service_categories (
+                id,
+                service_category_type
+              )
+            )
           `
           )
           .eq("is_active", true)
@@ -305,26 +313,38 @@ export default function Index() {
         });
 
         if (!featuredError && featuredServicesData) {
+          console.log('🔍 Featured Services Raw Data (Index):', featuredServicesData);
           const transformedFeatured = featuredServicesData.map(
-            (service: any) => ({
-              id: service.id,
-              title: service.name,
-              category: "General", // Simplified for now
-              image:
-                service.image_url ||
-                "https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=500&h=300&fit=crop",
-              description:
-                service.description || "Professional featured service",
-              price: `$${service.min_price || 50}`,
-              rating: 4.8, // Default rating
-              duration: `${service.duration_minutes || 60} min`,
-            }),
+            (service: any) => {
+              const category = service.service_subcategories?.service_categories?.service_category_type || 'general';
+              console.log('🔍 Featured Service Category Debug (Index):', {
+                serviceName: service.name,
+                serviceId: service.id,
+                subcategoryId: service.subcategory_id,
+                subcategory: service.service_subcategories,
+                category: service.service_subcategories?.service_categories,
+                finalCategory: category
+              });
+              return {
+                id: service.id,
+                title: service.name,
+                category: category,
+                image:
+                  service.image_url ||
+                  "https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=500&h=300&fit=crop",
+                description:
+                  service.description || "Professional featured service",
+                price: `$${service.min_price || 50}`,
+                rating: 4.8, // Default rating
+                duration: `${service.duration_minutes || 60} min`,
+              };
+            }
           );
-          logger.debug("Transformed featured services:", transformedFeatured);
+          console.log('🔍 Transformed Featured Services (Index):', transformedFeatured);
           setFeaturedServices(transformedFeatured);
         }
 
-        // Fetch popular services using is_popular flag
+        // Fetch popular services using is_popular flag with proper category information
         const popularServicesResponse = await supabase
           .from("services")
           .select(
@@ -337,7 +357,15 @@ export default function Index() {
             image_url,
             is_active,
             is_popular,
-            subcategory_id
+            subcategory_id,
+            service_subcategories!subcategory_id (
+              id,
+              service_subcategory_type,
+              service_categories (
+                id,
+                service_category_type
+              )
+            )
           `
           )
           .eq("is_active", true)
@@ -353,24 +381,36 @@ export default function Index() {
         });
 
         if (!popularError && popularServicesData) {
+          console.log('🔍 Popular Services Raw Data (Index):', popularServicesData);
           const transformedPopular = popularServicesData.map(
-            (service: any) => ({
-              id: service.id,
-              title: service.name,
-              category: "General", // Simplified for now
-              image:
-                service.image_url ||
-                "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=500&h=300&fit=crop",
-              description:
-                service.description || "Popular professional service",
-              price: `$${service.min_price || 50}`,
-              rating: 4.9, // Default rating
-              duration: `${service.duration_minutes || 60} min`,
-              bookings: `${Math.floor(Math.random() * 50) + 10} bookings this month`, // Dynamic booking count
-              availability: `${Math.floor(Math.random() * 8) + 1} slots available`, // Dynamic availability
-            }),
+            (service: any) => {
+              const category = service.service_subcategories?.service_categories?.service_category_type || 'general';
+              console.log('🔍 Popular Service Category Debug (Index):', {
+                serviceName: service.name,
+                serviceId: service.id,
+                subcategoryId: service.subcategory_id,
+                subcategory: service.service_subcategories,
+                category: service.service_subcategories?.service_categories,
+                finalCategory: category
+              });
+              return {
+                id: service.id,
+                title: service.name,
+                category: category,
+                image:
+                  service.image_url ||
+                  "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=500&h=300&fit=crop",
+                description:
+                  service.description || "Popular professional service",
+                price: `$${service.min_price || 50}`,
+                rating: 4.9, // Default rating
+                duration: `${service.duration_minutes || 60} min`,
+                bookings: `${Math.floor(Math.random() * 50) + 10} bookings this month`, // Dynamic booking count
+                availability: `${Math.floor(Math.random() * 8) + 1} slots available`, // Dynamic availability
+              };
+            }
           );
-          logger.debug("Transformed popular services:", transformedPopular);
+          console.log('🔍 Transformed Popular Services (Index):', transformedPopular);
           setPopularServices(transformedPopular);
         }
 
@@ -759,7 +799,7 @@ export default function Index() {
   // Featured Services: paginate into pages of 2 for desktop, 1 for mobile
   const servicePages = useMemo(() => {
     const pages: FeaturedService[][] = [];
-    // Always paginate by 2 cards per page (will show 1 on mobile, 2 on desktop)
+    // Paginate by 2 cards per page for desktop, 1 for mobile
     for (let i = 0; i < filteredFeaturedServices.length; i += 2) {
       pages.push(filteredFeaturedServices.slice(i, i + 2));
     }
@@ -809,9 +849,10 @@ export default function Index() {
     setCurrentPopularSlide(newPage);
   }, [currentPopularSlide, popularPages, filteredPopularServices.length]);
 
-  // Old promotions pagination logic (kept for existing database promotions if needed)
+  // Special Promotions: paginate into pages of 3 for desktop, 1 for mobile
   const promotionPages = useMemo(() => {
     const pages: TransformedPromotion[][] = [];
+    // Paginate by 3 cards per page for desktop, 1 for mobile
     for (let i = 0; i < promotions.length; i += 3) {
       pages.push(promotions.slice(i, i + 3));
     }
@@ -843,22 +884,19 @@ export default function Index() {
         s.toLowerCase().includes(searchQuery.toLowerCase()),
       );
 
-    const matchesCategory =
-      selectedCategory === "all" ||
-      business.type.toLowerCase().includes(selectedCategory) ||
-      business.specialties.some((s) =>
-        s.toLowerCase().includes(selectedCategory),
-      );
+    // Note: Category filter only applies to services, not businesses
+    // Businesses are always shown regardless of category selection
     const matchesDelivery =
       selectedDelivery === "all" ||
       business.deliveryTypes.includes(selectedDelivery);
 
-    return matchesSearch && matchesCategory && matchesDelivery;
+    return matchesSearch && matchesDelivery;
   });
 
-  // Featured Businesses: paginate into pages of 3
+  // Featured Businesses: paginate into pages of 3 for desktop, 1 for mobile
   const businessPages = useMemo(() => {
     const pages: FeaturedService[][] = [];
+    // Paginate by 3 cards per page for desktop, 1 for mobile
     for (let i = 0; i < filteredBusinesses.length; i += 3) {
       pages.push(filteredBusinesses.slice(i, i + 3));
     }
@@ -1332,12 +1370,12 @@ export default function Index() {
                   {servicePages.map((page, pageIndex) => (
                     <div
                       key={`page-${pageIndex}`}
-                      className="w-full flex-none grid grid-cols-1 md:grid-cols-2 gap-6 px-4"
+                      className="flex gap-6 w-full flex-none px-4"
                     >
                       {page.map((service, serviceIndex) => (
                         <Card
                           key={service.id}
-                          className="hover:shadow-xl transition-all duration-300 cursor-pointer border-border/50 hover:border-roam-light-blue/50 overflow-hidden w-full"
+                          className="group hover:shadow-2xl transition-all duration-500 hover:-translate-y-3 border-0 shadow-xl bg-white overflow-hidden rounded-3xl flex-shrink-0 w-full md:w-[calc(50%-12px)]"
                         >
                           <div className="relative h-64">
                             <img
@@ -1510,12 +1548,12 @@ export default function Index() {
                   {promotionPages.map((page, pageIndex) => (
                     <div
                       key={`promotion-page-${pageIndex}`}
-                      className="w-full flex-none grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 px-4"
+                      className="flex gap-6 w-full flex-none px-4"
                     >
                       {page.map((promotion) => (
                         <Card
                           key={promotion.id}
-                          className="group hover:shadow-2xl transition-all duration-500 hover:-translate-y-3 border-0 shadow-xl bg-white overflow-hidden rounded-3xl w-full"
+                          className="group hover:shadow-2xl transition-all duration-500 hover:-translate-y-3 border-0 shadow-xl bg-white overflow-hidden rounded-3xl flex-shrink-0 w-full md:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)]"
                         >
                           {/* Hero Image Section */}
                           <div className="relative h-64 bg-gradient-to-br from-roam-yellow/20 via-roam-light-blue/10 to-roam-blue/5 overflow-hidden">
@@ -1916,7 +1954,7 @@ export default function Index() {
                       {page.map((business) => (
                         <Card
                           key={business.id}
-                          className="group hover:shadow-2xl transition-all duration-500 hover:-translate-y-3 border-0 shadow-xl bg-white overflow-hidden rounded-3xl flex-shrink-0 w-full sm:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)]"
+                          className="group hover:shadow-2xl transition-all duration-500 hover:-translate-y-3 border-0 shadow-xl bg-white overflow-hidden rounded-3xl flex-shrink-0 w-full md:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)]"
                         >
                           <CardContent className="p-0">
                             {/* Hero Cover Section */}

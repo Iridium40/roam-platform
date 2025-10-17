@@ -238,6 +238,7 @@ export default function BookService() {
   const [paymentBreakdown, setPaymentBreakdown] = useState<any>(null);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [saveLocationForFuture, setSaveLocationForFuture] = useState(true); // Default to true to save locations
+  const [createdBookingId, setCreatedBookingId] = useState<string | null>(null);
   
   // Auth modal state
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -880,7 +881,7 @@ export default function BookService() {
     switch (currentStep) {
       case 'datetime':
         if (selectedDate && selectedTime) {
-          // If businessId is provided, skip business selection
+          // If businessId is provided, skip business selection (Business + Service specified)
           if (businessId && selectedBusiness) {
             loadProviders(selectedBusiness.id);
             
@@ -904,6 +905,7 @@ export default function BookService() {
               setCurrentStep('delivery-location');
             }
           } else {
+            // No businessId provided - go to business selection (Service Only specified)
             // Load all businesses that offer this service
             loadBusinesses();
             setCurrentStep('business');

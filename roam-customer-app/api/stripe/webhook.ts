@@ -130,5 +130,37 @@ async function handleBookingPayment(session: Stripe.Checkout.Session) {
 
 async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent) {
   console.log('✅ Payment intent succeeded:', paymentIntent.id);
-  // Additional payment success logic if needed
+  
+  try {
+    const bookingId = paymentIntent.metadata.bookingId;
+    
+    if (!bookingId) {
+      console.error('No booking ID in payment intent metadata');
+      return;
+    }
+
+    console.log(`📋 Confirming booking: ${bookingId}`);
+
+    // Update booking status to confirmed
+    const { error: updateError } = await supabase
+      .from('bookings')
+      .update({
+        booking_status: 'confirmed',
+        payment_status: 'completed',
+        stripe_payment_intent_id: paymentIntent.id,
+        confirmed_at: new Date().toISOString(),
+      })
+      .eq('id', bookingId);
+
+    if (updateError) {
+      console.error('Error updating booking:', updateError);
+      throw updateError;
+    }
+
+    console.log(`✅ Booking ${bookingId} confirmed successfully`);
+
+  } catch (error) {
+    console.error('Error handling payment intent succeeded:', error);
+    throw error;
+  }
 }
