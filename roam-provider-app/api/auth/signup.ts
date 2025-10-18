@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { createClient } from "@supabase/supabase-js";
-import { EmailService } from "../../server/services/emailService";
+// EmailService import removed to fix serverless function issues
 
 // Initialize Supabase client with service role key for admin operations
 const supabaseUrl = process.env.VITE_PUBLIC_SUPABASE_URL!;
@@ -197,29 +197,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     console.log("Provider record created successfully with role 'owner'");
 
-    // Send welcome email (don't fail signup if email fails)
-    try {
-      const emailSent = await EmailService.sendWelcomeEmail(
-        signupData.email,
-        signupData.firstName,
-      );
-      if (!emailSent) {
-        console.error(
-          "Failed to send welcome email, but continuing with signup",
-        );
-      }
-    } catch (emailError) {
-      console.error("Error sending welcome email:", emailError);
-      if (
-        emailError.name === "validation_error" &&
-        emailError.message?.includes("domain is not verified")
-      ) {
-        console.log(
-          "💡 Domain verification needed: Add and verify 'roamyourbestlife.com' at https://resend.com/domains",
-        );
-      }
-      // Continue with signup even if email fails
-    }
+    // TODO: Send welcome email (temporarily disabled to fix serverless function)
+    console.log("Welcome email sending temporarily disabled");
 
     return res.status(201).json({
       success: true,
