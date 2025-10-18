@@ -1158,15 +1158,15 @@ export default function FinancialsTab({
             </CardContent>
           </Card>
 
-          {/* Bank Account Management */}
+          {/* Stripe Connect Account Management */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <CreditCard className="w-5 h-5" />
-                <span>Bank Account</span>
+                <span>Manage your Connected Stripe Account</span>
               </CardTitle>
               <CardDescription>
-                Manage where you receive your payouts
+                Manage your Stripe Connect account for payments and payouts
               </CardDescription>
             </CardHeader>
             <CardContent>
