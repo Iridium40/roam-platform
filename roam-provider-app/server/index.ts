@@ -1936,6 +1936,85 @@ export function createServer() {
   app.post("/api/sms/cancellation-notification", handleCancellationNotification);
   app.post("/api/sms/reminder", handleBookingReminder);
 
+  // ==================== Stripe Financial Routes ====================
+  
+  // Stripe Connect account status check
+  app.get("/api/stripe/check-connect-account-status", async (req, res) => {
+    try {
+      const statusHandler = await import("../api/stripe/check-connect-account-status");
+      await statusHandler.default(req as any, res as any);
+    } catch (error) {
+      console.error("Error importing Stripe Connect status handler:", error);
+      res.status(500).json({ error: "Failed to load Stripe Connect status handler" });
+    }
+  });
+  
+  // Stripe balance
+  app.get("/api/stripe/balance", async (req, res) => {
+    try {
+      const balanceHandler = await import("../api/stripe/balance");
+      await balanceHandler.default(req as any, res as any);
+    } catch (error) {
+      console.error("Error importing Stripe balance handler:", error);
+      res.status(500).json({ error: "Failed to load Stripe balance handler" });
+    }
+  });
+
+  // Stripe payouts
+  app.get("/api/stripe/payouts", async (req, res) => {
+    try {
+      const payoutsHandler = await import("../api/stripe/payouts");
+      await payoutsHandler.default(req as any, res as any);
+    } catch (error) {
+      console.error("Error importing Stripe payouts handler:", error);
+      res.status(500).json({ error: "Failed to load Stripe payouts handler" });
+    }
+  });
+
+  app.post("/api/stripe/payouts", async (req, res) => {
+    try {
+      const payoutsHandler = await import("../api/stripe/payouts");
+      await payoutsHandler.default(req as any, res as any);
+    } catch (error) {
+      console.error("Error importing Stripe payouts handler:", error);
+      res.status(500).json({ error: "Failed to load Stripe payouts handler" });
+    }
+  });
+
+  // Stripe transactions
+  app.get("/api/stripe/transactions", async (req, res) => {
+    try {
+      const transactionsHandler = await import("../api/stripe/transactions");
+      await transactionsHandler.default(req as any, res as any);
+    } catch (error) {
+      console.error("Error importing Stripe transactions handler:", error);
+      res.status(500).json({ error: "Failed to load Stripe transactions handler" });
+    }
+  });
+
+  // Stripe payout schedule
+  app.get("/api/stripe/payout-schedule", async (req, res) => {
+    try {
+      const scheduleHandler = await import("../api/stripe/payout-schedule");
+      await scheduleHandler.default(req as any, res as any);
+    } catch (error) {
+      console.error("Error importing Stripe payout schedule handler:", error);
+      res.status(500).json({ error: "Failed to load Stripe payout schedule handler" });
+    }
+  });
+
+  app.put("/api/stripe/payout-schedule", async (req, res) => {
+    try {
+      const scheduleHandler = await import("../api/stripe/payout-schedule");
+      await scheduleHandler.default(req as any, res as any);
+    } catch (error) {
+      console.error("Error importing Stripe payout schedule handler:", error);
+      res.status(500).json({ error: "Failed to load Stripe payout schedule handler" });
+    }
+  });
+
+  // ==================== End Stripe Financial Routes ====================
+
   // ==================== Provider Services Management ====================
   
   // Get provider services

@@ -82,6 +82,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Continue anyway - we still return the Stripe data
     }
 
+    // Also ensure business_profiles has the stripe_account_id
+    const { error: businessUpdateError } = await supabase
+      .from("business_profiles")
+      .update({
+        stripe_account_id: connectAccount.stripe_account_id,
+      })
+      .eq("id", businessId);
+
+    if (businessUpdateError) {
+      console.error("Error updating business_profiles.stripe_account_id:", businessUpdateError);
+      // Continue anyway
+    }
+
     // Determine onboarding status
     let onboardingStatus = "pending";
     let onboardingMessage = "Account setup in progress";

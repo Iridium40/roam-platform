@@ -214,7 +214,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         enabled: true,
         allow_redirects: 'never', // Disable redirect-based payment methods like Cash App
       },
-      payment_method_types: ['card'], // Only allow card payments (includes Apple Pay & Google Pay)
+      // Note: Cannot use payment_method_types when automatic_payment_methods is enabled
+      // automatic_payment_methods handles card, Apple Pay, Google Pay automatically
     });
 
     // If bookingId provided, update booking with payment intent

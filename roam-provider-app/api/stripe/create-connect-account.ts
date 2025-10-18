@@ -81,29 +81,45 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Validate business type specific fields
     if (businessType === "individual") {
-      if (!firstName || !lastName || !dateOfBirth) {
+      if (!firstName || !lastName) {
         return res.status(400).json({ 
-          error: "Individual accounts require firstName, lastName, and dateOfBirth"
+          error: "Individual accounts require firstName and lastName"
         });
       }
+      // dateOfBirth is optional - Stripe will collect during onboarding if needed
     } else if (businessType === "company") {
-      if (!companyName || !taxId) {
+      if (!companyName) {
         return res.status(400).json({ 
-          error: "Company accounts require companyName and taxId"
+          error: "Company accounts require companyName"
         });
       }
+      // taxId is optional - Stripe will collect during onboarding if needed
     }
 
-    // Verify business profile exists and is approved
+    // Verify business profile exists
     const { data: businessProfile, error: businessError } = await supabase
       .from("business_profiles")
       .select("*")
       .eq("id", businessId)
-      .eq("owner_user_id", userId)
       .single();
 
     if (businessError || !businessProfile) {
       return res.status(404).json({ error: "Business profile not found" });
+    }
+
+    // Verify user has access to this business (is a provider for this business)
+    const { data: providerAccess, error: providerError } = await supabase
+      .from("providers")
+      .select("id, provider_role")
+      .eq("user_id", userId)
+      .eq("business_id", businessId)
+      .single();
+
+    if (providerError || !providerAccess) {
+      return res.status(403).json({ 
+        error: "Access denied",
+        details: "You don't have permission to create a Stripe account for this business"
+      });
     }
 
     if (businessProfile.verification_status !== "approved") {
@@ -166,11 +182,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         last_name: lastName!,
         email,
         phone: phone || undefined,
-        dob: {
-          day: parseInt(dateOfBirth!.split('-')[2]),
-          month: parseInt(dateOfBirth!.split('-')[1]),
-          year: parseInt(dateOfBirth!.split('-')[0]),
-        },
+        // DOB is optional - Stripe will collect during onboarding if not provided
+        dob: dateOfBirth ? {
+          day: parseInt(dateOfBirth.split('-')[2]),
+          month: parseInt(dateOfBirth.split('-')[1]),
+          year: parseInt(dateOfBirth.split('-')[0]),
+        } : undefined,
         ssn_last_4: ssnLast4 || undefined,
         address: {
           country,
@@ -186,7 +203,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (businessType === "company") {
       accountParams.company = {
         name: companyName!,
-        tax_id: taxId!,
+        tax_id: taxId || undefined, // Optional - Stripe will collect during onboarding
         phone: phone || undefined,
         address: {
           country,
@@ -205,7 +222,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     console.log("Stripe Connect account created:", account.id);
 
-    // Store account information in database
+    // Store account information in stripe_connect_accounts table
     const { error: dbError } = await supabase
       .from("stripe_connect_accounts")
       .insert({
@@ -226,6 +243,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (dbError) {
       console.error("Error storing connect account in database:", dbError);
       // Continue anyway - Stripe account was created successfully
+    }
+
+    // CRITICAL: Also update business_profiles with stripe_account_id for balance queries
+    const { error: businessUpdateError } = await supabase
+      .from("business_profiles")
+      .update({
+        stripe_account_id: account.id,
+      })
+      .eq("id", businessId);
+
+    if (businessUpdateError) {
+      console.error("Error updating business_profiles with stripe_account_id:", businessUpdateError);
+      // Continue anyway - the account was created
+    } else {
+      console.log("✅ Updated business_profiles.stripe_account_id:", account.id);
     }
 
     // Create account link for onboarding

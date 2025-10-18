@@ -32,6 +32,36 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: `Webhook signature verification failed: ${err.message}` });
   }
 
+  // Record webhook event in database for audit trail
+  let webhookEventId: string | null = null;
+  try {
+    const { data: webhookEvent, error: webhookError } = await supabase
+      .from('stripe_tax_webhook_events')
+      .insert({
+        stripe_event_id: event.id,
+        stripe_event_type: event.type,
+        stripe_object_id: (event.data.object as any).id || null,
+        stripe_object_type: (event.data.object as any).object || null,
+        event_data: event.data as any,
+        processed: false,
+        api_version: event.api_version,
+        webhook_received_at: new Date().toISOString(),
+      })
+      .select('id')
+      .single();
+
+    if (webhookError) {
+      console.error('⚠️ Failed to record webhook event:', webhookError);
+      // Continue processing anyway - don't fail webhook due to logging
+    } else {
+      webhookEventId = webhookEvent?.id || null;
+      console.log('✅ Webhook event recorded:', event.id);
+    }
+  } catch (err) {
+    console.error('⚠️ Error recording webhook event:', err);
+    // Continue processing anyway
+  }
+
   try {
     console.log('📋 Processing event type:', event.type);
     
@@ -48,6 +78,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         console.log(`⚠️ Unhandled event type: ${event.type}`);
     }
 
+    // Mark webhook event as processed
+    if (webhookEventId) {
+      await supabase
+        .from('stripe_tax_webhook_events')
+        .update({
+          processed: true,
+          processed_at: new Date().toISOString(),
+        })
+        .eq('id', webhookEventId);
+    }
+
     console.log('✅ Webhook processed successfully');
     return res.status(200).json({ received: true });
   } catch (error: any) {
@@ -56,6 +97,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       message: error.message,
       stack: error.stack
     });
+
+    // Mark webhook event as failed with error
+    if (webhookEventId) {
+      await supabase
+        .from('stripe_tax_webhook_events')
+        .update({
+          processed: false,
+          processing_error: error.message || 'Unknown error',
+          processed_at: new Date().toISOString(),
+        })
+        .eq('id', webhookEventId);
+    }
+
     return res.status(500).json({ error: error.message });
   }
 }

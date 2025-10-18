@@ -40,7 +40,8 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
   const handleSignOut = async () => {
     try {
       await signOut();
-      // Navigation will be handled automatically by ProtectedRoute
+      // Navigate to provider portal after successful sign out
+      navigate("/provider-portal", { replace: true });
     } catch (error) {
       console.error("Sign out error:", error);
       // Still navigate on error

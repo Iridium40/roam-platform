@@ -4,9 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -29,6 +31,7 @@ import {
   Copy,
   Eye,
   EyeOff,
+  XCircle,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
@@ -86,6 +89,9 @@ export default function BankAccountManager({ userId, businessId }: BankAccountMa
   const [plaidLoading, setPlaidLoading] = useState(false);
   const [manualLoading, setManualLoading] = useState(false);
   const [showAccountNumber, setShowAccountNumber] = useState<{ [key: string]: boolean }>({});
+  const [stripeConnectStatus, setStripeConnectStatus] = useState<any>(null);
+  const [checkingStripe, setCheckingStripe] = useState(false);
+  const [creatingStripe, setCreatingStripe] = useState(false);
 
   // Manual form state
   const [manualForm, setManualForm] = useState({
@@ -154,7 +160,135 @@ export default function BankAccountManager({ userId, businessId }: BankAccountMa
 
   useEffect(() => {
     loadBankAccounts();
+    checkStripeConnectStatus();
   }, [userId, businessId]);
+
+  // Check Stripe Connect account status
+  const checkStripeConnectStatus = async () => {
+    try {
+      setCheckingStripe(true);
+      const response = await fetch(`/api/stripe/check-connect-account-status?userId=${userId}&businessId=${businessId}`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.account) {
+          setStripeConnectStatus(data.account);
+        }
+      } else if (response.status === 404) {
+        // No account exists yet
+        setStripeConnectStatus(null);
+      }
+    } catch (error) {
+      console.log('No Stripe Connect account found');
+      setStripeConnectStatus(null);
+    } finally {
+      setCheckingStripe(false);
+    }
+  };
+
+  // Create Stripe Connect account
+  const createStripeConnectAccount = async () => {
+    try {
+      setCreatingStripe(true);
+      
+      // Get business and provider data
+      const { data: businessData, error: businessError } = await supabase
+        .from('business_profiles')
+        .select('business_name, business_type, contact_email, phone')
+        .eq('id', businessId)
+        .single();
+
+      if (businessError || !businessData) {
+        throw new Error('Business not found');
+      }
+
+      const { data: providerData, error: providerError } = await supabase
+        .from('providers')
+        .select('first_name, last_name, email')
+        .eq('user_id', userId)
+        .single();
+
+      if (providerError || !providerData) {
+        throw new Error('Provider not found');
+      }
+
+      // Get tax info for company accounts
+      const { data: taxInfo } = await supabase
+        .from('business_stripe_tax_info')
+        .select('legal_business_name, tax_id, tax_id_type, business_entity_type')
+        .eq('business_id', businessId)
+        .single();
+
+      // Prepare request body
+      const requestBody: any = {
+        userId,
+        businessId,
+        businessName: businessData.business_name,
+        businessType: businessData.business_type === 'sole_proprietorship' ? 'individual' : 'company',
+        email: businessData.contact_email || providerData.email,
+        country: 'US',
+        firstName: providerData.first_name,
+        lastName: providerData.last_name,
+        phone: businessData.phone,
+      };
+
+      // Add company-specific fields if business type is company
+      if (requestBody.businessType === 'company') {
+        if (taxInfo) {
+          requestBody.companyName = taxInfo.legal_business_name || businessData.business_name;
+          requestBody.taxId = taxInfo.tax_id;
+        } else {
+          // Use business name as fallback, but create with minimal info
+          requestBody.companyName = businessData.business_name;
+          // Note: Stripe will ask for tax ID during onboarding
+        }
+      }
+
+      // Create Connect account
+      const response = await fetch('/api/stripe/create-connect-account', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to create Stripe Connect account');
+      }
+
+      // Check if test mode
+      if (result.testMode) {
+        toast({
+          title: "Development Mode",
+          description: "Mock Stripe Connect account created successfully",
+        });
+        await checkStripeConnectStatus();
+        return;
+      }
+
+      // Open Stripe onboarding in new tab
+      if (result.accountLink?.url) {
+        window.open(result.accountLink.url, '_blank');
+        toast({
+          title: "Stripe Connect",
+          description: "Complete your Stripe account setup in the new tab",
+        });
+      }
+
+      await checkStripeConnectStatus();
+
+    } catch (error) {
+      console.error('Error creating Stripe Connect account:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to create Stripe account",
+        variant: "destructive",
+      });
+    } finally {
+      setCreatingStripe(false);
+    }
+  };
 
   // Initialize Plaid Link
   const initializePlaid = async () => {
@@ -221,19 +355,6 @@ export default function BankAccountManager({ userId, businessId }: BankAccountMa
         return;
       }
 
-      // Create Stripe account link for verification
-      const { data: accountLinkData, error: accountLinkError } = await supabase.functions.invoke('create-stripe-account-link', {
-        body: {
-          user_id: userId,
-          business_id: businessId,
-          account_type: 'express',
-          refresh_url: `${window.location.origin}/provider/dashboard?tab=financials`,
-          return_url: `${window.location.origin}/provider/dashboard?tab=financials`,
-        }
-      });
-
-      if (accountLinkError) throw accountLinkError;
-
       // Save bank account to database
       const { data: bankAccountData, error: bankAccountError } = await supabase
         .from('manual_bank_accounts')
@@ -247,6 +368,7 @@ export default function BankAccountManager({ userId, businessId }: BankAccountMa
           bank_name: manualForm.bank_name,
           is_verified: false,
           is_default: bankAccounts.length === 0, // First account is default
+          verification_status: 'pending',
         })
         .select()
         .single();
@@ -264,14 +386,9 @@ export default function BankAccountManager({ userId, businessId }: BankAccountMa
         throw bankAccountError;
       }
 
-      // Redirect to Stripe for verification
-      if (accountLinkData?.url) {
-        window.open(accountLinkData.url, '_blank');
-      }
-
       toast({
         title: "Bank Account Added",
-        description: "Please complete verification with Stripe to enable payouts",
+        description: "Account saved successfully. Next, create a Stripe Connect account to enable payouts.",
       });
 
       setShowManualDialog(false);
@@ -289,7 +406,7 @@ export default function BankAccountManager({ userId, businessId }: BankAccountMa
       console.error('Error adding bank account:', error);
       toast({
         title: "Error",
-        description: "Failed to add bank account",
+        description: error instanceof Error ? error.message : "Failed to add bank account",
         variant: "destructive",
       });
     } finally {
@@ -546,6 +663,124 @@ export default function BankAccountManager({ userId, businessId }: BankAccountMa
           ))}
         </div>
       )}
+
+      {/* Stripe Connect Status */}
+      <Card className="border-2 border-blue-200 bg-blue-50">
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <CreditCard className="w-5 h-5 text-blue-600" />
+            <span>Stripe Connect Account</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {checkingStripe ? (
+            <div className="flex items-center space-x-2">
+              <RefreshCw className="w-4 h-4 animate-spin" />
+              <span className="text-sm">Checking account status...</span>
+            </div>
+          ) : stripeConnectStatus ? (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium">Account ID: {stripeConnectStatus.id}</p>
+                  <p className="text-sm text-gray-600 mt-1">Status: {stripeConnectStatus.status}</p>
+                </div>
+                {stripeConnectStatus.charges_enabled && stripeConnectStatus.payouts_enabled ? (
+                  <Badge className="bg-green-100 text-green-800 border-green-300">
+                    <CheckCircle className="w-3 h-3 mr-1" />
+                    Active
+                  </Badge>
+                ) : (
+                  <Badge variant="secondary">
+                    <AlertCircle className="w-3 h-3 mr-1" />
+                    Setup Incomplete
+                  </Badge>
+                )}
+              </div>
+              
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="flex items-center space-x-2">
+                  {stripeConnectStatus.charges_enabled ? (
+                    <CheckCircle className="w-4 h-4 text-green-600" />
+                  ) : (
+                    <XCircle className="w-4 h-4 text-red-500" />
+                  )}
+                  <span>Charges {stripeConnectStatus.charges_enabled ? 'Enabled' : 'Disabled'}</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  {stripeConnectStatus.payouts_enabled ? (
+                    <CheckCircle className="w-4 h-4 text-green-600" />
+                  ) : (
+                    <XCircle className="w-4 h-4 text-red-500" />
+                  )}
+                  <span>Payouts {stripeConnectStatus.payouts_enabled ? 'Enabled' : 'Disabled'}</span>
+                </div>
+              </div>
+
+              {!stripeConnectStatus.details_submitted && stripeConnectStatus.requirements?.currently_due?.length > 0 && (
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    {stripeConnectStatus.requirements.currently_due.length} items need to be completed in Stripe
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={checkStripeConnectStatus}
+                className="w-full"
+              >
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Refresh Status
+              </Button>
+            </div>
+          ) : (
+            <div className="text-center space-y-4">
+              <div className="bg-white p-6 rounded-lg">
+                <AlertCircle className="w-12 h-12 text-blue-600 mx-auto mb-3" />
+                <h3 className="font-semibold text-gray-900 mb-2">Stripe Connect Required</h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Create a Stripe Connect account to receive payments and manage payouts for your business.
+                </p>
+                <ul className="text-left text-sm text-gray-600 space-y-2 mb-4">
+                  <li className="flex items-start">
+                    <CheckCircle className="w-4 h-4 text-green-600 mr-2 mt-0.5 flex-shrink-0" />
+                    <span>Receive payments directly from customers</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckCircle className="w-4 h-4 text-green-600 mr-2 mt-0.5 flex-shrink-0" />
+                    <span>Automated payout scheduling</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckCircle className="w-4 h-4 text-green-600 mr-2 mt-0.5 flex-shrink-0" />
+                    <span>Real-time balance and transaction tracking</span>
+                  </li>
+                </ul>
+              </div>
+              
+              <Button
+                onClick={createStripeConnectAccount}
+                disabled={creatingStripe}
+                className="w-full bg-blue-600 hover:bg-blue-700"
+              >
+                {creatingStripe ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    Creating Account...
+                  </>
+                ) : (
+                  <>
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    Create Stripe Connect Account
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Plaid Dialog */}
       <Dialog open={showPlaidDialog} onOpenChange={setShowPlaidDialog}>

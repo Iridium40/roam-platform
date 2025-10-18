@@ -82,6 +82,12 @@ export default function FinancialsTab({
   const [stripeLoading, setStripeLoading] = useState(false);
   const [payoutSchedule, setPayoutSchedule] = useState<any>(null);
 
+  // Supabase financial data state
+  const [financialTransactions, setFinancialTransactions] = useState<any[]>([]);
+  const [paymentTransactions, setPaymentTransactions] = useState<any[]>([]);
+  const [businessPaymentTransactions, setBusinessPaymentTransactions] = useState<any[]>([]);
+  const [supabaseLoading, setSupabaseLoading] = useState(false);
+
   // Payout request state
   const [payoutDialogOpen, setPayoutDialogOpen] = useState(false);
   const [payoutAmount, setPayoutAmount] = useState("");
@@ -120,6 +126,73 @@ export default function FinancialsTab({
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Load Supabase financial transactions
+  const loadSupabaseFinancialData = async () => {
+    if (!businessId) return;
+
+    try {
+      setSupabaseLoading(true);
+
+      // Load financial_transactions through bookings (since financial_transactions has booking_id, not business_id)
+      const { data: financialData, error: financialError } = await supabase
+        .from('financial_transactions')
+        .select(`
+          *,
+          bookings!inner(business_id)
+        `)
+        .eq('bookings.business_id', businessId)
+        .order('processed_at', { ascending: false })
+        .limit(50);
+
+      if (financialError) {
+        console.error('Error loading financial transactions:', financialError);
+      } else {
+        setFinancialTransactions(financialData || []);
+      }
+
+      // Load payment_transactions through bookings (since payment_transactions has booking_id, not business_id)
+      const { data: paymentData, error: paymentError } = await supabase
+        .from('payment_transactions')
+        .select(`
+          *,
+          bookings!inner(business_id)
+        `)
+        .eq('bookings.business_id', businessId)
+        .order('processed_at', { ascending: false })
+        .limit(50);
+
+      if (paymentError) {
+        console.error('Error loading payment transactions:', paymentError);
+      } else {
+        setPaymentTransactions(paymentData || []);
+      }
+
+      // Load business_payment_transactions (this table has business_id directly)
+      const { data: businessPaymentData, error: businessPaymentError } = await supabase
+        .from('business_payment_transactions')
+        .select('*')
+        .eq('business_id', businessId)
+        .order('payment_date', { ascending: false })
+        .limit(50);
+
+      if (businessPaymentError) {
+        console.error('Error loading business payment transactions:', businessPaymentError);
+      } else {
+        setBusinessPaymentTransactions(businessPaymentData || []);
+      }
+
+    } catch (error) {
+      console.error('Error loading Supabase financial data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load transaction data",
+        variant: "destructive",
+      });
+    } finally {
+      setSupabaseLoading(false);
     }
   };
 
@@ -280,7 +353,7 @@ export default function FinancialsTab({
     }
   };
 
-  // Refresh all Stripe data
+  // Refresh all financial data
   const refreshStripeData = async () => {
     setStripeLoading(true);
     await Promise.all([
@@ -288,6 +361,7 @@ export default function FinancialsTab({
       loadStripePayouts(),
       loadStripeTransactions(),
       loadPayoutSchedule(),
+      loadSupabaseFinancialData(), // Also refresh Supabase data
     ]);
     setStripeLoading(false);
   };
@@ -306,6 +380,7 @@ export default function FinancialsTab({
     loadStripePayouts();
     loadStripeTransactions();
     loadPayoutSchedule();
+    loadSupabaseFinancialData(); // Load Supabase financial data
   }, [providerData, business]);
 
   // Calculate financial metrics
@@ -462,10 +537,10 @@ export default function FinancialsTab({
         <Card className="p-6 border-2 border-green-200 bg-green-50">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600 flex items-center gap-2">
+              <div className="text-sm text-gray-600 flex items-center gap-2">
                 Available Balance
                 <Badge variant="outline" className="bg-white">Ready</Badge>
-              </p>
+              </div>
               <p className="text-4xl font-bold text-gray-900 mt-2">
                 ${stripeBalance?.available?.toFixed(2) || "0.00"}
               </p>
@@ -480,10 +555,10 @@ export default function FinancialsTab({
         <Card className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600 flex items-center gap-2">
+              <div className="text-sm text-gray-600 flex items-center gap-2">
                 Pending Balance
                 <Badge variant="outline">Processing</Badge>
-              </p>
+              </div>
               <p className="text-4xl font-bold text-gray-900 mt-2">
                 ${stripeBalance?.pending?.toFixed(2) || "0.00"}
               </p>
@@ -825,20 +900,21 @@ export default function FinancialsTab({
 
         {/* Payouts Tab */}
         <TabsContent value="payouts" className="space-y-6 mt-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
+          {/* Stripe Payouts */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
                 <Wallet className="w-5 h-5" />
-                <span>Payout History</span>
-          </CardTitle>
-              <CardDescription>View all your past and pending payouts</CardDescription>
-        </CardHeader>
-        <CardContent>
+                <span>Stripe Payouts</span>
+              </CardTitle>
+              <CardDescription>Direct payouts from Stripe to your bank account</CardDescription>
+            </CardHeader>
+            <CardContent>
               <div className="space-y-3">
                 {stripePayouts.length > 0 ? (
                   stripePayouts.map((payout) => (
                     <div key={payout.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                <div className="flex items-center space-x-3">
+                      <div className="flex items-center space-x-3">
                         <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
                           payout.status === 'paid' ? 'bg-green-100' :
                           payout.status === 'pending' ? 'bg-yellow-100' :
@@ -884,13 +960,61 @@ export default function FinancialsTab({
                 ) : (
                   <div className="text-center py-8">
                     <Wallet className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                    <p className="text-sm text-gray-500">No payouts yet</p>
+                    <p className="text-sm text-gray-500">No Stripe payouts yet</p>
                     <p className="text-xs text-gray-400 mt-1">Request your first payout above</p>
                   </div>
-                        )}
-                      </div>
+                )}
+              </div>
             </CardContent>
           </Card>
+
+          {/* Business Payment Transactions (Provider Payouts) */}
+          {businessPaymentTransactions.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Building2 className="w-5 h-5" />
+                  <span>Provider Payouts</span>
+                </CardTitle>
+                <CardDescription>Your earnings transferred to your account</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {businessPaymentTransactions.map((payout) => (
+                    <div key={payout.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-green-100">
+                          <CheckCircle className="w-5 h-5 text-green-600" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-sm">
+                            ${payout.net_payment_amount.toFixed(2)} to you
+                          </p>
+                          <p className="text-xs text-gray-600">
+                            {payout.booking_id && `Booking ID: ${payout.booking_id}`}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {new Date(payout.payment_date).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold text-green-600">
+                          +${payout.net_payment_amount.toFixed(2)}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Platform fee: ${payout.platform_fee.toFixed(2)}
+                        </p>
+                        <p className="text-xs text-gray-400">
+                          Tax Year: {payout.tax_year}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         {/* Transactions Tab */}
@@ -901,53 +1025,121 @@ export default function FinancialsTab({
                 <Receipt className="w-5 h-5" />
                 <span>Transaction History</span>
               </CardTitle>
-              <CardDescription>All charges, fees, and balance changes</CardDescription>
+              <CardDescription>All charges, fees, and balance changes from your bookings</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {stripeTransactions.length > 0 ? (
-                  stripeTransactions.map((transaction) => (
+                {financialTransactions.length > 0 ? (
+                  financialTransactions.map((transaction) => (
                     <div key={transaction.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                       <div className="flex items-center space-x-3">
                         <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                          transaction.type === 'charge' ? 'bg-green-100' :
-                          transaction.type === 'payout' ? 'bg-blue-100' :
-                          transaction.type === 'refund' ? 'bg-red-100' :
+                          transaction.transaction_type === 'service_payment' ? 'bg-green-100' :
+                          transaction.transaction_type === 'tip_payment' ? 'bg-blue-100' :
+                          transaction.transaction_type === 'refund' ? 'bg-red-100' :
                           'bg-gray-100'
                         }`}>
-                          {transaction.type === 'charge' ? (
+                          {transaction.transaction_type === 'service_payment' ? (
                             <ArrowDownRight className="w-5 h-5 text-green-600" />
-                          ) : transaction.type === 'payout' ? (
-                            <ArrowUpRight className="w-5 h-5 text-blue-600" />
+                          ) : transaction.transaction_type === 'tip_payment' ? (
+                            <DollarSign className="w-5 h-5 text-blue-600" />
                           ) : (
                             <Receipt className="w-5 h-5 text-gray-600" />
-                    )}
-                  </div>
-                  <div>
-                          <p className="font-medium text-sm capitalize">{transaction.type}</p>
-                    <p className="text-xs text-gray-600">
-                            {new Date(transaction.created * 1000).toLocaleDateString()}
-                            {transaction.description && ` • ${transaction.description}`}
-                    </p>
-                  </div>
-                </div>
-                <div className="text-right">
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-medium text-sm">
+                            {transaction.description || transaction.transaction_type?.replace('_', ' ')}
+                          </p>
+                          <p className="text-xs text-gray-600">
+                            {transaction.booking_id && `Booking ID: ${transaction.booking_id}`}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {new Date(transaction.processed_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
                         <p className={`font-semibold ${transaction.amount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                           {transaction.amount >= 0 ? '+' : ''}${Math.abs(transaction.amount).toFixed(2)}
                         </p>
-                        <p className="text-xs text-gray-500">Net: ${transaction.net.toFixed(2)}</p>
-                </div>
-              </div>
+                        <p className="text-xs text-gray-500">{transaction.currency}</p>
+                        <p className="text-xs text-gray-400">
+                          {transaction.status === 'completed' ? '✓ Completed' : 
+                           transaction.status === 'pending' ? '⏳ Pending' : 
+                           transaction.status}
+                        </p>
+                      </div>
+                    </div>
                   ))
                 ) : (
                   <div className="text-center py-8">
                     <Receipt className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                     <p className="text-sm text-gray-500">No transactions yet</p>
+                    <p className="text-xs text-gray-400 mt-1">Complete your first booking to see transactions here</p>
                   </div>
                 )}
-          </div>
-        </CardContent>
-      </Card>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Payment Splits Section */}
+          {paymentTransactions.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <PieChart className="w-5 h-5" />
+                  <span>Payment Breakdown</span>
+                </CardTitle>
+                <CardDescription>How your earnings are split between platform fees and your payout</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {paymentTransactions.map((payment) => (
+                    <div key={payment.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                          payment.transaction_type === 'service_fee' ? 'bg-orange-100' :
+                          payment.transaction_type === 'remaining_balance' ? 'bg-green-100' :
+                          'bg-gray-100'
+                        }`}>
+                          {payment.transaction_type === 'service_fee' ? (
+                            <TrendingDown className="w-5 h-5 text-orange-600" />
+                          ) : (
+                            <TrendingUp className="w-5 h-5 text-green-600" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-medium text-sm">
+                            {payment.transaction_type === 'service_fee' ? 'Platform Fee (12%)' : 'Your Earnings (88%)'}
+                          </p>
+                          <p className="text-xs text-gray-600">
+                            {payment.booking_id && `Booking ID: ${payment.booking_id}`}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {new Date(payment.processed_at || payment.created_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className={`font-semibold ${payment.transaction_type === 'service_fee' ? 'text-orange-600' : 'text-green-600'}`}>
+                          {payment.transaction_type === 'service_fee' ? '-' : '+'}${Math.abs(payment.amount).toFixed(2)}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {payment.destination_account === 'roam_platform' ? 'To Platform' : 'To You'}
+                        </p>
+                        <p className="text-xs text-gray-400">
+                          {payment.status === 'completed' ? '✓ Completed' : 
+                           payment.status === 'pending' ? '⏳ Pending' : 
+                           payment.status}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         {/* Settings Tab */}

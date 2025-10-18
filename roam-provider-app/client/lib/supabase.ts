@@ -67,6 +67,18 @@ const createSupabaseClient = (): SupabaseClient<Database> => {
 
 export const supabase = createSupabaseClient();
 
+// Create admin client for server-side operations
+export const supabaseAdmin = createClient<Database>(
+  supabaseUrl,
+  import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY || supabaseAnonKey,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
+);
+
 // Add type declarations to prevent TypeScript errors
 declare global {
   interface Window {
@@ -74,3 +86,4 @@ declare global {
     __SUPABASE_CONNECTION_TESTED__?: boolean;
   }
 }
+

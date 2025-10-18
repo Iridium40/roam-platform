@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
-import { AuthAPI } from "@/lib/supabase/auth";
+import { AuthAPI } from "@/lib/supabase-utils/auth";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "@/hooks/use-toast";
 

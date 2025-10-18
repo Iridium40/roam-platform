@@ -329,14 +329,17 @@ export default function ProviderDashboard() {
   const handleSignOut = async () => {
     try {
       await signOut();
-      // Redirect will be handled by the auth context
+      // Navigate to provider portal after successful sign out
+      navigate("/provider-portal", { replace: true });
     } catch (error) {
       console.error("Error signing out:", error);
-        toast({
-          title: "Error",
+      toast({
+        title: "Error",
         description: "Failed to sign out. Please try again.",
-          variant: "destructive",
-        });
+        variant: "destructive",
+      });
+      // Still navigate on error
+      navigate("/provider-portal", { replace: true });
     }
   };
 
