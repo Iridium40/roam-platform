@@ -7,11 +7,13 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 });
 
 const supabase = createClient(
-  process.env.SUPABASE_URL!,
+  process.env.VITE_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  console.log('🔔 Webhook received:', req.method);
+  
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -19,16 +21,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const sig = req.headers['stripe-signature'] as string;
   const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
+  console.log('🔐 Verifying webhook signature...');
   let event: Stripe.Event;
 
   try {
     event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
+    console.log('✅ Webhook signature verified:', event.type);
   } catch (err: any) {
-    console.error('Webhook signature verification failed:', err.message);
+    console.error('❌ Webhook signature verification failed:', err.message);
     return res.status(400).json({ error: `Webhook signature verification failed: ${err.message}` });
   }
 
   try {
+    console.log('📋 Processing event type:', event.type);
+    
     switch (event.type) {
       case 'checkout.session.completed':
         await handleCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session);
@@ -39,12 +45,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         break;
 
       default:
-        console.log(`Unhandled event type: ${event.type}`);
+        console.log(`⚠️ Unhandled event type: ${event.type}`);
     }
 
+    console.log('✅ Webhook processed successfully');
     return res.status(200).json({ received: true });
   } catch (error: any) {
-    console.error('Webhook handler error:', error);
+    console.error('❌ Webhook handler error:', error);
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack
+    });
     return res.status(500).json({ error: error.message });
   }
 }
@@ -130,10 +141,12 @@ async function handleBookingPayment(session: Stripe.Checkout.Session) {
 
 async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent) {
   console.log('✅ Payment intent succeeded:', paymentIntent.id);
+  console.log('💳 Payment metadata:', paymentIntent.metadata);
   
   try {
     // Check if this is a tip payment
     if (paymentIntent.metadata?.type === 'tip') {
+      console.log('💰 Processing as tip payment');
       await handleTipPaymentIntent(paymentIntent);
       return;
     }
@@ -141,18 +154,26 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
     const bookingId = paymentIntent.metadata.bookingId;
     
     if (!bookingId) {
-      console.error('No booking ID in payment intent metadata');
+      console.error('❌ No booking ID in payment intent metadata');
+      console.error('Available metadata:', paymentIntent.metadata);
       return;
     }
 
     console.log(`📋 Confirming booking: ${bookingId}`);
 
     // Get booking details for transaction recording
-    const { data: booking } = await supabase
+    const { data: booking, error: bookingError } = await supabase
       .from('bookings')
       .select('business_id, total_amount')
       .eq('id', bookingId)
       .single();
+
+    if (bookingError) {
+      console.error('❌ Error fetching booking:', bookingError);
+      throw bookingError;
+    }
+
+    console.log('📦 Booking data:', booking);
 
     // Update booking status to confirmed
     const { error: updateError } = await supabase
@@ -166,15 +187,17 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
       .eq('id', bookingId);
 
     if (updateError) {
-      console.error('Error updating booking:', updateError);
+      console.error('❌ Error updating booking:', updateError);
       throw updateError;
     }
 
-    console.log(`✅ Booking ${bookingId} confirmed successfully`);
+    console.log(`✅ Booking ${bookingId} status updated to confirmed`);
 
     // Record in financial_transactions (overall payment ledger)
     const totalAmount = paymentIntent.amount / 100;
-    await supabase.from('financial_transactions').insert({
+    console.log(`💵 Recording financial transaction: $${totalAmount}`);
+    
+    const { error: financialError } = await supabase.from('financial_transactions').insert({
       booking_id: bookingId,
       amount: totalAmount,
       currency: paymentIntent.currency.toUpperCase(),
@@ -191,12 +214,21 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
       }
     });
 
+    if (financialError) {
+      console.error('❌ Error recording financial transaction:', financialError);
+      throw financialError;
+    }
+
+    console.log('✅ Financial transaction recorded');
+
     // Record payment splits in payment_transactions
     const platformFee = totalAmount * 0.12; // 12% platform fee
     const providerAmount = totalAmount - platformFee;
 
+    console.log(`💰 Recording payment splits: Platform $${platformFee.toFixed(2)}, Provider $${providerAmount.toFixed(2)}`);
+
     // Platform fee transaction
-    await supabase.from('payment_transactions').insert({
+    const { error: platformError } = await supabase.from('payment_transactions').insert({
       booking_id: bookingId,
       transaction_type: 'service_fee',
       amount: platformFee,
@@ -207,8 +239,15 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
       processed_at: new Date().toISOString()
     });
 
+    if (platformError) {
+      console.error('❌ Error recording platform fee:', platformError);
+      throw platformError;
+    }
+
+    console.log('✅ Platform fee transaction recorded');
+
     // Provider payment transaction (pending transfer)
-    await supabase.from('payment_transactions').insert({
+    const { error: providerError } = await supabase.from('payment_transactions').insert({
       booking_id: bookingId,
       transaction_type: 'remaining_balance',
       amount: providerAmount,
@@ -219,10 +258,17 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
       processed_at: null
     });
 
-    console.log(`✅ Financial transactions recorded for booking ${bookingId}`);
+    if (providerError) {
+      console.error('❌ Error recording provider payment:', providerError);
+      throw providerError;
+    }
 
-  } catch (error) {
-    console.error('Error handling payment intent succeeded:', error);
+    console.log('✅ Provider payment transaction recorded');
+    console.log(`✅ All financial transactions recorded for booking ${bookingId}`);
+
+  } catch (error: any) {
+    console.error('❌ Error handling payment intent succeeded:', error);
+    console.error('Error stack:', error.stack);
     throw error;
   }
 }
