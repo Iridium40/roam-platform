@@ -26,18 +26,12 @@ import {
   ExternalLink,
   Lock
 } from 'lucide-react';
-import { PlaidBankConnection } from '@/components/PlaidBankConnection';
+import StripeConnectSetup from '@/components/StripeConnectSetup';
 
 interface BankingPayoutData {
   stripeConnected: boolean;
-  plaidConnected: boolean;
-  bankAccount?: {
-    account_id: string;
-    mask: string;
-    name: string;
-    type: string;
-    institution_name: string;
-  };
+  stripeAccountId?: string;
+  stripeAccountStatus?: string;
 }
 
 interface BankingPayoutSetupProps {
@@ -62,7 +56,6 @@ export default function BankingPayoutSetup({
   const [bankingData, setBankingData] = useState<BankingPayoutData>(
     initialData || {
       stripeConnected: false,
-      plaidConnected: false,
     }
   );
   const [loading, setLoading] = useState(false);
@@ -153,16 +146,15 @@ export default function BankingPayoutSetup({
 
   const completionPercentage = () => {
     let completed = 0;
-    const total = 2; // stripe connection and plaid connection
+    const total = 1; // stripe connection only
 
     if (bankingData.stripeConnected) completed++;
-    if (bankingData.plaidConnected) completed++;
 
     return Math.round((completed / total) * 100);
   };
 
   const canSubmit = () => {
-    return bankingData.stripeConnected && bankingData.plaidConnected;
+    return bankingData.stripeConnected;
   };
 
   const handleSubmit = async () => {
@@ -325,12 +317,12 @@ export default function BankingPayoutSetup({
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <Label className="text-lg font-semibold">Bank Account Connection</Label>
-              <Badge className={bankingData.plaidConnected ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}>
-                {bankingData.plaidConnected ? 'Connected' : 'Not Connected'}
+              <Badge className={bankingData.stripeConnected ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}>
+                {bankingData.stripeConnected ? 'Connected' : 'Not Connected'}
               </Badge>
             </div>
             
-            {!bankingData.plaidConnected ? (
+            {!bankingData.stripeConnected ? (
               <Card className="p-6">
                 <div className="text-center space-y-4">
                   <Banknote className="w-12 h-12 text-gray-400 mx-auto" />
@@ -340,33 +332,17 @@ export default function BankingPayoutSetup({
                       Securely connect your bank account for automatic payouts
                     </p>
                   </div>
-                  <PlaidBankConnection
+                  <StripeConnectSetup
                       userId={userId}
                       businessId={businessId}
-                      businessType="llc"
-                      onConnectionComplete={(connectionData) => {
-                        console.log('Plaid connection completed:', connectionData);
-                        
-                        // Handle both direct data structure and nested connection structure
-                        const accounts = connectionData.accounts || connectionData.connection?.accounts;
-                        const institution = connectionData.institution || connectionData.connection?.institution;
-                        
-                        if (accounts && accounts[0] && institution) {
-                          setBankingData(prev => ({
-                            ...prev,
-                            plaidConnected: true,
-                            bankAccount: {
-                              account_id: accounts[0].account_id || '',
-                              mask: accounts[0].mask || '',
-                              name: accounts[0].name || '',
-                              type: accounts[0].type || '',
-                              institution_name: institution.name || 'Unknown Bank',
-                            }
-                          }));
-                        } else {
-                          console.error('Invalid connection data structure:', connectionData);
-                          setError('Invalid bank connection data received');
-                        }
+                      onConnectionComplete={(stripeData) => {
+                        console.log('Stripe Connect setup completed:', stripeData);
+                        setBankingData(prev => ({
+                          ...prev,
+                          stripeConnected: true,
+                          stripeAccountId: stripeData.accountId,
+                          stripeAccountStatus: stripeData.status
+                        }));
                       }}
                       onConnectionError={(error) => {
                         setError(error);
@@ -378,9 +354,9 @@ export default function BankingPayoutSetup({
                     <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
                       <p className="text-sm text-gray-700">
                         <strong>Debug Info:</strong> 
-                        <br />• The PlaidBankConnection component should show a "Connect Bank Account" button
+                        <br />• The StripeConnectSetup component should show Stripe Connect options
                         <br />• Check browser console for any API errors
-                        <br />• Make sure your Plaid environment variables are set
+                        <br />• Make sure your Stripe environment variables are set
                       </p>
                     </div>
                 </div>
@@ -450,7 +426,7 @@ export default function BankingPayoutSetup({
               <div className="mt-3 flex justify-center">
                 <Button
                   variant="outline"
-                  onClick={() => onComplete({ stripeConnected: true, plaidConnected: true })}
+                  onClick={() => onComplete({ stripeConnected: true })}
                   className="border-orange-300 text-orange-700 hover:bg-orange-50"
                 >
                   🚀 Skip to Service Pricing (Dev Mode)
@@ -474,9 +450,7 @@ export default function BankingPayoutSetup({
             >
               {!canSubmit() && (
                 <span className="text-xs mr-2">
-                  {!bankingData.stripeConnected && !bankingData.plaidConnected 
-                    ? "Connect Stripe & Bank Account" 
-                    : !bankingData.stripeConnected 
+                  {!bankingData.stripeConnected 
                     ? "Connect Stripe Account" 
                     : "Connect Bank Account"}
                 </span>

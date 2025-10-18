@@ -2,24 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import {
   AlertCircle,
   CheckCircle,
@@ -28,50 +11,10 @@ import {
   Shield,
   RefreshCw,
   ExternalLink,
-  Copy,
-  Eye,
-  EyeOff,
-  XCircle,
+  Clock,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
-
-interface BankAccount {
-  id: string;
-  user_id: string;
-  business_id: string | null;
-  account_name: string;
-  account_type: string;
-  account_number: string;
-  routing_number: string;
-  bank_name: string;
-  is_verified: boolean;
-  is_default: boolean;
-  stripe_account_id: string | null;
-  verification_status: string;
-  created_at: string | null;
-  updated_at: string | null;
-}
-
-interface PlaidBankConnection {
-  id: string;
-  user_id: string | null;
-  business_id: string | null;
-  plaid_access_token: string | null;
-  plaid_item_id: string | null;
-  plaid_account_id: string | null;
-  institution_id: string | null;
-  institution_name: string | null;
-  account_name: string | null;
-  account_mask: string | null;
-  account_type: string | null;
-  account_subtype: string | null;
-  verification_status: string | null;
-  routing_numbers: string[] | null;
-  account_number_mask: string | null;
-  connected_at: string | null;
-  is_active: boolean | null;
-}
 
 interface BankAccountManagerProps {
   userId: string;
@@ -80,88 +23,11 @@ interface BankAccountManagerProps {
 
 export default function BankAccountManager({ userId, businessId }: BankAccountManagerProps) {
   const { toast } = useToast();
-  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
-  const [plaidConnections, setPlaidConnections] = useState<PlaidBankConnection[]>([]);
   const [loading, setLoading] = useState(false);
-  const [showAddDialog, setShowAddDialog] = useState(false);
-  const [showPlaidDialog, setShowPlaidDialog] = useState(false);
-  const [showManualDialog, setShowManualDialog] = useState(false);
-  const [plaidLoading, setPlaidLoading] = useState(false);
-  const [manualLoading, setManualLoading] = useState(false);
-  const [showAccountNumber, setShowAccountNumber] = useState<{ [key: string]: boolean }>({});
-  const [stripeConnectStatus, setStripeConnectStatus] = useState<any>(null);
   const [checkingStripe, setCheckingStripe] = useState(false);
   const [creatingStripe, setCreatingStripe] = useState(false);
-
-  // Manual form state
-  const [manualForm, setManualForm] = useState({
-    account_name: '',
-    account_type: 'checking',
-    account_number: '',
-    routing_number: '',
-    bank_name: '',
-  });
-
-  // Load bank accounts and Plaid connections
-  const loadBankAccounts = async () => {
-    try {
-      setLoading(true);
-      
-      // Load manual bank accounts
-      const { data: bankAccountsData, error: bankAccountsError } = await supabase
-        .from('manual_bank_accounts')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
-
-      if (bankAccountsError) {
-        // If table doesn't exist, just set empty array
-        if (bankAccountsError.code === '42P01') {
-          console.log('manual_bank_accounts table does not exist yet');
-          setBankAccounts([]);
-        } else {
-          throw bankAccountsError;
-        }
-      } else {
-        setBankAccounts(bankAccountsData || []);
-      }
-
-      // Load Plaid bank connections
-      const { data: plaidConnectionsData, error: plaidConnectionsError } = await supabase
-        .from('plaid_bank_connections')
-        .select('*')
-        .eq('business_id', businessId)
-        .eq('is_active', true)
-        .order('connected_at', { ascending: false });
-
-      if (plaidConnectionsError) {
-        // If table doesn't exist, just set empty array
-        if (plaidConnectionsError.code === '42P01') {
-          console.log('plaid_bank_connections table does not exist yet');
-          setPlaidConnections([]);
-        } else {
-          throw plaidConnectionsError;
-        }
-      } else {
-        setPlaidConnections(plaidConnectionsData || []);
-      }
-      
-    } catch (error) {
-      console.error('Error loading bank accounts:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load bank accounts",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadBankAccounts();
-    checkStripeConnectStatus();
-  }, [userId, businessId]);
+  const [stripeAccount, setStripeAccount] = useState<any>(null);
+  const [stripeAccountStatus, setStripeAccountStatus] = useState<string>('');
 
   // Check Stripe Connect account status
   const checkStripeConnectStatus = async () => {
@@ -171,16 +37,17 @@ export default function BankAccountManager({ userId, businessId }: BankAccountMa
       
       if (response.ok) {
         const data = await response.json();
-        if (data.success && data.account) {
-          setStripeConnectStatus(data.account);
-        }
-      } else if (response.status === 404) {
-        // No account exists yet
-        setStripeConnectStatus(null);
+        setStripeAccount(data.account);
+        setStripeAccountStatus(data.status);
+      } else {
+        console.log('No Stripe Connect account found');
+        setStripeAccount(null);
+        setStripeAccountStatus('not_connected');
       }
     } catch (error) {
-      console.log('No Stripe Connect account found');
-      setStripeConnectStatus(null);
+      console.error('Error checking Stripe Connect status:', error);
+      setStripeAccount(null);
+      setStripeAccountStatus('error');
     } finally {
       setCheckingStripe(false);
     }
@@ -191,57 +58,23 @@ export default function BankAccountManager({ userId, businessId }: BankAccountMa
     try {
       setCreatingStripe(true);
       
-      // Get business and provider data
-      const { data: businessData, error: businessError } = await supabase
-        .from('business_profiles')
-        .select('business_name, business_type, contact_email, phone')
-        .eq('id', businessId)
-        .single();
-
-      if (businessError || !businessData) {
-        throw new Error('Business not found');
-      }
-
-      const { data: providerData, error: providerError } = await supabase
-        .from('providers')
-        .select('first_name, last_name, email')
-        .eq('user_id', userId)
-        .single();
-
-      if (providerError || !providerData) {
-        throw new Error('Provider not found');
-      }
-
-      // Get tax info for company accounts
-      const { data: taxInfo } = await supabase
+      // Get business tax info for Stripe Connect
+      const { data: taxInfo, error: taxError } = await supabase
         .from('business_stripe_tax_info')
-        .select('legal_business_name, tax_id, tax_id_type, business_entity_type')
+        .select('*')
         .eq('business_id', businessId)
         .single();
 
-      // Prepare request body
       const requestBody: any = {
-        userId,
         businessId,
-        businessName: businessData.business_name,
-        businessType: businessData.business_type === 'sole_proprietorship' ? 'individual' : 'company',
-        email: businessData.contact_email || providerData.email,
-        country: 'US',
-        firstName: providerData.first_name,
-        lastName: providerData.last_name,
-        phone: businessData.phone,
+        userId,
+        type: 'express', // Use Express accounts for easier onboarding
       };
 
-      // Add company-specific fields if business type is company
-      if (requestBody.businessType === 'company') {
-        if (taxInfo) {
-          requestBody.companyName = taxInfo.legal_business_name || businessData.business_name;
-          requestBody.taxId = taxInfo.tax_id;
-        } else {
-          // Use business name as fallback, but create with minimal info
-          requestBody.companyName = businessData.business_name;
-          // Note: Stripe will ask for tax ID during onboarding
-        }
+      // Add tax info if available
+      if (taxInfo && !taxError) {
+        requestBody.companyName = taxInfo.company_name;
+        requestBody.taxId = taxInfo.tax_id;
       }
 
       // Create Connect account
@@ -251,38 +84,27 @@ export default function BankAccountManager({ userId, businessId }: BankAccountMa
         body: JSON.stringify(requestBody),
       });
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to create Stripe Connect account');
+      if (response.ok) {
+        const data = await response.json();
+        
+        if (data.accountLink) {
+          // Open Stripe onboarding in new tab
+          window.open(data.accountLink.url, '_blank');
+          
+          toast({
+            title: "Stripe Account Created",
+            description: "Complete the onboarding process in the new tab to activate your account.",
+          });
+        }
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create Stripe Connect account');
       }
-
-      // Check if test mode
-      if (result.testMode) {
-        toast({
-          title: "Development Mode",
-          description: "Mock Stripe Connect account created successfully",
-        });
-        await checkStripeConnectStatus();
-        return;
-      }
-
-      // Open Stripe onboarding in new tab
-      if (result.accountLink?.url) {
-        window.open(result.accountLink.url, '_blank');
-        toast({
-          title: "Stripe Connect",
-          description: "Complete your Stripe account setup in the new tab",
-        });
-      }
-
-      await checkStripeConnectStatus();
-
     } catch (error) {
       console.error('Error creating Stripe Connect account:', error);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to create Stripe account",
+        description: error instanceof Error ? error.message : "Failed to create Stripe Connect account",
         variant: "destructive",
       });
     } finally {
@@ -290,451 +112,108 @@ export default function BankAccountManager({ userId, businessId }: BankAccountMa
     }
   };
 
-  // Initialize Plaid Link
-  const initializePlaid = async () => {
+  // Open Stripe Dashboard
+  const openStripeDashboard = async () => {
     try {
-      setPlaidLoading(true);
-      
-      // Create link token for Plaid using Vercel Edge Function
-      const response = await fetch('/api/plaid/create-link-token-edge', {
+      const response = await fetch('/api/stripe/dashboard-link', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId,
-          businessId,
-          businessType: 'individual', // Default for now
-          products: ['auth'],
-          country_codes: ['US'],
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ business_id: businessId }),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create Plaid link token');
+      if (response.ok) {
+        const data = await response.json();
+        window.open(data.url, '_blank');
+      } else {
+        throw new Error('Failed to create dashboard link');
       }
-
-      const linkTokenData = await response.json();
-      
-      // Initialize Plaid Link
-      const { Plaid } = await import('react-plaid-link');
-      
-      // This would typically be handled by a Plaid Link component
-      // For now, we'll simulate the flow
-      toast({
-        title: "Plaid Integration",
-        description: "Plaid integration will be implemented with the actual Plaid SDK",
-      });
-      
     } catch (error) {
-      console.error('Error initializing Plaid:', error);
+      console.error('Error opening Stripe dashboard:', error);
       toast({
         title: "Error",
-        description: "Failed to initialize Plaid",
-        variant: "destructive",
-      });
-    } finally {
-      setPlaidLoading(false);
-      setShowPlaidDialog(false);
-    }
-  };
-
-  // Add manual bank account
-  const addManualBankAccount = async () => {
-    try {
-      setManualLoading(true);
-      
-      // Validate form
-      if (!manualForm.account_name || !manualForm.account_number || !manualForm.routing_number || !manualForm.bank_name) {
-        toast({
-          title: "Validation Error",
-          description: "Please fill in all required fields",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Save bank account to database
-      const { data: bankAccountData, error: bankAccountError } = await supabase
-        .from('manual_bank_accounts')
-        .insert({
-          user_id: userId,
-          business_id: businessId,
-          account_name: manualForm.account_name,
-          account_type: manualForm.account_type,
-          account_number: manualForm.account_number,
-          routing_number: manualForm.routing_number,
-          bank_name: manualForm.bank_name,
-          is_verified: false,
-          is_default: bankAccounts.length === 0, // First account is default
-          verification_status: 'pending',
-        })
-        .select()
-        .single();
-
-      if (bankAccountError) {
-        // If table doesn't exist, show a message
-        if (bankAccountError.code === '42P01') {
-          toast({
-            title: "Database Setup Required",
-            description: "Bank account tables need to be created. Please contact support.",
-            variant: "destructive",
-          });
-          return;
-        }
-        throw bankAccountError;
-      }
-
-      toast({
-        title: "Bank Account Added",
-        description: "Account saved successfully. Next, create a Stripe Connect account to enable payouts.",
-      });
-
-      setShowManualDialog(false);
-      setManualForm({
-        account_name: '',
-        account_type: 'checking',
-        account_number: '',
-        routing_number: '',
-        bank_name: '',
-      });
-      
-      loadBankAccounts();
-      
-    } catch (error) {
-      console.error('Error adding bank account:', error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to add bank account",
-        variant: "destructive",
-      });
-    } finally {
-      setManualLoading(false);
-    }
-  };
-
-  // Set default account
-  const setDefaultAccount = async (accountId: string) => {
-    try {
-      // Update all accounts to not default
-      await supabase
-        .from('manual_bank_accounts')
-        .update({ is_default: false })
-        .eq('user_id', userId);
-
-      // Set selected account as default
-      await supabase
-        .from('manual_bank_accounts')
-        .update({ is_default: true })
-        .eq('id', accountId);
-
-      toast({
-        title: "Default Account Updated",
-        description: "Your default payout account has been updated",
-      });
-
-      loadBankAccounts();
-    } catch (error) {
-      console.error('Error setting default account:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update default account",
+        description: "Failed to open Stripe dashboard",
         variant: "destructive",
       });
     }
   };
 
-  // Remove bank account
-  const removeBankAccount = async (accountId: string) => {
-    try {
-      const { error } = await supabase
-        .from('manual_bank_accounts')
-        .delete()
-        .eq('id', accountId);
-
-      if (error) throw error;
-
-      toast({
-        title: "Account Removed",
-        description: "Bank account has been removed",
-      });
-
-      loadBankAccounts();
-    } catch (error) {
-      console.error('Error removing bank account:', error);
-      toast({
-        title: "Error",
-        description: "Failed to remove bank account",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Copy account number
-  const copyAccountNumber = (accountNumber: string) => {
-    navigator.clipboard.writeText(accountNumber);
-    toast({
-      title: "Copied",
-      description: "Account number copied to clipboard",
-    });
-  };
-
-  const toggleAccountNumberVisibility = (accountId: string) => {
-    setShowAccountNumber(prev => ({
-      ...prev,
-      [accountId]: !prev[accountId]
-    }));
-  };
+  useEffect(() => {
+    checkStripeConnectStatus();
+  }, [userId, businessId]);
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-semibold text-gray-900">Bank Account Management</h2>
-          <p className="text-sm text-gray-600">Connect your bank account to receive payouts</p>
-        </div>
-        <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-          <DialogTrigger asChild>
-            <Button>
-              <Building2 className="w-4 h-4 mr-2" />
-              Add Bank Account
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Add Bank Account</DialogTitle>
-              <DialogDescription>
-                Connect your bank account to receive payouts from your services.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="text-sm text-gray-600">
-                Choose how you'd like to connect your bank account:
-              </div>
-              
-              <Button
-                variant="outline"
-                className="w-full justify-start"
-                onClick={() => {
-                  setShowAddDialog(false);
-                  setShowPlaidDialog(true);
-                }}
-              >
-                <Shield className="w-4 h-4 mr-2" />
-                Connect with Plaid (Recommended)
-                <Badge className="ml-auto" variant="secondary">Secure</Badge>
-              </Button>
-              
-              <Button
-                variant="outline"
-                className="w-full justify-start"
-                onClick={() => {
-                  setShowAddDialog(false);
-                  setShowManualDialog(true);
-                }}
-              >
-                <CreditCard className="w-4 h-4 mr-2" />
-                Enter Manually
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      {/* Bank Accounts List */}
-      {loading ? (
-        <div className="space-y-4">
-          {[1, 2].map((i) => (
-            <Card key={i} className="p-6">
-              <div className="animate-pulse">
-                <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                <div className="h-6 bg-gray-200 rounded w-1/2"></div>
-              </div>
-            </Card>
-          ))}
-        </div>
-      ) : bankAccounts.length === 0 ? (
-        <Card className="p-8 text-center">
-                      <Building2 className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No Bank Accounts</h3>
-            <p className="text-gray-600 mb-4">
-              Add a bank account to start receiving payouts from your completed bookings.
-            </p>
-            <Button onClick={() => setShowAddDialog(true)}>
-              <Building2 className="w-4 h-4 mr-2" />
-              Add Your First Bank Account
-            </Button>
-        </Card>
-      ) : (
-        <div className="space-y-4">
-          {bankAccounts.map((account) => (
-            <Card key={account.id} className="p-6">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center space-x-3 mb-2">
-                    <Building2 className="w-5 h-5 text-blue-600" />
-                    <div>
-                      <h3 className="font-medium text-gray-900">{account.account_name}</h3>
-                      <p className="text-sm text-gray-600">{account.bank_name}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="text-gray-500">Account Type:</span>
-                      <span className="ml-2 font-medium capitalize">{account.account_type}</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Account Number:</span>
-                      <div className="flex items-center space-x-2">
-                        <span className="font-mono">
-                          {showAccountNumber[account.id] 
-                            ? account.account_number 
-                            : `••••${account.account_number.slice(-4)}`
-                          }
-                        </span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => toggleAccountNumberVisibility(account.id)}
-                        >
-                          {showAccountNumber[account.id] ? (
-                            <EyeOff className="w-3 h-3" />
-                          ) : (
-                            <Eye className="w-3 h-3" />
-                          )}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => copyAccountNumber(account.account_number)}
-                        >
-                          <Copy className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center space-x-4 mt-3">
-                    {account.is_verified ? (
-                      <Badge className="bg-green-100 text-green-800 border-green-300">
-                        <CheckCircle className="w-3 h-3 mr-1" />
-                        Verified
-                      </Badge>
-                    ) : (
-                      <Badge variant="secondary">
-                        <AlertCircle className="w-3 h-3 mr-1" />
-                        Pending Verification
-                      </Badge>
-                    )}
-                    
-                    {account.is_default && (
-                      <Badge className="bg-blue-100 text-blue-800 border-blue-300">
-                        Default
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-                
-                <div className="flex items-center space-x-2 ml-4">
-                  {!account.is_default && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setDefaultAccount(account.id)}
-                    >
-                      Set Default
-                    </Button>
-                  )}
-                  
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => removeBankAccount(account.id)}
-                    disabled={account.is_default && bankAccounts.length === 1}
-                  >
-                    Remove
-                  </Button>
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
-      )}
-
-      {/* Stripe Connect Status */}
-      <Card className="border-2 border-blue-200 bg-blue-50">
+      {/* Stripe Connect Account Status */}
+      <Card>
         <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <CreditCard className="w-5 h-5 text-blue-600" />
-            <span>Stripe Connect Account</span>
+          <CardTitle className="flex items-center gap-2">
+            <CreditCard className="w-5 h-5" />
+            Stripe Connect Account
           </CardTitle>
         </CardHeader>
         <CardContent>
           {checkingStripe ? (
-            <div className="flex items-center space-x-2">
-              <RefreshCw className="w-4 h-4 animate-spin" />
-              <span className="text-sm">Checking account status...</span>
+            <div className="flex items-center justify-center py-8">
+              <RefreshCw className="w-6 h-6 animate-spin text-blue-600" />
+              <span className="ml-2 text-gray-600">Checking account status...</span>
             </div>
-          ) : stripeConnectStatus ? (
-            <div className="space-y-3">
+          ) : stripeAccount ? (
+            <div className="space-y-4">
               <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                    <CheckCircle className="w-5 h-5 text-green-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900">Account Connected</h3>
+                    <p className="text-sm text-gray-600">
+                      Stripe ID: {stripeAccount.id}
+                    </p>
+                  </div>
+                </div>
+                <Badge 
+                  variant={stripeAccount.charges_enabled ? "default" : "secondary"}
+                  className={stripeAccount.charges_enabled ? "bg-green-100 text-green-800" : ""}
+                >
+                  {stripeAccount.charges_enabled ? "Active" : "Pending"}
+                </Badge>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <p className="font-medium">Account ID: {stripeConnectStatus.id}</p>
-                  <p className="text-sm text-gray-600 mt-1">Status: {stripeConnectStatus.status}</p>
+                  <span className="text-gray-500">Charges:</span>
+                  <span className={`ml-2 font-medium ${stripeAccount.charges_enabled ? 'text-green-600' : 'text-yellow-600'}`}>
+                    {stripeAccount.charges_enabled ? 'Enabled' : 'Pending'}
+                  </span>
                 </div>
-                {stripeConnectStatus.charges_enabled && stripeConnectStatus.payouts_enabled ? (
-                  <Badge className="bg-green-100 text-green-800 border-green-300">
-                    <CheckCircle className="w-3 h-3 mr-1" />
-                    Active
-                  </Badge>
-                ) : (
-                  <Badge variant="secondary">
-                    <AlertCircle className="w-3 h-3 mr-1" />
-                    Setup Incomplete
-                  </Badge>
-                )}
-              </div>
-              
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div className="flex items-center space-x-2">
-                  {stripeConnectStatus.charges_enabled ? (
-                    <CheckCircle className="w-4 h-4 text-green-600" />
-                  ) : (
-                    <XCircle className="w-4 h-4 text-red-500" />
-                  )}
-                  <span>Charges {stripeConnectStatus.charges_enabled ? 'Enabled' : 'Disabled'}</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  {stripeConnectStatus.payouts_enabled ? (
-                    <CheckCircle className="w-4 h-4 text-green-600" />
-                  ) : (
-                    <XCircle className="w-4 h-4 text-red-500" />
-                  )}
-                  <span>Payouts {stripeConnectStatus.payouts_enabled ? 'Enabled' : 'Disabled'}</span>
+                <div>
+                  <span className="text-gray-500">Payouts:</span>
+                  <span className={`ml-2 font-medium ${stripeAccount.payouts_enabled ? 'text-green-600' : 'text-yellow-600'}`}>
+                    {stripeAccount.payouts_enabled ? 'Enabled' : 'Pending'}
+                  </span>
                 </div>
               </div>
 
-              {!stripeConnectStatus.details_submitted && stripeConnectStatus.requirements?.currently_due?.length > 0 && (
-                <Alert>
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    {stripeConnectStatus.requirements.currently_due.length} items need to be completed in Stripe
-                  </AlertDescription>
-                </Alert>
-              )}
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={checkStripeConnectStatus}
-                className="w-full"
-              >
-                <RefreshCw className="w-4 h-4 mr-2" />
-                Refresh Status
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  onClick={openStripeDashboard}
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                >
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  Open Dashboard
+                </Button>
+                <Button
+                  onClick={checkStripeConnectStatus}
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                >
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Refresh Status
+                </Button>
+              </div>
             </div>
           ) : (
             <div className="text-center space-y-4">
@@ -773,144 +252,6 @@ export default function BankAccountManager({ userId, businessId }: BankAccountMa
           )}
         </CardContent>
       </Card>
-
-      {/* Plaid Dialog */}
-      <Dialog open={showPlaidDialog} onOpenChange={setShowPlaidDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Connect with Plaid</DialogTitle>
-            <DialogDescription>
-              Securely connect your bank account using Plaid's encrypted connection.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="text-sm text-gray-600">
-              Plaid provides a secure way to connect your bank account. Your credentials are never stored and are encrypted during transmission.
-            </div>
-            
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <div className="flex items-start space-x-3">
-                <Shield className="w-5 h-5 text-blue-600 mt-0.5" />
-                <div className="text-sm">
-                  <p className="font-medium text-blue-900">Bank-Level Security</p>
-                  <p className="text-blue-700">Your bank credentials are encrypted and never stored on our servers.</p>
-                </div>
-              </div>
-            </div>
-            
-            <Button
-              onClick={initializePlaid}
-              disabled={plaidLoading}
-              className="w-full"
-            >
-              {plaidLoading ? (
-                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <ExternalLink className="w-4 h-4 mr-2" />
-              )}
-              {plaidLoading ? 'Connecting...' : 'Connect Bank Account'}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Manual Entry Dialog */}
-      <Dialog open={showManualDialog} onOpenChange={setShowManualDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Add Bank Account Manually</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="account_name">Account Name</Label>
-              <Input
-                id="account_name"
-                placeholder="e.g., Main Checking Account"
-                value={manualForm.account_name}
-                onChange={(e) => setManualForm(prev => ({ ...prev, account_name: e.target.value }))}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="account_type">Account Type</Label>
-              <Select
-                value={manualForm.account_type}
-                onValueChange={(value) => setManualForm(prev => ({ ...prev, account_type: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="checking">Checking</SelectItem>
-                  <SelectItem value="savings">Savings</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="bank_name">Bank Name</Label>
-              <Input
-                id="bank_name"
-                placeholder="e.g., Chase Bank"
-                value={manualForm.bank_name}
-                onChange={(e) => setManualForm(prev => ({ ...prev, bank_name: e.target.value }))}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="routing_number">Routing Number</Label>
-              <Input
-                id="routing_number"
-                placeholder="9-digit routing number"
-                value={manualForm.routing_number}
-                onChange={(e) => setManualForm(prev => ({ ...prev, routing_number: e.target.value }))}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="account_number">Account Number</Label>
-              <Input
-                id="account_number"
-                placeholder="Account number"
-                value={manualForm.account_number}
-                onChange={(e) => setManualForm(prev => ({ ...prev, account_number: e.target.value }))}
-              />
-            </div>
-            
-            <div className="bg-yellow-50 p-4 rounded-lg">
-              <div className="flex items-start space-x-3">
-                <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5" />
-                <div className="text-sm">
-                  <p className="font-medium text-yellow-900">Verification Required</p>
-                  <p className="text-yellow-700">You'll be redirected to Stripe to verify your account details.</p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="flex space-x-2">
-              <Button
-                variant="outline"
-                onClick={() => setShowManualDialog(false)}
-                className="flex-1"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={addManualBankAccount}
-                disabled={manualLoading}
-                className="flex-1"
-              >
-                {manualLoading ? (
-                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                )}
-                {manualLoading ? 'Adding...' : 'Add Account'}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
