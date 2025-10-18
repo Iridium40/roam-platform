@@ -260,11 +260,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       console.log("✅ Updated business_profiles.stripe_account_id:", account.id);
     }
 
+    // Determine the base URL for return/refresh URLs
+    const host = req.headers.host || 'localhost:5175';
+    const protocol = host.includes('localhost') ? 'http' : 'https';
+    const baseUrl = process.env.VITE_APP_URL || `${protocol}://${host}`;
+    
+    console.log('🔗 Creating account link with baseUrl:', baseUrl);
+
     // Create account link for onboarding
     const accountLink = await stripe.accountLinks.create({
       account: account.id,
-      refresh_url: `${process.env.VITE_APP_URL || 'http://localhost:5175'}/provider-onboarding/phase2/stripe-setup?refresh=true`,
-      return_url: `${process.env.VITE_APP_URL || 'http://localhost:5175'}/provider-onboarding/phase2/stripe-setup?success=true`,
+      refresh_url: `${baseUrl}/owner/financials?stripe_refresh=true`,
+      return_url: `${baseUrl}/owner/financials?stripe_success=true`,
       type: "account_onboarding",
       collect: "eventually_due",
     });
