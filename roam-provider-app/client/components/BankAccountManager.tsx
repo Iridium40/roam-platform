@@ -740,9 +740,9 @@ export default function BankAccountManager({ userId, businessId }: BankAccountMa
             <div className="text-center space-y-4">
               <div className="bg-white p-6 rounded-lg">
                 <AlertCircle className="w-12 h-12 text-blue-600 mx-auto mb-3" />
-                <h3 className="font-semibold text-gray-900 mb-2">Stripe Connect Required</h3>
+                <h3 className="font-semibold text-gray-900 mb-2">Stripe Connect Setup</h3>
                 <p className="text-sm text-gray-600 mb-4">
-                  Create a Stripe Connect account to receive payments and manage payouts for your business.
+                  Your Stripe Connect account will be automatically created during the business onboarding process. Once approved, you'll have full access to payment processing and payout management.
                 </p>
                 <ul className="text-left text-sm text-gray-600 space-y-2 mb-4">
                   <li className="flex items-start">
@@ -760,23 +760,15 @@ export default function BankAccountManager({ userId, businessId }: BankAccountMa
                 </ul>
               </div>
               
-              <Button
-                onClick={createStripeConnectAccount}
-                disabled={creatingStripe}
-                className="w-full bg-blue-600 hover:bg-blue-700"
-              >
-                {creatingStripe ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                    Creating Account...
-                  </>
-                ) : (
-                  <>
-                    <ExternalLink className="w-4 h-4 mr-2" />
-                    Create Stripe Connect Account
-                  </>
-                )}
-              </Button>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-center">
+                  <Clock className="w-5 h-5 text-blue-600 mr-2" />
+                  <div>
+                    <p className="text-sm font-medium text-blue-900">Setup in Progress</p>
+                    <p className="text-xs text-blue-700">Your Stripe account will be ready after business approval</p>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </CardContent>

@@ -1056,7 +1056,7 @@ export default function Index() {
           </div>
 
           {/* Desktop Category Cards - Enhanced */}
-          <div className="hidden md:grid grid-cols-2 lg:grid-cols-5 gap-8 mb-16">
+          <div className="hidden md:grid grid-cols-2 lg:grid-cols-5 gap-4 mb-16">
             {/* All Categories Option */}
             <div
               className={`group cursor-pointer transition-all duration-500 hover:-translate-y-4 ${
@@ -1072,14 +1072,14 @@ export default function Index() {
                 }`}
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-gray-500/10 via-transparent to-gray-600/5"></div>
-                <div className="relative p-8 text-center">
-                  <div className="w-20 h-20 bg-gradient-to-br from-gray-500 to-gray-600 rounded-3xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shadow-lg">
-                    <Filter className="w-10 h-10 text-white" />
+                <div className="relative p-4 text-center">
+                  <div className="w-12 h-12 bg-gradient-to-br from-gray-500 to-gray-600 rounded-2xl flex items-center justify-center mx-auto mb-3 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shadow-lg">
+                    <Filter className="w-6 h-6 text-white" />
                   </div>
-                  <h3 className="text-lg font-bold mb-3 text-gray-900 group-hover:text-roam-blue transition-colors">
+                  <h3 className="text-base font-bold mb-2 text-gray-900 group-hover:text-roam-blue transition-colors">
                     All Categories
                   </h3>
-                  <p className="text-sm text-gray-600 leading-relaxed">
+                  <p className="text-xs text-gray-600 leading-relaxed">
                     Browse all available services
                   </p>
                   {selectedCategory === "all" && (
@@ -1107,13 +1107,13 @@ export default function Index() {
                   }`}
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-transparent opacity-50"></div>
-                  <div className="relative p-8 text-center">
+                  <div className="relative p-4 text-center">
                     <div
-                      className={`w-20 h-20 bg-gradient-to-br ${category.color} rounded-3xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shadow-lg`}
+                      className={`w-12 h-12 bg-gradient-to-br ${category.color} rounded-2xl flex items-center justify-center mx-auto mb-3 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shadow-lg`}
                     >
-                      <category.icon className="w-10 h-10 text-white" />
+                      <category.icon className="w-6 h-6 text-white" />
                     </div>
-                    <h3 className="text-lg font-bold mb-3 text-gray-900 group-hover:text-roam-blue transition-colors">
+                    <h3 className="text-base font-bold mb-2 text-gray-900 group-hover:text-roam-blue transition-colors">
                       {category.id === "therapy"
                         ? "Therapy"
                         : category.id === "fitness"
@@ -1122,7 +1122,7 @@ export default function Index() {
                             ? "Beauty"
                             : category.name}
                     </h3>
-                    <p className="text-sm text-gray-600 leading-relaxed">
+                    <p className="text-xs text-gray-600 leading-relaxed">
                       {category.description}
                     </p>
                     {selectedCategory === category.id && (
@@ -1137,28 +1137,28 @@ export default function Index() {
           </div>
 
           {/* Enhanced Search and Filter Section */}
-          <div className="max-w-4xl mx-auto">
-            <div className="bg-white rounded-3xl shadow-xl p-8 border border-gray-100">
-              <div className="text-center mb-8">
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">
+          <div className="max-w-3xl mx-auto">
+            <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+              <div className="text-center mb-6">
+                <h3 className="text-xl font-bold text-gray-900 mb-2">
                   Find Your Perfect Service
                 </h3>
-                <p className="text-gray-600">
+                <p className="text-sm text-gray-600">
                   Search and filter to discover exactly what you need
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* Enhanced Search Input */}
                 <div className="md:col-span-2">
                   <div className="relative group">
                     <div className="absolute inset-0 bg-gradient-to-r from-roam-blue/20 to-roam-light-blue/20 rounded-2xl blur-sm group-focus-within:blur-0 transition-all duration-300"></div>
                     <div className="relative bg-white rounded-2xl border border-gray-200 group-focus-within:border-roam-blue/50 transition-all duration-300">
-                      <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400 group-focus-within:text-roam-blue transition-colors" />
+                      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 group-focus-within:text-roam-blue transition-colors" />
                       <Input
                         type="search"
                         placeholder="Search for services, treatments, or providers..."
-                        className="pl-12 pr-4 h-14 border-0 rounded-2xl text-lg placeholder:text-gray-400 focus:ring-0 focus:border-0 bg-transparent"
+                        className="pl-10 pr-4 h-10 border-0 rounded-xl text-base placeholder:text-gray-400 focus:ring-0 focus:border-0 bg-transparent"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                       />
@@ -1174,7 +1174,7 @@ export default function Index() {
                       value={selectedDelivery}
                       onValueChange={(value) => setFilters(prev => ({ ...prev, selectedDelivery: value }))}
                     >
-                      <SelectTrigger className="h-14 border-0 rounded-2xl bg-white border border-gray-200 group-focus-within:border-roam-blue/50 transition-all text-lg">
+                      <SelectTrigger className="h-10 border-0 rounded-xl bg-white border border-gray-200 group-focus-within:border-roam-blue/50 transition-all text-base">
                         <SelectValue placeholder="Delivery Type" />
                       </SelectTrigger>
                       <SelectContent className="rounded-2xl border-0 shadow-2xl">

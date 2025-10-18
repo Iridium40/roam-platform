@@ -516,18 +516,12 @@ export default function FinancialsTab({
 
       {/* Alert if Stripe not connected */}
       {!stripeBalance?.payoutsEnabled && (
-        <Alert variant="destructive">
+        <Alert>
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Payouts Not Enabled</AlertTitle>
+          <AlertTitle>Stripe Account Setup</AlertTitle>
           <AlertDescription>
-            Complete your Stripe verification to enable payouts. 
-            <Button 
-              variant="link" 
-              className="p-0 h-auto ml-1"
-              onClick={openStripeDashboard}
-            >
-              Complete verification now
-            </Button>
+            Your Stripe Connect account will be automatically created during the business onboarding process. 
+            Once your business is approved, you'll have full access to payment processing and financial management.
           </AlertDescription>
         </Alert>
       )}
