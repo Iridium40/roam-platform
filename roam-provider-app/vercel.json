@@ -104,6 +104,26 @@
       "destination": "/api/stripe/create-connect-account.ts"
     },
     {
+      "source": "/api/stripe/check-connect-account-status",
+      "destination": "/api/stripe/check-connect-account-status.ts"
+    },
+    {
+      "source": "/api/stripe/balance",
+      "destination": "/api/stripe/balance.ts"
+    },
+    {
+      "source": "/api/stripe/payouts",
+      "destination": "/api/stripe/payouts.ts"
+    },
+    {
+      "source": "/api/stripe/transactions",
+      "destination": "/api/stripe/transactions.ts"
+    },
+    {
+      "source": "/api/stripe/payout-schedule",
+      "destination": "/api/stripe/payout-schedule.ts"
+    },
+    {
       "source": "/api/storage/upload-image",
       "destination": "/api/storage/upload-image.ts"
     },
