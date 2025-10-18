@@ -153,7 +153,11 @@ export function CheckoutForm({ bookingDetails, onSuccess, onError }: CheckoutFor
               <PaymentElement 
                 options={{
                   layout: "tabs",
-                  paymentMethodOrder: ['card', 'apple_pay', 'google_pay']
+                  paymentMethodOrder: ['card', 'apple_pay', 'google_pay'],
+                  wallets: {
+                    applePay: 'auto',
+                    googlePay: 'auto',
+                  },
                 }}
               />
             </div>

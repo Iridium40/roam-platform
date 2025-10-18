@@ -151,7 +151,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       },
       automatic_payment_methods: {
         enabled: true,
+        allow_redirects: 'never', // Disable redirect-based payment methods like Cash App
       },
+      payment_method_types: ['card'], // Only allow card payments (includes Apple Pay & Google Pay)
     });
 
     console.log('✅ Created tip payment intent:', paymentIntent.id);

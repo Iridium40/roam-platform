@@ -96,7 +96,12 @@ export function TipCheckoutForm({ tipAmount, providerName, onSuccess, onError }:
                 <div className="border rounded-lg p-4">
                   <PaymentElement 
                     options={{
-                      layout: 'tabs'
+                      layout: 'tabs',
+                      paymentMethodOrder: ['card', 'apple_pay', 'google_pay'],
+                      wallets: {
+                        applePay: 'auto',
+                        googlePay: 'auto',
+                      },
                     }}
                   />
                 </div>
