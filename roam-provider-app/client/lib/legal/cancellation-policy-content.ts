@@ -83,15 +83,14 @@ Our team may waive fees or penalties in documented emergency situations. We may 
 3. Selecting the booking you wish to cancel or change.
 4. Choosing **Cancel** or **Reschedule** and following the prompts.
 
-If you need help, contact ROAM Support at support@roamwellness.com or call (850) 555-ROAM.`,
+If you need help, contact ROAM Support at contactus@roamyourbestlife.com.`,
     },
     {
       id: "support",
       title: "8. Need Assistance?",
       content: `We're here to help. If you have questions about this policy or believe a fee was applied in error, please contact ROAM Support.
 
-- Email: support@roamwellness.com
-- Phone: (850) 555-ROAM
+- Email: contactus@roamyourbestlife.com
 - Live chat: Available in the ROAM app
 
 We review all concerns within one business day and aim to resolve cancellation-related requests quickly and fairly.`,

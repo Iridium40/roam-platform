@@ -113,7 +113,7 @@ When data is no longer required, we delete or anonymize it, unless retention is 
 - Restrict or object to certain processing
 - Opt out of marketing communications
 
-To exercise these rights, contact privacy@roamwellness.com. We may require verification of your identity.`,
+To exercise these rights, contact contactus@roamyourbestlife.com. We may require verification of your identity.`,
     },
     {
       id: "california",
@@ -148,7 +148,7 @@ Your continued use of the platform signifies acceptance of the updated policy.`,
       title: "13. Contact Us",
       content: `Have questions about this Privacy Policy?
 
-- Email: privacy@roamwellness.com
+- Email: contactus@roamyourbestlife.com
 - Mail: ROAM Wellness Services, LLC, Covington, LA
 
 We respond to privacy-related inquiries within one business day.`,
