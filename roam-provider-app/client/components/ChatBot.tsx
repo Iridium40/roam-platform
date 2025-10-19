@@ -108,7 +108,7 @@ export default function ChatBot({ isOpen, onClose }: ChatBotProps) {
       <Card className="w-full max-w-md h-[500px] flex flex-col">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-roam-blue text-white rounded-t-lg">
           <CardTitle className="flex items-center gap-2 text-lg">
-            <Bot className="w-5 h-5" />
+            <img src="/roam-icon.png" alt="ROAM" className="w-5 h-5" />
             ROAM Assistant
           </CardTitle>
           <Button
@@ -132,7 +132,7 @@ export default function ChatBot({ isOpen, onClose }: ChatBotProps) {
                 >
                   {message.role === "assistant" && (
                     <div className="w-8 h-8 rounded-full bg-roam-blue/10 flex items-center justify-center flex-shrink-0">
-                      <Bot className="w-4 h-4 text-roam-blue" />
+                      <img src="/roam-icon.png" alt="ROAM" className="w-4 h-4" />
                     </div>
                   )}
                   <div
@@ -160,7 +160,7 @@ export default function ChatBot({ isOpen, onClose }: ChatBotProps) {
               {isLoading && (
                 <div className="flex gap-3 justify-start">
                   <div className="w-8 h-8 rounded-full bg-roam-blue/10 flex items-center justify-center flex-shrink-0">
-                    <Bot className="w-4 h-4 text-roam-blue" />
+                    <img src="/roam-icon.png" alt="ROAM" className="w-4 h-4" />
                   </div>
                   <div className="bg-gray-100 p-3 rounded-lg">
                     <Loader2 className="w-4 h-4 animate-spin text-gray-600" />
