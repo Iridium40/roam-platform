@@ -16,20 +16,20 @@ export default function FloatingChatButton() {
                animation: 'ping 3s cubic-bezier(0, 0, 0.2, 1) infinite'
              }}></div>
         
-        {/* Main button with slower pulse - transparent background to show icon clearly */}
+        {/* Main button with slower pulse - no border, larger icon */}
         <Button
           onClick={() => setIsChatOpen(true)}
-          className="relative w-14 h-14 rounded-full bg-transparent hover:bg-roam-blue/10 text-roam-blue shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 border-2 border-roam-blue"
+          className="relative w-16 h-16 rounded-full bg-transparent hover:bg-roam-blue/10 text-roam-blue shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110"
           style={{
             animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
           }}
           size="icon"
         >
-          {/* Custom chat icon - larger and more prominent */}
+          {/* Custom chat icon - much larger and more prominent */}
           <img 
             src="/chat-icon.svg" 
             alt="Chat" 
-            className="w-8 h-8" 
+            className="w-12 h-12" 
           />
         </Button>
       </div>
