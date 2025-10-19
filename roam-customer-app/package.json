@@ -34,6 +34,7 @@
     "deploy:force": "vercel --prod --force"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.32.1",
     "@roam/shared": "file:../packages/shared",
     "@stripe/react-stripe-js": "^3.9.1",
     "@stripe/stripe-js": "^7.8.0",

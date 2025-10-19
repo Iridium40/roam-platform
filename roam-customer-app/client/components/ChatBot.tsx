@@ -46,60 +46,47 @@ export default function ChatBot({ isOpen, onClose }: ChatBotProps) {
     setIsLoading(true);
 
     try {
-      // This would integrate with Vercel AI SDK
-      // For now, we'll simulate a response
-      setTimeout(() => {
-        const botResponse: Message = {
-          id: (Date.now() + 1).toString(),
-          role: "assistant",
-          content: getSimulatedResponse(input),
-          timestamp: new Date(),
-        };
-        setMessages((prev) => [...prev, botResponse]);
-        setIsLoading(false);
-      }, 1000);
+      // Call the Claude AI API
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: [...messages, userMessage].map(msg => ({
+            role: msg.role,
+            content: msg.content
+          })),
+        }),
+      });
 
-      // TODO: Replace with actual Vercel AI SDK implementation
-      // const response = await fetch('/api/chat', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({
-      //     messages: [...messages, userMessage],
-      //   }),
-      // });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to get response');
+      }
 
-      // const data = await response.json();
-      // setMessages(prev => [...prev, data.message]);
+      const data = await response.json();
+      
+      const botResponse: Message = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        content: data.message.content,
+        timestamp: new Date(data.message.timestamp),
+      };
+      
+      setMessages((prev) => [...prev, botResponse]);
     } catch (error) {
       logger.error("Error sending message:", error);
+      
+      // Add error message to chat
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        content: "I'm sorry, I'm having trouble responding right now. Please try again or contact our support team at contactus@roamyourbestlife.com.",
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
       setIsLoading(false);
     }
-  };
-
-  const getSimulatedResponse = (userInput: string): string => {
-    const lowerInput = userInput.toLowerCase();
-
-    if (lowerInput.includes("booking") || lowerInput.includes("appointment")) {
-      return "To make a booking, you can browse our services and select a provider that fits your needs. Each provider's profile shows their availability and pricing. Would you like help finding a specific type of service?";
-    }
-
-    if (lowerInput.includes("provider") || lowerInput.includes("join")) {
-      return "Interested in becoming a provider? Great! You can apply through our 'Become a Provider' page. We welcome verified professionals in beauty, fitness, wellness, and healthcare. The application process includes verification steps to ensure quality service.";
-    }
-
-    if (lowerInput.includes("payment") || lowerInput.includes("cost")) {
-      return "ROAM offers secure payment processing. You can see exact pricing on each provider's profile before booking. We accept major credit cards and digital payments. There are no hidden fees - what you see is what you pay.";
-    }
-
-    if (lowerInput.includes("cancel") || lowerInput.includes("refund")) {
-      return "Cancellation policies vary by provider, but most allow cancellations up to 24 hours before your appointment. You can manage your bookings in the 'My Bookings' section. For specific refund questions, please contact the provider directly or reach out to our support team.";
-    }
-
-    if (lowerInput.includes("location") || lowerInput.includes("area")) {
-      return "ROAM connects you with local service providers in your area. Our providers offer both in-home services and studio appointments. You can filter by location and see each provider's service radius on their profile.";
-    }
-
-    return "I'm here to help with questions about ROAM's services, booking process, becoming a provider, payments, and more. Could you please be more specific about what you'd like to know?";
   };
 
   if (!isOpen) return null;
