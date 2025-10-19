@@ -10,8 +10,8 @@ export default function FloatingChatButton() {
     <>
       {/* Floating Chat Button */}
       <div className="fixed bottom-6 right-6 z-50" style={{ zIndex: 9999 }}>
-        {/* Slower pulsing ring effect - larger ring */}
-        <div className="absolute -inset-2 rounded-full bg-roam-blue opacity-75" 
+        {/* Slower pulsing ring effect - larger ring with more gap */}
+        <div className="absolute -inset-4 rounded-full bg-roam-blue opacity-75" 
              style={{
                animation: 'ping 3s cubic-bezier(0, 0, 0.2, 1) infinite'
              }}></div>
