@@ -1,15 +1,5 @@
 import { Request, Response } from "express";
-import Anthropic from "@anthropic-ai/sdk";
-
-// Initialize Anthropic client with error handling
-let anthropic: Anthropic;
-try {
-  anthropic = new Anthropic({
-    apiKey: process.env.ANTHROPIC_API_KEY!,
-  });
-} catch (error) {
-  console.error("Failed to initialize Anthropic client:", error);
-}
+import { streamText } from 'ai';
 
 interface Message {
   role: "user" | "assistant";
@@ -21,14 +11,6 @@ export default async function handler(req: Request, res: Response) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  // Check if Anthropic API key is configured
-  if (!process.env.ANTHROPIC_API_KEY || !anthropic) {
-    console.error("ANTHROPIC_API_KEY environment variable is not set or Anthropic client failed to initialize");
-    return res.status(500).json({ 
-      error: "AI service is temporarily unavailable. Please contact support at contactus@roamyourbestlife.com" 
-    });
-  }
-
   try {
     const { messages } = req.body as { messages: Message[] };
 
@@ -37,9 +19,8 @@ export default async function handler(req: Request, res: Response) {
     }
 
     console.log("Processing chat request with", messages.length, "messages");
-    console.log("Anthropic API key configured:", !!process.env.ANTHROPIC_API_KEY);
 
-    // System prompt to configure Claude's behavior with comprehensive ROAM information from actual website content
+    // System prompt to configure Claude's behavior with comprehensive ROAM information
     const systemPrompt = `You are a helpful AI assistant for ROAM, a premium wellness services platform. 
 
 === ABOUT ROAM ===
@@ -331,31 +312,27 @@ Be friendly, professional, and helpful. Answer questions accurately based on thi
 - Encourage bookings and highlight ROAM's unique value propositions
 - For technical issues or account-specific questions, direct to support team`;
 
-    // Convert messages to Anthropic format
-    const anthropicMessages = messages.map((msg) => ({
-      role: msg.role,
+    // Convert messages to a conversation format for Vercel AI
+    const conversation = messages.map((msg) => ({
+      role: msg.role === "assistant" ? "assistant" : "user",
       content: msg.content,
     }));
 
-    // Call Anthropic API with streaming disabled for simplicity
-    const response = await anthropic.messages.create({
-      model: "claude-3-5-sonnet-20241022",
-      max_tokens: 1024,
+    // Use Vercel AI Gateway with streamText
+    const result = await streamText({
+      model: 'anthropic/claude-3-5-sonnet-20241022',
       system: systemPrompt,
-      messages: anthropicMessages,
+      messages: conversation,
+      maxTokens: 1024,
     });
 
-    // Extract the assistant's response
-    const assistantMessage = response.content[0];
-    
-    if (assistantMessage.type !== "text") {
-      throw new Error("Unexpected response type from Claude");
-    }
+    // Get the full response text
+    const responseText = await result.text;
 
     return res.status(200).json({
       message: {
         role: "assistant",
-        content: assistantMessage.text,
+        content: responseText,
         timestamp: new Date(),
       },
     });
