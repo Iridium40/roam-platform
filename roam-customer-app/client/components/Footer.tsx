@@ -8,13 +8,11 @@ export function Footer() {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-14">
         <div className="flex flex-col items-center text-center gap-6">
           <Link to="/" className="flex items-center justify-center">
-            <div className="w-24 h-24 rounded-lg overflow-hidden flex items-center justify-center bg-white shadow-sm">
-              <img
-                src="https://cdn.builder.io/api/v1/image/assets%2Fa42b6f9ec53e4654a92af75aad56d14f%2F38446bf6c22b453fa45caf63b0513e21?format=webp&width=800"
-                alt="ROAM Logo"
-                className="w-24 h-24 object-contain"
-              />
-            </div>
+            <img
+              src="/logo.png"
+              alt="ROAM Logo"
+              className="h-16 w-auto object-contain"
+            />
           </Link>
 
           <p className="text-foreground/70 max-w-2xl leading-relaxed">
