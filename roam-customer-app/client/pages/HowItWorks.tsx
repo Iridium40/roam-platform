@@ -123,10 +123,10 @@ export default function HowItWorks() {
                 </Link>
               </Button>
               <Button asChild size="lg" variant="outline" className="border-white text-white bg-white/10 hover:bg-white/20">
-                <Link to="/provider-portal">
+                <a href="https://roamprovider.com" target="_blank" rel="noopener noreferrer">
                   <Users className="w-5 h-5 mr-2" />
                   Become a Provider
-                </Link>
+                </a>
               </Button>
             </div>
           </div>
@@ -303,10 +303,10 @@ export default function HowItWorks() {
                   </Link>
                 </Button>
                 <Button asChild size="lg" variant="outline" className="border-roam-blue text-roam-blue hover:bg-roam-blue/10">
-                  <Link to="/provider-portal">
+                  <a href="https://roamprovider.com" target="_blank" rel="noopener noreferrer">
                     <Users className="w-5 h-5 mr-2" />
                     Become a Provider
-                  </Link>
+                  </a>
                 </Button>
               </div>
               <div className="mt-8 text-center">
