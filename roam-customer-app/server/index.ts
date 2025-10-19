@@ -260,6 +260,32 @@ export function createServer() {
     }
   );
 
+  // Chat API route (no auth required for now)
+  app.post("/api/chat",
+    async (req, res) => {
+      try {
+        const chatHandler = await import("../api/chat");
+        await chatHandler.default(req, res);
+      } catch (error) {
+        console.error("Error importing chat handler:", error);
+        res.status(500).json({ error: "Failed to load chat handler" });
+      }
+    }
+  );
+
+  // Newsletter subscription route (no auth required)
+  app.post("/api/subscribe",
+    async (req, res) => {
+      try {
+        const subscribeHandler = await import("../api/subscribe");
+        await subscribeHandler.default(req, res);
+      } catch (error) {
+        console.error("Error importing subscribe handler:", error);
+        res.status(500).json({ error: "Failed to load subscribe handler" });
+      }
+    }
+  );
+
   // Error handling middleware
   app.use((error: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
     console.error('Server error:', error);
