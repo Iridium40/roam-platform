@@ -1,9 +1,9 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { MessageCircle, X } from "lucide-react";
-import ChatBot from "./ChatBot";
+import { MessageCircle } from "lucide-react";
+import ProviderChatBot from "./ProviderChatBot";
 
-export default function FloatingChatButton() {
+export default function ProviderFloatingChatButton() {
   const [isChatOpen, setIsChatOpen] = useState(false);
 
   return (
@@ -23,8 +23,8 @@ export default function FloatingChatButton() {
         </Button>
       </div>
 
-      {/* Chat Bot Modal */}
-      <ChatBot 
+      {/* Provider Chat Bot Modal */}
+      <ProviderChatBot 
         isOpen={isChatOpen} 
         onClose={() => setIsChatOpen(false)} 
       />
