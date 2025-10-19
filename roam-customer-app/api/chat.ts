@@ -36,6 +36,9 @@ export default async function handler(req: Request, res: Response) {
       return res.status(400).json({ error: "Messages array is required" });
     }
 
+    console.log("Processing chat request with", messages.length, "messages");
+    console.log("Anthropic API key configured:", !!process.env.ANTHROPIC_API_KEY);
+
     // System prompt to configure Claude's behavior with comprehensive ROAM information from actual website content
     const systemPrompt = `You are a helpful AI assistant for ROAM, a premium wellness services platform. 
 
@@ -358,6 +361,13 @@ Be friendly, professional, and helpful. Answer questions accurately based on thi
     });
   } catch (error: any) {
     console.error("Chat API error:", error);
+    console.error("Error details:", {
+      message: error.message,
+      status: error.status,
+      statusText: error.statusText,
+      name: error.name,
+      stack: error.stack
+    });
     
     // Handle specific Anthropic errors
     if (error.status === 401) {
@@ -372,8 +382,15 @@ Be friendly, professional, and helpful. Answer questions accurately based on thi
       });
     }
 
+    if (error.status === 400) {
+      return res.status(400).json({ 
+        error: "Invalid request. Please try again." 
+      });
+    }
+
     return res.status(500).json({ 
-      error: "Failed to process your message. Please try again." 
+      error: "Failed to process your message. Please try again.",
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 }
