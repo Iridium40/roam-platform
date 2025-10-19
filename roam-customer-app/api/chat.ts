@@ -11,18 +11,6 @@ export default async function handler(req: Request, res: Response) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  // Check if Vercel AI Gateway is configured
-  const hasGatewayKey = !!process.env.AI_GATEWAY_API_KEY;
-  const hasVercelOIDC = !!process.env.VERCEL_OIDC_TOKEN;
-  
-  if (!hasGatewayKey && !hasVercelOIDC) {
-    console.error("No Vercel AI Gateway configured. Need either AI_GATEWAY_API_KEY or VERCEL_OIDC_TOKEN");
-    console.error("Available environment variables:", Object.keys(process.env).filter(key => key.includes('AI') || key.includes('GATEWAY') || key.includes('OIDC')));
-    return res.status(500).json({ 
-      error: "AI service is temporarily unavailable. Please contact support at contactus@roamyourbestlife.com" 
-    });
-  }
-
   try {
     const { messages } = req.body as { messages: Message[] };
 
@@ -31,7 +19,6 @@ export default async function handler(req: Request, res: Response) {
     }
 
     console.log("Processing chat request with", messages.length, "messages");
-    console.log("AI Gateway API key configured:", !!process.env.AI_GATEWAY_API_KEY);
 
     // System prompt to configure Claude's behavior with comprehensive ROAM information
     const systemPrompt = `You are a helpful AI assistant for ROAM, a premium wellness services platform. 
@@ -364,7 +351,6 @@ Be friendly, professional, and helpful. Answer questions accurately based on thi
     });
     console.error("Request body:", req.body);
     console.error("Environment check:", {
-      hasAIKey: !!process.env.AI_GATEWAY_API_KEY,
       nodeEnv: process.env.NODE_ENV,
       vercelEnv: process.env.VERCEL_ENV
     });
