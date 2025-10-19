@@ -72,7 +72,7 @@ const App = () => (
           <AuthProvider>
             <Suspense fallback={<PageLoader />}>
               <Routes>
-                <Route path="/" element={<Index />} />
+                <Route path="/" element={<MarketingLanding />} />
                 <Route path="/bookings" element={<MyBookings />} />
                 <Route path="/book-service/:serviceId" element={<BookService />} />
                 <Route path="/booking-success" element={<BookingSuccess />} />
@@ -84,6 +84,7 @@ const App = () => (
                 <Route path="/how-it-works" element={<HowItWorks />} />
                 <Route path="/whyroam" element={<MarketingLanding />} />
                 <Route path="/booknow" element={<Index />} />
+                <Route path="/home" element={<Index />} />
                 <Route path="/sign-in" element={<SignIn />} />
                 <Route path="/become-a-provider" element={<BecomeProvider />} />
                 <Route
