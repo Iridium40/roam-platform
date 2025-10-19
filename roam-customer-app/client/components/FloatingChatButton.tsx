@@ -9,7 +9,7 @@ export default function FloatingChatButton() {
   return (
     <>
       {/* Floating Chat Button */}
-      <div className="fixed bottom-6 right-6 z-40">
+      <div className="fixed bottom-6 right-6 z-50" style={{ zIndex: 9999 }}>
         {/* Slower pulsing ring effect */}
         <div className="absolute inset-0 rounded-full bg-roam-blue opacity-75" 
              style={{
@@ -19,9 +19,10 @@ export default function FloatingChatButton() {
         {/* Main button with slower pulse - no border, larger icon */}
         <Button
           onClick={() => setIsChatOpen(true)}
-          className="relative w-16 h-16 rounded-full bg-transparent hover:bg-roam-blue/10 text-roam-blue shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110"
+          className="relative w-16 h-16 rounded-full bg-white hover:bg-roam-blue/10 text-roam-blue shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 border-2 border-roam-blue"
           style={{
-            animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+            animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            zIndex: 10000
           }}
           size="icon"
         >
@@ -30,6 +31,10 @@ export default function FloatingChatButton() {
             src="/chat-icon.svg" 
             alt="Chat" 
             className="w-12 h-12" 
+            onError={(e) => {
+              console.error('Chat icon failed to load:', e);
+              e.currentTarget.style.display = 'none';
+            }}
           />
         </Button>
       </div>
