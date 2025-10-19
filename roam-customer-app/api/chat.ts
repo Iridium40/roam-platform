@@ -1,9 +1,15 @@
 import { Request, Response } from "express";
 import Anthropic from "@anthropic-ai/sdk";
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY!,
-});
+// Initialize Anthropic client with error handling
+let anthropic: Anthropic;
+try {
+  anthropic = new Anthropic({
+    apiKey: process.env.ANTHROPIC_API_KEY!,
+  });
+} catch (error) {
+  console.error("Failed to initialize Anthropic client:", error);
+}
 
 interface Message {
   role: "user" | "assistant";
@@ -13,6 +19,14 @@ interface Message {
 export default async function handler(req: Request, res: Response) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
+  }
+
+  // Check if Anthropic API key is configured
+  if (!process.env.ANTHROPIC_API_KEY || !anthropic) {
+    console.error("ANTHROPIC_API_KEY environment variable is not set or Anthropic client failed to initialize");
+    return res.status(500).json({ 
+      error: "AI service is temporarily unavailable. Please contact support at contactus@roamyourbestlife.com" 
+    });
   }
 
   try {
