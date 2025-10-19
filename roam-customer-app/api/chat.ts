@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { streamText } from 'ai';
+import Anthropic from "@anthropic-ai/sdk";
 
 interface Message {
   role: "user" | "assistant";
@@ -11,9 +12,14 @@ export default async function handler(req: Request, res: Response) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  // Check if AI Gateway API key is configured
-  if (!process.env.AI_GATEWAY_API_KEY) {
-    console.error("AI_GATEWAY_API_KEY environment variable is not set");
+  // Check if we have either Anthropic API key or Vercel AI Gateway configured
+  const hasAnthropicKey = !!process.env.ANTHROPIC_API_KEY;
+  const hasVercelOIDC = !!process.env.VERCEL_OIDC_TOKEN;
+  const hasGatewayKey = !!process.env.AI_GATEWAY_API_KEY;
+  
+  if (!hasAnthropicKey && !hasVercelOIDC && !hasGatewayKey) {
+    console.error("No AI service configured. Need either ANTHROPIC_API_KEY, VERCEL_OIDC_TOKEN, or AI_GATEWAY_API_KEY");
+    console.error("Available environment variables:", Object.keys(process.env).filter(key => key.includes('AI') || key.includes('GATEWAY') || key.includes('OIDC') || key.includes('ANTHROPIC')));
     return res.status(500).json({ 
       error: "AI service is temporarily unavailable. Please contact support at contactus@roamyourbestlife.com" 
     });
@@ -327,16 +333,36 @@ Be friendly, professional, and helpful. Answer questions accurately based on thi
       content: msg.content,
     }));
 
-    // Use Vercel AI Gateway with streamText
-    const result = await streamText({
-      model: 'anthropic/claude-3-5-sonnet-20241022',
-      system: systemPrompt,
-      messages: conversation,
-      maxTokens: 1024,
-    });
+    let responseText: string;
 
-    // Get the full response text
-    const responseText = await result.text;
+    // Use direct Anthropic SDK for local development, Vercel AI Gateway for production
+    if (hasAnthropicKey && !hasVercelOIDC) {
+      console.log("Using direct Anthropic SDK for local development");
+      const anthropic = new Anthropic({
+        apiKey: process.env.ANTHROPIC_API_KEY!,
+      });
+
+      const response = await anthropic.messages.create({
+        model: "claude-3-5-sonnet-20241022",
+        max_tokens: 1024,
+        system: systemPrompt,
+        messages: conversation,
+      });
+
+      responseText = response.content[0].type === "text" ? response.content[0].text : "Error: Unexpected response type";
+    } else {
+      console.log("Using Vercel AI Gateway");
+      // Use Vercel AI Gateway with streamText
+      const result = await streamText({
+        model: 'anthropic/claude-3-5-sonnet-20241022',
+        system: systemPrompt,
+        messages: conversation,
+        maxTokens: 1024,
+      });
+
+      // Get the full response text
+      responseText = await result.text;
+    }
 
     return res.status(200).json({
       message: {
@@ -352,7 +378,15 @@ Be friendly, professional, and helpful. Answer questions accurately based on thi
       status: error.status,
       statusText: error.statusText,
       name: error.name,
-      stack: error.stack
+      stack: error.stack,
+      code: error.code,
+      cause: error.cause
+    });
+    console.error("Request body:", req.body);
+    console.error("Environment check:", {
+      hasAIKey: !!process.env.AI_GATEWAY_API_KEY,
+      nodeEnv: process.env.NODE_ENV,
+      vercelEnv: process.env.VERCEL_ENV
     });
     
     // Handle specific Anthropic errors
