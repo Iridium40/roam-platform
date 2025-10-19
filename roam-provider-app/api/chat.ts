@@ -11,14 +11,6 @@ export default async function handler(req: Request, res: Response) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  // Check if AI Gateway API key is configured
-  if (!process.env.AI_GATEWAY_API_KEY) {
-    console.error("AI_GATEWAY_API_KEY environment variable is not set");
-    return res.status(500).json({ 
-      error: "AI service is temporarily unavailable. Please contact support at contactus@roamyourbestlife.com" 
-    });
-  }
-
   try {
     const { messages, context } = req.body as { messages: Message[]; context?: string };
 
@@ -27,7 +19,6 @@ export default async function handler(req: Request, res: Response) {
     }
 
     console.log("Processing provider chat request with", messages.length, "messages");
-    console.log("AI Gateway API key configured:", !!process.env.AI_GATEWAY_API_KEY);
 
     // System prompt for provider-specific assistance
     const systemPrompt = `You are a helpful AI assistant for ROAM providers. You help wellness professionals manage their ROAM provider accounts, bookings, payments, and platform features.

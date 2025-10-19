@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { streamText } from 'ai';
+import Anthropic from "@anthropic-ai/sdk";
 
 interface Message {
   role: "user" | "assistant";
@@ -19,6 +20,18 @@ export default async function handler(req: Request, res: Response) {
     }
 
     console.log("Processing chat request with", messages.length, "messages");
+    
+    const hasAnthropicKey = !!process.env.ANTHROPIC_API_KEY;
+    const hasVercelOIDC = !!process.env.VERCEL_OIDC_TOKEN;
+    const hasGatewayKey = !!process.env.AI_GATEWAY_API_KEY;
+    
+    console.log("AI service configuration:", {
+      hasAnthropicKey,
+      hasVercelOIDC,
+      hasGatewayKey,
+      nodeEnv: process.env.NODE_ENV,
+      vercelEnv: process.env.VERCEL_ENV
+    });
 
     // System prompt to configure Claude's behavior with comprehensive ROAM information
     const systemPrompt = `You are a helpful AI assistant for ROAM, a premium wellness services platform. 
@@ -318,18 +331,36 @@ Be friendly, professional, and helpful. Answer questions accurately based on thi
       content: msg.content,
     }));
 
-    console.log("Using Vercel AI Gateway");
-    
-    // Use Vercel AI Gateway with streamText
-    const result = await streamText({
-      model: 'anthropic/claude-3-5-sonnet-20241022',
-      system: systemPrompt,
-      messages: conversation,
-      maxTokens: 1024,
-    });
+    let responseText: string;
 
-    // Get the full response text
-    const responseText = await result.text;
+    // Use direct Anthropic SDK for local development, Vercel AI Gateway for production
+    if (hasAnthropicKey && !hasVercelOIDC && !hasGatewayKey) {
+      console.log("Using direct Anthropic SDK for local development");
+      const anthropic = new Anthropic({
+        apiKey: process.env.ANTHROPIC_API_KEY!,
+      });
+
+      const response = await anthropic.messages.create({
+        model: "claude-3-5-sonnet-20241022",
+        max_tokens: 1024,
+        system: systemPrompt,
+        messages: conversation,
+      });
+
+      responseText = response.content[0].type === "text" ? response.content[0].text : "Error: Unexpected response type";
+    } else {
+      console.log("Using Vercel AI Gateway for production");
+      // Use Vercel AI Gateway with streamText
+      const result = await streamText({
+        model: 'anthropic/claude-3-5-sonnet-20241022',
+        system: systemPrompt,
+        messages: conversation,
+        maxTokens: 1024,
+      });
+
+      // Get the full response text
+      responseText = await result.text;
+    }
 
     return res.status(200).json({
       message: {
