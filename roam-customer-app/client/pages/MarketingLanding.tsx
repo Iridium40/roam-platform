@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ShareMenu from "@/components/ShareMenu";
@@ -10,15 +11,21 @@ import TrustSafety from "@/components/roam/TrustSafety";
 import LocationBenefits from "@/components/roam/LocationBenefits";
 import SocialProof from "@/components/roam/SocialProof";
 import FAQ from "@/components/roam/FAQ";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 
 export default function MarketingLanding() {
+  const [isLoading, setIsLoading] = useState(false);
+  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
   const handleSubscribe = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = event.currentTarget;
     const email = new FormData(form).get("email");
     if (!email || typeof email !== "string") return;
+
+    setIsLoading(true);
+    setMessage(null);
 
     try {
       const response = await fetch("/api/subscribe", {
@@ -27,11 +34,27 @@ export default function MarketingLanding() {
         body: JSON.stringify({ email }),
       });
 
-      if (!response.ok) throw new Error("subscribe_failed");
-      await response.json();
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to subscribe");
+      }
+
+      setMessage({
+        type: "success",
+        text: data.alreadySubscribed 
+          ? "You're already subscribed! 🎉" 
+          : "Successfully subscribed! Check your email for confirmation. 📧",
+      });
       (form.elements.namedItem("email") as HTMLInputElement).value = "";
     } catch (error) {
       console.error("Subscription failed", error);
+      setMessage({
+        type: "error",
+        text: error instanceof Error ? error.message : "Failed to subscribe. Please try again.",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -63,11 +86,35 @@ export default function MarketingLanding() {
                 placeholder="Enter your email for news & announcements"
                 aria-label="Email address"
                 className="bg-white/95"
+                disabled={isLoading}
               />
-              <Button type="submit" className="px-6">
-                Register
+              <Button type="submit" className="px-6" disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Registering...
+                  </>
+                ) : (
+                  "Register"
+                )}
               </Button>
             </div>
+            {message && (
+              <div
+                className={`mt-3 flex items-center gap-2 rounded-lg px-4 py-2 text-sm ${
+                  message.type === "success"
+                    ? "bg-green-500/90 text-white"
+                    : "bg-red-500/90 text-white"
+                }`}
+              >
+                {message.type === "success" ? (
+                  <CheckCircle className="w-4 h-4 flex-shrink-0" />
+                ) : (
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                )}
+                <span>{message.text}</span>
+              </div>
+            )}
             <p className="mt-2 text-xs text-white/90">
               By registering, you agree to our{" "}
               <Link to="/privacy" className="underline">
