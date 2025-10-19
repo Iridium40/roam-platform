@@ -334,7 +334,7 @@ Be friendly, professional, and helpful. Answer questions accurately based on thi
     let responseText: string;
 
     // Use direct Anthropic SDK for local development, Vercel AI Gateway for production
-    if (hasAnthropicKey && !hasVercelOIDC) {
+    if (hasAnthropicKey && !hasVercelOIDC && !hasGatewayKey) {
       console.log("Using direct Anthropic SDK for local development");
       const anthropic = new Anthropic({
         apiKey: process.env.ANTHROPIC_API_KEY!,
