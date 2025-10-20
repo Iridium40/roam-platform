@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { streamText } from 'ai';
+import Anthropic from "@anthropic-ai/sdk";
 
 interface Message {
   role: "user" | "assistant";
@@ -19,6 +19,13 @@ export default async function handler(req: Request, res: Response) {
     }
 
     console.log("Processing provider chat request with", messages.length, "messages");
+    
+    if (!process.env.ANTHROPIC_API_KEY) {
+      console.error("Missing ANTHROPIC_API_KEY");
+      return res.status(500).json({ 
+        error: "AI service not configured. Please contact support." 
+      });
+    }
 
     // System prompt for provider-specific assistance
     const systemPrompt = `You are a helpful AI assistant for ROAM providers. You help wellness professionals manage their ROAM provider accounts, bookings, payments, and platform features.
@@ -159,22 +166,26 @@ Be helpful, professional, and specific to provider needs. Focus on:
 
 Always provide actionable steps and direct users to the appropriate sections of their provider dashboard when relevant.`;
 
-    // Convert messages to a conversation format for Vercel AI
+    // Convert messages to Anthropic format
     const conversation = messages.map((msg) => ({
       role: msg.role === "assistant" ? "assistant" : "user" as const,
       content: msg.content,
     }));
 
-    // Use Vercel AI Gateway with streamText
-    const result = await streamText({
-      model: 'anthropic/claude-3-5-sonnet-20241022',
-      system: systemPrompt,
-      messages: conversation,
-      maxTokens: 1024,
+    // Use Anthropic SDK directly
+    console.log("Using Anthropic SDK");
+    const anthropic = new Anthropic({
+      apiKey: process.env.ANTHROPIC_API_KEY!,
     });
 
-    // Get the full response text
-    const responseText = await result.text;
+    const response = await anthropic.messages.create({
+      model: "claude-3-5-sonnet-20241022",
+      max_tokens: 1024,
+      system: systemPrompt,
+      messages: conversation,
+    });
+
+    const responseText = response.content[0].type === "text" ? response.content[0].text : "Error: Unexpected response type";
 
     return res.status(200).json({
       message: {

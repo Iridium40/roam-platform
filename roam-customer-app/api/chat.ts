@@ -1,5 +1,4 @@
 import { Request, Response } from "express";
-import { streamText } from 'ai';
 import Anthropic from "@anthropic-ai/sdk";
 
 interface Message {
@@ -21,17 +20,12 @@ export default async function handler(req: Request, res: Response) {
 
     console.log("Processing chat request with", messages.length, "messages");
     
-    const hasAnthropicKey = !!process.env.ANTHROPIC_API_KEY;
-    const hasVercelOIDC = !!process.env.VERCEL_OIDC_TOKEN;
-    const hasGatewayKey = !!process.env.AI_GATEWAY_API_KEY;
-    
-    console.log("AI service configuration:", {
-      hasAnthropicKey,
-      hasVercelOIDC,
-      hasGatewayKey,
-      nodeEnv: process.env.NODE_ENV,
-      vercelEnv: process.env.VERCEL_ENV
-    });
+    if (!process.env.ANTHROPIC_API_KEY) {
+      console.error("Missing ANTHROPIC_API_KEY");
+      return res.status(500).json({ 
+        error: "AI service not configured. Please contact support." 
+      });
+    }
 
     // System prompt to configure Claude's behavior with comprehensive ROAM information
     const systemPrompt = `You are a helpful AI assistant for ROAM, a premium wellness services platform. 
@@ -325,42 +319,26 @@ Be friendly, professional, and helpful. Answer questions accurately based on thi
 - Encourage bookings and highlight ROAM's unique value propositions
 - For technical issues or account-specific questions, direct to support team`;
 
-    // Convert messages to a conversation format for Vercel AI
+    // Convert messages to Anthropic format
     const conversation = messages.map((msg) => ({
       role: msg.role === "assistant" ? "assistant" : "user" as const,
       content: msg.content,
     }));
 
-    let responseText: string;
+    // Use Anthropic SDK directly
+    console.log("Using Anthropic SDK");
+    const anthropic = new Anthropic({
+      apiKey: process.env.ANTHROPIC_API_KEY!,
+    });
 
-    // Use direct Anthropic SDK for local development, Vercel AI Gateway for production
-    if (hasAnthropicKey && !hasVercelOIDC && !hasGatewayKey) {
-      console.log("Using direct Anthropic SDK for local development");
-      const anthropic = new Anthropic({
-        apiKey: process.env.ANTHROPIC_API_KEY!,
-      });
+    const response = await anthropic.messages.create({
+      model: "claude-3-5-sonnet-20241022",
+      max_tokens: 1024,
+      system: systemPrompt,
+      messages: conversation,
+    });
 
-      const response = await anthropic.messages.create({
-        model: "claude-3-5-sonnet-20241022",
-        max_tokens: 1024,
-        system: systemPrompt,
-        messages: conversation,
-      });
-
-      responseText = response.content[0].type === "text" ? response.content[0].text : "Error: Unexpected response type";
-    } else {
-      console.log("Using Vercel AI Gateway for production");
-      // Use Vercel AI Gateway with streamText
-      const result = await streamText({
-        model: 'anthropic/claude-3-5-sonnet-20241022',
-        system: systemPrompt,
-        messages: conversation,
-        maxTokens: 1024,
-      });
-
-      // Get the full response text
-      responseText = await result.text;
-    }
+    const responseText = response.content[0].type === "text" ? response.content[0].text : "Error: Unexpected response type";
 
     return res.status(200).json({
       message: {
