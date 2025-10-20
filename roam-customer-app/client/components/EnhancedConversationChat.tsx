@@ -80,7 +80,14 @@ export default function EnhancedConversationChat({
   currentUser
 }: EnhancedConversationChatProps) {
   const { customer } = useAuth();
-  const [bookingConversationsClient] = useState(() => createBookingConversationsClient());
+  
+  // Get access token from localStorage
+  const accessToken = typeof window !== 'undefined' ? localStorage.getItem('roam_access_token') : null;
+  
+  const bookingConversationsClient = useMemo(() => 
+    createBookingConversationsClient({ accessToken: accessToken || undefined }), 
+    [accessToken]
+  );
   const [messages, setMessages] = useState<ConversationMessageWithAuthor[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(false);

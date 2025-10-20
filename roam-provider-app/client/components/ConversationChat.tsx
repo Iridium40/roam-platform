@@ -57,10 +57,16 @@ interface ConversationChatProps {
   conversationSid?: string;
 }
 
-const bookingConversationsClient = createBookingConversationsClient();
-
 const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: ConversationChatProps) => {
   const { user, customer, userType } = useAuth();
+  
+  // Get access token from localStorage
+  const accessToken = typeof window !== 'undefined' ? localStorage.getItem('roam_access_token') : null;
+  
+  const bookingConversationsClient = useMemo(() => 
+    createBookingConversationsClient({ accessToken: accessToken || undefined }), 
+    [accessToken]
+  );
   
   // Determine user type safely
   const currentUserType = userType || (user ? 'provider' : 'customer');

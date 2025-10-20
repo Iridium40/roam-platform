@@ -12,6 +12,8 @@ interface BookingConversationClientOptions {
   baseUrl?: string;
   /** optional function to provide extra headers per request */
   getHeaders?: () => Record<string, string | undefined> | Promise<Record<string, string | undefined>>;
+  /** access token for authentication */
+  accessToken?: string;
 }
 
 type CreateConversationPayload = {
@@ -65,14 +67,28 @@ async function postJson<TResponse>(baseUrl: string, payload: ApiPayload, extraHe
 export class BookingConversationsClient {
   private baseUrl: string;
   private getHeaders?: BookingConversationClientOptions['getHeaders'];
+  private accessToken?: string;
 
   constructor(options?: BookingConversationClientOptions) {
     this.baseUrl = options?.baseUrl || DEFAULT_BASE_URL;
     this.getHeaders = options?.getHeaders;
+    this.accessToken = options?.accessToken;
   }
 
   private async request<TResponse>(payload: ApiPayload) {
-    const headers = this.getHeaders ? await this.getHeaders() : undefined;
+    const headers: Record<string, string | undefined> = {};
+    
+    // Add authentication header if access token is available
+    if (this.accessToken) {
+      headers['Authorization'] = `Bearer ${this.accessToken}`;
+    }
+    
+    // Add any additional headers from getHeaders function
+    if (this.getHeaders) {
+      const additionalHeaders = await this.getHeaders();
+      Object.assign(headers, additionalHeaders);
+    }
+    
     return postJson<TResponse>(this.baseUrl, payload, headers);
   }
 
