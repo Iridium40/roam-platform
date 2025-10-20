@@ -11,14 +11,11 @@ export default function ProviderFloatingChatButton() {
       {!isChatOpen && (
         <div className="fixed bottom-6 right-6 z-40">
           {/* Main button - reduced size by 20% */}
-          <Button
-            onClick={() => setIsChatOpen(true)}
-            className="relative w-12 h-12 rounded-full bg-transparent hover:bg-roam-blue/10 text-roam-blue shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110"
-            style={{
-              animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
-            }}
-            size="icon"
-          >
+                 <Button
+                   onClick={() => setIsChatOpen(true)}
+                   className="relative w-12 h-12 rounded-full bg-transparent hover:bg-roam-blue/10 text-roam-blue shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110"
+                   size="icon"
+                 >
             {/* Custom chat icon - reduced size by 20% */}
             <img 
               src="/chat-icon.svg" 
