@@ -107,7 +107,15 @@ export default function ChatBot({ isOpen, onClose }: ChatBotProps) {
       <Card className="w-full max-w-md h-[500px] flex flex-col overflow-hidden">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-roam-blue text-white rounded-t-lg flex-shrink-0">
           <CardTitle className="flex items-center gap-2 text-lg">
-            <img src="/roam-icon.png" alt="ROAM" className="w-5 h-5" />
+            <img 
+              src="/roam-icon.png" 
+              alt="ROAM" 
+              className="w-5 h-5"
+              onError={(e) => {
+                console.error('ROAM icon failed to load:', e);
+                e.currentTarget.style.display = 'none';
+              }}
+            />
             ROAM Assistant
           </CardTitle>
           <Button
@@ -131,7 +139,15 @@ export default function ChatBot({ isOpen, onClose }: ChatBotProps) {
                 >
                   {message.role === "assistant" && (
                     <div className="w-8 h-8 rounded-full bg-roam-blue/10 flex items-center justify-center flex-shrink-0">
-                      <img src="/roam-icon.png" alt="ROAM" className="w-4 h-4" />
+                      <img 
+                        src="/roam-icon.png" 
+                        alt="ROAM" 
+                        className="w-4 h-4"
+                        onError={(e) => {
+                          console.error('ROAM icon failed to load:', e);
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
                     </div>
                   )}
                   <div
@@ -159,7 +175,15 @@ export default function ChatBot({ isOpen, onClose }: ChatBotProps) {
               {isLoading && (
                 <div className="flex gap-3 justify-start">
                   <div className="w-8 h-8 rounded-full bg-roam-blue/10 flex items-center justify-center flex-shrink-0">
-                    <img src="/roam-icon.png" alt="ROAM" className="w-4 h-4" />
+                    <img 
+                      src="/roam-icon.png" 
+                      alt="ROAM" 
+                      className="w-4 h-4"
+                      onError={(e) => {
+                        console.error('ROAM icon failed to load:', e);
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
                   </div>
                   <div className="bg-gray-100 p-3 rounded-lg">
                     <Loader2 className="w-4 h-4 animate-spin text-gray-600" />
