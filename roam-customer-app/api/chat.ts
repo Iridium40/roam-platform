@@ -7,7 +7,9 @@ interface Message {
 }
 
 export default async function handler(req: Request, res: Response) {
-  if (req.method !== "POST") {
+  // Express uses req.method, Vercel uses req.method - both should work
+  const method = req.method?.toUpperCase();
+  if (method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
@@ -332,7 +334,7 @@ Be friendly, professional, and helpful. Answer questions accurately based on thi
     });
 
     const response = await anthropic.messages.create({
-      model: "claude-3-5-sonnet-20241022",
+      model: "claude-3-haiku-20240307",
       max_tokens: 1024,
       system: systemPrompt,
       messages: conversation,

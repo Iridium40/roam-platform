@@ -48,6 +48,7 @@
     "env:add": "vercel env add"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.67.0",
     "@roam/shared": "file:../packages/shared",
     "@stripe/stripe-js": "^7.8.0",
     "@supabase/supabase-js": "^2.55.0",
