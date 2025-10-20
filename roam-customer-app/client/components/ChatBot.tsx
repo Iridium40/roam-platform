@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -30,6 +30,17 @@ export default function ChatBot({ isOpen, onClose }: ChatBotProps) {
   ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to bottom when new messages are added
+  useEffect(() => {
+    if (scrollAreaRef.current) {
+      const scrollContainer = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
+      if (scrollContainer) {
+        scrollContainer.scrollTop = scrollContainer.scrollHeight;
+      }
+    }
+  }, [messages, isLoading]);
 
   const sendMessage = async () => {
     if (!input.trim()) return;
@@ -93,8 +104,8 @@ export default function ChatBot({ isOpen, onClose }: ChatBotProps) {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-end justify-end p-4 z-50">
-      <Card className="w-full max-w-md h-[500px] flex flex-col">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-roam-blue text-white rounded-t-lg">
+      <Card className="w-full max-w-md h-[500px] flex flex-col overflow-hidden">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-roam-blue text-white rounded-t-lg flex-shrink-0">
           <CardTitle className="flex items-center gap-2 text-lg">
             <img src="/roam-icon.png" alt="ROAM" className="w-5 h-5" />
             ROAM Assistant
@@ -108,9 +119,9 @@ export default function ChatBot({ isOpen, onClose }: ChatBotProps) {
             <X className="w-4 h-4" />
           </Button>
         </CardHeader>
-        <CardContent className="flex-1 flex flex-col p-0">
-          <ScrollArea className="flex-1 p-4">
-            <div className="space-y-4">
+        <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
+          <ScrollArea ref={scrollAreaRef} className="flex-1 p-4 h-full">
+            <div className="space-y-4 min-h-full">
               {messages.map((message) => (
                 <div
                   key={message.id}
@@ -157,7 +168,7 @@ export default function ChatBot({ isOpen, onClose }: ChatBotProps) {
               )}
             </div>
           </ScrollArea>
-          <div className="p-4 border-t">
+          <div className="p-4 border-t flex-shrink-0">
             <div className="flex gap-2">
               <Input
                 value={input}
