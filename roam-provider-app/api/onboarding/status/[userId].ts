@@ -106,10 +106,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ) {
         // Check if documents are uploaded
         const { data: documents } = await supabase
-          .from("provider_documents")
+          .from("business_documents")
           .select("document_type")
           .eq("business_id", businessProfile.id)
-          .eq("upload_status", "uploaded");
+          .eq("verification_status", "pending");
 
         const requiredTypes = ["professional_license", "professional_headshot"];
         if (businessProfile.business_type !== "sole_proprietorship") {

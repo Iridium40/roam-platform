@@ -315,7 +315,7 @@ export function ProviderSignupForm({
                   onValueChange={handleSelectChange("yearsExperience")}
                   disabled={loading}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger id="yearsExperience">
                     <SelectValue placeholder="Select years of experience" />
                   </SelectTrigger>
                   <SelectContent>

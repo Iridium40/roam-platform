@@ -250,7 +250,7 @@ export default function StripeTaxInfoCapture({
               value={taxInfo.businessType}
               onValueChange={(value) => updateTaxInfo('businessType', value)}
             >
-              <SelectTrigger>
+              <SelectTrigger id="businessType">
                 <SelectValue placeholder="Select business type" />
               </SelectTrigger>
               <SelectContent>
@@ -283,7 +283,7 @@ export default function StripeTaxInfoCapture({
                 value={taxInfo.taxIdType}
                 onValueChange={(value) => updateTaxInfo('taxIdType', value)}
               >
-                <SelectTrigger>
+                <SelectTrigger id="taxIdType">
                   <SelectValue placeholder="Select tax ID type" />
                 </SelectTrigger>
                 <SelectContent>

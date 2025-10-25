@@ -131,7 +131,7 @@ export function AddServiceModal({
                 setServiceForm(prev => ({ ...prev, service_id: value }))
               }
             >
-              <SelectTrigger>
+              <SelectTrigger id="service">
                 <SelectValue placeholder="Choose a service to offer" />
               </SelectTrigger>
               <SelectContent>
@@ -247,7 +247,7 @@ export function AddServiceModal({
                 setServiceForm(prev => ({ ...prev, delivery_type: value }))
               }
             >
-              <SelectTrigger>
+              <SelectTrigger id="delivery">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

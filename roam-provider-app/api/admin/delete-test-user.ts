@@ -51,7 +51,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Delete from related tables first (to avoid foreign key constraints)
     const deleteOperations = [
       // Delete provider documents
-      supabase.from("provider_documents").delete().eq("user_id", userId),
+      supabase.from("business_documents").delete().eq("business_id", businessId),
 
       // Delete provider applications
       supabase.from("provider_applications").delete().eq("user_id", userId),

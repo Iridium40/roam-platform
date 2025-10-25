@@ -20,13 +20,51 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   console.log("Request headers:", req.headers);
 
   try {
-    // TODO: Implement file upload without multer middleware
-    // For now, return a temporary error message
-    console.log("File upload temporarily disabled - multer middleware removed");
+    // Simple implementation for file upload
+    // Note: This is a basic implementation - the client-side direct upload is preferred
     
-    return res.status(501).json({
-      error: "File upload temporarily disabled",
-      message: "Document upload functionality is being updated. Please try again later.",
+    const { businessId, userId, documentType, documentName, fileUrl, fileSizeBytes } = req.body;
+
+    console.log("Request body:", { businessId, userId, documentType, documentName, fileUrl, fileSizeBytes });
+
+    if (!businessId || !userId || !documentType || !documentName || !fileUrl) {
+      console.error("Missing required fields:", { businessId, userId, documentType, documentName, fileUrl });
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    // Create document record in database
+    const { data, error } = await supabase
+      .from('business_documents')
+      .insert({
+        business_id: businessId,
+        document_type: documentType,
+        document_name: documentName,
+        file_url: fileUrl,
+        file_size_bytes: fileSizeBytes || null,
+        verification_status: 'pending'
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Database error:", error);
+      return res.status(500).json({ 
+        error: "Failed to create document record",
+        details: error.message 
+      });
+    }
+
+    console.log("Document created successfully:", data);
+
+    return res.status(200).json({
+      success: true,
+      uploaded: [{
+        id: data.id,
+        url: fileUrl,
+        name: documentName,
+        type: documentType
+      }],
+      message: "Document uploaded successfully"
     });
 
   } catch (error) {
@@ -38,9 +76,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 }
 
-// Disable body parsing for file uploads
+// Enable body parsing for JSON data
 export const config = {
   api: {
-    bodyParser: false,
+    bodyParser: true,
   },
 };

@@ -265,14 +265,8 @@ export function DocumentUploadForm({
         );
       }, 200);
 
-      // Upload using API endpoint (which handles both storage and database)
-      const formData = new FormData();
-      formData.append("documents", file);
-      formData.append("userId", userId);
-      formData.append("businessId", businessId || "");
-      formData.append("documentType", documentType); // Send document type directly
-
-      console.log("Uploading file:", {
+      // Upload directly to Supabase storage (bypassing broken API endpoint)
+      console.log("Uploading file directly to Supabase:", {
         fileName: file.name,
         fileSize: file.size,
         documentType: documentType,
@@ -280,30 +274,51 @@ export function DocumentUploadForm({
         businessId: businessId
       });
 
-      console.log("Sending fetch request to upload documents...");
-      const response = await fetch("/api/onboarding/upload-documents", {
-        method: "POST",
-        body: formData,
-      });
-      console.log("Fetch response status:", response.status);
-      console.log("Fetch response headers:", Object.fromEntries(response.headers.entries()));
+      // Sanitize filename for storage
+      const sanitizeFileName = (filename: string) => {
+        return filename
+          .replace(/[^a-zA-Z0-9.-]/g, '_') // Replace special characters with underscores
+          .replace(/_+/g, '_') // Replace multiple underscores with single
+          .replace(/^_|_$/g, ''); // Remove leading/trailing underscores
+      };
 
-      if (!response.ok) {
-        const errorData = await response
-          .json()
-          .catch(() => ({ error: response.statusText }));
-        console.error("Upload API error:", errorData);
-        throw new Error(
-          `Upload failed: ${errorData.error || response.statusText}`,
-        );
+      const sanitizedFileName = sanitizeFileName(file.name);
+      const fileName = `provider-documents/${businessId}/${documentType}_${Date.now()}_${sanitizedFileName}`;
+      
+      // Upload to Supabase storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('roam-file-storage')
+        .upload(fileName, file);
+
+      if (uploadError) {
+        throw new Error(`Storage upload failed: ${uploadError.message}`);
       }
 
-      const result = await response.json();
-      console.log("Upload API response:", result);
-      console.log("Upload API response.uploaded:", result.uploaded);
-      console.log("Upload API response.errors:", result.errors);
-      console.log("Upload API response.success:", result.success);
-      const uploadedDoc = result.uploaded?.[0];
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('roam-file-storage')
+        .getPublicUrl(fileName);
+
+      // Create database record
+      const { data: dbData, error: dbError } = await supabase
+        .from('business_documents')
+        .insert({
+          business_id: businessId,
+          document_type: documentType,
+          document_name: file.name,
+          file_url: urlData.publicUrl,
+          file_size_bytes: file.size,
+          verification_status: 'pending'
+        })
+        .select()
+        .single();
+
+      if (dbError) {
+        throw new Error(`Database error: ${dbError.message}`);
+      }
+
+      console.log("Upload successful:", dbData);
+      const uploadedDoc = { url: urlData.publicUrl, id: dbData.id };
 
       clearInterval(progressInterval);
 
