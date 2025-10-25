@@ -20,50 +20,95 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   console.log("Request headers:", req.headers);
 
   try {
-    // Simple implementation for file upload
-    // Note: This is a basic implementation - the client-side direct upload is preferred
-    
-    const { businessId, userId, documentType, documentName, fileUrl, fileSizeBytes } = req.body;
+    // Handle file upload with service role permissions
+    const { 
+      businessId, 
+      userId, 
+      documentType, 
+      fileName, 
+      fileData, 
+      filePath, 
+      mimeType, 
+      fileSizeBytes 
+    } = req.body;
 
-    console.log("Request body:", { businessId, userId, documentType, documentName, fileUrl, fileSizeBytes });
+    console.log("Upload request:", { 
+      businessId, 
+      userId, 
+      documentType, 
+      fileName, 
+      filePath, 
+      mimeType, 
+      fileSizeBytes 
+    });
 
-    if (!businessId || !userId || !documentType || !documentName || !fileUrl) {
-      console.error("Missing required fields:", { businessId, userId, documentType, documentName, fileUrl });
+    if (!businessId || !userId || !documentType || !fileName || !fileData || !filePath) {
+      console.error("Missing required fields:", { businessId, userId, documentType, fileName, filePath });
       return res.status(400).json({ error: "Missing required fields" });
     }
 
-    // Create document record in database
-    const { data, error } = await supabase
+    // Convert base64 back to buffer
+    const buffer = Buffer.from(fileData, 'base64');
+
+    // Upload to Supabase storage using service role key
+    console.log("Uploading to storage:", filePath);
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('roam-file-storage')
+      .upload(filePath, buffer, {
+        contentType: mimeType,
+        cacheControl: '3600',
+        upsert: false
+      });
+
+    if (uploadError) {
+      console.error("Storage upload error:", uploadError);
+      return res.status(500).json({ 
+        error: "Storage upload failed",
+        details: uploadError.message 
+      });
+    }
+
+    console.log("Storage upload successful:", uploadData);
+
+    // Get public URL
+    const { data: urlData } = supabase.storage
+      .from('roam-file-storage')
+      .getPublicUrl(filePath);
+
+    // Create document record in database using service role
+    const { data: dbData, error: dbError } = await supabase
       .from('business_documents')
       .insert({
         business_id: businessId,
         document_type: documentType,
-        document_name: documentName,
-        file_url: fileUrl,
-        file_size_bytes: fileSizeBytes || null,
+        document_name: fileName,
+        file_url: urlData.publicUrl,
+        file_size_bytes: fileSizeBytes || buffer.length,
         verification_status: 'pending'
       })
       .select()
       .single();
 
-    if (error) {
-      console.error("Database error:", error);
+    if (dbError) {
+      console.error("Database error:", dbError);
       return res.status(500).json({ 
         error: "Failed to create document record",
-        details: error.message 
+        details: dbError.message 
       });
     }
 
-    console.log("Document created successfully:", data);
+    console.log("Document created successfully:", dbData);
 
     return res.status(200).json({
       success: true,
       uploaded: [{
-        id: data.id,
-        url: fileUrl,
-        name: documentName,
+        id: dbData.id,
+        url: urlData.publicUrl,
+        name: fileName,
         type: documentType
       }],
+      publicUrl: urlData.publicUrl,
+      documentId: dbData.id,
       message: "Document uploaded successfully"
     });
 

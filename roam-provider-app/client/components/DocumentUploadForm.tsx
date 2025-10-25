@@ -265,8 +265,8 @@ export function DocumentUploadForm({
         );
       }, 200);
 
-      // Upload directly to Supabase storage (bypassing broken API endpoint)
-      console.log("Uploading file directly to Supabase:", {
+      // Upload via onboarding API (uses service role for both storage and database)
+      console.log("Uploading file via onboarding API:", {
         fileName: file.name,
         fileSize: file.size,
         documentType: documentType,
@@ -274,6 +274,10 @@ export function DocumentUploadForm({
         businessId: businessId
       });
 
+      // Convert file to base64 for API transmission
+      const fileBuffer = await file.arrayBuffer();
+      const base64Data = btoa(String.fromCharCode(...new Uint8Array(fileBuffer)));
+      
       // Sanitize filename for storage
       const sanitizeFileName = (filename: string) => {
         return filename
@@ -284,41 +288,37 @@ export function DocumentUploadForm({
 
       const sanitizedFileName = sanitizeFileName(file.name);
       const fileName = `provider-documents/${businessId}/${documentType}_${Date.now()}_${sanitizedFileName}`;
-      
-      // Upload to Supabase storage
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('roam-file-storage')
-        .upload(fileName, file);
 
-      if (uploadError) {
-        throw new Error(`Storage upload failed: ${uploadError.message}`);
-      }
-
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from('roam-file-storage')
-        .getPublicUrl(fileName);
-
-      // Create database record
-      const { data: dbData, error: dbError } = await supabase
-        .from('business_documents')
-        .insert({
-          business_id: businessId,
-          document_type: documentType,
-          document_name: file.name,
-          file_url: urlData.publicUrl,
-          file_size_bytes: file.size,
-          verification_status: 'pending'
+      // Upload via onboarding API (uses service role for everything)
+      const response = await fetch('/api/onboarding/upload-documents', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          fileData: base64Data,
+          fileName: file.name,
+          filePath: fileName,
+          mimeType: file.type,
+          businessId: businessId,
+          userId: userId,
+          documentType: documentType,
+          fileSizeBytes: file.size
         })
-        .select()
-        .single();
+      });
 
-      if (dbError) {
-        throw new Error(`Database error: ${dbError.message}`);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`Server upload failed: ${errorData.error || response.statusText}`);
       }
 
-      console.log("Upload successful:", dbData);
-      const uploadedDoc = { url: urlData.publicUrl, id: dbData.id };
+      const uploadResult = await response.json();
+      console.log("Onboarding upload successful:", uploadResult);
+
+      const uploadedDoc = uploadResult.uploaded?.[0] || {
+        url: uploadResult.publicUrl,
+        id: uploadResult.documentId
+      };
 
       clearInterval(progressInterval);
 
