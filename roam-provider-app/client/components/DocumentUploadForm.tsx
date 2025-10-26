@@ -274,9 +274,20 @@ export function DocumentUploadForm({
         businessId: businessId
       });
 
-      // Convert file to base64 for API transmission
-      const fileBuffer = await file.arrayBuffer();
-      const base64Data = btoa(String.fromCharCode(...new Uint8Array(fileBuffer)));
+      // Convert file to base64 for API transmission (streaming approach)
+      const reader = new FileReader();
+      const base64Promise = new Promise<string>((resolve, reject) => {
+        reader.onload = () => {
+          const result = reader.result as string;
+          // Remove data URL prefix to get just the base64 data
+          const base64Data = result.split(',')[1];
+          resolve(base64Data);
+        };
+        reader.onerror = () => reject(reader.error);
+      });
+      
+      reader.readAsDataURL(file);
+      const base64Data = await base64Promise;
       
       // Sanitize filename for storage
       const sanitizeFileName = (filename: string) => {
