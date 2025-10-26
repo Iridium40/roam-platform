@@ -103,7 +103,7 @@ export function ApplicationReviewPage({
   serviceCategories = [],
   serviceSubcategories = [],
 }: ApplicationReviewPageProps) {
-  const [finalConsent, setFinalConsent] = useState(false);
+  const [allConsentsAccepted, setAllConsentsAccepted] = useState(false);
 
   // Utility function to convert snake_case or underscore-separated text to CamelCase
   const toCamelCase = (text: string): string => {
@@ -126,9 +126,6 @@ export function ApplicationReviewPage({
     if (!subcategory) return subcategoryId; // fallback to ID if not found
     return subcategory.description || toCamelCase(subcategory.service_subcategory_type);
   };
-  const [termsAccepted, setTermsAccepted] = useState(false);
-  const [submissionConsent, setSubmissionConsent] = useState(false);
-  const [backgroundCheckConsent, setBackgroundCheckConsent] = useState(false);
 
   const { userData, businessInfo, documents } = applicationData;
 
@@ -159,7 +156,7 @@ export function ApplicationReviewPage({
   };
 
   const canSubmit = () => {
-    return finalConsent && termsAccepted && submissionConsent && backgroundCheckConsent && !loading;
+    return allConsentsAccepted && !loading;
   };
 
   const handleSubmit = async () => {
@@ -510,104 +507,54 @@ export function ApplicationReviewPage({
             </AlertDescription>
           </Alert>
 
-          {/* Consent Checkboxes */}
+          {/* Consolidated Consent Checkbox */}
           <div className="space-y-4">
             <div className="flex items-start space-x-3">
               <Checkbox
-                id="finalConsent"
-                checked={finalConsent}
+                id="allConsentsAccepted"
+                checked={allConsentsAccepted}
                 onCheckedChange={(checked) =>
-                  setFinalConsent(checked as boolean)
+                  setAllConsentsAccepted(checked as boolean)
                 }
                 disabled={loading}
               />
               <Label
-                htmlFor="finalConsent"
+                htmlFor="allConsentsAccepted"
                 className="text-sm leading-relaxed cursor-pointer"
               >
-                I confirm that all information provided in this application is
-                accurate and complete. I understand that providing false
-                information may result in application rejection or account
-                termination.
-              </Label>
-            </div>
-
-            <div className="flex items-start space-x-3">
-              <Checkbox
-                id="termsAccepted"
-                checked={termsAccepted}
-                onCheckedChange={(checked) =>
-                  setTermsAccepted(checked as boolean)
-                }
-                disabled={loading}
-              />
-              <Label
-                htmlFor="termsAccepted"
-                className="text-sm leading-relaxed cursor-pointer"
-              >
-                I agree to the ROAM{" "}
-                <Button
-                  variant="link"
-                  className="p-0 h-auto text-roam-blue underline"
-                  onClick={() => window.open('https://app.termly.io/policy-viewer/policy.html?policyUUID=8bd3c211-2aaa-4626-9910-794dc2d85aff', '_blank')}
-                >
-                  Terms of Service
-                </Button>
-                ,{" "}
-                <Button
-                  variant="link"
-                  className="p-0 h-auto text-roam-blue underline"
-                  onClick={() => window.open('https://app.termly.io/policy-viewer/policy.html?policyUUID=64dec2e3-d030-4421-86ff-a3e7864709d8', '_blank')}
-                >
-                  Privacy Policy
-                </Button>
-                , and{" "}
-                <Button
-                  variant="link"
-                  className="p-0 h-auto text-roam-blue underline"
-                >
-                  Provider Agreement
-                </Button>
-                .
-              </Label>
-            </div>
-
-            <div className="flex items-start space-x-3">
-              <Checkbox
-                id="backgroundCheckConsent"
-                checked={backgroundCheckConsent}
-                onCheckedChange={(checked) =>
-                  setBackgroundCheckConsent(checked as boolean)
-                }
-                disabled={loading}
-              />
-              <Label
-                htmlFor="backgroundCheckConsent"
-                className="text-sm leading-relaxed cursor-pointer"
-              >
-                I consent to a comprehensive background check including criminal
-                history, sex offender registry, and identity verification as
-                required for platform approval.
-              </Label>
-            </div>
-
-            <div className="flex items-start space-x-3">
-              <Checkbox
-                id="submissionConsent"
-                checked={submissionConsent}
-                onCheckedChange={(checked) =>
-                  setSubmissionConsent(checked as boolean)
-                }
-                disabled={loading}
-              />
-              <Label
-                htmlFor="submissionConsent"
-                className="text-sm leading-relaxed cursor-pointer"
-              >
-                I consent to background checks, identity verification, and
-                understand that my application will be reviewed by ROAM
-                administrators. I agree to provide additional documentation if
-                requested during the review process.
+                <div className="space-y-2">
+                  <p className="font-medium">I agree to the following:</p>
+                  <ul className="list-disc list-inside space-y-1 text-xs text-muted-foreground">
+                    <li>I confirm that all information provided in this application is accurate and complete. I understand that providing false information may result in application rejection or account termination.</li>
+                    <li>I agree to the ROAM{" "}
+                      <Button
+                        variant="link"
+                        className="p-0 h-auto text-roam-blue underline"
+                        onClick={() => window.open('https://app.termly.io/policy-viewer/policy.html?policyUUID=8bd3c211-2aaa-4626-9910-794dc2d85aff', '_blank')}
+                      >
+                        Terms of Service
+                      </Button>
+                      ,{" "}
+                      <Button
+                        variant="link"
+                        className="p-0 h-auto text-roam-blue underline"
+                        onClick={() => window.open('https://app.termly.io/policy-viewer/policy.html?policyUUID=64dec2e3-d030-4421-86ff-a3e7864709d8', '_blank')}
+                      >
+                        Privacy Policy
+                      </Button>
+                      , and{" "}
+                      <Button
+                        variant="link"
+                        className="p-0 h-auto text-roam-blue underline"
+                      >
+                        Provider Agreement
+                      </Button>
+                      .
+                    </li>
+                    <li>I consent to a comprehensive background check including criminal history, sex offender registry, and identity verification as required for platform approval.</li>
+                    <li>I consent to background checks, identity verification, and understand that my application will be reviewed by ROAM administrators. I agree to provide additional documentation if requested during the review process.</li>
+                  </ul>
+                </div>
               </Label>
             </div>
           </div>
