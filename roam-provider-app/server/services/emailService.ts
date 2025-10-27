@@ -1,5 +1,5 @@
 import { Resend } from "resend";
-import { ROAM_EMAIL_TEMPLATES, ROAM_EMAIL_CONFIG } from "../../shared/emailTemplates";
+import { ROAM_EMAIL_TEMPLATES, ROAM_EMAIL_CONFIG } from "@shared/emailTemplates";
 
 // Initialize Resend with API key
 const resend = new Resend(process.env.RESEND_API_KEY || "re_Dpiy6s8h_BbVinwM12HVgicrsr7o6uxAV");
