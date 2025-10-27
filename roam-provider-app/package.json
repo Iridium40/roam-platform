@@ -67,7 +67,7 @@
     "plaid": "^38.0.0",
     "react-plaid-link": "^4.1.1",
     "react-qr-code": "^2.0.18",
-    "resend": "^6.0.1",
+    "resend": "^6.3.0",
     "stripe": "^13.4.0",
     "twilio": "^5.10.2",
     "zod": "^3.23.8"

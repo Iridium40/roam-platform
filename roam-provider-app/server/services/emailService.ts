@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import { ROAM_EMAIL_TEMPLATES, ROAM_EMAIL_CONFIG } from "../../shared/emailTemplates";
 
 // Initialize Resend with API key
 const resend = new Resend(process.env.RESEND_API_KEY || "re_Dpiy6s8h_BbVinwM12HVgicrsr7o6uxAV");
@@ -231,42 +232,10 @@ export class EmailService {
     firstName: string,
     applicationId: string,
   ): Promise<boolean> {
-    const content = `
-      <h1 style="color: ${this.brandColor};">Application Submitted Successfully!</h1>
-      <p>Hi ${firstName},</p>
-      
-      <p>Great news! We've received your provider application and all required documents.</p>
-      
-      <div class="highlight">
-        <h3>Application Details:</h3>
-        <p><strong>Application ID:</strong> ${applicationId}</p>
-        <p><strong>Status:</strong> Under Review</p>
-        <p><strong>Submitted:</strong> ${new Date().toLocaleDateString()}</p>
-      </div>
-      
-      <h3>What's Next?</h3>
-      <ol>
-        <li><strong>Background Check (24-48 hours)</strong> - We'll initiate your background check</li>
-        <li><strong>Document Review (2-3 business days)</strong> - Our team will verify your credentials</li>
-        <li><strong>Admin Review (3-5 business days)</strong> - Final review and approval</li>
-      </ol>
-      
-      <p>Once approved, you'll receive a secure email with a link to complete Phase 2 of your setup, including:</p>
-      <ul>
-        <li>Identity verification with Stripe</li>
-        <li>Bank account connection</li>
-        <li>Payment setup</li>
-      </ul>
-      
-      <p>We'll keep you updated throughout the review process. Thank you for your patience!</p>
-      
-      <p>Best regards,<br>The ROAM Onboarding Team</p>
-    `;
-
     return this.sendEmail({
       to,
-      subject: "Application Received - Under Review",
-      html: this.getEmailTemplate(content),
+      subject: "Application Submitted Successfully - ROAM Provider",
+      html: ROAM_EMAIL_TEMPLATES.applicationSubmitted(firstName, applicationId),
       text: `Hi ${firstName}, your ROAM provider application (ID: ${applicationId}) has been submitted successfully and is now under review. We'll contact you within 3-5 business days with updates.`,
     });
   }

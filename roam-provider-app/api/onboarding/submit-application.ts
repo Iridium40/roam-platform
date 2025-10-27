@@ -1,10 +1,15 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { createClient } from "@supabase/supabase-js";
+import { Resend } from "resend";
+import { ROAM_EMAIL_TEMPLATES, ROAM_EMAIL_CONFIG } from "../../../shared/emailTemplates";
 
 const supabase = createClient(
   process.env.VITE_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
+
+// Initialize Resend
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 interface ApplicationData {
   userId: string;
@@ -281,11 +286,49 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Use business contact email (from Step 2) instead of auth email
     const userEmail = businessProfile.contact_email || user.data.user?.email || "";
 
-    // Email functionality temporarily disabled due to missing EmailService module
-    console.log("Email functionality disabled - EmailService module not available in Vercel deployment");
-    console.log("User email would be:", userEmail);
-    console.log("First name would be:", firstName);
-    console.log("Application ID:", submission.id);
+    // Send confirmation email to provider
+    if (userEmail && process.env.RESEND_API_KEY) {
+      try {
+        console.log("Sending application submitted email to:", userEmail);
+        
+        // Create contact in Resend audience first
+        try {
+          await resend.contacts.create({
+            email: userEmail,
+            firstName: firstName,
+            lastName: businessProfile.business_name || "Provider",
+            unsubscribed: false,
+            audienceId: ROAM_EMAIL_CONFIG.resendAudienceId,
+          });
+          console.log("✅ Contact created in Resend audience");
+        } catch (contactError) {
+          console.log("Contact creation failed (may already exist):", contactError);
+          // Continue anyway - contact might already exist
+        }
+
+        // Send application submitted email using shared template
+        const emailHtml = ROAM_EMAIL_TEMPLATES.applicationSubmitted(firstName, submission.id);
+
+        const { data: emailData, error: emailError } = await resend.emails.send({
+          from: "ROAM Provider Support <providersupport@roamyourbestlife.com>",
+          to: [userEmail],
+          subject: "Application Submitted Successfully - ROAM Provider",
+          html: emailHtml,
+        });
+
+        if (emailError) {
+          console.error("❌ Email send failed:", emailError);
+        } else {
+          console.log("✅ Application submitted email sent successfully:", emailData);
+        }
+
+      } catch (emailError) {
+        console.error("Error sending application submitted email:", emailError);
+        // Continue - don't fail the submission if email fails
+      }
+    } else {
+      console.log("Skipping email - no email address or RESEND_API_KEY not configured");
+    }
 
     // TODO: Send email notification to admins about new application
     // TODO: Queue background check initiation
