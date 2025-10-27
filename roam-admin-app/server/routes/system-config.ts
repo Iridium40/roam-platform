@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { supabase } from "../lib/supabase";
+import { supabase } from "../lib/supabase.js";
 
 export async function handleSystemConfig(req: Request, res: Response) {
   try {
