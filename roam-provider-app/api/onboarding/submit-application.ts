@@ -141,11 +141,45 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         timestamp: new Date().toISOString(),
       },
       submitted_at: new Date().toISOString(),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
     };
 
-    console.log("Creating application submission with data:", submissionData);
+    console.log("Creating application submission with data:", JSON.stringify(submissionData, null, 2));
+
+    // Test the insert operation step by step
+    console.log("Testing provider_applications table access...");
+    const { data: testQuery, error: testError } = await supabase
+      .from("provider_applications")
+      .select("id")
+      .limit(1);
+    
+    if (testError) {
+      console.error("Error accessing provider_applications table:", testError);
+      return res.status(500).json({ 
+        error: "Database access error",
+        details: testError.message,
+        debug: { testError }
+      });
+    }
+    
+    console.log("Provider_applications table access successful, proceeding with insert...");
+
+    // Check if there's already an application for this business
+    const { data: existingApplication, error: existingError } = await supabase
+      .from("provider_applications")
+      .select("id, application_status")
+      .eq("business_id", businessId)
+      .single();
+    
+    if (existingApplication) {
+      console.log("Found existing application:", existingApplication);
+      if (existingApplication.application_status === "submitted") {
+        return res.status(400).json({ 
+          error: "Application already submitted",
+          applicationId: existingApplication.id,
+          status: existingApplication.application_status
+        });
+      }
+    }
 
     const { data: submission, error: submissionError } = await supabase
       .from("provider_applications")
@@ -156,13 +190,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (submissionError) {
       console.error("Error creating application submission:", submissionError);
       console.error("Submission error details:", JSON.stringify(submissionError, null, 2));
+      console.error("Submission data being inserted:", JSON.stringify(submissionData, null, 2));
       return res.status(500).json({ 
         error: "Failed to submit application",
         details: submissionError.message,
         debug: {
           userId,
           businessId,
-          submissionData
+          submissionData,
+          errorCode: submissionError.code,
+          errorHint: submissionError.hint,
+          errorDetails: submissionError.details
         }
       });
     }
@@ -176,7 +214,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         verification_status: "under_review",
         setup_step: 2, // Phase 1 complete
         application_submitted_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
       })
       .eq("id", businessId);
 
@@ -191,7 +228,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .update({
         verification_status: "under_review",
         background_check_status: "pending",
-        updated_at: new Date().toISOString(),
       })
       .eq("business_id", businessId);
 
@@ -219,7 +255,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             go_live_completed: false,
             phase_1_completed: true,
             phase_1_completed_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
           },
           {
             onConflict: "business_id",
