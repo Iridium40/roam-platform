@@ -7,8 +7,6 @@ export async function handleBusinessDocuments(req: Request, res: Response) {
 
     console.log('[Business Documents API] GET request received');
     console.log('[Business Documents API] business_id:', business_id);
-    console.log('[Business Documents API] Full query params:', req.query);
-    console.log('[Business Documents API] Request headers:', req.headers);
 
     if (!business_id || typeof business_id !== 'string') {
       console.error('[Business Documents API] Missing or invalid business_id');
@@ -16,6 +14,16 @@ export async function handleBusinessDocuments(req: Request, res: Response) {
         error: 'business_id query parameter is required' 
       });
     }
+
+    // Validate business_id format (should be UUID)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(business_id)) {
+      console.error('[Business Documents API] Invalid business_id format:', business_id);
+      return res.status(400).json({ 
+        error: 'Invalid business_id format - must be a valid UUID' 
+      });
+    }
+
 
     // First, verify the business exists
     const { data: business, error: businessError } = await supabase
@@ -47,26 +55,8 @@ export async function handleBusinessDocuments(req: Request, res: Response) {
       });
     }
 
-    // Test access to business_documents table first
-    console.log('[Business Documents API] Testing business_documents table access...');
-    const { data: testQuery, error: testError } = await supabase
-      .from('business_documents')
-      .select('id')
-      .limit(1);
-    
-    if (testError) {
-      console.error('[Business Documents API] Error accessing business_documents table:', testError);
-      return res.status(500).json({ 
-        error: 'Database access error',
-        details: testError.message,
-        debug: { testError }
-      });
-    }
-    
-    console.log('[Business Documents API] business_documents table access successful, proceeding with query...');
-
-    // Fetch business documents
-    console.log('[Business Documents API] Fetching documents...');
+    // Fetch business documents using service role (should bypass RLS)
+    console.log('[Business Documents API] Fetching documents with service role...');
     const { data: documents, error: documentsError } = await supabase
       .from('business_documents')
       .select('*')

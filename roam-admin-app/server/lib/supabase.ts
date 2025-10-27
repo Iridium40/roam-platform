@@ -27,10 +27,16 @@ validateEnvironment();
 const supabaseUrl = process.env.VITE_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
+// Create admin client that bypasses RLS
 export const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: {
     autoRefreshToken: false,
-    persistSession: false
+    persistSession: false,
+    // Ensure we're using service role for admin operations
+    detectSessionInUrl: false
+  },
+  db: {
+    schema: 'public'
   },
   global: {
     headers: {
@@ -38,3 +44,6 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
     }
   }
 });
+
+// Verify this is using service role key
+console.log('Admin Supabase client configured with service role key:', supabaseKey?.substring(0, 10) + '...');
