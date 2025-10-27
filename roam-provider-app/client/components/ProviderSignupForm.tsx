@@ -252,6 +252,9 @@ export function ProviderSignupForm({
                     disabled={loading}
                   />
                 </div>
+                <p className="text-sm text-gray-600">
+                  This email will be used for login to your ROAM account
+                </p>
                 {fieldErrors.email && (
                   <p className="text-sm text-red-600">{fieldErrors.email}</p>
                 )}

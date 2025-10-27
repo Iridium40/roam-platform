@@ -1,6 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { createClient } from "@supabase/supabase-js";
-import { EmailService } from "../../server/services/emailService";
 
 const supabase = createClient(
   process.env.VITE_PUBLIC_SUPABASE_URL!,
@@ -282,28 +281,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Use business contact email (from Step 2) instead of auth email
     const userEmail = businessProfile.contact_email || user.data.user?.email || "";
 
-    // Send confirmation email to provider (optional - don't fail if email fails)
-    if (userEmail && process.env.RESEND_API_KEY) {
-      try {
-        console.log("Attempting to send email to:", userEmail);
-        const emailSent = await EmailService.sendApplicationSubmittedEmail(
-          userEmail,
-          firstName,
-          submission.id,
-        );
-        if (emailSent) {
-          console.log("✅ Application submitted email sent to:", userEmail);
-        } else {
-          console.error("❌ Failed to send application submitted email to:", userEmail);
-        }
-      } catch (emailError) {
-        console.error("Error sending application submitted email:", emailError);
-        console.error("Email error details:", emailError instanceof Error ? emailError.message : "Unknown email error");
-        // Continue - don't fail the submission if email fails
-      }
-    } else {
-      console.log("Skipping email - no email address or RESEND_API_KEY not configured");
-    }
+    // Email functionality temporarily disabled due to missing EmailService module
+    console.log("Email functionality disabled - EmailService module not available in Vercel deployment");
+    console.log("User email would be:", userEmail);
+    console.log("First name would be:", firstName);
+    console.log("Application ID:", submission.id);
 
     // TODO: Send email notification to admins about new application
     // TODO: Queue background check initiation
