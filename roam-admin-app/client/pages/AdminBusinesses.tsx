@@ -127,7 +127,7 @@ interface BusinessProfile {
   contact_email: string | null;
   phone: string | null;
   verification_status: VerificationStatus;
-  stripe_connect_account_id: string | null;
+  stripe_account_id: string | null;
   is_active: boolean;
   created_at: string;
   image_url: string | null;
@@ -261,7 +261,7 @@ const sampleBusinesses: BusinessProfile[] = [
     phone: "+1-305-555-0123",
     status: "active",
     verification_status: "verified",
-    stripe_connect_account_id: "acct_1234567890",
+    stripe_account_id: "acct_1234567890",
     is_active: true,
     created_at: "2023-11-15T00:00:00Z",
     website_url: "https://miamispa.com",
@@ -287,7 +287,7 @@ const sampleBusinesses: BusinessProfile[] = [
     phone: "+1-305-555-0124",
     status: "active",
     verification_status: "verified",
-    stripe_connect_account_id: "acct_2345678901",
+    stripe_account_id: "acct_2345678901",
     is_active: true,
     created_at: "2023-12-01T00:00:00Z",
     website_url: "https://elitefitness.com",
@@ -333,7 +333,7 @@ const sampleBusinesses: BusinessProfile[] = [
     phone: "+1-305-555-0127",
     status: "active",
     verification_status: "pending",
-    stripe_connect_account_id: "acct_3456789012",
+    stripe_account_id: "acct_3456789012",
     is_active: true,
     created_at: "2024-01-05T00:00:00Z",
     website_url: "https://platinumnails.com",
@@ -1956,7 +1956,7 @@ export default function AdminBusinesses() {
         b.verification_status === "pending" ||
         b.verification_status === "under_review",
     ).length,
-    withStripe: businesses.filter((b) => b.stripe_connect_account_id).length,
+    withStripe: businesses.filter((b) => b.stripe_account_id).length,
   };
 
   const businessDocumentColumns: Column[] = [
@@ -2192,7 +2192,7 @@ export default function AdminBusinesses() {
       header: "Payment",
       render: (value: any, row: BusinessProfile) => (
         <div className="flex items-center gap-2">
-          {row.stripe_connect_account_id ? (
+          {row.stripe_account_id ? (
             <ROAMBadge variant="success" className="flex items-center gap-1">
               <CreditCard className="w-3 h-3" />
               Connected
@@ -2767,7 +2767,7 @@ export default function AdminBusinesses() {
                       </div>
                     </div>
 
-                    {selectedBusiness.stripe_connect_account_id && (
+                    {selectedBusiness.stripe_account_id && (
                       <div className="flex items-center gap-3">
                         <CreditCard className="w-4 h-4 text-muted-foreground" />
                         <div>
@@ -2775,7 +2775,7 @@ export default function AdminBusinesses() {
                             Stripe Account
                           </div>
                           <div className="font-medium font-mono text-sm">
-                            {selectedBusiness.stripe_connect_account_id}
+                            {selectedBusiness.stripe_account_id}
                           </div>
                         </div>
                       </div>

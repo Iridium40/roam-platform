@@ -41,7 +41,7 @@ interface BusinessProfile {
   contact_email: string | null;
   phone: string | null;
   verification_status: VerificationStatus;
-  stripe_connect_account_id: string | null;
+  stripe_account_id: string | null;
   is_active: boolean;
   created_at: string;
   image_url: string | null;
@@ -175,7 +175,7 @@ export function BusinessDetails({
                 Featured
               </ROAMBadge>
             )}
-            {business.stripe_connect_account_id && (
+            {business.stripe_account_id && (
               <ROAMBadge variant="default">
                 <CreditCard className="w-3 h-3 mr-1" />
                 Stripe Connected

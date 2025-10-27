@@ -43,7 +43,7 @@ async function getBusinesses(req: Request, res: Response) {
         contact_email,
         phone,
         verification_status,
-        stripe_connect_account_id,
+        stripe_account_id,
         is_active,
         created_at,
         image_url,

@@ -7,6 +7,8 @@ export async function handleBusinessDocuments(req: Request, res: Response) {
 
     console.log('[Business Documents API] GET request received');
     console.log('[Business Documents API] business_id:', business_id);
+    console.log('[Business Documents API] Full query params:', req.query);
+    console.log('[Business Documents API] Request headers:', req.headers);
 
     if (!business_id || typeof business_id !== 'string') {
       console.error('[Business Documents API] Missing or invalid business_id');
@@ -30,6 +32,7 @@ export async function handleBusinessDocuments(req: Request, res: Response) {
 
     if (businessError) {
       console.error('[Business Documents API] Business lookup error:', businessError);
+      console.error('[Business Documents API] Business error details:', JSON.stringify(businessError, null, 2));
       if (businessError.code === 'PGRST116') {
         return res.status(404).json({ 
           error: 'Business not found',
@@ -37,9 +40,30 @@ export async function handleBusinessDocuments(req: Request, res: Response) {
         });
       }
       return res.status(500).json({ 
-        error: businessError.message 
+        error: businessError.message,
+        details: businessError.details,
+        hint: businessError.hint,
+        code: businessError.code
       });
     }
+
+    // Test access to business_documents table first
+    console.log('[Business Documents API] Testing business_documents table access...');
+    const { data: testQuery, error: testError } = await supabase
+      .from('business_documents')
+      .select('id')
+      .limit(1);
+    
+    if (testError) {
+      console.error('[Business Documents API] Error accessing business_documents table:', testError);
+      return res.status(500).json({ 
+        error: 'Database access error',
+        details: testError.message,
+        debug: { testError }
+      });
+    }
+    
+    console.log('[Business Documents API] business_documents table access successful, proceeding with query...');
 
     // Fetch business documents
     console.log('[Business Documents API] Fetching documents...');
@@ -51,9 +75,12 @@ export async function handleBusinessDocuments(req: Request, res: Response) {
 
     if (documentsError) {
       console.error('[Business Documents API] Documents fetch error:', documentsError);
+      console.error('[Business Documents API] Documents error details:', JSON.stringify(documentsError, null, 2));
       return res.status(500).json({ 
         error: documentsError.message,
-        details: documentsError.details 
+        details: documentsError.details,
+        hint: documentsError.hint,
+        code: documentsError.code
       });
     }
 
