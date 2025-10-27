@@ -1,49 +1,49 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
-import { handleDemo } from "./routes/demo";
-import { handleSystemConfig } from "./routes/system-config";
-import { handleTestSMS, handleGetSMSSettings } from "./routes/sms";
-import { handleUploadImage } from "./routes/storage";
-import { handleSendApprovalEmail } from "./routes/send-approval-email";
-import { handleSendRejectionEmail } from "./routes/send-rejection-email";
-import { handleSendContactReply } from "./routes/send-contact-reply";
-import { handleValidatePhase2Token } from "./routes/validate-phase2-token";
-import { handleBusinessServiceCategories } from "./routes/business-service-categories";
-import { handleBusinessServiceSubcategories } from "./routes/business-service-subcategories";
-import { handleBusinesses, handleVerificationStats } from "./routes/businesses";
-import { handleBusinessDocuments } from "./routes/business-documents";
-import { handleUsers, handleUserActivity } from "./routes/users";
-import { handleBookings, handleBookingStats, handleBookingTrends } from "./routes/bookings";
+import { handleDemo } from "./routes/demo.js";
+import { handleSystemConfig } from "./routes/system-config.js";
+import { handleTestSMS, handleGetSMSSettings } from "./routes/sms.js";
+import { handleUploadImage } from "./routes/storage.js";
+import { handleSendApprovalEmail } from "./routes/send-approval-email.js";
+import { handleSendRejectionEmail } from "./routes/send-rejection-email.js";
+import { handleSendContactReply } from "./routes/send-contact-reply.js";
+import { handleValidatePhase2Token } from "./routes/validate-phase2-token.js";
+import { handleBusinessServiceCategories } from "./routes/business-service-categories.js";
+import { handleBusinessServiceSubcategories } from "./routes/business-service-subcategories.js";
+import { handleBusinesses, handleVerificationStats } from "./routes/businesses.js";
+import { handleBusinessDocuments } from "./routes/business-documents.js";
+import { handleUsers, handleUserActivity } from "./routes/users.js";
+import { handleBookings, handleBookingStats, handleBookingTrends } from "./routes/bookings.js";
 import { 
   handleFinancialStats, 
   handleTransactions, 
   handlePayoutRequests, 
   handleUpdatePayoutStatus, 
   handleRevenueData 
-} from "./routes/financial";
+} from "./routes/financial.js";
 import { 
   handleReportMetrics,
   handleUserReports,
   handleBookingReports,
   handleBusinessReports,
   handleServiceReports
-} from "./routes/reports";
+} from "./routes/reports.js";
 import { 
   handleReviews, 
   handleReviewModeration, 
   handleFlaggedReviews 
-} from "./routes/reviews";
+} from "./routes/reviews.js";
 import { 
   handlePromotions, 
   handlePromotionUsage, 
   handlePromotionActivation 
-} from "./routes/promotions";
+} from "./routes/promotions.js";
 import { 
   handleAnnouncements, 
   handleAnnouncementPublication, 
   handleActiveAnnouncements 
-} from "./routes/announcements";
+} from "./routes/announcements.js";
 
 export function createServer() {
   const app = express();
