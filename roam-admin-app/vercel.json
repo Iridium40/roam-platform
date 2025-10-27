@@ -158,6 +158,102 @@
       "source": "/api/test/generate-phase2-token",
       "destination": "/api/test/generate-phase2-token.ts"
     },
+    {
+      "source": "/api/business-documents",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/api/businesses",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/api/verification/stats",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/api/users",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/api/users/activity",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/api/bookings",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/api/bookings/stats",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/api/bookings/trends",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/api/business-service-categories",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/api/business-service-subcategories",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/api/financial/stats",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/api/financial/transactions",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/api/financial/payouts",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/api/financial/revenue-data",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/api/reports/metrics",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/api/reports/users",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/api/reports/bookings",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/api/reports/businesses",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/api/reports/services",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/api/reviews",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/api/reviews/flagged",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/api/promotions",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/api/announcements",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/api/announcements/active",
+      "destination": "/api/index.ts"
+    },
 
     {
       "source": "/((?!api/).*)",
