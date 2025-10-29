@@ -254,6 +254,22 @@
       "source": "/api/announcements/active",
       "destination": "/api/index.ts"
     },
+    {
+      "source": "/api/send-approval-email",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/api/send-rejection-email",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/api/send-contact-reply",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/api/validate-phase2-token",
+      "destination": "/api/index.ts"
+    },
 
     {
       "source": "/((?!api/).*)",
