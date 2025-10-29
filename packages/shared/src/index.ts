@@ -1,15 +1,15 @@
-// Auth
-export * from './types/auth';
+// Auth types (type-only exports)
+export type * from './types/auth';
 export * from './services/auth-service';
 export * from './services/auth-api';
 export * from './services/supabase-auth-service';
 export * from './services/mfa-service';
 export * from './contexts/UnifiedAuthContext';
 
-// Types
-export * from './types/database';
-export * from './types/twilio';
-export * from './types/booking-conversations';
+// Types (type-only exports)
+export type * from './types/database';
+export type * from './types/twilio';
+export type * from './types/booking-conversations';
 export * from './branding/assets';
 // Unified Service Types (explicit exports to avoid conflicts)
 export type {

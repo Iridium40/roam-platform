@@ -522,25 +522,43 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Update business address
-    const { error: addressError } = await supabase
+    // First check if a location already exists for this business
+    const { data: existingLocation } = await supabase
       .from("business_locations")
-      .upsert(
-        {
-          business_id: businessProfileData.id,
-          location_name: "Main Location",
-          address_line1: businessData.businessAddress.addressLine1,
-          address_line2: businessData.businessAddress.addressLine2,
-          city: businessData.businessAddress.city,
-          state: businessData.businessAddress.state,
-          postal_code: businessData.businessAddress.postalCode,
-          country: businessData.businessAddress.country,
-          is_primary: true,
-          is_active: true,
-        },
-        {
-          onConflict: "business_id",
-        },
-      );
+      .select("id")
+      .eq("business_id", businessProfileData.id)
+      .eq("is_primary", true)
+      .single();
+
+    const addressData = {
+      business_id: businessProfileData.id,
+      location_name: "Main Location",
+      address_line1: businessData.businessAddress.addressLine1,
+      address_line2: businessData.businessAddress.addressLine2,
+      city: businessData.businessAddress.city,
+      state: businessData.businessAddress.state,
+      postal_code: businessData.businessAddress.postalCode,
+      country: businessData.businessAddress.country,
+      is_primary: true,
+      is_active: true,
+    };
+
+    let addressError = null;
+
+    if (existingLocation) {
+      // Update existing location
+      const { error } = await supabase
+        .from("business_locations")
+        .update(addressData)
+        .eq("id", existingLocation.id);
+      addressError = error;
+    } else {
+      // Create new location
+      const { error } = await supabase
+        .from("business_locations")
+        .insert(addressData);
+      addressError = error;
+    }
 
     if (addressError) {
       console.error("Error updating business address:", addressError);
