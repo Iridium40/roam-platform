@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { TokenService } from "../services/tokenService";
+import { TokenService } from "../services/tokenService.js";
 
 interface ApprovalEmailRequest {
   businessName: string;

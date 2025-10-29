@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { TokenService, Phase2ApprovalToken } from "../services/tokenService";
+import { TokenService, Phase2ApprovalToken } from "../services/tokenService.js";
 import { createClient } from "@supabase/supabase-js";
 
 // Initialize Supabase client (using same config as other routes)

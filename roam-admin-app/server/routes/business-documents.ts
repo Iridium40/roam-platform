@@ -3,10 +3,16 @@ import { supabase } from '../lib/supabase.js';
 
 export async function handleBusinessDocuments(req: Request, res: Response) {
   try {
+    console.log('[Business Documents API] ===== START =====');
+    console.log('[Business Documents API] Request method:', req.method);
+    console.log('[Business Documents API] Request URL:', req.url);
+    console.log('[Business Documents API] Request headers:', JSON.stringify(req.headers, null, 2));
+    console.log('[Business Documents API] Request query:', req.query);
+    
     const { business_id } = req.query;
 
-    console.log('[Business Documents API] GET request received');
-    console.log('[Business Documents API] business_id:', business_id);
+    console.log('[Business Documents API] business_id extracted:', business_id);
+    console.log('[Business Documents API] business_id type:', typeof business_id);
 
     if (!business_id || typeof business_id !== 'string') {
       console.error('[Business Documents API] Missing or invalid business_id');
@@ -24,6 +30,34 @@ export async function handleBusinessDocuments(req: Request, res: Response) {
       });
     }
 
+    // Debug environment variables
+    console.log('[Business Documents API] Environment check:');
+    console.log('[Business Documents API] SUPABASE_URL exists:', !!process.env.VITE_PUBLIC_SUPABASE_URL);
+    console.log('[Business Documents API] SUPABASE_URL length:', process.env.VITE_PUBLIC_SUPABASE_URL?.length);
+    console.log('[Business Documents API] SERVICE_ROLE_KEY exists:', !!process.env.SUPABASE_SERVICE_ROLE_KEY);
+    console.log('[Business Documents API] SERVICE_ROLE_KEY length:', process.env.SUPABASE_SERVICE_ROLE_KEY?.length);
+    console.log('[Business Documents API] SERVICE_ROLE_KEY prefix:', process.env.SUPABASE_SERVICE_ROLE_KEY?.substring(0, 10));
+
+    // Test Supabase connection
+    console.log('[Business Documents API] Testing Supabase connection...');
+    try {
+      const { data: testData, error: testError } = await supabase
+        .from('business_profiles')
+        .select('count')
+        .limit(1);
+      
+      console.log('[Business Documents API] Supabase test result:', {
+        hasData: !!testData,
+        hasError: !!testError,
+        errorMessage: testError?.message
+      });
+    } catch (testErr) {
+      console.error('[Business Documents API] Supabase connection test failed:', testErr);
+      return res.status(500).json({ 
+        error: 'Database connection failed',
+        message: testErr instanceof Error ? testErr.message : 'Unknown connection error'
+      });
+    }
 
     // First, verify the business exists
     const { data: business, error: businessError } = await supabase
@@ -89,6 +123,9 @@ export async function handleBusinessDocuments(req: Request, res: Response) {
       }))
     });
 
+    console.log('[Business Documents API] ===== SUCCESS =====');
+    console.log('[Business Documents API] Returning response with', documents?.length || 0, 'documents');
+    
     return res.status(200).json({ 
       data: documents || [],
       business: {
