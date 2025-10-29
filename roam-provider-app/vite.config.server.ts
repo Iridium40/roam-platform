@@ -1,5 +1,6 @@
 import { defineConfig } from "vite";
 import path from "path";
+import { copyFileSync, mkdirSync, existsSync } from "fs";
 
 // Server build configuration
 export default defineConfig({
@@ -50,4 +51,29 @@ export default defineConfig({
   define: {
     "process.env.NODE_ENV": '"production"',
   },
+  plugins: [
+    {
+      name: "copy-shared",
+      writeBundle() {
+        // Copy shared folder to dist/server
+        const sharedDir = path.resolve(__dirname, "shared");
+        const distSharedDir = path.resolve(__dirname, "dist/server/shared");
+        
+        if (existsSync(sharedDir)) {
+          if (!existsSync(distSharedDir)) {
+            mkdirSync(distSharedDir, { recursive: true });
+          }
+          
+          // Copy emailTemplates.ts
+          const srcFile = path.join(sharedDir, "emailTemplates.ts");
+          const destFile = path.join(distSharedDir, "emailTemplates.js");
+          
+          if (existsSync(srcFile)) {
+            copyFileSync(srcFile, destFile);
+            console.log("✅ Copied shared/emailTemplates.ts to dist/server/shared/emailTemplates.js");
+          }
+        }
+      },
+    },
+  ],
 });

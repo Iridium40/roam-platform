@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { createClient } from "@supabase/supabase-js";
 import { Resend } from "resend";
-import { ROAM_EMAIL_TEMPLATES, ROAM_EMAIL_CONFIG } from "@shared/emailTemplates";
+import { ROAM_EMAIL_TEMPLATES, ROAM_EMAIL_CONFIG } from "../../shared/emailTemplates";
 
 const supabase = createClient(
   process.env.VITE_PUBLIC_SUPABASE_URL!,
