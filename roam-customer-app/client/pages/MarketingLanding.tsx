@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ShareMenu from "@/components/ShareMenu";
@@ -13,16 +13,28 @@ import SocialProof from "@/components/roam/SocialProof";
 import FAQ from "@/components/roam/FAQ";
 import { ChevronDown, Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import { Link } from "react-router-dom";
+import Turnstile from "react-turnstile";
 
 export default function MarketingLanding() {
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const turnstileRef = useRef<HTMLFormElement>(null);
 
   const handleSubscribe = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = event.currentTarget;
     const email = new FormData(form).get("email");
     if (!email || typeof email !== "string") return;
+
+    // Check if Turnstile token exists
+    if (!turnstileToken) {
+      setMessage({
+        type: "error",
+        text: "Please verify you're not a robot",
+      });
+      return;
+    }
 
     setIsLoading(true);
     setMessage(null);
@@ -31,7 +43,7 @@ export default function MarketingLanding() {
       const response = await fetch("/api/subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, token: turnstileToken }),
       });
 
       const data = await response.json();
@@ -47,12 +59,14 @@ export default function MarketingLanding() {
           : "Successfully subscribed! Check your email for confirmation. 📧",
       });
       (form.elements.namedItem("email") as HTMLInputElement).value = "";
+      setTurnstileToken(null);
     } catch (error) {
       console.error("Subscription failed", error);
       setMessage({
         type: "error",
         text: error instanceof Error ? error.message : "Failed to subscribe. Please try again.",
       });
+      setTurnstileToken(null);
     } finally {
       setIsLoading(false);
     }
@@ -63,7 +77,7 @@ export default function MarketingLanding() {
       {/* Launch Hero */}
       <section className="relative overflow-hidden">
         <div className="absolute top-6 left-6 z-30">
-          <ShareMenu variant="secondary" />
+          <ShareMenu />
         </div>
         <div className="container relative z-20 mx-auto flex min-h-[60vh] flex-col items-center justify-center gap-6 py-16 text-center">
           <img
@@ -77,7 +91,7 @@ export default function MarketingLanding() {
           <p className="max-w-2xl text-white/90">
             The new ROAM experience is almost here. Stay tuned for premium wellness services delivered anywhere you are.
           </p>
-          <form onSubmit={handleSubscribe} className="mx-auto mt-2 w-full max-w-md">
+          <form ref={turnstileRef} onSubmit={handleSubscribe} className="mx-auto mt-2 w-full max-w-md">
             <div className="flex items-center gap-2">
               <Input
                 type="email"
@@ -98,6 +112,15 @@ export default function MarketingLanding() {
                   "Register"
                 )}
               </Button>
+            </div>
+            <div className="mt-3 flex justify-center">
+              <Turnstile
+                sitekey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
+                onSuccess={(token) => setTurnstileToken(token)}
+                onError={() => setTurnstileToken(null)}
+                onExpire={() => setTurnstileToken(null)}
+                theme="light"
+              />
             </div>
             {message && (
               <div

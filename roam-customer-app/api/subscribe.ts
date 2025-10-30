@@ -10,10 +10,37 @@ export default async function handler(req: Request, res: Response) {
   }
 
   try {
-    const { email } = req.body;
+    const { email, token } = req.body;
 
     if (!email || typeof email !== "string") {
       return res.status(400).json({ error: "Email is required" });
+    }
+
+    // Validate Turnstile token
+    if (!token || typeof token !== "string") {
+      return res.status(400).json({ error: "Verification token is required" });
+    }
+
+    // Verify Turnstile token with Cloudflare
+    const verificationResponse = await fetch(
+      "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          secret: process.env.TURNSTILE_SECRET_KEY,
+          response: token,
+        }),
+      }
+    );
+
+    const verificationResult = await verificationResponse.json();
+
+    if (!verificationResult.success) {
+      console.error("Turnstile verification failed:", verificationResult);
+      return res.status(400).json({ error: "Verification failed. Please try again." });
     }
 
     // Validate email format
