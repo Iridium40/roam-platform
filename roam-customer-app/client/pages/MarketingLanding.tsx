@@ -114,13 +114,19 @@ export default function MarketingLanding() {
               </Button>
             </div>
             <div className="mt-3 flex justify-center">
-              <Turnstile
-                sitekey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
-                onSuccess={(token) => setTurnstileToken(token)}
-                onError={() => setTurnstileToken(null)}
-                onExpire={() => setTurnstileToken(null)}
-                theme="light"
-              />
+              {import.meta.env.VITE_TURNSTILE_SITE_KEY ? (
+                <Turnstile
+                  sitekey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
+                  onSuccess={(token) => setTurnstileToken(token)}
+                  onError={() => setTurnstileToken(null)}
+                  onExpire={() => setTurnstileToken(null)}
+                  theme="light"
+                />
+              ) : (
+                <div className="rounded bg-yellow-100 px-4 py-2 text-sm text-yellow-800">
+                  ⚠️ CAPTCHA not configured. Please restart the dev server after adding environment variables.
+                </div>
+              )}
             </div>
             {message && (
               <div
