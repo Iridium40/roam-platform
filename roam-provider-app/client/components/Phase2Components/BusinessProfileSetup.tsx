@@ -115,6 +115,27 @@ export default function BusinessProfileSetup({
 
   const loadExistingData = async () => {
     try {
+      // First, try to get business data from sessionStorage (from token validation)
+      const phase2Session = sessionStorage.getItem('phase2_session');
+      let fallbackData: any = null;
+      
+      if (phase2Session) {
+        try {
+          const session = JSON.parse(phase2Session);
+          if (session.business_name) {
+            fallbackData = {
+              businessName: session.business_name,
+              detailedDescription: "",
+              websiteUrl: "",
+              socialMediaLinks: {}
+            };
+            console.log('Using business data from session:', fallbackData);
+          }
+        } catch (e) {
+          console.error('Error parsing phase2 session:', e);
+        }
+      }
+      
       // Try the onboarding-specific endpoint first, fallback to regular endpoint
       let response = await fetch(`/api/onboarding/business-profile/${businessId}`);
       if (!response.ok) {
@@ -124,15 +145,15 @@ export default function BusinessProfileSetup({
       
       if (response.ok) {
         const data = await response.json();
-        console.log('Loaded business profile data:', data);
+        console.log('Loaded business profile data from API:', data);
         
         // Populate formData with Phase 1 data - these fields should come from Phase 1
         setFormData((prev) => ({
           ...prev,
-          businessName: data.businessName || data.business_name || prev.businessName || "",
-          detailedDescription: data.detailedDescription || data.business_description || prev.detailedDescription || "",
-          websiteUrl: data.websiteUrl || data.website_url || prev.websiteUrl || "",
-          socialMediaLinks: data.socialMediaLinks || data.social_media || prev.socialMediaLinks || {},
+          businessName: data.businessName || data.business_name || prev.businessName || fallbackData?.businessName || "",
+          detailedDescription: data.detailedDescription || data.business_description || prev.detailedDescription || fallbackData?.detailedDescription || "",
+          websiteUrl: data.websiteUrl || data.website_url || prev.websiteUrl || fallbackData?.websiteUrl || "",
+          socialMediaLinks: data.socialMediaLinks || data.social_media || prev.socialMediaLinks || fallbackData?.socialMediaLinks || {},
           logoUrl: data.logoUrl || data.logo_url || prev.logoUrl,
           coverImageUrl: data.coverImageUrl || data.cover_image_url || prev.coverImageUrl,
         }));
@@ -148,10 +169,47 @@ export default function BusinessProfileSetup({
           });
         }
       } else {
-        console.error('Failed to load business profile:', response.status, response.statusText);
+        console.error('Failed to load business profile from API:', response.status, response.statusText);
+        
+        // Use fallback data from session if API fails
+        if (fallbackData) {
+          console.log('Using fallback data from session since API failed');
+          setFormData((prev) => ({
+            ...prev,
+            businessName: fallbackData.businessName || prev.businessName || "",
+            detailedDescription: fallbackData.detailedDescription || prev.detailedDescription || "",
+            websiteUrl: fallbackData.websiteUrl || prev.websiteUrl || "",
+            socialMediaLinks: fallbackData.socialMediaLinks || prev.socialMediaLinks || {},
+          }));
+          
+          if (fallbackData.businessName) {
+            setBusinessInfo({
+              businessName: fallbackData.businessName,
+              businessDescription: fallbackData.detailedDescription || "",
+              website: fallbackData.websiteUrl || "",
+              socialMedia: fallbackData.socialMediaLinks || {},
+            });
+          }
+        }
       }
     } catch (error) {
       console.error("Error loading existing business profile data:", error);
+      
+      // Even if everything fails, try to get at least the business name from session
+      const phase2Session = sessionStorage.getItem('phase2_session');
+      if (phase2Session) {
+        try {
+          const session = JSON.parse(phase2Session);
+          if (session.business_name && !formData.businessName) {
+            setFormData((prev) => ({
+              ...prev,
+              businessName: session.business_name
+            }));
+          }
+        } catch (e) {
+          // Ignore parse errors
+        }
+      }
     }
   };
 

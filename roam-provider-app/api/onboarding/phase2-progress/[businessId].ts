@@ -7,9 +7,26 @@ const supabase = createClient(
 );
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  const { businessId } = req.query;
+  // Extract businessId from URL path (most reliable)
+  let businessId: string | undefined;
+  
+  if (req.url) {
+    const urlMatch = req.url.match(/\/api\/onboarding\/phase2-progress\/([a-f0-9-]{36}|[^/?]+)/);
+    if (urlMatch && urlMatch[1]) {
+      businessId = urlMatch[1];
+    }
+  }
+  
+  // Fallback to query param
+  if (!businessId && req.query.businessId) {
+    businessId = Array.isArray(req.query.businessId) ? req.query.businessId[0] : req.query.businessId as string;
+  }
 
-  if (typeof businessId !== 'string') {
+  if (!businessId || typeof businessId !== 'string') {
+    console.error('Phase2 progress - Business ID extraction failed:', {
+      query: req.query,
+      url: req.url
+    });
     return res.status(400).json({ error: 'Invalid business ID' });
   }
 

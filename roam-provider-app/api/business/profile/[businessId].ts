@@ -21,35 +21,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   Object.entries(CORS_HEADERS).forEach(([k, v]) => res.setHeader(k, v));
 
-  // Dynamic route params: Vercel rewrites pass the captured segment as a query param
-  // For /api/business/profile/(.*) -> [businessId].ts, the segment is in req.query
-  // However, the query key might be the filename pattern or the captured segment
+  // Dynamic route params: Extract businessId from URL path first (most reliable)
+  // Vercel rewrites with (.*) pattern - extract directly from URL
   let businessId: string | undefined;
   
-  // Check all possible query param locations
-  const possibleKeys = ['businessId', 'business_id', '[businessId]', ...Object.keys(req.query)];
-  
-  for (const key of possibleKeys) {
-    const value = req.query[key];
-    if (value && typeof value === 'string' && value.length > 0) {
-      // Skip if it's clearly not a UUID/business ID format
-      if (value.length > 10 && !value.includes('=') && !value.includes('&')) {
-        businessId = value;
-        break;
-      }
-    } else if (Array.isArray(value) && value[0] && typeof value[0] === 'string') {
-      if (value[0].length > 10) {
-        businessId = value[0];
-        break;
-      }
+  // Primary method: extract from URL path (always works)
+  if (req.url) {
+    const urlMatch = req.url.match(/\/api\/business\/profile\/([a-f0-9-]{36}|[^/?]+)/);
+    if (urlMatch && urlMatch[1]) {
+      businessId = urlMatch[1];
     }
   }
   
-  // Fallback: extract from URL path
-  if (!businessId && req.url) {
-    const urlMatch = req.url.match(/\/api\/business\/profile\/([^/?]+)/);
-    if (urlMatch && urlMatch[1] && urlMatch[1].length > 10) {
-      businessId = urlMatch[1];
+  // Fallback: try query params (Vercel might pass it here)
+  if (!businessId) {
+    const queryKeys = ['businessId', 'business_id', ...Object.keys(req.query)];
+    for (const key of queryKeys) {
+      const value = req.query[key];
+      if (value) {
+        const strValue = Array.isArray(value) ? value[0] : value;
+        if (typeof strValue === 'string' && strValue.length > 10) {
+          // Check if it looks like a UUID
+          if (/^[a-f0-9-]{36}$/i.test(strValue) || strValue.length > 20) {
+            businessId = strValue;
+            break;
+          }
+        }
+      }
     }
   }
 
@@ -58,8 +56,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       query: req.query,
       url: req.url,
       queryKeys: Object.keys(req.query),
-      extracted: businessId,
-      allQueryValues: Object.values(req.query)
+      extracted: businessId
     });
     return res.status(400).json({ error: 'businessId param required' });
   }
