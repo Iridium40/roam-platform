@@ -124,28 +124,34 @@ export default function BusinessProfileSetup({
       
       if (response.ok) {
         const data = await response.json();
+        console.log('Loaded business profile data:', data);
+        
+        // Populate formData with Phase 1 data - these fields should come from Phase 1
         setFormData((prev) => ({
           ...prev,
-          businessName: data.businessName || prev.businessName || "",
-          detailedDescription: data.detailedDescription || prev.detailedDescription || "",
-          websiteUrl: data.websiteUrl || prev.websiteUrl || "",
-          socialMediaLinks: data.socialMediaLinks || prev.socialMediaLinks || {},
-          logoUrl: data.logoUrl || prev.logoUrl,
-          coverImageUrl: data.coverImageUrl || prev.coverImageUrl,
+          businessName: data.businessName || data.business_name || prev.businessName || "",
+          detailedDescription: data.detailedDescription || data.business_description || prev.detailedDescription || "",
+          websiteUrl: data.websiteUrl || data.website_url || prev.websiteUrl || "",
+          socialMediaLinks: data.socialMediaLinks || data.social_media || prev.socialMediaLinks || {},
+          logoUrl: data.logoUrl || data.logo_url || prev.logoUrl,
+          coverImageUrl: data.coverImageUrl || data.cover_image_url || prev.coverImageUrl,
         }));
         
         // Also update businessInfo for display
-        if (data.businessName) {
+        const loadedBusinessName = data.businessName || data.business_name;
+        if (loadedBusinessName) {
           setBusinessInfo({
-            businessName: data.businessName,
-            businessDescription: data.detailedDescription || "",
-            website: data.websiteUrl || "",
-            socialMedia: data.socialMediaLinks || {},
+            businessName: loadedBusinessName,
+            businessDescription: data.detailedDescription || data.business_description || "",
+            website: data.websiteUrl || data.website_url || "",
+            socialMedia: data.socialMediaLinks || data.social_media || {},
           });
         }
+      } else {
+        console.error('Failed to load business profile:', response.status, response.statusText);
       }
     } catch (error) {
-      console.log("No existing business profile data found");
+      console.error("Error loading existing business profile data:", error);
     }
   };
 
@@ -301,13 +307,13 @@ export default function BusinessProfileSetup({
   const validateForm = (): boolean => {
     const errors: Record<string, string> = {};
 
-    if (!formData.businessName.trim()) {
+    if (!formData.businessName || !formData.businessName.trim()) {
       errors.businessName = "Business name is required";
     }
 
-    if (!formData.detailedDescription.trim()) {
+    if (!formData.detailedDescription || !formData.detailedDescription.trim()) {
       errors.detailedDescription = "Business description is required";
-    } else if (formData.detailedDescription.length < 50) {
+    } else if (formData.detailedDescription.trim().length < 50) {
       errors.detailedDescription =
         "Description should be at least 50 characters";
     }
@@ -354,14 +360,23 @@ export default function BusinessProfileSetup({
         await uploadImage("cover");
       }
 
+      // Ensure we have required fields - should be populated from Phase 1
+      if (!formData.businessName || !formData.businessName.trim()) {
+        throw new Error("Business name is required. Please ensure Phase 1 data is loaded.");
+      }
+
+      if (!formData.detailedDescription || !formData.detailedDescription.trim()) {
+        throw new Error("Business description is required. Please ensure Phase 1 data is loaded.");
+      }
+
       // Save business profile data using proper endpoint
       const response = await fetch(`/api/business/profile/${businessId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          businessName: formData.businessName || "",
-          detailedDescription: formData.detailedDescription || "",
-          websiteUrl: formData.websiteUrl || "",
+          businessName: formData.businessName.trim(),
+          detailedDescription: formData.detailedDescription.trim(),
+          websiteUrl: formData.websiteUrl?.trim() || "",
           socialMediaLinks: formData.socialMediaLinks || {},
           logoUrl: formData.logoUrl || undefined,
           coverImageUrl: formData.coverImageUrl || undefined,

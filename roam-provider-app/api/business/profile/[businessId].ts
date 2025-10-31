@@ -20,12 +20,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   // Dynamic route params are exposed via query on Vercel
-  const businessIdRaw = (req.query.businessId || req.query.business_id) as string | string[] | undefined;
-  const businessId = Array.isArray(businessIdRaw) ? businessIdRaw[0] : businessIdRaw;
+  // Try multiple possible keys and handle different formats
+  let businessIdRaw = req.query.businessId || req.query.business_id || req.query['[businessId]'];
+  
+  // If still not found, try extracting from URL path
+  if (!businessIdRaw && req.url) {
+    const urlMatch = req.url.match(/\/api\/business\/profile\/([^/?]+)/);
+    if (urlMatch) {
+      businessIdRaw = urlMatch[1];
+    }
+  }
+  
+  const businessId = Array.isArray(businessIdRaw) ? businessIdRaw[0] : (businessIdRaw as string | undefined);
 
   Object.entries(CORS_HEADERS).forEach(([k, v]) => res.setHeader(k, v));
 
-  if (!businessId) {
+  if (!businessId || typeof businessId !== 'string') {
+    console.error('Business ID extraction failed:', {
+      query: req.query,
+      url: req.url,
+      extracted: businessId
+    });
     return res.status(400).json({ error: 'businessId param required' });
   }
 
