@@ -19,27 +19,47 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(500).json({ error: 'Server configuration error' });
   }
 
-  // Dynamic route params are exposed via query on Vercel
-  // Try multiple possible keys and handle different formats
-  let businessIdRaw = req.query.businessId || req.query.business_id || req.query['[businessId]'];
+  Object.entries(CORS_HEADERS).forEach(([k, v]) => res.setHeader(k, v));
+
+  // Dynamic route params: Vercel rewrites pass the captured segment as a query param
+  // For /api/business/profile/(.*) -> [businessId].ts, the segment is in req.query
+  // However, the query key might be the filename pattern or the captured segment
+  let businessId: string | undefined;
   
-  // If still not found, try extracting from URL path
-  if (!businessIdRaw && req.url) {
-    const urlMatch = req.url.match(/\/api\/business\/profile\/([^/?]+)/);
-    if (urlMatch) {
-      businessIdRaw = urlMatch[1];
+  // Check all possible query param locations
+  const possibleKeys = ['businessId', 'business_id', '[businessId]', ...Object.keys(req.query)];
+  
+  for (const key of possibleKeys) {
+    const value = req.query[key];
+    if (value && typeof value === 'string' && value.length > 0) {
+      // Skip if it's clearly not a UUID/business ID format
+      if (value.length > 10 && !value.includes('=') && !value.includes('&')) {
+        businessId = value;
+        break;
+      }
+    } else if (Array.isArray(value) && value[0] && typeof value[0] === 'string') {
+      if (value[0].length > 10) {
+        businessId = value[0];
+        break;
+      }
     }
   }
   
-  const businessId = Array.isArray(businessIdRaw) ? businessIdRaw[0] : (businessIdRaw as string | undefined);
-
-  Object.entries(CORS_HEADERS).forEach(([k, v]) => res.setHeader(k, v));
+  // Fallback: extract from URL path
+  if (!businessId && req.url) {
+    const urlMatch = req.url.match(/\/api\/business\/profile\/([^/?]+)/);
+    if (urlMatch && urlMatch[1] && urlMatch[1].length > 10) {
+      businessId = urlMatch[1];
+    }
+  }
 
   if (!businessId || typeof businessId !== 'string') {
     console.error('Business ID extraction failed:', {
       query: req.query,
       url: req.url,
-      extracted: businessId
+      queryKeys: Object.keys(req.query),
+      extracted: businessId,
+      allQueryValues: Object.values(req.query)
     });
     return res.status(400).json({ error: 'businessId param required' });
   }

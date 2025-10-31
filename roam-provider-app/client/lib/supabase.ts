@@ -103,7 +103,10 @@ export const supabaseAdmin = (() => {
   }
 
   // Return regular client as fallback (should not be used for admin operations)
-  console.warn('Admin client not available - using regular client. Admin operations should be done server-side.');
+  // Only warn in development to avoid console spam
+  if (import.meta.env.DEV) {
+    console.warn('Admin client not available - using regular client. Admin operations should be done server-side.');
+  }
   return supabase;
 })();
 

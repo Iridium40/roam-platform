@@ -212,6 +212,10 @@
       "destination": "/api/onboarding/phase2-progress/[businessId].ts"
     },
     {
+      "source": "/api/onboarding/business-profile/(.*)",
+      "destination": "/api/onboarding/business-profile/[businessId].ts"
+    },
+    {
       "source": "/api/business/profile/(.*)",
       "destination": "/api/business/profile/[businessId].ts"
     },
