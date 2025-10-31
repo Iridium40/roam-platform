@@ -101,23 +101,27 @@ export default function BusinessProfileSetupSimplified({
   const loadExistingData = async () => {
     try {
       setLoadingInfo(true);
-      // Load business profile data from Phase 1
-      const response = await fetch(`/api/onboarding/business-profile/${businessId}`);
+      // Try the onboarding-specific endpoint first, fallback to regular endpoint
+      let response = await fetch(`/api/onboarding/business-profile/${businessId}`);
+      if (!response.ok) {
+        response = await fetch(`/api/business/profile/${businessId}`);
+      }
+      
       if (response.ok) {
         const data = await response.json();
         setBusinessInfo({
-          businessName: data.business_name || "",
-          businessDescription: data.business_description || "",
-          website: data.website || "",
-          socialMedia: data.social_media || {},
+          businessName: data.businessName || data.business_name || "",
+          businessDescription: data.detailedDescription || data.business_description || "",
+          website: data.websiteUrl || data.website || "",
+          socialMedia: data.socialMediaLinks || data.social_media || {},
         });
         
         // Load existing images if any
-        if (data.logo_url) {
-          setFormData((prev) => ({ ...prev, logoUrl: data.logo_url }));
+        if (data.logoUrl || data.logo_url) {
+          setFormData((prev) => ({ ...prev, logoUrl: data.logoUrl || data.logo_url }));
         }
-        if (data.cover_image_url) {
-          setFormData((prev) => ({ ...prev, coverImageUrl: data.cover_image_url }));
+        if (data.coverImageUrl || data.cover_image_url) {
+          setFormData((prev) => ({ ...prev, coverImageUrl: data.coverImageUrl || data.cover_image_url }));
         }
       }
     } catch (error) {
@@ -265,12 +269,12 @@ export default function BusinessProfileSetupSimplified({
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          businessName: formData.businessName,
-          detailedDescription: formData.detailedDescription,
-          websiteUrl: formData.websiteUrl,
-          socialMediaLinks: formData.socialMediaLinks,
-          logoUrl: formData.logoUrl,
-          coverImageUrl: formData.coverImageUrl,
+          businessName: businessInfo.businessName || "",
+          detailedDescription: businessInfo.businessDescription || "",
+          websiteUrl: businessInfo.website || "",
+          socialMediaLinks: businessInfo.socialMedia || {},
+          logoUrl: formData.logoUrl || undefined,
+          coverImageUrl: formData.coverImageUrl || undefined,
         }),
       });
 

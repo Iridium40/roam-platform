@@ -67,17 +67,45 @@ const createSupabaseClient = (): SupabaseClient<Database> => {
 
 export const supabase = createSupabaseClient();
 
-// Create admin client for server-side operations
-export const supabaseAdmin = createClient<Database>(
-  supabaseUrl,
-  import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY || supabaseAnonKey,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
+// Create admin client for server-side operations (only in browser if service role key is available)
+// Note: Service role key should NEVER be exposed to the client in production
+// This is only for admin operations that bypass RLS
+let supabaseAdminInstance: SupabaseClient<Database> | null = null;
+
+export const supabaseAdmin = (() => {
+  // Only create admin client if service role key is available AND we're in development
+  // In production, admin operations should be done server-side only
+  if (supabaseAdminInstance) {
+    return supabaseAdminInstance;
   }
-);
+
+  const serviceRoleKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
+  
+  // Only create admin client in development or if explicitly enabled
+  if (serviceRoleKey && (import.meta.env.DEV || import.meta.env.VITE_ENABLE_ADMIN_CLIENT === 'true')) {
+    supabaseAdminInstance = createClient<Database>(
+      supabaseUrl,
+      serviceRoleKey,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+          storageKey: 'roam-provider-admin-auth' // Use different storage key to avoid conflicts
+        },
+        global: {
+          headers: {
+            'X-Client-Info': 'roam-provider-admin'
+          }
+        }
+      }
+    );
+    return supabaseAdminInstance;
+  }
+
+  // Return regular client as fallback (should not be used for admin operations)
+  console.warn('Admin client not available - using regular client. Admin operations should be done server-side.');
+  return supabase;
+})();
 
 // Add type declarations to prevent TypeScript errors
 declare global {

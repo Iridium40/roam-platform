@@ -103,6 +103,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         coverImageUrl
       } = body;
 
+      // Validate required fields
+      if (!businessName || typeof businessName !== 'string' || !businessName.trim()) {
+        return res.status(400).json({ error: 'businessName is required and must be a non-empty string' });
+      }
+
       if (businessId.startsWith('test-') && businessId !== '12345678-1234-1234-1234-123456789abc') {
         return res.status(200).json({
           success: true,
@@ -121,16 +126,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(404).json({ error: 'Business profile not found' });
       }
 
+      // Prepare update data, only including defined values
+      const updateData: Record<string, any> = {
+        business_name: businessName.trim(),
+      };
+
+      if (detailedDescription !== undefined) {
+        updateData.business_description = detailedDescription || null;
+      }
+      if (websiteUrl !== undefined) {
+        updateData.website_url = websiteUrl?.trim() || null;
+      }
+      if (socialMediaLinks !== undefined) {
+        updateData.social_media = socialMediaLinks || {};
+      }
+      if (logoUrl !== undefined) {
+        updateData.logo_url = logoUrl || null;
+      }
+      if (coverImageUrl !== undefined) {
+        updateData.cover_image_url = coverImageUrl || null;
+      }
+
       const { error: updateError } = await supabase
         .from('businesses')
-        .update({
-          business_name: businessName,
-          business_description: detailedDescription,
-          website_url: websiteUrl,
-          social_media: socialMediaLinks,
-          logo_url: logoUrl,
-          cover_image_url: coverImageUrl
-        })
+        .update(updateData)
         .eq('id', businessId);
 
       if (updateError) {

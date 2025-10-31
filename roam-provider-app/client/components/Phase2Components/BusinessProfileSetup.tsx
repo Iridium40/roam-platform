@@ -23,6 +23,10 @@ import { ImageStorageService } from "@/utils/image/imageStorage";
 import { IMAGE_REQUIREMENTS, ImageType } from "@/utils/image/imageTypes";
 
 interface BusinessProfileData {
+  businessName?: string;
+  detailedDescription?: string;
+  websiteUrl?: string;
+  socialMediaLinks?: Record<string, string>;
   logoUrl?: string;
   coverImageUrl?: string;
   businessCategoryRefined?: string;
@@ -55,6 +59,10 @@ export default function BusinessProfileSetup({
   className = "",
 }: BusinessProfileSetupProps) {
   const [formData, setFormData] = useState<BusinessProfileData>({
+    businessName: "",
+    detailedDescription: "",
+    websiteUrl: "",
+    socialMediaLinks: {},
     logoUrl: initialData?.logoUrl,
     coverImageUrl: initialData?.coverImageUrl,
     businessCategoryRefined: initialData?.businessCategoryRefined,
@@ -107,14 +115,34 @@ export default function BusinessProfileSetup({
 
   const loadExistingData = async () => {
     try {
-      // Use the onboarding-specific endpoint that doesn't require authentication
-      const response = await fetch(`/api/onboarding/business-profile/${businessId}`);
+      // Try the onboarding-specific endpoint first, fallback to regular endpoint
+      let response = await fetch(`/api/onboarding/business-profile/${businessId}`);
+      if (!response.ok) {
+        // Fallback to regular business profile endpoint
+        response = await fetch(`/api/business/profile/${businessId}`);
+      }
+      
       if (response.ok) {
         const data = await response.json();
         setFormData((prev) => ({
           ...prev,
-          ...data,
+          businessName: data.businessName || prev.businessName || "",
+          detailedDescription: data.detailedDescription || prev.detailedDescription || "",
+          websiteUrl: data.websiteUrl || prev.websiteUrl || "",
+          socialMediaLinks: data.socialMediaLinks || prev.socialMediaLinks || {},
+          logoUrl: data.logoUrl || prev.logoUrl,
+          coverImageUrl: data.coverImageUrl || prev.coverImageUrl,
         }));
+        
+        // Also update businessInfo for display
+        if (data.businessName) {
+          setBusinessInfo({
+            businessName: data.businessName,
+            businessDescription: data.detailedDescription || "",
+            website: data.websiteUrl || "",
+            socialMedia: data.socialMediaLinks || {},
+          });
+        }
       }
     } catch (error) {
       console.log("No existing business profile data found");
@@ -331,12 +359,12 @@ export default function BusinessProfileSetup({
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          businessName: formData.businessName,
-          detailedDescription: formData.detailedDescription,
-          websiteUrl: formData.websiteUrl,
-          socialMediaLinks: formData.socialMediaLinks,
-          logoUrl: formData.logoUrl,
-          coverImageUrl: formData.coverImageUrl,
+          businessName: formData.businessName || "",
+          detailedDescription: formData.detailedDescription || "",
+          websiteUrl: formData.websiteUrl || "",
+          socialMediaLinks: formData.socialMediaLinks || {},
+          logoUrl: formData.logoUrl || undefined,
+          coverImageUrl: formData.coverImageUrl || undefined,
         }),
       });
 
