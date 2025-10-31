@@ -20,7 +20,7 @@ export class TokenService {
   }
 
   private static getFrontendURL(): string {
-    return process.env.FRONTEND_URL || process.env.VITE_FRONTEND_URL || 'https://roamyourbestlife.com';
+    return process.env.FRONTEND_URL || process.env.VITE_FRONTEND_URL || 'https://roamprovider.com';
   }
 
   /**
