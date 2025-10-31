@@ -21,43 +21,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   Object.entries(CORS_HEADERS).forEach(([k, v]) => res.setHeader(k, v));
 
-  // Dynamic route params: Extract businessId from URL path first (most reliable)
-  // Vercel rewrites with (.*) pattern - extract directly from URL
-  let businessId: string | undefined;
-  
-  // Primary method: extract from URL path (always works)
-  if (req.url) {
-    const urlMatch = req.url.match(/\/api\/onboarding\/business-profile\/([a-f0-9-]{36}|[^/?]+)/);
-    if (urlMatch && urlMatch[1]) {
-      businessId = urlMatch[1];
-    }
-  }
-  
-  // Fallback: try query params (Vercel might pass it here)
-  if (!businessId) {
-    const queryKeys = ['businessId', 'business_id', ...Object.keys(req.query)];
-    for (const key of queryKeys) {
-      const value = req.query[key];
-      if (value) {
-        const strValue = Array.isArray(value) ? value[0] : value;
-        if (typeof strValue === 'string' && strValue.length > 10) {
-          // Check if it looks like a UUID
-          if (/^[a-f0-9-]{36}$/i.test(strValue) || strValue.length > 20) {
-            businessId = strValue;
-            break;
-          }
-        }
-      }
-    }
-  }
+  // Dynamic route params: Vercel passes them via req.query (like provider/profile/[userId].ts)
+  const { businessId } = req.query;
 
-  if (!businessId || typeof businessId !== 'string') {
-    console.error('Business ID extraction failed:', {
-      query: req.query,
-      url: req.url,
-      queryKeys: Object.keys(req.query),
-      extracted: businessId
-    });
+  if (typeof businessId !== 'string') {
     return res.status(400).json({ error: 'businessId param required' });
   }
 
