@@ -24,6 +24,9 @@ const ServerEnvironmentSchema = z.object({
   // Email configuration (Resend)
   RESEND_API_KEY: z.string().min(1, 'Resend API key is required'),
   
+  // Email verification (Emailable)
+  EMAILABLE_API_KEY: z.string().optional(), // Server-side only
+  
   // Plaid configuration
   PLAID_CLIENT_ID: z.string().optional(),
   PLAID_SECRET: z.string().optional(),
@@ -102,6 +105,7 @@ export class ServerEnvironmentConfig {
         VITE_TWILIO_CONVERSATIONS_SERVICE_SID: process.env.VITE_TWILIO_CONVERSATIONS_SERVICE_SID,
         TWILIO_FROM_NUMBER: process.env.TWILIO_FROM_NUMBER,
         RESEND_API_KEY: process.env.RESEND_API_KEY,
+        EMAILABLE_API_KEY: process.env.EMAILABLE_API_KEY,
         PLAID_CLIENT_ID: process.env.PLAID_CLIENT_ID,
         PLAID_SECRET: process.env.PLAID_SECRET,
         PLAID_ENV: process.env.PLAID_ENV,
@@ -137,6 +141,7 @@ export class ServerEnvironmentConfig {
         validatedConfig.RESEND_API_KEY = validatedConfig.RESEND_API_KEY || validatedConfig.VITE_RESEND_API_KEY || '';
         validatedConfig.VITE_PUBLIC_SUPABASE_URL = validatedConfig.VITE_PUBLIC_SUPABASE_URL || validatedConfig.VITE_SUPABASE_URL || '';
         validatedConfig.VITE_PUBLIC_SUPABASE_ANON_KEY = validatedConfig.VITE_PUBLIC_SUPABASE_ANON_KEY || validatedConfig.VITE_SUPABASE_ANON_KEY || '';
+        validatedConfig.EMAILABLE_API_KEY = validatedConfig.EMAILABLE_API_KEY || '';
       }
 
       return validatedConfig;
@@ -186,6 +191,7 @@ export class ServerEnvironmentConfig {
   public get email() {
     return {
       resendApiKey: this.config.RESEND_API_KEY,
+      emailableApiKey: this.config.EMAILABLE_API_KEY,
     };
   }
 

@@ -49,6 +49,37 @@ export default async function handler(req: Request, res: Response) {
       return res.status(400).json({ error: "Invalid email format" });
     }
 
+    // Verify email with Emailable
+    if (process.env.EMAILABLE_API_KEY) {
+      try {
+        const emailableResponse = await fetch(
+          `https://api.emailable.com/v1/verify?email=${encodeURIComponent(email)}&api_key=${process.env.EMAILABLE_API_KEY}`
+        );
+
+        if (!emailableResponse.ok) {
+          console.error(`Emailable API error: ${emailableResponse.status} ${emailableResponse.statusText}`);
+          // Continue with subscription if API call fails
+        } else {
+          const emailableResult = await emailableResponse.json();
+
+          // Reject invalid emails based on Emailable verification
+          if (emailableResult.state === "undeliverable" || emailableResult.state === "risky") {
+            console.log(`Email rejected by Emailable: ${email} - state: ${emailableResult.state}`);
+            return res.status(400).json({ 
+              error: "Please enter a valid email address" 
+            });
+          }
+
+          // Log verification result for monitoring
+          console.log(`Email verified by Emailable: ${email} - state: ${emailableResult.state}`);
+        }
+      } catch (emailableError) {
+        console.error("Emailable verification error:", emailableError);
+        // Continue with subscription even if Emailable verification fails
+        // to avoid blocking legitimate users due to service issues
+      }
+    }
+
     // Initialize Supabase client
     const supabase = createClient(
       process.env.VITE_PUBLIC_SUPABASE_URL!,
