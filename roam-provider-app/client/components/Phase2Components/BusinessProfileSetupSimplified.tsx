@@ -260,18 +260,23 @@ export default function BusinessProfileSetupSimplified({
         await uploadImage("cover");
       }
 
-      // Save business profile data
-      const profileResponse = await fetch(`/api/test-business-profile`, {
+      // Save business profile data using proper endpoint
+      const profileResponse = await fetch(`/api/business/profile/${businessId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          businessId,
-          ...formData,
+          businessName: formData.businessName,
+          detailedDescription: formData.detailedDescription,
+          websiteUrl: formData.websiteUrl,
+          socialMediaLinks: formData.socialMediaLinks,
+          logoUrl: formData.logoUrl,
+          coverImageUrl: formData.coverImageUrl,
         }),
       });
 
       if (!profileResponse.ok) {
-        throw new Error("Failed to save business profile");
+        const errorData = await profileResponse.json().catch(() => ({ error: 'Failed to save business profile' }));
+        throw new Error(errorData.error || "Failed to save business profile");
       }
 
       // Mark step as completed
@@ -286,7 +291,8 @@ export default function BusinessProfileSetupSimplified({
       });
 
       if (!progressResponse.ok) {
-        throw new Error("Failed to save progress");
+        console.error("Failed to save progress, but profile was saved");
+        // Don't throw here - profile was saved successfully
       }
 
       onComplete(formData);

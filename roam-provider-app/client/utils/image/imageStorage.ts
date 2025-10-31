@@ -5,6 +5,7 @@ import {
   StorageConfig, 
   STORAGE_BUCKETS 
 } from "./imageTypes";
+import { ImageProcessingService } from "./imageProcessing";
 
 // Create service role client for admin operations
 const createServiceRoleClient = () => {
@@ -33,8 +34,133 @@ export class ImageStorageService {
     userId?: string
   ): Promise<ImageUploadResult> {
     try {
-      // Convert file to base64 for server transmission
-      const base64 = await this.fileToBase64(file);
+      // Compress and resize image before upload to avoid Vercel 4.5MB limit
+      // Base64 encoding increases size by ~33%, so we need to keep files under ~1.5MB
+      // Target: 1.5MB raw = ~2MB base64 + ~0.5MB JSON overhead = ~2.5MB total (safe under 4.5MB)
+      const maxSafeSize = 1.5 * 1024 * 1024; // 1.5MB - very conservative
+      let processedFile = file;
+      
+      try {
+        // For business cover images, compress aggressively from the start
+        if (imageType === 'business_cover') {
+          // Compress business cover to 1280x720 at 75% quality (good balance)
+          processedFile = await ImageProcessingService.processImage(
+            file,
+            {
+              width: 1280,
+              height: 720,
+              aspectRatio: 16 / 9,
+              quality: 75,
+              format: 'jpeg'
+            }
+          );
+        } else {
+          // For other image types, resize according to requirements first
+          processedFile = await ImageProcessingService.resizeImage(file, imageType);
+        }
+        
+        // If still too large after initial compression, compress further with lower quality
+        if (processedFile.size > maxSafeSize) {
+          console.log(`Image still too large (${(processedFile.size / 1024 / 1024).toFixed(2)}MB), compressing further...`);
+          
+          // Determine aggressive compression settings
+          let targetWidth: number;
+          let targetHeight: number;
+          let quality: number;
+          
+          if (imageType === 'business_cover') {
+            // Already at 1280x720, reduce quality further or resize more
+            if (processedFile.size > maxSafeSize * 2) {
+              targetWidth = 1024;
+              targetHeight = 576;
+              quality = 60;
+            } else {
+              targetWidth = 1280;
+              targetHeight = 720;
+              quality = 65;
+            }
+          } else {
+            // For other types, resize more aggressively
+            targetWidth = processedFile.size > maxSafeSize * 2 ? 1024 : 1280;
+            quality = processedFile.size > maxSafeSize * 2 ? 60 : 70;
+          }
+          
+          processedFile = await ImageProcessingService.processImage(
+            processedFile,
+            {
+              width: targetWidth,
+              height: imageType === 'business_cover' ? targetHeight : undefined,
+              aspectRatio: imageType === 'business_cover' ? 16 / 9 : undefined,
+              quality: quality,
+              format: 'jpeg'
+            }
+          );
+          
+          // If still too large after second pass, one more aggressive compression
+          if (processedFile.size > maxSafeSize) {
+            console.log(`Image still too large after second pass (${(processedFile.size / 1024 / 1024).toFixed(2)}MB), final compression...`);
+            
+            const finalWidth = imageType === 'business_cover' ? 1024 : 800;
+            const finalHeight = imageType === 'business_cover' ? 576 : undefined;
+            
+            processedFile = await ImageProcessingService.processImage(
+              processedFile,
+              {
+                width: finalWidth,
+                height: finalHeight,
+                aspectRatio: imageType === 'business_cover' ? 16 / 9 : undefined,
+                quality: 55,
+                format: 'jpeg'
+              }
+            );
+          }
+        }
+        
+        console.log(`Final image size: ${(processedFile.size / 1024 / 1024).toFixed(2)}MB (original: ${(file.size / 1024 / 1024).toFixed(2)}MB)`);
+        
+        // Final safety check - if still too large, reject
+        if (processedFile.size > 2 * 1024 * 1024) { // 2MB absolute max
+          return {
+            success: false,
+            error: `Unable to compress image below safe limit. Original size: ${(file.size / 1024 / 1024).toFixed(2)}MB. Please use a smaller image file.`
+          };
+        }
+      } catch (compressError) {
+        console.error('Image compression failed:', compressError);
+        // If compression fails, reject large files
+        if (file.size > 2 * 1024 * 1024) {
+          return {
+            success: false,
+            error: `Image compression failed and file is too large (${(file.size / 1024 / 1024).toFixed(2)}MB). Please use a smaller image file (under 2MB recommended).`
+          };
+        }
+        // For smaller files, try to proceed
+        processedFile = file;
+      }
+      
+      // Convert processed file to base64 for server transmission
+      const base64 = await this.fileToBase64(processedFile);
+      
+      // Estimate total payload size (base64 is ~33% larger than original)
+      const estimatedPayloadSize = base64.length + JSON.stringify({
+        imageType,
+        businessId,
+        userId,
+        fileName: processedFile.name,
+        fileType: processedFile.type,
+        fileSize: processedFile.size
+      }).length;
+      
+      // Vercel limit is 4.5MB, stay well below
+      const maxPayloadSize = 3.5 * 1024 * 1024; // 3.5MB - conservative limit
+      
+      if (estimatedPayloadSize > maxPayloadSize) {
+        console.error(`Payload size (${(estimatedPayloadSize / 1024 / 1024).toFixed(2)}MB) exceeds safe limit`);
+        return {
+          success: false,
+          error: `Image is too large even after compression (${(processedFile.size / 1024 / 1024).toFixed(2)}MB). Please use a smaller image file.`
+        };
+      }
       
       // Upload via server endpoint that uses service role
       const response = await fetch('/api/onboarding/upload-image', {
@@ -47,13 +173,18 @@ export class ImageStorageService {
           imageType,
           businessId,
           userId,
-          fileName: file.name,
-          fileType: file.type,
-          fileSize: file.size
+          fileName: processedFile.name,
+          fileType: processedFile.type,
+          fileSize: processedFile.size
         }),
       });
 
       if (!response.ok) {
+        // Handle 413 (Payload Too Large) specifically
+        if (response.status === 413) {
+          throw new Error('Image is too large even after compression. Please try using a smaller image file (under 2MB recommended).');
+        }
+        
         const errorData = await response.json().catch(() => ({ error: 'Upload failed' }));
         throw new Error(errorData.error || `Upload failed with status ${response.status}`);
       }
@@ -97,8 +228,43 @@ export class ImageStorageService {
     config: StorageConfig
   ): Promise<ImageUploadResult> {
     try {
-      // Convert file to base64 for server transmission
-      const base64 = await this.fileToBase64(file);
+      // Compress image if needed to avoid Vercel limit
+      let processedFile = file;
+      const maxSafeSize = 2.5 * 1024 * 1024; // 2.5MB
+      
+      if (file.size > maxSafeSize) {
+        try {
+          // Determine target dimensions for aggressive compression
+          let targetWidth: number | undefined;
+          let targetHeight: number | undefined;
+          
+          if (file.size > maxSafeSize * 2) {
+            targetWidth = 1280;
+            targetHeight = 720; // Maintain 16:9 aspect ratio
+          }
+          
+          processedFile = await ImageProcessingService.processImage(
+            file,
+            {
+              width: targetWidth,
+              height: targetHeight,
+              quality: 70,
+              format: 'jpeg'
+            }
+          );
+        } catch (compressError) {
+          console.warn('Image compression failed, using original file:', compressError);
+          if (file.size > 3.5 * 1024 * 1024) {
+            return {
+              success: false,
+              error: `Image is too large (${(file.size / 1024 / 1024).toFixed(2)}MB). Please use a smaller image.`
+            };
+          }
+        }
+      }
+      
+      // Convert processed file to base64 for server transmission
+      const base64 = await this.fileToBase64(processedFile);
       
       // Upload via server endpoint that uses service role
       const response = await fetch('/api/onboarding/upload-image', {
@@ -111,14 +277,19 @@ export class ImageStorageService {
           imageType: 'custom',
           businessId: 'custom',
           userId: 'custom',
-          fileName: config.fileName,
-          fileType: config.contentType,
-          fileSize: file.size,
+          fileName: processedFile.name,
+          fileType: processedFile.type,
+          fileSize: processedFile.size,
           customConfig: config
         }),
       });
 
       if (!response.ok) {
+        // Handle 413 (Payload Too Large) specifically
+        if (response.status === 413) {
+          throw new Error('Image is too large even after compression. Please try using a smaller image file (under 2MB recommended).');
+        }
+        
         const errorData = await response.json().catch(() => ({ error: 'Upload failed' }));
         throw new Error(errorData.error || `Upload failed with status ${response.status}`);
       }
