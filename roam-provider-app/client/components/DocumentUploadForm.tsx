@@ -38,7 +38,6 @@ interface RequiredDocuments {
   proof_of_address: boolean;
   liability_insurance: boolean;
   professional_license: boolean;
-  professional_certificate: boolean;
   business_license: boolean;
 }
 
@@ -71,7 +70,7 @@ const documentRequirements = {
   liability_insurance: {
     title: "Liability Insurance",
     description: "Professional liability insurance certificate",
-    required: true,
+    required: false,
     acceptedFormats: [".pdf", ".jpg", ".jpeg", ".png"],
     maxSize: 5, // MB
     examples: [
@@ -84,25 +83,13 @@ const documentRequirements = {
     title: "Professional License/Certification",
     description:
       "Your professional license, certification, or training credentials",
-    required: true,
+    required: false,
     acceptedFormats: [".pdf", ".jpg", ".jpeg", ".png"],
     maxSize: 5, // MB
     examples: [
       "Massage License",
       "Cosmetology License",
       "Personal Trainer Certification",
-    ],
-  },
-  professional_certificate: {
-    title: "Professional Certificate",
-    description: "Professional certification or clear headshot photo",
-    required: true,
-    acceptedFormats: [".jpg", ".jpeg", ".png", ".pdf"],
-    maxSize: 2, // MB
-    examples: [
-      "Professional certificate",
-      "Professional headshot",
-      "Business portrait",
     ],
   },
   business_license: {
@@ -136,15 +123,9 @@ export function DocumentUploadForm({
       drivers_license: true,
       proof_of_address: true,
       liability_insurance: false,
-      professional_license: true,
-      professional_certificate: true,
+      professional_license: false,
       business_license: false,
     };
-
-    // Business entities typically need business license
-    if (businessType && businessType !== "sole_proprietorship") {
-      base.business_license = true;
-    }
 
     return base;
   };
@@ -169,12 +150,14 @@ export function DocumentUploadForm({
       return `File must be one of: ${requirements.acceptedFormats.join(", ")}`;
     }
 
-    // Check for duplicate document type
-    const existingDoc = documents.find(
-      (doc) => doc.type === documentType && doc.status !== "error",
-    );
-    if (existingDoc) {
-      return `A ${requirements.title.toLowerCase()} has already been uploaded`;
+    // Check for duplicate document type (except professional_license which allows multiple uploads)
+    if (documentType !== "professional_license") {
+      const existingDoc = documents.find(
+        (doc) => doc.type === documentType && doc.status !== "error",
+      );
+      if (existingDoc) {
+        return `A ${requirements.title.toLowerCase()} has already been uploaded`;
+      }
     }
 
     return null;
@@ -221,26 +204,43 @@ export function DocumentUploadForm({
   ) => {
     if (!files || files.length === 0) return;
 
-    const file = files[0];
-    const validationError = validateFile(file, documentType);
+    // For professional_license, process all selected files
+    // For other document types, process only the first file
+    const filesToProcess = documentType === "professional_license"
+      ? Array.from(files)
+      : [files[0]];
 
-    if (validationError) {
-      // Add error document
-      const errorDoc: UploadedDocument = {
-        id: `${documentType}-${Date.now()}`,
-        file,
-        type: documentType,
-        uploadProgress: 0,
-        status: "error",
-        error: validationError,
-      };
-      setDocuments((prev) => [...prev, errorDoc]);
-      return;
+    // Process each file
+    for (const file of filesToProcess) {
+      const validationError = validateFile(file, documentType);
+
+      if (validationError) {
+        // Add error document
+        const errorDoc: UploadedDocument = {
+          id: `${documentType}-${Date.now()}-${Math.random()}`,
+          file,
+          type: documentType,
+          uploadProgress: 0,
+          status: "error",
+          error: validationError,
+        };
+        setDocuments((prev) => [...prev, errorDoc]);
+        continue;
+      }
+
+      // Process this file (continue with existing logic)
+      await processFileUpload(file, documentType);
     }
+  };
 
-    // Create document entry
+  const processFileUpload = async (
+    file: File,
+    documentType: DocumentType,
+  ) => {
+
+    // Create document entry with unique ID
     const newDoc: UploadedDocument = {
-      id: `${documentType}-${Date.now()}`,
+      id: `${documentType}-${Date.now()}-${Math.random().toString(36).substring(7)}`,
       file,
       type: documentType,
       uploadProgress: 0,
@@ -484,8 +484,9 @@ export function DocumentUploadForm({
 
           {/* Document Upload Sections */}
           <div className="space-y-6">
-            {Object.entries(documentRequirements).map(
-              ([docType, requirements]) => {
+            {Object.entries(documentRequirements)
+              .filter(([docType]) => docType !== "professional_certificate") // Remove duplicate Professional Certificate
+              .map(([docType, requirements]) => {
                 const documentType = docType as DocumentType;
                 const isRequired = requiredDocs[documentType];
                 const status = getDocumentStatus(documentType);
@@ -494,6 +495,13 @@ export function DocumentUploadForm({
                   (doc) =>
                     doc.type === documentType && doc.status === "uploaded",
                 );
+                // For professional_license, get all uploaded documents
+                const uploadedProfessionalLicenses = documentType === "professional_license"
+                  ? documents.filter(
+                      (doc) =>
+                        doc.type === documentType && doc.status === "uploaded",
+                    )
+                  : uploadedDoc ? [uploadedDoc] : [];
 
                 return (
                   <div key={documentType} className="space-y-4">
@@ -511,7 +519,7 @@ export function DocumentUploadForm({
                               Optional
                             </Badge>
                           )}
-                          {status === "uploaded" && (
+                          {(status === "uploaded" || (documentType === "professional_license" && uploadedProfessionalLicenses.length > 0)) && (
                             <CheckCircle className="h-5 w-5 text-green-600" />
                           )}
                         </h3>
@@ -526,7 +534,7 @@ export function DocumentUploadForm({
                       className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
                         dragOver === documentType
                           ? "border-roam-blue bg-roam-light-blue/10"
-                          : status === "uploaded"
+                          : (status === "uploaded" || (documentType === "professional_license" && uploadedProfessionalLicenses.length > 0))
                             ? "border-green-300 bg-green-50"
                             : error
                               ? "border-red-300 bg-red-50"
@@ -541,13 +549,72 @@ export function DocumentUploadForm({
                         ref={(el) => (fileInputRefs.current[documentType] = el)}
                         type="file"
                         accept={requirements.acceptedFormats.join(",")}
+                        multiple={documentType === "professional_license"}
                         onChange={(e) =>
                           handleFileSelect(e.target.files, documentType)
                         }
                         className="hidden"
                       />
 
-                      {status === "uploaded" && uploadedDoc ? (
+                      {documentType === "professional_license" && uploadedProfessionalLicenses.length > 0 ? (
+                        <div className="space-y-4">
+                          <div className="flex items-center gap-2 mb-4">
+                            <CheckCircle className="h-5 w-5 text-green-600" />
+                            <p className="font-medium text-green-800">
+                              {uploadedProfessionalLicenses.length} {uploadedProfessionalLicenses.length === 1 ? "license" : "licenses"} uploaded
+                            </p>
+                          </div>
+                          
+                          {/* List of uploaded professional licenses */}
+                          <div className="space-y-3">
+                            {uploadedProfessionalLicenses.map((doc) => (
+                              <div key={doc.id} className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
+                                <div className="flex items-center gap-2">
+                                  <FileText className="h-4 w-4 text-green-600" />
+                                  <span className="text-sm font-medium">{doc.file.name}</span>
+                                </div>
+                                <div className="flex gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => window.open(doc.url, "_blank")}
+                                  >
+                                    <Eye className="h-4 w-4 mr-2" />
+                                    Preview
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => removeDocument(doc.id)}
+                                  >
+                                    <X className="h-4 w-4 mr-2" />
+                                    Remove
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                          
+                          {/* Allow uploading additional licenses */}
+                          <div className="pt-4 border-t">
+                            <p className="text-sm text-muted-foreground mb-3 text-center">
+                              Upload additional {requirements.title.toLowerCase()}
+                            </p>
+                            <div className="flex justify-center gap-2">
+                              <Button
+                                variant="outline"
+                                onClick={() =>
+                                  fileInputRefs.current[documentType]?.click()
+                                }
+                                disabled={loading}
+                              >
+                                <Upload className="h-4 w-4 mr-2" />
+                                Add Another
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ) : status === "uploaded" && uploadedDoc ? (
                         <div className="space-y-3">
                           <CheckCircle className="h-12 w-12 text-green-600 mx-auto" />
                           <div>
@@ -633,10 +700,12 @@ export function DocumentUploadForm({
                             <p className="text-lg font-medium mb-2">
                               Drop {requirements.title.toLowerCase()} here or
                               click to browse
+                              {documentType === "professional_license" && " (you can upload multiple)"}
                             </p>
                             <p className="text-sm text-foreground/60 mb-3">
                               Formats: {requirements.acceptedFormats.join(", ")}{" "}
                               • Max size: {requirements.maxSize}MB
+                              {documentType === "professional_license" && " • You can select multiple files"}
                             </p>
                             <div className="flex justify-center gap-2">
                               <Button
@@ -647,7 +716,7 @@ export function DocumentUploadForm({
                                 disabled={loading}
                               >
                                 <Upload className="h-4 w-4 mr-2" />
-                                Choose File
+                                {documentType === "professional_license" ? "Choose Files" : "Choose File"}
                               </Button>
                               {requirements.title.includes("Headshot") && (
                                 <Button

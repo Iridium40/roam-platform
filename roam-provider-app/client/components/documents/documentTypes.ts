@@ -17,7 +17,6 @@ export interface RequiredDocuments {
   proof_of_address: boolean;
   liability_insurance: boolean;
   professional_license: boolean;
-  professional_certificate: boolean;
   business_license: boolean;
 }
 
@@ -63,7 +62,7 @@ export const documentRequirements: Record<DocumentType, DocumentRequirements> = 
     title: "Professional License/Certification",
     description:
       "Your professional license, certification, or training credentials",
-    required: true,
+    required: false,
     acceptedFormats: [".pdf", ".jpg", ".jpeg", ".png"],
     maxSize: 5, // MB
     examples: [
@@ -75,7 +74,7 @@ export const documentRequirements: Record<DocumentType, DocumentRequirements> = 
   professional_certificate: {
     title: "Professional Certificate",
     description: "Professional certification or clear headshot photo",
-    required: true,
+    required: false, // Duplicate of Professional License/Certification - should be filtered out
     acceptedFormats: [".jpg", ".jpeg", ".png", ".pdf"],
     maxSize: 2, // MB
     examples: [
