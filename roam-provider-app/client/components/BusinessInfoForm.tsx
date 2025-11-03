@@ -20,7 +20,6 @@ import {
   Phone,
   Globe,
   MapPin,
-  Clock,
   AlertCircle,
   Info,
   Star,
@@ -59,16 +58,6 @@ type BusinessType =
   | "other";
 type ServiceCategory = string;
 
-interface BusinessHours {
-  Monday: { open: string; close: string; closed: boolean };
-  Tuesday: { open: string; close: string; closed: boolean };
-  Wednesday: { open: string; close: string; closed: boolean };
-  Thursday: { open: string; close: string; closed: boolean };
-  Friday: { open: string; close: string; closed: boolean };
-  Saturday: { open: string; close: string; closed: boolean };
-  Sunday: { open: string; close: string; closed: boolean };
-}
-
 interface SocialMediaLink {
   platform: string;
   url: string;
@@ -97,7 +86,6 @@ export interface BusinessInfoFormData {
   phone: string;
   serviceCategories: string[]; // Now stores category IDs instead of text
   serviceSubcategories: string[]; // Now stores subcategory IDs instead of text
-  businessHours: BusinessHours;
   businessAddress: BusinessAddress;
   website?: string;
   socialMedia?: SocialMediaLinks;
@@ -111,16 +99,6 @@ interface BusinessInfoFormProps {
   error?: string;
   initialData?: Partial<BusinessInfoFormData>;
 }
-
-const defaultBusinessHours: BusinessHours = {
-  Monday: { open: "09:00", close: "17:00", closed: false },
-  Tuesday: { open: "09:00", close: "17:00", closed: false },
-  Wednesday: { open: "09:00", close: "17:00", closed: false },
-  Thursday: { open: "09:00", close: "17:00", closed: false },
-  Friday: { open: "09:00", close: "17:00", closed: false },
-  Saturday: { open: "10:00", close: "16:00", closed: false },
-  Sunday: { open: "10:00", close: "16:00", closed: true },
-};
 
 const serviceCategories = ["beauty", "fitness", "therapy", "healthcare"];
 
@@ -193,7 +171,6 @@ export function BusinessInfoForm({
     phone: initialData?.phone || "",
     serviceCategories: initialData?.serviceCategories || [],
     serviceSubcategories: initialData?.serviceSubcategories || [],
-    businessHours: initialData?.businessHours || defaultBusinessHours,
     businessAddress: initialData?.businessAddress || {
       addressLine1: "",
       addressLine2: "",
@@ -418,36 +395,6 @@ export function BusinessInfoForm({
     }));
   };
 
-  const handleBusinessHoursChange = (
-    day: keyof BusinessHours,
-    field: "open" | "close",
-    value: string,
-  ) => {
-    setFormData((prev) => ({
-      ...prev,
-      businessHours: {
-        ...prev.businessHours,
-        [day]: {
-          ...prev.businessHours[day],
-          [field]: value,
-        },
-      },
-    }));
-  };
-
-  const toggleDayClosed = (day: keyof BusinessHours) => {
-    setFormData((prev) => ({
-      ...prev,
-      businessHours: {
-        ...prev.businessHours,
-        [day]: {
-          ...prev.businessHours[day],
-          closed: !prev.businessHours[day].closed,
-        },
-      },
-    }));
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -486,23 +433,9 @@ export function BusinessInfoForm({
     }
 
     try {
-      // Convert business hours format for database storage
-      const convertedBusinessHours: {
-        [key: string]: { open: string; close: string };
-      } = {};
-
-      Object.entries(formData.businessHours).forEach(([day, hours]) => {
-        if (!hours.closed) {
-          convertedBusinessHours[day] = {
-            open: hours.open,
-            close: hours.close,
-          };
-        }
-      });
-
+      // Business hours are collected in Phase 2 step 4, not Phase 1
       const submissionData = {
         ...formData,
-        businessHours: convertedBusinessHours,
       };
 
       await onSubmit(submissionData);
@@ -801,70 +734,6 @@ export function BusinessInfoForm({
                   )}
                 </div>
               </div>
-            </div>
-          </div>
-
-          {/* Business Hours */}
-          <div className="space-y-6">
-            <h3 className="text-lg font-semibold flex items-center gap-2">
-              <Clock className="h-5 w-5 text-roam-blue" />
-              Business Hours
-            </h3>
-
-            <div className="space-y-3">
-              {Object.entries(formData.businessHours).map(([day, hours]) => (
-                <div
-                  key={day}
-                  className="flex items-center gap-4 p-3 border rounded-lg"
-                >
-                  <div className="w-20 font-medium capitalize">{day}</div>
-
-                  <Checkbox
-                    checked={!hours.closed}
-                    onCheckedChange={() =>
-                      toggleDayClosed(day as keyof BusinessHours)
-                    }
-                    disabled={loading}
-                  />
-                  <Label className="text-sm">Open</Label>
-
-                  {!hours.closed && (
-                    <>
-                      <Input
-                        type="time"
-                        value={hours.open}
-                        onChange={(e) =>
-                          handleBusinessHoursChange(
-                            day as keyof BusinessHours,
-                            "open",
-                            e.target.value,
-                          )
-                        }
-                        className="w-32"
-                        disabled={loading}
-                      />
-                      <span className="text-foreground/60">to</span>
-                      <Input
-                        type="time"
-                        value={hours.close}
-                        onChange={(e) =>
-                          handleBusinessHoursChange(
-                            day as keyof BusinessHours,
-                            "close",
-                            e.target.value,
-                          )
-                        }
-                        className="w-32"
-                        disabled={loading}
-                      />
-                    </>
-                  )}
-
-                  {hours.closed && (
-                    <span className="text-foreground/60 italic">Closed</span>
-                  )}
-                </div>
-              ))}
             </div>
           </div>
 
