@@ -18,7 +18,6 @@ interface BusinessInfoData {
   phone: string;
   serviceCategories: string[];
   serviceSubcategories: string[];
-  businessHours: { [key: string]: { open: string; close: string } };
   businessAddress: {
     addressLine1: string;
     addressLine2?: string;
@@ -132,7 +131,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           business_type: businessData.businessType,
           contact_email: businessData.contactEmail,
           phone: businessData.phone,
-          business_hours: businessData.businessHours,
+          // business_hours collected in Phase 2 step 4, not Phase 1
           website_url: businessData.website,
           social_media: businessData.socialMedia || [],
           business_description: businessData.businessDescription,
@@ -307,7 +306,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           business_type: businessData.businessType,
           contact_email: businessData.contactEmail,
           phone: businessData.phone,
-          business_hours: businessData.businessHours,
+          // business_hours collected in Phase 2 step 4, not Phase 1
+          business_hours: {}, // Initialize as empty object, will be set in Phase 2
           website_url: businessData.website,
           social_media: businessData.socialMedia || [],
           business_description: businessData.businessDescription,
