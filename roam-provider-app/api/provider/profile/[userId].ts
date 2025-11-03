@@ -160,11 +160,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(400).json({ error: 'businessId is required for provider profile update' });
       }
 
-      // Check if provider exists for this business
+      // Check if owner provider exists for this business
+      // Phase 2 onboarding is specifically for the business owner (first person to sign up)
       const { data: existingProfile, error: lookupError } = await supabase
         .from('providers')
-        .select('id, user_id')
+        .select('id, user_id, provider_role')
         .eq('business_id', businessId)
+        .eq('provider_role', 'owner')
         .single();
 
       if (lookupError && lookupError.code !== 'PGRST116') {
@@ -174,8 +176,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       if (!existingProfile) {
-        console.warn('Provider profile not found for business:', businessId);
-        return res.status(404).json({ error: 'Provider profile not found for this business. Complete Phase 1 first.' });
+        console.warn('Owner provider profile not found for business:', businessId);
+        return res.status(404).json({ error: 'Owner provider profile not found for this business. Complete Phase 1 first.' });
       }
 
       // Map to providers table schema
@@ -198,11 +200,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       
       // Note: updated_at field doesn't exist in providers table schema
 
-      // Update provider by business_id (Phase 2 onboarding uses business relationship)
+      // Update owner provider by business_id and provider_role
+      // Phase 2 onboarding updates the business owner specifically
       const { error: updateError } = await supabase
         .from('providers')
         .update(profileData)
-        .eq('business_id', businessId);
+        .eq('business_id', businessId)
+        .eq('provider_role', 'owner');
 
       if (updateError) {
         console.error('Error updating provider profile:', updateError);
