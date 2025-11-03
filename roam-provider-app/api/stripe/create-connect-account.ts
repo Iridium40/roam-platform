@@ -107,27 +107,41 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(404).json({ error: "Business profile not found" });
     }
 
-    // Verify user has access to this business (is a provider for this business)
+    // Verify user has access to this business (is owner provider for this business)
+    // For Phase 2 onboarding, check for owner role specifically
     const { data: providerAccess, error: providerError } = await supabase
       .from("providers")
-      .select("id, provider_role")
-      .eq("user_id", userId)
+      .select("id, provider_role, user_id")
       .eq("business_id", businessId)
+      .eq("provider_role", "owner")
       .single();
 
     if (providerError || !providerAccess) {
+      console.error("Provider access check failed:", { providerError, providerAccess, businessId });
       return res.status(403).json({ 
         error: "Access denied",
-        details: "You don't have permission to create a Stripe account for this business"
+        details: "You don't have permission to create a Stripe account for this business. Only the business owner can create a Stripe Connect account."
       });
     }
 
-    if (businessProfile.verification_status !== "approved") {
-      return res.status(403).json({
-        error: "Business must be approved before creating Stripe Connect account",
-        currentStatus: businessProfile.verification_status,
+    // Additional check: verify the provider's user_id matches the request userId
+    // This ensures the authenticated user is the owner
+    if (providerAccess.user_id && providerAccess.user_id !== userId) {
+      return res.status(403).json({ 
+        error: "Access denied",
+        details: "User ID does not match the business owner"
       });
     }
+
+    // Note: In Phase 2 onboarding, business may not be approved yet
+    // Allow Stripe Connect setup during onboarding (verification happens later)
+    // Commenting out this check for Phase 2 onboarding flow
+    // if (businessProfile.verification_status !== "approved") {
+    //   return res.status(403).json({
+    //     error: "Business must be approved before creating Stripe Connect account",
+    //     currentStatus: businessProfile.verification_status,
+    //   });
+    // }
 
     // Check if Stripe Connect account already exists
     const { data: existingAccount } = await supabase

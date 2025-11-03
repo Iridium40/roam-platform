@@ -82,35 +82,51 @@ export default function StripeTaxInfoCapture({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Load existing tax info
+  // Load existing tax info and business profile for contact info
   useEffect(() => {
     const loadTaxInfo = async () => {
       try {
         setLoading(true);
-        const { data, error } = await supabase
+        
+        // Load tax info
+        const { data: taxData, error: taxError } = await supabase
           .from('business_stripe_tax_info')
           .select('*')
           .eq('business_id', businessId)
           .single();
 
-        if (data && !error) {
+        // Load business profile for contact info (required fields)
+        const { data: businessProfile } = await supabase
+          .from('business_profiles')
+          .select('business_name, contact_email')
+          .eq('id', businessId)
+          .single();
+
+        if (taxData && !taxError) {
           setTaxInfo({
-            businessType: data.business_type || 'llc',
-            companyName: data.company_name || '',
-            taxId: data.tax_id || '',
-            taxIdType: data.tax_id_type || 'ein',
+            businessType: taxData.business_entity_type || 'llc',
+            companyName: taxData.legal_business_name || '',
+            taxId: taxData.tax_id || '',
+            taxIdType: taxData.tax_id_type || 'EIN',
             address: {
-              line1: data.address_line1 || '',
-              line2: data.address_line2 || '',
-              city: data.city || '',
-              state: data.state || '',
-              postalCode: data.postal_code || '',
-              country: data.country || 'US',
+              line1: taxData.tax_address_line1 || '',
+              line2: taxData.tax_address_line2 || '',
+              city: taxData.tax_city || '',
+              state: taxData.tax_state || '',
+              postalCode: taxData.tax_postal_code || '',
+              country: taxData.tax_country || 'US',
             },
-            phone: data.phone || '',
-            website: data.website || '',
-            description: data.description || '',
+            phone: taxData.tax_contact_phone || '',
+            website: '', // Not in schema
+            description: '', // Not in schema
           });
+        } else if (businessProfile) {
+          // If no tax info exists, use business profile name and email as defaults
+          // These will be used for required tax_contact_name and tax_contact_email
+          setTaxInfo(prev => ({
+            ...prev,
+            companyName: businessProfile.business_name || prev.companyName,
+          }));
         }
       } catch (error) {
         console.error('Error loading tax info:', error);
@@ -178,23 +194,71 @@ export default function StripeTaxInfoCapture({
       setSaving(true);
       setError(null);
 
+      // Get business profile and provider for required contact fields
+      const { data: businessProfile } = await supabase
+        .from('business_profiles')
+        .select('business_name, contact_email')
+        .eq('id', businessId)
+        .single();
+
+      if (!businessProfile) {
+        throw new Error('Business profile not found');
+      }
+
+      // Get provider profile for owner email (fallback if business contact_email is empty)
+      const { data: ownerProvider } = await supabase
+        .from('providers')
+        .select('email, first_name, last_name')
+        .eq('business_id', businessId)
+        .eq('provider_role', 'owner')
+        .single();
+
+      // Get current auth user email as final fallback
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+
+      // Determine contact email (priority: business contact_email > provider email > auth user email)
+      const contactEmail = businessProfile.contact_email || 
+                           ownerProvider?.email || 
+                           authUser?.email || 
+                           '';
+
+      if (!contactEmail) {
+        throw new Error('Contact email is required. Please ensure your business profile has a contact email.');
+      }
+
+      // Determine contact name (priority: business name > provider name > default)
+      const contactName = businessProfile.business_name || 
+                         (ownerProvider?.first_name && ownerProvider?.last_name 
+                           ? `${ownerProvider.first_name} ${ownerProvider.last_name}` 
+                           : null) ||
+                         'Business Owner';
+
+      // Convert tax_id_type to uppercase to match schema constraint ('EIN' or 'SSN')
+      const taxIdTypeUpper = taxInfo.taxIdType.toUpperCase() === 'EIN' ? 'EIN' : 
+                              taxInfo.taxIdType.toUpperCase() === 'SSN' ? 'SSN' : 
+                              'EIN'; // Default to EIN
+
+      // Ensure business_entity_type matches schema enum values exactly
+      const businessEntityType = ['sole_proprietorship', 'partnership', 'llc', 'corporation', 'non_profit']
+        .includes(taxInfo.businessType) ? taxInfo.businessType : 'llc';
+
       const { error } = await supabase
         .from('business_stripe_tax_info')
         .upsert({
           business_id: businessId,
-          business_type: taxInfo.businessType,
-          company_name: taxInfo.companyName,
+          business_entity_type: businessEntityType,
+          legal_business_name: taxInfo.companyName || businessProfile.business_name,
           tax_id: taxInfo.taxId,
-          tax_id_type: taxInfo.taxIdType,
-          address_line1: taxInfo.address.line1,
-          address_line2: taxInfo.address.line2,
-          city: taxInfo.address.city,
-          state: taxInfo.address.state,
-          postal_code: taxInfo.address.postalCode,
-          country: taxInfo.address.country,
-          phone: taxInfo.phone,
-          website: taxInfo.website,
-          description: taxInfo.description,
+          tax_id_type: taxIdTypeUpper,
+          tax_address_line1: taxInfo.address.line1,
+          tax_address_line2: taxInfo.address.line2 || null,
+          tax_city: taxInfo.address.city,
+          tax_state: taxInfo.address.state,
+          tax_postal_code: taxInfo.address.postalCode,
+          tax_country: taxInfo.address.country || 'US',
+          tax_contact_name: contactName, // Required field
+          tax_contact_email: contactEmail, // Required field - must not be empty
+          tax_contact_phone: taxInfo.phone || null,
           updated_at: new Date().toISOString(),
         });
 
