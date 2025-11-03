@@ -34,8 +34,8 @@ export function getROAMEmailTemplate(content: string): string {
           box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
         .header {
-          background-color: ${ROAM_EMAIL_CONFIG.brandColor};
-          color: white;
+          background-color: #f5f5f5;
+          color: #333333;
           padding: 30px 20px;
           text-align: center;
           border-radius: 8px 8px 0 0;

@@ -248,49 +248,11 @@ export class EmailService {
     // Add to Resend audience before sending email
     await this.addToProviderAudience(to, firstName);
 
-    const content = `
-      <h1 style="color: ${this.brandColor};">🎉 Congratulations! Your Application is Approved</h1>
-      <p>Hi ${firstName},</p>
-      
-      <p>Excellent news! Your ROAM provider application has been approved. Welcome to the ROAM family!</p>
-      
-      <div class="highlight">
-        <h3>You're Ready for Phase 2!</h3>
-        <p>Complete your financial setup to start offering services and earning with ROAM.</p>
-      </div>
-      
-      <h3>Phase 2 Setup Includes:</h3>
-      <ul>
-        <li><strong>Identity Verification</strong> - Secure verification with Stripe</li>
-        <li><strong>Bank Account Connection</strong> - Connect your account for payments</li>
-        <li><strong>Payment Setup</strong> - Configure your payment preferences</li>
-      </ul>
-      
-      <p>This secure link is valid for 7 days:</p>
-      <a href="${phase2Link}" class="button">Complete Financial Setup →</a>
-      
-      <p style="font-size: 14px; color: #6b7280;">
-        <strong>Security Note:</strong> This link is unique to you and expires in 7 days. Don't share it with anyone.
-      </p>
-      
-      <p>Once you complete Phase 2, you'll have full access to the ROAM platform and can start:</p>
-      <ul>
-        <li>Setting your service availability</li>
-        <li>Managing your calendar</li>
-        <li>Receiving and accepting bookings</li>
-        <li>Getting paid for your services</li>
-      </ul>
-      
-      <p>We're thrilled to have you as part of the ROAM community!</p>
-      
-      <p>Best regards,<br>The ROAM Team</p>
-    `;
-
     return this.sendEmail({
       to,
-      subject: "🎉 Welcome to ROAM - Complete Your Setup",
-      html: this.getEmailTemplate(content),
-      text: `Congratulations ${firstName}! Your ROAM provider application has been approved. Complete your financial setup using this secure link: ${phase2Link}`,
+      subject: "🎉 Application Approved - Complete Your Setup",
+      html: ROAM_EMAIL_TEMPLATES.applicationApproved(firstName, phase2Link),
+      text: `Congratulations ${firstName}! Your ROAM provider application has been approved. Complete your setup at: ${phase2Link}`,
     });
   }
 
