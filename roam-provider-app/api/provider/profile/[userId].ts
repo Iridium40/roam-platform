@@ -154,12 +154,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
       }
 
-      // Check if profile exists
-      const { data: existingProfile } = await supabase
+      // For Phase 2 onboarding, we look up provider by business_id, not user_id
+      // This is because the business_id comes from the Phase 2 token
+      if (!businessId || typeof businessId !== 'string') {
+        return res.status(400).json({ error: 'businessId is required for provider profile update' });
+      }
+
+      // Check if provider exists for this business
+      const { data: existingProfile, error: lookupError } = await supabase
         .from('providers')
-        .select('id')
-        .eq('user_id', userId)
+        .select('id, user_id')
+        .eq('business_id', businessId)
         .single();
+
+      if (lookupError && lookupError.code !== 'PGRST116') {
+        // PGRST116 = no rows returned
+        console.error('Error looking up provider profile:', lookupError);
+        return res.status(500).json({ error: 'Failed to look up provider profile' });
+      }
+
+      if (!existingProfile) {
+        console.warn('Provider profile not found for business:', businessId);
+        return res.status(404).json({ error: 'Provider profile not found for this business. Complete Phase 1 first.' });
+      }
 
       // Map to providers table schema
       // Note: Schema has created_at but no updated_at field
@@ -181,21 +198,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       
       // Note: updated_at field doesn't exist in providers table schema
 
-      if (existingProfile) {
-        // Update existing profile
-        const { error: updateError } = await supabase
-          .from('providers')
-          .update(profileData)
-          .eq('user_id', userId);
+      // Update provider by business_id (Phase 2 onboarding uses business relationship)
+      const { error: updateError } = await supabase
+        .from('providers')
+        .update(profileData)
+        .eq('business_id', businessId);
 
-        if (updateError) {
-          console.error('Error updating provider profile:', updateError);
-          return res.status(500).json({ error: 'Failed to update provider profile' });
-        }
-      } else {
-        // Provider should already exist from Phase 1, but handle edge case
-        console.warn('Provider profile not found for user:', userId);
-        return res.status(404).json({ error: 'Provider profile not found. Complete Phase 1 first.' });
+      if (updateError) {
+        console.error('Error updating provider profile:', updateError);
+        return res.status(500).json({ error: 'Failed to update provider profile' });
       }
 
       return res.status(200).json({ success: true });

@@ -287,11 +287,13 @@ export default function PersonalProfileSetup({
       }
 
       // Save personal profile data
+      // Use business_id to find and update provider (Phase 2 onboarding)
       const profileResponse = await fetch(`/api/provider/profile/${userId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId,
+          businessId, // Required for Phase 2: lookup provider by business_id
           ...formData
         })
       });
