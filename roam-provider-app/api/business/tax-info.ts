@@ -78,35 +78,53 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       let contactEmail = tax_contact_email;
 
       if (!contactName || !contactEmail) {
-        const { data: businessProfile } = await supabase
-          .from('business_profiles')
-          .select('business_name, contact_email')
-          .eq('id', business_id)
-          .single();
+        try {
+          const { data: businessProfile, error: businessError } = await supabase
+            .from('business_profiles')
+            .select('business_name, contact_email')
+            .eq('id', business_id)
+            .single();
 
-        if (businessProfile) {
-          if (!contactName) {
-            contactName = businessProfile.business_name || 'Business Owner';
+          if (businessError && businessError.code !== 'PGRST116') {
+            console.error('Error fetching business profile:', businessError);
+            // Continue anyway - we'll try provider fallback
           }
-          if (!contactEmail) {
-            // Try to get from provider if business contact_email is empty
-            if (!businessProfile.contact_email) {
-              const { data: ownerProvider } = await supabase
-                .from('providers')
-                .select('email, first_name, last_name')
-                .eq('business_id', business_id)
-                .eq('provider_role', 'owner')
-                .single();
-              
-              if (ownerProvider?.email) {
-                contactEmail = ownerProvider.email;
-              } else if (ownerProvider?.first_name && ownerProvider?.last_name) {
-                contactName = `${ownerProvider.first_name} ${ownerProvider.last_name}`;
+
+          if (businessProfile) {
+            if (!contactName) {
+              contactName = businessProfile.business_name || 'Business Owner';
+            }
+            if (!contactEmail) {
+              // Try to get from provider if business contact_email is empty
+              if (!businessProfile.contact_email) {
+                try {
+                  const { data: ownerProvider, error: providerError } = await supabase
+                    .from('providers')
+                    .select('email, first_name, last_name')
+                    .eq('business_id', business_id)
+                    .eq('provider_role', 'owner')
+                    .single();
+                  
+                  if (providerError && providerError.code !== 'PGRST116') {
+                    console.error('Error fetching owner provider:', providerError);
+                  }
+                  
+                  if (ownerProvider?.email) {
+                    contactEmail = ownerProvider.email;
+                  } else if (ownerProvider?.first_name && ownerProvider?.last_name && !contactName) {
+                    contactName = `${ownerProvider.first_name} ${ownerProvider.last_name}`;
+                  }
+                } catch (providerErr) {
+                  console.error('Exception fetching provider:', providerErr);
+                }
+              } else {
+                contactEmail = businessProfile.contact_email;
               }
-            } else {
-              contactEmail = businessProfile.contact_email;
             }
           }
+        } catch (err) {
+          console.error('Exception fetching business profile:', err);
+          // Continue - we'll validate email at the end
         }
 
         // Note: Cannot use supabase.auth.getUser() with service_role key
@@ -114,7 +132,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       if (!contactEmail) {
-        return res.status(400).json({ error: 'Contact email is required. Please ensure your business profile has a contact email.' });
+        console.error('No contact email found:', { business_id, providedEmail: tax_contact_email });
+        return res.status(400).json({ 
+          error: 'Contact email is required. Please ensure your business profile has a contact email.' 
+        });
       }
 
       // Convert tax_id_type to uppercase to match schema constraint ('EIN' or 'SSN')
@@ -152,13 +173,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       if (error) {
         console.error('Tax info upsert error:', error);
-        return res.status(500).json({ error: 'Failed to save tax info', details: (error as any).message });
+        console.error('Update payload:', updatePayload);
+        return res.status(500).json({ 
+          error: 'Failed to save tax info', 
+          details: (error as any).message,
+          code: (error as any).code
+        });
       }
 
       return res.status(200).json({ message: 'Saved', tax_info: data });
     } catch (err) {
       console.error('Tax info PUT error:', err);
-      return res.status(500).json({ error: 'Internal server error' });
+      console.error('Error details:', {
+        message: err instanceof Error ? err.message : 'Unknown error',
+        stack: err instanceof Error ? err.stack : undefined
+      });
+      return res.status(500).json({ 
+        error: 'Internal server error',
+        details: err instanceof Error ? err.message : 'Unknown error'
+      });
     }
   }
 

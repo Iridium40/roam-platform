@@ -97,13 +97,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Verify business profile exists
+    console.log("Checking business profile:", { businessId });
     const { data: businessProfile, error: businessError } = await supabase
       .from("business_profiles")
       .select("*")
       .eq("id", businessId)
       .single();
 
-    if (businessError || !businessProfile) {
+    if (businessError) {
+      console.error("Business profile lookup error:", { businessError, businessId });
+      return res.status(404).json({ 
+        error: "Business profile not found",
+        details: (businessError as any).message
+      });
+    }
+
+    if (!businessProfile) {
+      console.error("Business profile not found:", { businessId });
       return res.status(404).json({ error: "Business profile not found" });
     }
 
@@ -111,14 +121,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // For Phase 2 onboarding, check for owner role specifically
     console.log("Checking provider access:", { businessId, userId });
     
+    // First, try to find any provider with this business_id and user_id
+    const { data: allProviders, error: allProvidersError } = await supabase
+      .from("providers")
+      .select("id, provider_role, user_id, business_id, email, first_name, last_name")
+      .eq("business_id", businessId);
+
+    console.log("All providers for business:", { allProviders, allProvidersError, businessId });
+
+    // Then find the owner specifically
     const { data: providerAccess, error: providerError } = await supabase
       .from("providers")
-      .select("id, provider_role, user_id, business_id")
+      .select("id, provider_role, user_id, business_id, email, first_name, last_name")
       .eq("business_id", businessId)
       .eq("provider_role", "owner")
       .single();
 
-    console.log("Provider access query result:", { providerAccess, providerError, businessId, userId });
+    console.log("Provider access query result:", { 
+      providerAccess, 
+      providerError, 
+      businessId, 
+      userId,
+      errorCode: (providerError as any)?.code,
+      errorMessage: (providerError as any)?.message
+    });
 
     if (providerError) {
       console.error("Provider access check error:", { providerError, businessId, userId });
@@ -126,12 +152,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if ((providerError as any).code === 'PGRST116') {
         return res.status(403).json({ 
           error: "Access denied",
-          details: "No owner provider found for this business. Please complete Phase 1 onboarding first."
+          details: "No owner provider found for this business. Please complete Phase 1 onboarding first.",
+          debug: {
+            businessId,
+            userId,
+            allProviders: allProviders?.map(p => ({ id: p.id, user_id: p.user_id, role: p.provider_role }))
+          }
         });
       }
       return res.status(403).json({ 
         error: "Access denied",
-        details: `Provider lookup failed: ${(providerError as any).message}`
+        details: `Provider lookup failed: ${(providerError as any).message}`,
+        code: (providerError as any).code
       });
     }
 
@@ -139,18 +171,39 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       console.error("Provider access check failed - no provider found:", { businessId, userId });
       return res.status(403).json({ 
         error: "Access denied",
-        details: "You don't have permission to create a Stripe account for this business. Only the business owner can create a Stripe Connect account."
+        details: "You don't have permission to create a Stripe account for this business. Only the business owner can create a Stripe Connect account.",
+        debug: {
+          businessId,
+          userId,
+          allProviders: allProviders?.map(p => ({ id: p.id, user_id: p.user_id, role: p.provider_role }))
+        }
       });
     }
 
     // Additional check: verify the provider's user_id matches the request userId
     // This ensures the authenticated user is the owner
-    console.log("Comparing user IDs:", { providerUserId: providerAccess.user_id, requestUserId: userId });
+    console.log("Comparing user IDs:", { 
+      providerUserId: providerAccess.user_id, 
+      requestUserId: userId,
+      match: providerAccess.user_id === userId
+    });
+    
+    // For Phase 2 onboarding, we might be more lenient - just check if owner exists
+    // But log a warning if user_id doesn't match
     if (providerAccess.user_id && providerAccess.user_id !== userId) {
-      console.error("User ID mismatch:", { providerUserId: providerAccess.user_id, requestUserId: userId });
+      console.warn("User ID mismatch (but proceeding for Phase 2):", { 
+        providerUserId: providerAccess.user_id, 
+        requestUserId: userId 
+      });
+      // In Phase 2, we might allow this if the owner exists
+      // But for now, let's still require it to match
       return res.status(403).json({ 
         error: "Access denied",
-        details: "User ID does not match the business owner"
+        details: "User ID does not match the business owner",
+        debug: {
+          providerUserId: providerAccess.user_id,
+          requestUserId: userId
+        }
       });
     }
 

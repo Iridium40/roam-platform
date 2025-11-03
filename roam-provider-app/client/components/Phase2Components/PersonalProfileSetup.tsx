@@ -268,6 +268,42 @@ export default function PersonalProfileSetup({
     return Object.keys(errors).length === 0;
   };
 
+  const handleSkip = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Mark step as skipped
+      const progressResponse = await fetch("/api/onboarding/save-phase2-progress", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          business_id: businessId,
+          step: "personal_profile",
+          data: { skipped: true }
+        })
+      });
+
+      if (!progressResponse.ok) {
+        throw new Error('Failed to save progress');
+      }
+
+      // Call onComplete with empty data to allow navigation to next step
+      onComplete({
+        professionalTitle: '',
+        professionalBio: '',
+        yearsExperience: 0,
+        socialLinks: {},
+        avatarUrl: undefined,
+        coverImageUrl: undefined
+      });
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to skip step');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!validateForm()) {
       setError('Please fix the errors above');
@@ -601,23 +637,34 @@ export default function PersonalProfileSetup({
               </Button>
             )}
             
-            <Button
-              onClick={handleSubmit}
-              disabled={loading}
-              className="bg-roam-blue hover:bg-roam-blue/90 ml-auto"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  Continue to Business Hours
-                  <ArrowRight className="w-4 h-4 ml-2" />
-                </>
-              )}
-            </Button>
+            <div className="flex gap-3 ml-auto">
+              <Button
+                variant="outline"
+                onClick={handleSkip}
+                disabled={loading}
+                className="text-foreground/70 hover:text-foreground"
+              >
+                Skip for Now
+              </Button>
+              
+              <Button
+                onClick={handleSubmit}
+                disabled={loading}
+                className="bg-roam-blue hover:bg-roam-blue/90"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    Continue to Business Hours
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
