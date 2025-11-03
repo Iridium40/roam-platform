@@ -287,7 +287,7 @@ export default function PersonalProfileSetup({
       }
 
       // Save personal profile data
-      const profileResponse = await fetch(`/api/test-personal-profile`, {
+      const profileResponse = await fetch(`/api/provider/profile/${userId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

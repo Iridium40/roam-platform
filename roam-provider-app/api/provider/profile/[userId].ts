@@ -7,10 +7,52 @@ const supabase = createClient(
 );
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  const { userId } = req.query;
+  // Comprehensive logging to debug userId extraction
+  console.log('=== Provider Profile Debug ===');
+  console.log('req.url:', req.url);
+  console.log('req.query:', JSON.stringify(req.query, null, 2));
+  console.log('req.method:', req.method);
+  
+  // Extract userId - try multiple methods
+  let userId: string | undefined;
+  
+  // Method 1: Direct from req.query (standard Vercel file-based routing)
+  if (req.query.userId && typeof req.query.userId === 'string') {
+    userId = req.query.userId;
+    console.log('✓ Found userId in req.query.userId:', userId);
+  }
+  
+  // Method 2: Extract from URL path if not found
+  if (!userId && req.url) {
+    const urlMatch = req.url.match(/\/api\/provider\/profile\/([a-f0-9-]{36}|[^/?]+)/);
+    if (urlMatch && urlMatch[1]) {
+      userId = urlMatch[1];
+      console.log('✓ Extracted userId from URL path:', userId);
+    }
+  }
+  
+  // Method 3: Check all query keys for UUID-like values
+  if (!userId) {
+    for (const [key, value] of Object.entries(req.query)) {
+      const strValue = Array.isArray(value) ? value[0] : String(value);
+      if (strValue && /^[a-f0-9-]{36}$/i.test(strValue)) {
+        userId = strValue;
+        console.log(`✓ Found userId in req.query.${key}:`, userId);
+        break;
+      }
+    }
+  }
 
-  if (typeof userId !== 'string') {
-    return res.status(400).json({ error: 'Invalid user ID' });
+  if (!userId || typeof userId !== 'string') {
+    console.error('✗ Failed to extract userId');
+    return res.status(400).json({ 
+      error: 'Invalid user ID',
+      debug: {
+        url: req.url,
+        query: req.query,
+        extracted: userId
+      }
+    });
   }
 
   if (req.method === 'GET') {
