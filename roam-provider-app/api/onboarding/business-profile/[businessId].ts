@@ -91,7 +91,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // Get business profile
       const { data: business, error } = await supabase
-        .from('businesses')
+        .from('business_profiles')
         .select('*')
         .eq('id', businessId)
         .single();
