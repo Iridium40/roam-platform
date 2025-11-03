@@ -21,11 +21,52 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   Object.entries(CORS_HEADERS).forEach(([k, v]) => res.setHeader(k, v));
 
-  // Dynamic route params: Vercel passes them via req.query (like provider/profile/[userId].ts)
-  const { businessId } = req.query;
+  // Comprehensive logging to debug businessId extraction
+  console.log('=== Business Profile Debug ===');
+  console.log('req.url:', req.url);
+  console.log('req.query:', JSON.stringify(req.query, null, 2));
+  console.log('req.method:', req.method);
+  
+  // Extract businessId - try multiple methods
+  let businessId: string | undefined;
+  
+  // Method 1: Direct from req.query (standard Vercel file-based routing)
+  if (req.query.businessId && typeof req.query.businessId === 'string') {
+    businessId = req.query.businessId;
+    console.log('✓ Found businessId in req.query.businessId:', businessId);
+  }
+  
+  // Method 2: Extract from URL path if not found
+  if (!businessId && req.url) {
+    const urlMatch = req.url.match(/\/api\/business\/profile\/([a-f0-9-]{36}|[^/?]+)/);
+    if (urlMatch && urlMatch[1]) {
+      businessId = urlMatch[1];
+      console.log('✓ Extracted businessId from URL path:', businessId);
+    }
+  }
+  
+  // Method 3: Check all query keys for UUID-like values
+  if (!businessId) {
+    for (const [key, value] of Object.entries(req.query)) {
+      const strValue = Array.isArray(value) ? value[0] : String(value);
+      if (strValue && /^[a-f0-9-]{36}$/i.test(strValue)) {
+        businessId = strValue;
+        console.log(`✓ Found businessId in req.query.${key}:`, businessId);
+        break;
+      }
+    }
+  }
 
-  if (typeof businessId !== 'string') {
-    return res.status(400).json({ error: 'businessId param required' });
+  if (!businessId || typeof businessId !== 'string') {
+    console.error('✗ Failed to extract businessId');
+    return res.status(400).json({ 
+      error: 'businessId param required',
+      debug: {
+        url: req.url,
+        query: req.query,
+        extracted: businessId
+      }
+    });
   }
 
   const supabase = createClient(
