@@ -46,10 +46,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Update business profile to mark as fully onboarded
+    // Note: verification_status is managed by ROAM Admin app, not provider app
     const { error: updateBusinessError } = await supabase
       .from("business_profiles")
       .update({
-        verification_status: "approved",
         is_active: true,
         setup_completed: true,
         setup_step: 8, // Final step
@@ -64,10 +64,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Update provider to active status
+    // Note: verification_status is managed by ROAM Admin app, not provider app
     const { error: updateProviderError } = await supabase
       .from("providers")
       .update({
-        verification_status: "approved",
         is_active: true,
         onboarding_completed_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),

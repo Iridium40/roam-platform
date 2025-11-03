@@ -126,6 +126,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       // Prepare update data, only including defined values
+      // Explicitly exclude admin-managed fields like verification_status
+      const allowedFields = ['business_name', 'business_description', 'website_url', 'social_media', 'logo_url', 'cover_image_url'];
       const updateData: Record<string, any> = {
         business_name: businessName.trim(),
       };
@@ -146,9 +148,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         updateData.cover_image_url = coverImageUrl || null;
       }
 
+      // Filter out any admin-managed fields that shouldn't be updated by provider app
+      const filteredUpdateData: Record<string, any> = {};
+      for (const key of Object.keys(updateData)) {
+        if (allowedFields.includes(key)) {
+          filteredUpdateData[key] = updateData[key];
+        }
+      }
+
       const { error: updateError } = await supabase
         .from('businesses')
-        .update(updateData)
+        .update(filteredUpdateData)
         .eq('id', businessId);
 
       if (updateError) {

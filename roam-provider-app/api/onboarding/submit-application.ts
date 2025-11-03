@@ -334,10 +334,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.log("Application submission created successfully:", submission);
 
     // Update business profile status
+    // Note: verification_status is managed by ROAM Admin app, not provider app
     const { error: updateError } = await supabase
       .from("business_profiles")
       .update({
-        verification_status: "under_review",
         setup_step: 2, // Phase 1 complete
         application_submitted_at: new Date().toISOString(),
       })
@@ -349,10 +349,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Update provider status
+    // Note: verification_status is managed by ROAM Admin app, not provider app
     const { error: providerUpdateError } = await supabase
       .from("providers")
       .update({
-        verification_status: "under_review",
         background_check_status: "pending",
       })
       .eq("business_id", businessId);
