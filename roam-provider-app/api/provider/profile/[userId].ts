@@ -162,13 +162,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .single();
 
       // Map to providers table schema
-      const profileData = {
-        bio: professionalBio,
-        experience_years: yearsExperience,
-        image_url: avatarUrl,
-        cover_image_url: coverImageUrl,
-        updated_at: new Date().toISOString()
-      };
+      // Note: Schema has created_at but no updated_at field
+      const profileData: Record<string, any> = {};
+      
+      // Only include fields that are defined and match schema
+      if (professionalBio !== undefined) {
+        profileData.bio = professionalBio || null;
+      }
+      if (yearsExperience !== undefined) {
+        profileData.experience_years = yearsExperience || null;
+      }
+      if (avatarUrl !== undefined) {
+        profileData.image_url = avatarUrl || null;
+      }
+      if (coverImageUrl !== undefined) {
+        profileData.cover_image_url = coverImageUrl || null;
+      }
+      
+      // Note: updated_at field doesn't exist in providers table schema
 
       if (existingProfile) {
         // Update existing profile
