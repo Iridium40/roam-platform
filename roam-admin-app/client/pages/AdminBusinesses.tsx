@@ -926,8 +926,6 @@ export default function AdminBusinesses() {
     is_active: true,
     is_featured: false,
     business_type: "independent",
-    service_categories: [],
-    service_subcategories: [],
   });
   const [statusFilter, setStatusFilter] = useState<
     "all" | "active" | "inactive"
@@ -1633,8 +1631,6 @@ export default function AdminBusinesses() {
       is_active: business.is_active ?? true,
       is_featured: business.is_featured ?? false,
       business_type: business.business_type || "independent",
-      service_categories: business.service_categories || [],
-      service_subcategories: business.service_subcategories || [],
     });
     setIsEditBusinessOpen(true);
   };
@@ -1653,8 +1649,6 @@ export default function AdminBusinesses() {
         is_active: editFormData.is_active,
         is_featured: editFormData.is_featured,
         business_type: editFormData.business_type,
-        service_categories: editFormData.service_categories,
-        service_subcategories: editFormData.service_subcategories,
       });
 
       // First update the business profile
@@ -1680,102 +1674,6 @@ export default function AdminBusinesses() {
         return;
       }
 
-      // Update service categories
-      if (editFormData.service_categories) {
-        // First, delete existing categories
-        const deleteCategoriesResponse = await fetch('/api/business-service-categories', {
-          method: 'DELETE',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ businessId: editingBusiness.id }),
-        });
-
-        if (!deleteCategoriesResponse.ok) {
-          const errorData = await deleteCategoriesResponse.json();
-          throw new Error(errorData.error || 'Failed to delete existing service categories');
-        }
-
-        // Fetch all categories once to avoid enum casting issues
-        const { data: allCategories } = await supabase
-          .from("service_categories")
-          .select("id, service_category_type");
-
-        // Then insert new ones
-        for (const categoryType of editFormData.service_categories) {
-          // Find the category by filtering client-side (avoids PostgREST enum casting issues)
-          const categoryData = allCategories?.find(
-            (cat: any) => cat.service_category_type === categoryType
-          );
-
-          if (categoryData) {
-            const insertCategoryResponse = await fetch('/api/business-service-categories', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                businessId: editingBusiness.id,
-                categoryId: categoryData.id,
-              }),
-            });
-
-            if (!insertCategoryResponse.ok) {
-              const errorData = await insertCategoryResponse.json();
-              throw new Error(errorData.error || 'Failed to insert service category');
-            }
-          }
-        }
-      }
-
-      // Update service subcategories
-      if (editFormData.service_subcategories) {
-        // First, delete existing subcategories
-        const deleteSubcategoriesResponse = await fetch('/api/business-service-subcategories', {
-          method: 'DELETE',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ businessId: editingBusiness.id }),
-        });
-
-        if (!deleteSubcategoriesResponse.ok) {
-          const errorData = await deleteSubcategoriesResponse.json();
-          throw new Error(errorData.error || 'Failed to delete existing service subcategories');
-        }
-
-        // Fetch all subcategories once to avoid enum casting issues
-        const { data: allSubcategories } = await supabase
-          .from("service_subcategories")
-          .select("id, category_id, service_subcategory_type");
-
-        // Then insert new ones
-        for (const subcategoryType of editFormData.service_subcategories) {
-          // Find the subcategory by filtering client-side (avoids PostgREST enum casting issues)
-          const subcategoryData = allSubcategories?.find(
-            (sub: any) => sub.service_subcategory_type === subcategoryType
-          );
-
-          if (subcategoryData) {
-            const insertSubcategoryResponse = await fetch('/api/business-service-subcategories', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                businessId: editingBusiness.id,
-                categoryId: subcategoryData.category_id,
-                subcategoryId: subcategoryData.id,
-              }),
-            });
-
-            if (!insertSubcategoryResponse.ok) {
-              const errorData = await insertSubcategoryResponse.json();
-              throw new Error(errorData.error || 'Failed to insert service subcategory');
-            }
-          }
-        }
-      }
 
       setIsEditBusinessOpen(false);
       setEditingBusiness(null);
@@ -4020,128 +3918,6 @@ export default function AdminBusinesses() {
               </div>
             </div>
 
-            {/* Service Categories */}
-            <div className="space-y-4">
-              <h3 className="font-medium text-lg">Service Categories</h3>
-
-              <div>
-                <Label>Select Service Categories</Label>
-                <div className="mt-2 grid grid-cols-2 gap-3">
-                  {(
-                    [
-                      "beauty",
-                      "fitness",
-                      "therapy",
-                      "healthcare",
-                    ] as ServiceCategoryType[]
-                  ).map((category) => (
-                    <div key={category} className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id={`category_${category}`}
-                        checked={
-                          editFormData.service_categories?.includes(category) ||
-                          false
-                        }
-                        onChange={(e) => {
-                          const currentCategories =
-                            editFormData.service_categories || [];
-                          if (e.target.checked) {
-                            setEditFormData({
-                              ...editFormData,
-                              service_categories: [
-                                ...currentCategories,
-                                category,
-                              ],
-                            });
-                          } else {
-                            setEditFormData({
-                              ...editFormData,
-                              service_categories: currentCategories.filter(
-                                (c) => c !== category,
-                              ),
-                            });
-                          }
-                        }}
-                        className="rounded border-border"
-                      />
-                      <Label
-                        htmlFor={`category_${category}`}
-                        className="capitalize"
-                      >
-                        {formatServiceCategoryType(category)}
-                      </Label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <Label>Select Service Subcategories</Label>
-                <div className="mt-2 grid grid-cols-2 gap-3 max-h-40 overflow-y-auto">
-                  {(
-                    [
-                      "hair_and_makeup",
-                      "spray_tan",
-                      "esthetician",
-                      "massage_therapy",
-                      "iv_therapy",
-                      "physical_therapy",
-                      "nurse_practitioner",
-                      "physician",
-                      "health_coach",
-                      "chiropractor",
-                      "yoga_instructor",
-                      "pilates_instructor",
-                      "personal_trainer",
-                    ] as ServiceSubcategoryType[]
-                  ).map((subcategory) => (
-                    <div
-                      key={subcategory}
-                      className="flex items-center space-x-2"
-                    >
-                      <input
-                        type="checkbox"
-                        id={`subcategory_${subcategory}`}
-                        checked={
-                          editFormData.service_subcategories?.includes(
-                            subcategory,
-                          ) || false
-                        }
-                        onChange={(e) => {
-                          const currentSubcategories =
-                            editFormData.service_subcategories || [];
-                          if (e.target.checked) {
-                            setEditFormData({
-                              ...editFormData,
-                              service_subcategories: [
-                                ...currentSubcategories,
-                                subcategory,
-                              ],
-                            });
-                          } else {
-                            setEditFormData({
-                              ...editFormData,
-                              service_subcategories:
-                                currentSubcategories.filter(
-                                  (s) => s !== subcategory,
-                                ),
-                            });
-                          }
-                        }}
-                        className="rounded border-border"
-                      />
-                      <Label
-                        htmlFor={`subcategory_${subcategory}`}
-                        className="text-sm"
-                      >
-                        {formatEnumDisplay(subcategory)}
-                      </Label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
 
             {/* Action Buttons */}
             <MobileActionButtons>
