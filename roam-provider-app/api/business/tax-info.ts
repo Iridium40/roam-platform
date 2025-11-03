@@ -52,31 +52,96 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'PUT') {
     try {
       const body = typeof req.body === 'object' ? req.body : JSON.parse(req.body || '{}');
-      const { business_id, legal_entity_type, legal_name, tax_id_type, tax_id_full, address, w9_signed } = body || {};
+      const { 
+        business_id,
+        business_entity_type,
+        legal_business_name,
+        tax_id,
+        tax_id_type,
+        tax_address_line1,
+        tax_address_line2,
+        tax_city,
+        tax_state,
+        tax_postal_code,
+        tax_country,
+        tax_contact_name,
+        tax_contact_email,
+        tax_contact_phone
+      } = body || {};
+
       if (!business_id) {
         return res.status(400).json({ error: 'business_id is required' });
       }
 
-      let tax_id_last4: string | null = null;
-      if (typeof tax_id_full === 'string' && tax_id_full.trim().length >= 4) {
-        const digits = tax_id_full.replace(/\D/g, '');
-        tax_id_last4 = digits.slice(-4) || null;
+      // Get business profile for required contact fields if not provided
+      let contactName = tax_contact_name;
+      let contactEmail = tax_contact_email;
+
+      if (!contactName || !contactEmail) {
+        const { data: businessProfile } = await supabase
+          .from('business_profiles')
+          .select('business_name, contact_email')
+          .eq('id', business_id)
+          .single();
+
+        if (businessProfile) {
+          if (!contactName) {
+            contactName = businessProfile.business_name || 'Business Owner';
+          }
+          if (!contactEmail) {
+            // Try to get from provider if business contact_email is empty
+            if (!businessProfile.contact_email) {
+              const { data: ownerProvider } = await supabase
+                .from('providers')
+                .select('email, first_name, last_name')
+                .eq('business_id', business_id)
+                .eq('provider_role', 'owner')
+                .single();
+              
+              if (ownerProvider?.email) {
+                contactEmail = ownerProvider.email;
+              } else if (ownerProvider?.first_name && ownerProvider?.last_name) {
+                contactName = `${ownerProvider.first_name} ${ownerProvider.last_name}`;
+              }
+            } else {
+              contactEmail = businessProfile.contact_email;
+            }
+          }
+        }
+
+        // Note: Cannot use supabase.auth.getUser() with service_role key
+        // Contact email must come from business_profile or provider
       }
+
+      if (!contactEmail) {
+        return res.status(400).json({ error: 'Contact email is required. Please ensure your business profile has a contact email.' });
+      }
+
+      // Convert tax_id_type to uppercase to match schema constraint ('EIN' or 'SSN')
+      const taxIdTypeUpper = tax_id_type?.toUpperCase() === 'EIN' ? 'EIN' : 
+                              tax_id_type?.toUpperCase() === 'SSN' ? 'SSN' : 
+                              'EIN'; // Default to EIN
+
+      // Ensure business_entity_type matches schema enum values exactly
+      const businessEntityType = ['sole_proprietorship', 'partnership', 'llc', 'corporation', 'non_profit']
+        .includes(business_entity_type) ? business_entity_type : 'llc';
 
       const updatePayload: any = {
         business_id,
-        legal_entity_type: legal_entity_type || null,
-        legal_name: legal_name || null,
-        tax_id_type: tax_id_type || null,
-        tax_id_last4: tax_id_last4 || null,
-        address_line1: address?.line1 || null,
-        address_line2: address?.line2 || null,
-        city: address?.city || null,
-        state: address?.state || null,
-        postal_code: address?.postal_code || null,
-        country: address?.country || 'US',
-        w9_signed: !!w9_signed,
-        w9_signed_at: w9_signed ? new Date().toISOString() : null
+        business_entity_type: businessEntityType,
+        legal_business_name: legal_business_name || null,
+        tax_id: tax_id || null,
+        tax_id_type: taxIdTypeUpper,
+        tax_address_line1: tax_address_line1 || null,
+        tax_address_line2: tax_address_line2 || null,
+        tax_city: tax_city || null,
+        tax_state: tax_state || null,
+        tax_postal_code: tax_postal_code || null,
+        tax_country: tax_country || 'US',
+        tax_contact_name: contactName || 'Business Owner',
+        tax_contact_email: contactEmail,
+        tax_contact_phone: tax_contact_phone || null,
+        updated_at: new Date().toISOString(),
       };
 
       const { data, error } = await supabase
@@ -86,6 +151,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .single();
 
       if (error) {
+        console.error('Tax info upsert error:', error);
         return res.status(500).json({ error: 'Failed to save tax info', details: (error as any).message });
       }
 

@@ -109,15 +109,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Verify user has access to this business (is owner provider for this business)
     // For Phase 2 onboarding, check for owner role specifically
+    console.log("Checking provider access:", { businessId, userId });
+    
     const { data: providerAccess, error: providerError } = await supabase
       .from("providers")
-      .select("id, provider_role, user_id")
+      .select("id, provider_role, user_id, business_id")
       .eq("business_id", businessId)
       .eq("provider_role", "owner")
       .single();
 
-    if (providerError || !providerAccess) {
-      console.error("Provider access check failed:", { providerError, providerAccess, businessId });
+    console.log("Provider access query result:", { providerAccess, providerError, businessId, userId });
+
+    if (providerError) {
+      console.error("Provider access check error:", { providerError, businessId, userId });
+      // Check if it's a "not found" error (PGRST116)
+      if ((providerError as any).code === 'PGRST116') {
+        return res.status(403).json({ 
+          error: "Access denied",
+          details: "No owner provider found for this business. Please complete Phase 1 onboarding first."
+        });
+      }
+      return res.status(403).json({ 
+        error: "Access denied",
+        details: `Provider lookup failed: ${(providerError as any).message}`
+      });
+    }
+
+    if (!providerAccess) {
+      console.error("Provider access check failed - no provider found:", { businessId, userId });
       return res.status(403).json({ 
         error: "Access denied",
         details: "You don't have permission to create a Stripe account for this business. Only the business owner can create a Stripe Connect account."
@@ -126,12 +145,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Additional check: verify the provider's user_id matches the request userId
     // This ensures the authenticated user is the owner
+    console.log("Comparing user IDs:", { providerUserId: providerAccess.user_id, requestUserId: userId });
     if (providerAccess.user_id && providerAccess.user_id !== userId) {
+      console.error("User ID mismatch:", { providerUserId: providerAccess.user_id, requestUserId: userId });
       return res.status(403).json({ 
         error: "Access denied",
         details: "User ID does not match the business owner"
       });
     }
+
+    console.log("Provider access verified successfully");
 
     // Note: In Phase 2 onboarding, business may not be approved yet
     // Allow Stripe Connect setup during onboarding (verification happens later)

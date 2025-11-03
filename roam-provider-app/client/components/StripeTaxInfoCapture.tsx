@@ -82,27 +82,25 @@ export default function StripeTaxInfoCapture({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Load existing tax info and business profile for contact info
+  // Load existing tax info via API (uses service_role to bypass RLS)
   useEffect(() => {
     const loadTaxInfo = async () => {
       try {
         setLoading(true);
         
-        // Load tax info
-        const { data: taxData, error: taxError } = await supabase
-          .from('business_stripe_tax_info')
-          .select('*')
-          .eq('business_id', businessId)
-          .single();
+        // Load tax info via API endpoint (uses service_role)
+        const res = await fetch(`/api/business/tax-info?business_id=${businessId}`);
+        if (!res.ok) {
+          if (res.status === 404 || res.status === 500) {
+            // No tax info exists yet, that's okay
+            return;
+          }
+          throw new Error(`Failed to load tax info: ${res.statusText}`);
+        }
 
-        // Load business profile for contact info (required fields)
-        const { data: businessProfile } = await supabase
-          .from('business_profiles')
-          .select('business_name, contact_email')
-          .eq('id', businessId)
-          .single();
+        const { tax_info: taxData } = await res.json();
 
-        if (taxData && !taxError) {
+        if (taxData) {
           setTaxInfo({
             businessType: taxData.business_entity_type || 'llc',
             companyName: taxData.legal_business_name || '',
@@ -120,13 +118,6 @@ export default function StripeTaxInfoCapture({
             website: '', // Not in schema
             description: '', // Not in schema
           });
-        } else if (businessProfile) {
-          // If no tax info exists, use business profile name and email as defaults
-          // These will be used for required tax_contact_name and tax_contact_email
-          setTaxInfo(prev => ({
-            ...prev,
-            companyName: businessProfile.business_name || prev.companyName,
-          }));
         }
       } catch (error) {
         console.error('Error loading tax info:', error);
@@ -194,45 +185,6 @@ export default function StripeTaxInfoCapture({
       setSaving(true);
       setError(null);
 
-      // Get business profile and provider for required contact fields
-      const { data: businessProfile } = await supabase
-        .from('business_profiles')
-        .select('business_name, contact_email')
-        .eq('id', businessId)
-        .single();
-
-      if (!businessProfile) {
-        throw new Error('Business profile not found');
-      }
-
-      // Get provider profile for owner email (fallback if business contact_email is empty)
-      const { data: ownerProvider } = await supabase
-        .from('providers')
-        .select('email, first_name, last_name')
-        .eq('business_id', businessId)
-        .eq('provider_role', 'owner')
-        .single();
-
-      // Get current auth user email as final fallback
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-
-      // Determine contact email (priority: business contact_email > provider email > auth user email)
-      const contactEmail = businessProfile.contact_email || 
-                           ownerProvider?.email || 
-                           authUser?.email || 
-                           '';
-
-      if (!contactEmail) {
-        throw new Error('Contact email is required. Please ensure your business profile has a contact email.');
-      }
-
-      // Determine contact name (priority: business name > provider name > default)
-      const contactName = businessProfile.business_name || 
-                         (ownerProvider?.first_name && ownerProvider?.last_name 
-                           ? `${ownerProvider.first_name} ${ownerProvider.last_name}` 
-                           : null) ||
-                         'Business Owner';
-
       // Convert tax_id_type to uppercase to match schema constraint ('EIN' or 'SSN')
       const taxIdTypeUpper = taxInfo.taxIdType.toUpperCase() === 'EIN' ? 'EIN' : 
                               taxInfo.taxIdType.toUpperCase() === 'SSN' ? 'SSN' : 
@@ -242,12 +194,16 @@ export default function StripeTaxInfoCapture({
       const businessEntityType = ['sole_proprietorship', 'partnership', 'llc', 'corporation', 'non_profit']
         .includes(taxInfo.businessType) ? taxInfo.businessType : 'llc';
 
-      const { error } = await supabase
-        .from('business_stripe_tax_info')
-        .upsert({
+      // Save via API endpoint (uses service_role to bypass RLS)
+      const res = await fetch('/api/business/tax-info', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           business_id: businessId,
           business_entity_type: businessEntityType,
-          legal_business_name: taxInfo.companyName || businessProfile.business_name,
+          legal_business_name: taxInfo.companyName,
           tax_id: taxInfo.taxId,
           tax_id_type: taxIdTypeUpper,
           tax_address_line1: taxInfo.address.line1,
@@ -256,13 +212,15 @@ export default function StripeTaxInfoCapture({
           tax_state: taxInfo.address.state,
           tax_postal_code: taxInfo.address.postalCode,
           tax_country: taxInfo.address.country || 'US',
-          tax_contact_name: contactName, // Required field
-          tax_contact_email: contactEmail, // Required field - must not be empty
           tax_contact_phone: taxInfo.phone || null,
-          updated_at: new Date().toISOString(),
-        });
+          // Contact name and email will be determined by API endpoint from business profile/provider/auth
+        }),
+      });
 
-      if (error) throw error;
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || errorData.details || `Failed to save tax info: ${res.statusText}`);
+      }
 
       toast({
         title: "Tax Information Saved",
