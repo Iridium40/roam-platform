@@ -484,11 +484,12 @@ export function DocumentUploadForm({
 
           {/* Document Upload Sections */}
           <div className="space-y-6">
-            {Object.entries(documentRequirements)
+            {documentRequirements && documentRequirements !== null && typeof documentRequirements === 'object' && Object.entries(documentRequirements)
               .filter(([docType]) => docType !== "professional_certificate") // Remove duplicate Professional Certificate
+              .filter(([, requirements]) => requirements !== undefined && requirements !== null) // Ensure requirements exists
               .map(([docType, requirements]) => {
                 const documentType = docType as DocumentType;
-                const isRequired = requiredDocs[documentType];
+                const isRequired = requiredDocs?.[documentType] ?? false;
                 const status = getDocumentStatus(documentType);
                 const error = getDocumentError(documentType);
                 const uploadedDoc = documents.find(
