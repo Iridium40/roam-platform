@@ -416,19 +416,25 @@ export function DocumentUploadForm({
   };
 
   const canSubmit = () => {
-    if (!requiredDocs || typeof requiredDocs !== 'object') {
+    if (!requiredDocs || requiredDocs === null || typeof requiredDocs !== 'object' || Array.isArray(requiredDocs)) {
+      console.warn("canSubmit: requiredDocs is invalid:", requiredDocs);
       return false;
     }
 
-    const requiredDocTypes = Object.entries(requiredDocs)
-      .filter(([_, required]) => required)
-      .map(([type]) => type as DocumentType);
+    try {
+      const requiredDocTypes = Object.entries(requiredDocs)
+        .filter(([_, required]) => required)
+        .map(([type]) => type as DocumentType);
 
-    const uploadedRequiredDocs = requiredDocTypes.every((type) =>
-      documents.some((doc) => doc.type === type && doc.status === "uploaded"),
-    );
+      const uploadedRequiredDocs = requiredDocTypes.every((type) =>
+        documents.some((doc) => doc.type === type && doc.status === "uploaded"),
+      );
 
-    return uploadedRequiredDocs && uploadingCount === 0;
+      return uploadedRequiredDocs && uploadingCount === 0;
+    } catch (error) {
+      console.error("Error in canSubmit:", error, "requiredDocs:", requiredDocs);
+      return false;
+    }
   };
 
   const handleSubmit = async () => {
@@ -488,10 +494,21 @@ export function DocumentUploadForm({
 
           {/* Document Upload Sections */}
           <div className="space-y-6">
-            {documentRequirements && documentRequirements !== null && typeof documentRequirements === 'object' && Object.entries(documentRequirements)
-              .filter(([docType]) => docType !== "professional_certificate") // Remove duplicate Professional Certificate
-              .filter(([, requirements]) => requirements !== undefined && requirements !== null) // Ensure requirements exists
-              .map(([docType, requirements]) => {
+            {(() => {
+              try {
+                if (!documentRequirements || 
+                    documentRequirements === null || 
+                    typeof documentRequirements !== 'object' || 
+                    Array.isArray(documentRequirements)) {
+                  console.warn("Document requirements is invalid:", documentRequirements);
+                  return null;
+                }
+                
+                const entries = Object.entries(documentRequirements);
+                return entries
+                  .filter(([docType]) => docType !== "professional_certificate") // Remove duplicate Professional Certificate
+                  .filter(([, requirements]) => requirements !== undefined && requirements !== null) // Ensure requirements exists
+                  .map(([docType, requirements]) => {
                 const documentType = docType as DocumentType;
                 const isRequired = requiredDocs?.[documentType] ?? false;
                 const status = getDocumentStatus(documentType);
@@ -744,8 +761,12 @@ export function DocumentUploadForm({
                     </div>
                   </div>
                 );
-              },
-            )}
+              });
+              } catch (error) {
+                console.error("Error rendering document requirements:", error);
+                return null;
+              }
+            })()}
           </div>
 
           {/* Upload Progress Summary */}
@@ -760,33 +781,54 @@ export function DocumentUploadForm({
           )}
 
           {/* Completion Requirements */}
-          <Alert>
-            <Info className="h-4 w-4" />
-            <AlertDescription>
-              <strong>Before you can submit:</strong>
-              <ul className="list-disc list-inside mt-2 space-y-1">
-                {requiredDocs && typeof requiredDocs === 'object' && Object.entries(requiredDocs)
-                  .filter(([_, required]) => required)
-                  .map(([type]) => {
-                    const docType = type as DocumentType;
-                    const uploaded = documents.some(
-                      (doc) =>
-                        doc.type === docType && doc.status === "uploaded",
-                    );
-                    const docTitle = documentRequirements?.[docType]?.title || type;
-                    return (
-                      <li
-                        key={type}
-                        className={uploaded ? "text-green-700" : ""}
-                      >
-                        {uploaded ? "✓" : "•"}{" "}
-                        {docTitle}
-                      </li>
-                    );
-                  })}
-              </ul>
-            </AlertDescription>
-          </Alert>
+          {(() => {
+            try {
+              if (!requiredDocs || requiredDocs === null || typeof requiredDocs !== 'object' || Array.isArray(requiredDocs)) {
+                console.warn("Completion requirements: requiredDocs is invalid:", requiredDocs);
+                return null;
+              }
+              if (!documentRequirements || documentRequirements === null || typeof documentRequirements !== 'object') {
+                console.warn("Completion requirements: documentRequirements is invalid:", documentRequirements);
+                return null;
+              }
+
+              const requiredList = Object.entries(requiredDocs)
+                .filter(([_, required]) => required)
+                .map(([type]) => {
+                  const docType = type as DocumentType;
+                  const uploaded = documents.some(
+                    (doc) =>
+                      doc.type === docType && doc.status === "uploaded",
+                  );
+                  const requirements = documentRequirements[docType];
+                  const docTitle = requirements?.title || type;
+                  return (
+                    <li
+                      key={type}
+                      className={uploaded ? "text-green-700" : ""}
+                    >
+                      {uploaded ? "✓" : "•"}{" "}
+                      {docTitle}
+                    </li>
+                  );
+                });
+
+              return (
+                <Alert>
+                  <Info className="h-4 w-4" />
+                  <AlertDescription>
+                    <strong>Before you can submit:</strong>
+                    <ul className="list-disc list-inside mt-2 space-y-1">
+                      {requiredList}
+                    </ul>
+                  </AlertDescription>
+                </Alert>
+              );
+            } catch (error) {
+              console.error("Error rendering completion requirements:", error);
+              return null;
+            }
+          })()}
 
           {/* Submit Button */}
           <Button
