@@ -416,6 +416,10 @@ export function DocumentUploadForm({
   };
 
   const canSubmit = () => {
+    if (!requiredDocs || typeof requiredDocs !== 'object') {
+      return false;
+    }
+
     const requiredDocTypes = Object.entries(requiredDocs)
       .filter(([_, required]) => required)
       .map(([type]) => type as DocumentType);
@@ -761,7 +765,7 @@ export function DocumentUploadForm({
             <AlertDescription>
               <strong>Before you can submit:</strong>
               <ul className="list-disc list-inside mt-2 space-y-1">
-                {Object.entries(requiredDocs)
+                {requiredDocs && typeof requiredDocs === 'object' && Object.entries(requiredDocs)
                   .filter(([_, required]) => required)
                   .map(([type]) => {
                     const docType = type as DocumentType;
@@ -769,13 +773,14 @@ export function DocumentUploadForm({
                       (doc) =>
                         doc.type === docType && doc.status === "uploaded",
                     );
+                    const docTitle = documentRequirements?.[docType]?.title || type;
                     return (
                       <li
                         key={type}
                         className={uploaded ? "text-green-700" : ""}
                       >
                         {uploaded ? "✓" : "•"}{" "}
-                        {documentRequirements[docType].title}
+                        {docTitle}
                       </li>
                     );
                   })}
