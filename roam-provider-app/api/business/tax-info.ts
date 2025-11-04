@@ -51,6 +51,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (req.method === 'PUT') {
     try {
+      console.log('=== TAX INFO PUT REQUEST ===');
+      console.log('Request body:', JSON.stringify(req.body, null, 2));
+      
       const body = typeof req.body === 'object' ? req.body : JSON.parse(req.body || '{}');
       const { 
         business_id,
@@ -69,7 +72,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         tax_contact_phone
       } = body || {};
 
+      console.log('Extracted fields:', {
+        business_id,
+        business_entity_type,
+        legal_business_name,
+        tax_contact_name,
+        tax_contact_email,
+        tax_id: tax_id ? '***' : undefined,
+        tax_id_type
+      });
+
       if (!business_id) {
+        console.error('Missing business_id');
         return res.status(400).json({ error: 'business_id is required' });
       }
 
@@ -176,11 +190,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         updated_at: new Date().toISOString(),
       };
 
+      console.log('About to upsert with payload (sanitized):', {
+        ...updatePayload,
+        tax_id: updatePayload.tax_id ? '***' : null
+      });
+
       const { data, error } = await supabase
         .from('business_stripe_tax_info')
         .upsert(updatePayload, { onConflict: 'business_id' })
         .select('*')
         .single();
+      
+      console.log('Upsert result:', { success: !error, hasData: !!data });
 
       if (error) {
         console.error('Tax info upsert error:', error);
