@@ -50,7 +50,16 @@ interface DocumentUploadFormProps {
   businessId?: string;
 }
 
-const documentRequirements = {
+interface DocumentRequirement {
+  title: string;
+  description: string;
+  required: boolean;
+  acceptedFormats: string[];
+  maxSize: number;
+  examples: string[];
+}
+
+const documentRequirements: Record<DocumentType, DocumentRequirement> = {
   drivers_license: {
     title: "Driver's License",
     description: "Government-issued photo identification",
@@ -92,6 +101,18 @@ const documentRequirements = {
       "Personal Trainer Certification",
     ],
   },
+  professional_certificate: {
+    title: "Professional Certificate",
+    description: "Professional certification or clear headshot photo",
+    required: false, // Duplicate of Professional License/Certification - filtered out in UI
+    acceptedFormats: [".jpg", ".jpeg", ".png", ".pdf"],
+    maxSize: 2, // MB
+    examples: [
+      "Professional certificate",
+      "Professional headshot",
+      "Business portrait",
+    ],
+  },
   business_license: {
     title: "Business License",
     description: "Business registration or operating license (if applicable)",
@@ -100,6 +121,18 @@ const documentRequirements = {
     maxSize: 5, // MB
     examples: ["Business Registration", "DBA Certificate", "Operating License"],
   },
+};
+
+// Freeze the documentRequirements to prevent accidental modification
+Object.freeze(documentRequirements);
+
+// Safe getter to ensure documentRequirements is always available
+const getDocumentRequirements = (): Record<DocumentType, DocumentRequirement> => {
+  if (!documentRequirements || typeof documentRequirements !== 'object') {
+    console.error("CRITICAL: documentRequirements is invalid!", documentRequirements);
+    return {} as Record<DocumentType, DocumentRequirement>;
+  }
+  return documentRequirements;
 };
 
 export function DocumentUploadForm({
@@ -136,7 +169,13 @@ export function DocumentUploadForm({
     file: File,
     documentType: DocumentType,
   ): string | null => {
-    const requirements = documentRequirements[documentType];
+    const reqs = getDocumentRequirements();
+    const requirements = reqs[documentType];
+    
+    if (!requirements) {
+      console.error("No requirements found for document type:", documentType);
+      return "Invalid document type";
+    }
 
     // Check file size
     const maxSizeBytes = requirements.maxSize * 1024 * 1024;
@@ -496,15 +535,17 @@ export function DocumentUploadForm({
           <div className="space-y-6">
             {(() => {
               try {
-                if (!documentRequirements || 
-                    documentRequirements === null || 
-                    typeof documentRequirements !== 'object' || 
-                    Array.isArray(documentRequirements)) {
-                  console.warn("Document requirements is invalid:", documentRequirements);
+                const reqs = getDocumentRequirements();
+                if (!reqs || 
+                    reqs === null || 
+                    typeof reqs !== 'object' || 
+                    Array.isArray(reqs) ||
+                    Object.keys(reqs).length === 0) {
+                  console.warn("Document requirements is invalid:", reqs);
                   return null;
                 }
                 
-                const entries = Object.entries(documentRequirements);
+                const entries = Object.entries(reqs);
                 return entries
                   .filter(([docType]) => docType !== "professional_certificate") // Remove duplicate Professional Certificate
                   .filter(([, requirements]) => requirements !== undefined && requirements !== null) // Ensure requirements exists
@@ -787,8 +828,10 @@ export function DocumentUploadForm({
                 console.warn("Completion requirements: requiredDocs is invalid:", requiredDocs);
                 return null;
               }
-              if (!documentRequirements || documentRequirements === null || typeof documentRequirements !== 'object') {
-                console.warn("Completion requirements: documentRequirements is invalid:", documentRequirements);
+              
+              const reqs = getDocumentRequirements();
+              if (!reqs || reqs === null || typeof reqs !== 'object' || Object.keys(reqs).length === 0) {
+                console.warn("Completion requirements: documentRequirements is invalid:", reqs);
                 return null;
               }
 
@@ -800,7 +843,7 @@ export function DocumentUploadForm({
                     (doc) =>
                       doc.type === docType && doc.status === "uploaded",
                   );
-                  const requirements = documentRequirements[docType];
+                  const requirements = reqs[docType];
                   const docTitle = requirements?.title || type;
                   return (
                     <li
