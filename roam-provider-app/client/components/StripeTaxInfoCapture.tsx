@@ -235,29 +235,9 @@ export default function StripeTaxInfoCapture({
         throw new Error(errorData.error || errorData.details || `Failed to save tax info: ${res.statusText}`);
       }
 
-      // Also update business profile with contact email for Stripe Connect
-      try {
-        const profileRes = await fetch(`/api/business/profile/${businessId}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            contact_email: taxInfo.contactEmail,
-          }),
-        });
-        
-        if (!profileRes.ok) {
-          console.warn('Failed to update business profile with contact email');
-        }
-      } catch (profileError) {
-        console.error('Error updating business profile:', profileError);
-        // Don't fail the whole operation if profile update fails
-      }
-
       toast({
         title: "Tax Information Saved",
-        description: "Your business tax information has been saved successfully.",
+        description: "Your business and tax information has been saved successfully. You can now connect your Stripe account.",
       });
 
       onComplete(taxInfo);
@@ -332,7 +312,7 @@ export default function StripeTaxInfoCapture({
 
           {/* Contact Email */}
           <div className="space-y-2">
-            <Label htmlFor="contactEmail">Contact Email *</Label>
+            <Label htmlFor="contactEmail">Business Contact Email *</Label>
             <Input
               id="contactEmail"
               type="email"
@@ -342,7 +322,7 @@ export default function StripeTaxInfoCapture({
               required
             />
             <p className="text-sm text-muted-foreground">
-              This email will be used for Stripe Connect and business communications
+              This email will be used for Stripe Connect account setup and tax correspondence
             </p>
           </div>
 

@@ -111,21 +111,21 @@ export default function BankingPayoutSetup({
       setConnectingStripe(true);
       setError(null);
 
-      // Get business profile data for Stripe Connect
-      const businessResponse = await fetch(`/api/business/profile/${businessId}`);
-      if (!businessResponse.ok) {
-        throw new Error('Failed to fetch business profile');
+      // Get tax info which contains the contact email and business details for Stripe
+      const taxInfoResponse = await fetch(`/api/business/tax-info?business_id=${businessId}`);
+      if (!taxInfoResponse.ok) {
+        throw new Error('Failed to fetch tax information. Please complete the tax information form first.');
       }
-      const businessProfile = await businessResponse.json();
+      const { tax_info } = await taxInfoResponse.json();
       
-      // Map business profile fields to Stripe Connect requirements
-      const businessName = businessProfile.business_name || businessProfile.businessName || 'Business';
-      const email = businessProfile.contact_email || businessProfile.email || '';
-      const businessType = businessProfile.business_type || 'llc';
-
-      if (!email) {
-        throw new Error('Business contact email is required. Please ensure your business profile has a contact email.');
+      if (!tax_info || !tax_info.tax_contact_email) {
+        throw new Error('Business contact email is required. Please complete the tax information form first.');
       }
+
+      // Use tax info as source of truth for Stripe Connect
+      const businessName = tax_info.legal_business_name || 'Business';
+      const email = tax_info.tax_contact_email;
+      const businessType = tax_info.business_entity_type || 'llc';
 
       // Tax info should already be saved in database from the tax info step
       // The API endpoint will fetch it automatically
