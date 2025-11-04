@@ -108,8 +108,8 @@ export async function handleSendApprovalEmail(req: Request, res: Response) {
             <div class="container" style="max-width: 600px; margin: 0 auto; padding: 20px;">
 
               <!-- Header with Logo -->
-              <div style="text-align: center; padding: 30px 0 20px;">
-                <img src="${process.env.VITE_PUBLIC_SUPABASE_URL}/storage/v1/object/public/roam-file-storage/brand-assets/site_logo-1755737705142.png"
+              <div style="text-align: center; padding: 30px 0 20px; background-color: #f5f5f5; border-radius: 12px 12px 0 0; margin: -20px -20px 20px -20px; padding: 30px 20px;">
+                <img src="https://cdn.builder.io/api/v1/image/assets%2Fa42b6f9ec53e4654a92af75aad56d14f%2F993952d908754e5dbe0cceda03eb2224?format=webp&width=200"
                      alt="ROAM - Your Best Life. Everywhere."
                      class="logo"
                      style="max-width: 200px; height: auto;">
