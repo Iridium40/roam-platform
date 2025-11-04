@@ -209,6 +209,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     console.log("Provider access verified successfully");
 
+    // Fetch tax info from database (should be captured first in tax info step)
+    console.log("Fetching tax info from database:", { businessId });
+    const { data: taxInfo, error: taxInfoError } = await supabase
+      .from("business_stripe_tax_info")
+      .select("*")
+      .eq("business_id", businessId)
+      .single();
+
+    if (taxInfoError && taxInfoError.code !== 'PGRST116') {
+      console.error("Error fetching tax info:", taxInfoError);
+      // Continue anyway - tax info is optional for account creation
+      // Stripe will collect it during onboarding if needed
+    }
+
+    if (taxInfo) {
+      console.log("Tax info found:", {
+        business_entity_type: taxInfo.business_entity_type,
+        legal_business_name: taxInfo.legal_business_name,
+        tax_id_type: taxInfo.tax_id_type,
+        has_tax_id: !!taxInfo.tax_id,
+        has_address: !!taxInfo.tax_address_line1
+      });
+    } else {
+      console.warn("No tax info found - Stripe will collect during onboarding");
+    }
+
     // Note: In Phase 2 onboarding, business may not be approved yet
     // Allow Stripe Connect setup during onboarding (verification happens later)
     // Commenting out this check for Phase 2 onboarding flow
@@ -242,7 +268,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       business_type: businessType,
       business_profile: {
         name: businessName,
-        url: businessProfile.website || undefined,
+        url: businessProfile.website_url || undefined,
         mcc: businessProfile.mcc_code || undefined,
       },
       capabilities: {
@@ -291,16 +317,46 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Add company-specific fields
     if (businessType === "company") {
+      // Use tax info from database if available, otherwise use provided values
+      const companyTaxId = taxInfo?.tax_id || taxId || undefined;
+      const companyNameValue = taxInfo?.legal_business_name || companyName || businessName;
+      
       accountParams.company = {
-        name: companyName!,
-        tax_id: taxId || undefined, // Optional - Stripe will collect during onboarding
-        phone: phone || undefined,
+        name: companyNameValue,
+        tax_id: companyTaxId || undefined, // Use tax ID from database if available
+        phone: phone || taxInfo?.tax_contact_phone || undefined,
         address: {
-          country,
-          line1: businessProfile.business_address || undefined,
-          city: businessProfile.business_city || undefined,
-          state: businessProfile.business_state || undefined,
-          postal_code: businessProfile.business_zip || undefined,
+          country: taxInfo?.tax_country || country || 'US',
+          line1: taxInfo?.tax_address_line1 || businessProfile.business_address || undefined,
+          line2: taxInfo?.tax_address_line2 || undefined,
+          city: taxInfo?.tax_city || businessProfile.business_city || undefined,
+          state: taxInfo?.tax_state || businessProfile.business_state || undefined,
+          postal_code: taxInfo?.tax_postal_code || businessProfile.business_zip || undefined,
+        },
+      };
+      
+      // If we have tax info, also add it to business_profile
+      if (taxInfo) {
+        accountParams.business_profile = {
+          ...accountParams.business_profile,
+          name: taxInfo.legal_business_name || businessName,
+          url: businessProfile.website_url || undefined,
+          mcc: businessProfile.mcc_code || undefined,
+        };
+      }
+    }
+    
+    // For individual accounts, also use tax info address if available
+    if (businessType === "individual" && taxInfo) {
+      accountParams.individual = {
+        ...accountParams.individual,
+        address: {
+          country: taxInfo.tax_country || country || 'US',
+          line1: taxInfo.tax_address_line1 || businessProfile.business_address || undefined,
+          line2: taxInfo.tax_address_line2 || undefined,
+          city: taxInfo.tax_city || businessProfile.business_city || undefined,
+          state: taxInfo.tax_state || businessProfile.business_state || undefined,
+          postal_code: taxInfo.tax_postal_code || businessProfile.business_zip || undefined,
         },
       };
     }

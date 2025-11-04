@@ -65,7 +65,39 @@ export default function BankingPayoutSetup({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [connectingStripe, setConnectingStripe] = useState(false);
-  const [currentStep, setCurrentStep] = useState<'tax-info' | 'stripe-connect'>('tax-info');
+  // Start with tax-info step if not completed, otherwise start with stripe-connect
+  const [currentStep, setCurrentStep] = useState<'tax-info' | 'stripe-connect'>(
+    initialData?.taxInfoCompleted ? 'stripe-connect' : 'tax-info'
+  );
+
+  // Check if tax info exists in database on mount
+  useEffect(() => {
+    const checkTaxInfo = async () => {
+      try {
+        const res = await fetch(`/api/business/tax-info?business_id=${businessId}`);
+        if (res.ok) {
+          const { tax_info } = await res.json();
+          if (tax_info && tax_info.tax_id && tax_info.legal_business_name) {
+            setBankingData(prev => {
+              // Only update if not already set
+              if (!prev.taxInfoCompleted) {
+                return {
+                  ...prev,
+                  taxInfoCompleted: true
+                };
+              }
+              return prev;
+            });
+            // Switch to stripe-connect if tax info is complete
+            setCurrentStep(prev => prev === 'tax-info' ? 'stripe-connect' : prev);
+          }
+        }
+      } catch (error) {
+        console.error('Error checking tax info:', error);
+      }
+    };
+    checkTaxInfo();
+  }, [businessId]);
 
   const updateBankingData = (field: keyof BankingPayoutData, value: any) => {
     setBankingData(prev => ({
@@ -87,10 +119,16 @@ export default function BankingPayoutSetup({
       const businessProfile = await businessResponse.json();
       
       // Map business profile fields to Stripe Connect requirements
-      const businessName = businessProfile.businessName || 'Test Business';
-      const email = businessProfile.email || 'test@example.com';
+      const businessName = businessProfile.business_name || businessProfile.businessName || 'Business';
+      const email = businessProfile.contact_email || businessProfile.email || '';
       const businessType = businessProfile.business_type || 'llc';
 
+      if (!email) {
+        throw new Error('Business contact email is required. Please ensure your business profile has a contact email.');
+      }
+
+      // Tax info should already be saved in database from the tax info step
+      // The API endpoint will fetch it automatically
       const response = await fetch('/api/stripe/create-connect-account', {
         method: 'POST',
         headers: {
@@ -99,21 +137,12 @@ export default function BankingPayoutSetup({
         body: JSON.stringify({
           userId,
           businessId,
-          businessType,
+          businessType: businessType === 'llc' || businessType === 'corporation' || businessType === 'partnership' || businessType === 'non_profit' ? 'company' : 'individual',
           businessName,
           email,
-          taxInfo: {
-            business_tax_id: '12-3456789', // Mock EIN for testing
-            business_tax_id_type: 'ein',
-            mcc: '5734', // Computer Software Stores
-            product_description: 'Professional services',
-            url: businessProfile.websiteUrl || 'https://example.com'
-          },
           country: 'US',
-          capabilities: {
-            card_payments: { requested: true },
-            transfers: { requested: true }
-          }
+          // Tax info will be fetched from database by the API endpoint
+          // No need to send mock data - it will use the saved tax info
         }),
       });
 
@@ -332,81 +361,131 @@ export default function BankingPayoutSetup({
             </Button>
             <Button
               variant={currentStep === 'stripe-connect' ? 'default' : 'outline'}
-              onClick={() => setCurrentStep('stripe-connect')}
+              onClick={() => {
+                if (bankingData.taxInfoCompleted) {
+                  setCurrentStep('stripe-connect');
+                }
+              }}
               className="flex items-center gap-2"
               disabled={!bankingData.taxInfoCompleted}
+              title={!bankingData.taxInfoCompleted ? 'Please complete Tax Information first' : 'Connect Stripe Account'}
             >
               <CreditCard className="w-4 h-4" />
               Stripe Connect
               {bankingData.stripeConnected && <CheckCircle className="w-4 h-4 text-green-600" />}
+              {!bankingData.taxInfoCompleted && (
+                <AlertCircle className="w-4 h-4 text-yellow-600" title="Tax info required" />
+              )}
             </Button>
           </div>
 
+          {/* Alert if trying to access Stripe Connect without tax info */}
+          {currentStep === 'stripe-connect' && !bankingData.taxInfoCompleted && (
+            <Alert className="border-yellow-200 bg-yellow-50">
+              <AlertCircle className="h-4 w-4 text-yellow-600" />
+              <AlertDescription className="text-yellow-800">
+                <strong>Tax Information Required:</strong> Please complete and save your tax information before connecting your Stripe account.
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* Tax Information Step */}
           {currentStep === 'tax-info' && (
-            <StripeTaxInfoCapture
-              businessId={businessId}
-              userId={userId}
-              onComplete={(taxData) => {
-                setBankingData(prev => ({
-                  ...prev,
-                  taxInfoCompleted: true
-                }));
-                setCurrentStep('stripe-connect');
-              }}
-              onBack={onBack}
-            />
+            <div className="space-y-4">
+              <Alert className="border-blue-200 bg-blue-50">
+                <Info className="h-4 w-4 text-blue-600" />
+                <AlertDescription className="text-blue-800">
+                  <strong>Required Step:</strong> You must complete and save your tax information before you can connect your Stripe account.
+                </AlertDescription>
+              </Alert>
+              <StripeTaxInfoCapture
+                businessId={businessId}
+                userId={userId}
+                onComplete={(taxData) => {
+                  // Tax info has been saved successfully
+                  setBankingData(prev => ({
+                    ...prev,
+                    taxInfoCompleted: true
+                  }));
+                  // Automatically switch to Stripe Connect step after saving
+                  setCurrentStep('stripe-connect');
+                }}
+                onBack={onBack}
+              />
+            </div>
           )}
 
           {/* Stripe Connect Step */}
           {currentStep === 'stripe-connect' && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <Label className="text-lg font-semibold">Stripe Connect Setup</Label>
-                <Badge className={bankingData.stripeConnected ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}>
-                  {bankingData.stripeConnected ? 'Connected' : 'Not Connected'}
-                </Badge>
-              </div>
-              
-              {!bankingData.stripeConnected ? (
-                <Card className="p-6">
+              {!bankingData.taxInfoCompleted ? (
+                <Card className="p-6 border-yellow-200 bg-yellow-50">
                   <div className="text-center space-y-4">
-                    <Banknote className="w-12 h-12 text-gray-400 mx-auto" />
+                    <AlertCircle className="w-12 h-12 text-yellow-600 mx-auto" />
                     <div>
-                      <h4 className="font-semibold text-gray-900">Connect Your Bank Account</h4>
-                      <p className="text-gray-600">
-                        Securely connect your bank account for automatic payouts
+                      <h4 className="font-semibold text-yellow-900">Tax Information Required</h4>
+                      <p className="text-yellow-800">
+                        Please complete and save your tax information before connecting your Stripe account.
                       </p>
                     </div>
-                    <StripeConnectSetup
-                        userId={userId}
-                        businessId={businessId}
-                        onConnectionComplete={(stripeData) => {
-                          console.log('Stripe Connect setup completed:', stripeData);
-                          setBankingData(prev => ({
-                            ...prev,
-                            stripeConnected: true,
-                            stripeAccountId: stripeData.accountId,
-                            stripeAccountStatus: stripeData.status
-                          }));
-                        }}
-                        onConnectionError={(error) => {
-                          setError(error);
-                        }}
-                        className="w-full"
-                      />
+                    <Button
+                      onClick={() => setCurrentStep('tax-info')}
+                      className="bg-yellow-600 hover:bg-yellow-700"
+                    >
+                      Complete Tax Information First
+                    </Button>
                   </div>
                 </Card>
               ) : (
-                <Card className="p-4 border-green-200 bg-green-50">
-                  <div className="flex items-center gap-3">
-                    <CheckCircle className="w-6 h-6 text-green-600" />
-                    <div>
-                      <h4 className="font-semibold text-green-800">Stripe Account Connected</h4>
-                      <p className="text-green-700">Your account is ready to receive payments</p>
-                    </div>
+                <>
+                  <div className="flex items-center justify-between">
+                    <Label className="text-lg font-semibold">Stripe Connect Setup</Label>
+                    <Badge className={bankingData.stripeConnected ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}>
+                      {bankingData.stripeConnected ? 'Connected' : 'Not Connected'}
+                    </Badge>
                   </div>
-                </Card>
+                  
+                  {!bankingData.stripeConnected ? (
+                    <Card className="p-6">
+                      <div className="text-center space-y-4">
+                        <Banknote className="w-12 h-12 text-gray-400 mx-auto" />
+                        <div>
+                          <h4 className="font-semibold text-gray-900">Connect Your Stripe Account</h4>
+                          <p className="text-gray-600">
+                            Securely connect your Stripe account using the tax information you provided
+                          </p>
+                        </div>
+                        <StripeConnectSetup
+                          userId={userId}
+                          businessId={businessId}
+                          onConnectionComplete={(stripeData) => {
+                            console.log('Stripe Connect setup completed:', stripeData);
+                            setBankingData(prev => ({
+                              ...prev,
+                              stripeConnected: true,
+                              stripeAccountId: stripeData.accountId,
+                              stripeAccountStatus: stripeData.status
+                            }));
+                          }}
+                          onConnectionError={(error) => {
+                            setError(error);
+                          }}
+                          className="w-full"
+                        />
+                      </div>
+                    </Card>
+                  ) : (
+                    <Card className="p-4 border-green-200 bg-green-50">
+                      <div className="flex items-center gap-3">
+                        <CheckCircle className="w-6 h-6 text-green-600" />
+                        <div>
+                          <h4 className="font-semibold text-green-800">Stripe Account Connected</h4>
+                          <p className="text-green-700">Your account is ready to receive payments</p>
+                        </div>
+                      </div>
+                    </Card>
+                  )}
+                </>
               )}
             </div>
           )}
