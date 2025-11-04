@@ -130,14 +130,22 @@ export function ApplicationReviewPage({
   const { userData, businessInfo, documents } = applicationData;
 
   const formatBusinessHours = (hours: any) => {
-    return Object.entries(hours)
-      .map(([day, time]: [string, any]) => {
-        if (time.closed) {
-          return `${day.charAt(0).toUpperCase() + day.slice(1)}: Closed`;
-        }
-        return `${day.charAt(0).toUpperCase() + day.slice(1)}: ${time.open} - ${time.close}`;
-      })
-      .join(", ");
+    if (!hours || typeof hours !== 'object' || Array.isArray(hours)) {
+      return "Not specified";
+    }
+    try {
+      return Object.entries(hours)
+        .map(([day, time]: [string, any]) => {
+          if (time.closed) {
+            return `${day.charAt(0).toUpperCase() + day.slice(1)}: Closed`;
+          }
+          return `${day.charAt(0).toUpperCase() + day.slice(1)}: ${time.open} - ${time.close}`;
+        })
+        .join(", ");
+    } catch (error) {
+      console.error("Error formatting business hours:", error);
+      return "Not specified";
+    }
   };
 
   const formatAddress = (address: any) => {
@@ -341,29 +349,32 @@ export function ApplicationReviewPage({
             </div>
           )}
 
-          <Separator />
-
-          {/* Business Hours */}
-          <div>
-            <Label className="text-sm font-medium flex items-center gap-1 mb-2">
-              <Clock className="h-3 w-3" />
-              Business Hours
-            </Label>
-            <div className="text-sm text-foreground/80 space-y-1">
-              {Object.entries(businessInfo.businessHours).map(
-                ([day, hours]: [string, any]) => (
-                  <div key={day} className="flex justify-between">
-                    <span className="capitalize font-medium">{day}:</span>
-                    <span>
-                      {hours.closed
-                        ? "Closed"
-                        : `${hours.open} - ${hours.close}`}
-                    </span>
-                  </div>
-                ),
-              )}
-            </div>
-          </div>
+          {/* Business Hours - Only show if data exists */}
+          {businessInfo.businessHours && typeof businessInfo.businessHours === 'object' && Object.keys(businessInfo.businessHours).length > 0 && (
+            <>
+              <Separator />
+              <div>
+                <Label className="text-sm font-medium flex items-center gap-1 mb-2">
+                  <Clock className="h-3 w-3" />
+                  Business Hours
+                </Label>
+                <div className="text-sm text-foreground/80 space-y-1">
+                  {Object.entries(businessInfo.businessHours).map(
+                    ([day, hours]: [string, any]) => (
+                      <div key={day} className="flex justify-between">
+                        <span className="capitalize font-medium">{day}:</span>
+                        <span>
+                          {hours.closed
+                            ? "Closed"
+                            : `${hours.open} - ${hours.close}`}
+                        </span>
+                      </div>
+                    ),
+                  )}
+                </div>
+              </div>
+            </>
+          )}
 
           {/* Optional Information */}
           {(businessInfo.businessDescription ||
@@ -527,34 +538,34 @@ export function ApplicationReviewPage({
                   <ul className="list-disc list-inside space-y-1 text-xs text-muted-foreground">
                     <li>I confirm that all information provided in this application is accurate and complete. I understand that providing false information may result in application rejection or account termination.</li>
                     <li>I agree to the ROAM{" "}
-                      <Button
-                        variant="link"
-                        className="p-0 h-auto text-roam-blue underline"
-                        onClick={() => window.open('https://app.termly.io/policy-viewer/policy.html?policyUUID=8bd3c211-2aaa-4626-9910-794dc2d85aff', '_blank')}
-                      >
-                        Terms of Service
-                      </Button>
-                      ,{" "}
-                      <Button
-                        variant="link"
-                        className="p-0 h-auto text-roam-blue underline"
-                        onClick={() => window.open('https://app.termly.io/policy-viewer/policy.html?policyUUID=64dec2e3-d030-4421-86ff-a3e7864709d8', '_blank')}
-                      >
-                        Privacy Policy
-                      </Button>
-                      , and{" "}
-                      <Button
-                        variant="link"
-                        className="p-0 h-auto text-roam-blue underline"
-                      >
-                        Provider Agreement
-                      </Button>
-                      .
+                <Button
+                  variant="link"
+                  className="p-0 h-auto text-roam-blue underline"
+                  onClick={() => window.open('https://app.termly.io/policy-viewer/policy.html?policyUUID=8bd3c211-2aaa-4626-9910-794dc2d85aff', '_blank')}
+                >
+                  Terms of Service
+                </Button>
+                ,{" "}
+                <Button
+                  variant="link"
+                  className="p-0 h-auto text-roam-blue underline"
+                  onClick={() => window.open('https://app.termly.io/policy-viewer/policy.html?policyUUID=64dec2e3-d030-4421-86ff-a3e7864709d8', '_blank')}
+                >
+                  Privacy Policy
+                </Button>
+                , and{" "}
+                <Button
+                  variant="link"
+                  className="p-0 h-auto text-roam-blue underline"
+                >
+                  Provider Agreement
+                </Button>
+                .
                     </li>
                     <li>I consent to a comprehensive background check including criminal history, sex offender registry, and identity verification as required for platform approval.</li>
                     <li>I consent to background checks, identity verification, and understand that my application will be reviewed by ROAM administrators. I agree to provide additional documentation if requested during the review process.</li>
                   </ul>
-                </div>
+            </div>
               </Label>
             </div>
           </div>
