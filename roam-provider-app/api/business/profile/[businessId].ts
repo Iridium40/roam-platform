@@ -140,12 +140,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         websiteUrl,
         socialMediaLinks,
         logoUrl,
-        coverImageUrl
+        coverImageUrl,
+        contact_email
       } = body;
 
-      // Validate required fields
-      if (!businessName || typeof businessName !== 'string' || !businessName.trim()) {
-        return res.status(400).json({ error: 'businessName is required and must be a non-empty string' });
+      // Validate required fields (businessName is only required if provided)
+      if (businessName !== undefined && (typeof businessName !== 'string' || !businessName.trim())) {
+        return res.status(400).json({ error: 'businessName must be a non-empty string' });
       }
 
       if (businessId.startsWith('test-') && businessId !== '12345678-1234-1234-1234-123456789abc') {
@@ -168,11 +169,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // Prepare update data, only including defined values
       // Explicitly exclude admin-managed fields like verification_status
-      const allowedFields = ['business_name', 'business_description', 'website_url', 'social_media', 'logo_url', 'cover_image_url'];
-      const updateData: Record<string, any> = {
-        business_name: businessName.trim(),
-      };
+      const allowedFields = ['business_name', 'business_description', 'website_url', 'social_media', 'logo_url', 'cover_image_url', 'contact_email'];
+      const updateData: Record<string, any> = {};
 
+      if (businessName !== undefined) {
+        updateData.business_name = businessName.trim();
+      }
       if (detailedDescription !== undefined) {
         updateData.business_description = detailedDescription || null;
       }
@@ -187,6 +189,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
       if (coverImageUrl !== undefined) {
         updateData.cover_image_url = coverImageUrl || null;
+      }
+      if (contact_email !== undefined) {
+        updateData.contact_email = contact_email || null;
       }
 
       // Filter out any admin-managed fields that shouldn't be updated by provider app

@@ -264,138 +264,13 @@ export default function BankingPayoutSetup({
             </Alert>
           )}
 
-          {/* Payment Processing Information */}
-          <div className="space-y-4">
-            <Label className="text-lg font-semibold">Payment Processing</Label>
-            <Card className="p-4 border-blue-200 bg-blue-50">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                  <CreditCard className="w-5 h-5 text-blue-600" />
-                </div>
-                <div>
-                  <h4 className="font-semibold text-blue-900">Stripe Connect</h4>
-                  <p className="text-sm text-blue-800">Secure payment processing & payouts</p>
-                </div>
-              </div>
-              <div className="mt-3 space-y-2 text-sm text-blue-700">
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-blue-600" />
-                  <span>Instant payouts every Friday</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-blue-600" />
-                  <span>Secure payment processing</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-blue-600" />
-                  <span>Automatic tax handling</span>
-                </div>
-              </div>
-              <div className="mt-3 p-2 bg-blue-100 rounded text-xs text-blue-800">
-                <strong>Note:</strong> This shows what Stripe Connect provides. You'll need to connect your account below.
-              </div>
-            </Card>
-          </div>
-
-                    {/* Stripe Connect Setup */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Label className="text-lg font-semibold">Stripe Connect Setup</Label>
-              <Badge className={bankingData.stripeConnected ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}>
-                {bankingData.stripeConnected ? 'Connected' : 'Not Connected'}
-              </Badge>
-            </div>
-            
-            {!bankingData.stripeConnected ? (
-              <Card className="p-6">
-                <div className="text-center space-y-4">
-                  <Shield className="w-12 h-12 text-gray-400 mx-auto" />
-                  <div>
-                    <h4 className="font-semibold text-gray-900">Connect Your Stripe Account</h4>
-                    <p className="text-gray-600">
-                      Set up your Stripe Connect account to receive payments securely
-                    </p>
-                  </div>
-                  <Button 
-                    onClick={connectStripeAccount}
-                    disabled={connectingStripe}
-                    className="bg-green-600 hover:bg-green-700"
-                  >
-                    {connectingStripe ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Connecting...
-                      </>
-                    ) : (
-                      <>
-                        <ExternalLink className="w-4 h-4 mr-2" />
-                        Connect Stripe Account
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </Card>
-            ) : (
-              <Card className="p-4 border-green-200 bg-green-50">
-                <div className="flex items-center gap-3">
-                  <CheckCircle className="w-6 h-6 text-green-600" />
-                  <div>
-                    <h4 className="font-semibold text-green-800">Stripe Account Connected</h4>
-                    <p className="text-green-700">Your account is ready to receive payments</p>
-                  </div>
-                </div>
-              </Card>
-            )}
-          </div>
-
-          {/* Step Navigation */}
-          <div className="flex items-center justify-center space-x-4 mb-6">
-            <Button
-              variant={currentStep === 'tax-info' ? 'default' : 'outline'}
-              onClick={() => setCurrentStep('tax-info')}
-              className="flex items-center gap-2"
-            >
-              <FileText className="w-4 h-4" />
-              Tax Information
-              {bankingData.taxInfoCompleted && <CheckCircle className="w-4 h-4 text-green-600" />}
-            </Button>
-            <Button
-              variant={currentStep === 'stripe-connect' ? 'default' : 'outline'}
-              onClick={() => {
-                if (bankingData.taxInfoCompleted) {
-                  setCurrentStep('stripe-connect');
-                }
-              }}
-              className="flex items-center gap-2"
-              disabled={!bankingData.taxInfoCompleted}
-              title={!bankingData.taxInfoCompleted ? 'Please complete Tax Information first' : 'Connect Stripe Account'}
-            >
-              <CreditCard className="w-4 h-4" />
-              Stripe Connect
-              {bankingData.stripeConnected && <CheckCircle className="w-4 h-4 text-green-600" />}
-              {!bankingData.taxInfoCompleted && (
-                <AlertCircle className="w-4 h-4 text-yellow-600" title="Tax info required" />
-              )}
-            </Button>
-          </div>
-
-          {/* Alert if trying to access Stripe Connect without tax info */}
-          {currentStep === 'stripe-connect' && !bankingData.taxInfoCompleted && (
-            <Alert className="border-yellow-200 bg-yellow-50">
-              <AlertCircle className="h-4 w-4 text-yellow-600" />
-              <AlertDescription className="text-yellow-800">
-                <strong>Tax Information Required:</strong> Please complete and save your tax information before connecting your Stripe account.
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {/* Tax Information Step */}
-          {currentStep === 'tax-info' && (
+          {/* Step 1: Tax & Business Information (Always shown first) */}
+          {!bankingData.taxInfoCompleted && (
             <div className="space-y-4">
               <Alert className="border-blue-200 bg-blue-50">
                 <Info className="h-4 w-4 text-blue-600" />
                 <AlertDescription className="text-blue-800">
-                  <strong>Required Step:</strong> You must complete and save your tax information before you can connect your Stripe account.
+                  <strong>Step 1 of 2:</strong> Please complete your business and tax information below. After saving, you'll be able to connect your Stripe account.
                 </AlertDescription>
               </Alert>
               <StripeTaxInfoCapture
@@ -407,85 +282,96 @@ export default function BankingPayoutSetup({
                     ...prev,
                     taxInfoCompleted: true
                   }));
-                  // Automatically switch to Stripe Connect step after saving
-                  setCurrentStep('stripe-connect');
+                  // Keep on same page to show Stripe Connect button
                 }}
                 onBack={onBack}
               />
             </div>
           )}
 
-          {/* Stripe Connect Step */}
-          {currentStep === 'stripe-connect' && (
+          {/* Step 2: Stripe Connect (Only shown after tax info is saved) */}
+          {bankingData.taxInfoCompleted && (
             <div className="space-y-4">
-              {!bankingData.taxInfoCompleted ? (
-                <Card className="p-6 border-yellow-200 bg-yellow-50">
+              <Alert className="border-green-200 bg-green-50">
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                <AlertDescription className="text-green-800">
+                  <strong>Tax Information Saved!</strong> Now you can connect your Stripe account to start receiving payments.
+                </AlertDescription>
+              </Alert>
+              
+              {/* Payment Processing Information */}
+              <Card className="p-4 border-blue-200 bg-blue-50">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                    <CreditCard className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-blue-900">Stripe Connect</h4>
+                    <p className="text-sm text-blue-800">Secure payment processing & payouts</p>
+                  </div>
+                </div>
+                <div className="mt-3 space-y-2 text-sm text-blue-700">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-blue-600" />
+                    <span>Instant payouts every Friday</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-blue-600" />
+                    <span>Secure payment processing</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-blue-600" />
+                    <span>Automatic tax handling</span>
+                  </div>
+                </div>
+              </Card>
+              
+              <div className="flex items-center justify-between">
+                <Label className="text-lg font-semibold">Stripe Connect Setup</Label>
+                <Badge className={bankingData.stripeConnected ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}>
+                  {bankingData.stripeConnected ? 'Connected' : 'Not Connected'}
+                </Badge>
+              </div>
+              
+              {!bankingData.stripeConnected ? (
+                <Card className="p-6">
                   <div className="text-center space-y-4">
-                    <AlertCircle className="w-12 h-12 text-yellow-600 mx-auto" />
+                    <Banknote className="w-12 h-12 text-gray-400 mx-auto" />
                     <div>
-                      <h4 className="font-semibold text-yellow-900">Tax Information Required</h4>
-                      <p className="text-yellow-800">
-                        Please complete and save your tax information before connecting your Stripe account.
+                      <h4 className="font-semibold text-gray-900">Connect Your Stripe Account</h4>
+                      <p className="text-gray-600">
+                        Securely connect your Stripe account using the tax information you provided
                       </p>
                     </div>
-                    <Button
-                      onClick={() => setCurrentStep('tax-info')}
-                      className="bg-yellow-600 hover:bg-yellow-700"
-                    >
-                      Complete Tax Information First
-                    </Button>
+                    <StripeConnectSetup
+                      userId={userId}
+                      businessId={businessId}
+                      onConnectionComplete={(stripeData) => {
+                        console.log('Stripe Connect setup completed:', stripeData);
+                        setBankingData(prev => ({
+                          ...prev,
+                          stripeConnected: true,
+                          stripeAccountId: stripeData.accountId,
+                          stripeAccountStatus: stripeData.status
+                        }));
+                      }}
+                      onConnectionError={(error) => {
+                        setError(error);
+                      }}
+                      className="w-full"
+                    />
                   </div>
                 </Card>
               ) : (
-                <>
-                  <div className="flex items-center justify-between">
-                    <Label className="text-lg font-semibold">Stripe Connect Setup</Label>
-                    <Badge className={bankingData.stripeConnected ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}>
-                      {bankingData.stripeConnected ? 'Connected' : 'Not Connected'}
-                    </Badge>
+                <Card className="p-4 border-green-200 bg-green-50">
+                  <div className="flex items-center gap-3">
+                    <CheckCircle className="w-6 h-6 text-green-600" />
+                    <div>
+                      <h4 className="font-semibold text-green-800">Stripe Account Connected</h4>
+                      <p className="text-green-700">Your account is ready to receive payments</p>
+                    </div>
                   </div>
-                  
-                  {!bankingData.stripeConnected ? (
-                    <Card className="p-6">
-                      <div className="text-center space-y-4">
-                        <Banknote className="w-12 h-12 text-gray-400 mx-auto" />
-                        <div>
-                          <h4 className="font-semibold text-gray-900">Connect Your Stripe Account</h4>
-                          <p className="text-gray-600">
-                            Securely connect your Stripe account using the tax information you provided
-                          </p>
-                        </div>
-                        <StripeConnectSetup
-                          userId={userId}
-                          businessId={businessId}
-                          onConnectionComplete={(stripeData) => {
-                            console.log('Stripe Connect setup completed:', stripeData);
-                            setBankingData(prev => ({
-                              ...prev,
-                              stripeConnected: true,
-                              stripeAccountId: stripeData.accountId,
-                              stripeAccountStatus: stripeData.status
-                            }));
-                          }}
-                          onConnectionError={(error) => {
-                            setError(error);
-                          }}
-                          className="w-full"
-                        />
-                      </div>
-                    </Card>
-                  ) : (
-                    <Card className="p-4 border-green-200 bg-green-50">
-                      <div className="flex items-center gap-3">
-                        <CheckCircle className="w-6 h-6 text-green-600" />
-                        <div>
-                          <h4 className="font-semibold text-green-800">Stripe Account Connected</h4>
-                          <p className="text-green-700">Your account is ready to receive payments</p>
-                        </div>
-                      </div>
-                    </Card>
-                  )}
-                </>
+                </Card>
               )}
             </div>
           )}

@@ -26,6 +26,7 @@ import { useToast } from '@/hooks/use-toast';
 interface TaxInfoData {
   businessType: string;
   companyName: string;
+  contactEmail: string;
   taxId: string;
   taxIdType: string;
   address: {
@@ -63,6 +64,7 @@ export default function StripeTaxInfoCapture({
     initialData || {
       businessType: 'llc',
       companyName: '',
+      contactEmail: '',
       taxId: '',
       taxIdType: 'ein',
       address: {
@@ -104,6 +106,7 @@ export default function StripeTaxInfoCapture({
           setTaxInfo({
             businessType: taxData.business_entity_type || 'llc',
             companyName: taxData.legal_business_name || '',
+            contactEmail: taxData.tax_contact_email || '',
             taxId: taxData.tax_id || '',
             taxIdType: taxData.tax_id_type || 'EIN',
             address: {
@@ -149,6 +152,16 @@ export default function StripeTaxInfoCapture({
   const validateForm = () => {
     if (!taxInfo.companyName.trim()) {
       setError('Company name is required');
+      return false;
+    }
+    if (!taxInfo.contactEmail.trim()) {
+      setError('Contact email is required');
+      return false;
+    }
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(taxInfo.contactEmail)) {
+      setError('Please enter a valid email address');
       return false;
     }
     if (!taxInfo.taxId.trim()) {
@@ -204,6 +217,7 @@ export default function StripeTaxInfoCapture({
           business_id: businessId,
           business_entity_type: businessEntityType,
           legal_business_name: taxInfo.companyName,
+          tax_contact_email: taxInfo.contactEmail,
           tax_id: taxInfo.taxId,
           tax_id_type: taxIdTypeUpper,
           tax_address_line1: taxInfo.address.line1,
@@ -213,13 +227,32 @@ export default function StripeTaxInfoCapture({
           tax_postal_code: taxInfo.address.postalCode,
           tax_country: taxInfo.address.country || 'US',
           tax_contact_phone: taxInfo.phone || null,
-          // Contact name and email will be determined by API endpoint from business profile/provider/auth
         }),
       });
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
         throw new Error(errorData.error || errorData.details || `Failed to save tax info: ${res.statusText}`);
+      }
+
+      // Also update business profile with contact email for Stripe Connect
+      try {
+        const profileRes = await fetch(`/api/business/profile/${businessId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            contact_email: taxInfo.contactEmail,
+          }),
+        });
+        
+        if (!profileRes.ok) {
+          console.warn('Failed to update business profile with contact email');
+        }
+      } catch (profileError) {
+        console.error('Error updating business profile:', profileError);
+        // Don't fail the whole operation if profile update fails
       }
 
       toast({
@@ -295,6 +328,22 @@ export default function StripeTaxInfoCapture({
               placeholder="Enter your company name"
               required
             />
+          </div>
+
+          {/* Contact Email */}
+          <div className="space-y-2">
+            <Label htmlFor="contactEmail">Contact Email *</Label>
+            <Input
+              id="contactEmail"
+              type="email"
+              value={taxInfo.contactEmail}
+              onChange={(e) => updateTaxInfo('contactEmail', e.target.value)}
+              placeholder="business@example.com"
+              required
+            />
+            <p className="text-sm text-muted-foreground">
+              This email will be used for Stripe Connect and business communications
+            </p>
           </div>
 
           {/* Tax ID */}

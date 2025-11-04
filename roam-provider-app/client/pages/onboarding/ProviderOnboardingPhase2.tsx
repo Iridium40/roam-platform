@@ -226,6 +226,7 @@ export default function ProviderOnboardingPhase2() {
           <WelcomeBackStep
             businessName={onboardingState.businessData?.businessName}
             onContinue={handlePhase2Welcome}
+            onStepClick={handleStepClick}
             userId={onboardingState.userId}
             businessId={onboardingState.businessId}
           />
