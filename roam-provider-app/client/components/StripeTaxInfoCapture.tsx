@@ -26,6 +26,7 @@ import { useToast } from '@/hooks/use-toast';
 interface TaxInfoData {
   businessType: string;
   companyName: string;
+  contactName: string;
   contactEmail: string;
   taxId: string;
   taxIdType: string;
@@ -64,6 +65,7 @@ export default function StripeTaxInfoCapture({
     initialData || {
       businessType: 'llc',
       companyName: '',
+      contactName: '',
       contactEmail: '',
       taxId: '',
       taxIdType: 'ein',
@@ -106,6 +108,7 @@ export default function StripeTaxInfoCapture({
           setTaxInfo({
             businessType: taxData.business_entity_type || 'llc',
             companyName: taxData.legal_business_name || '',
+            contactName: taxData.tax_contact_name || '',
             contactEmail: taxData.tax_contact_email || '',
             taxId: taxData.tax_id || '',
             taxIdType: taxData.tax_id_type || 'EIN',
@@ -152,6 +155,10 @@ export default function StripeTaxInfoCapture({
   const validateForm = () => {
     if (!taxInfo.companyName.trim()) {
       setError('Company name is required');
+      return false;
+    }
+    if (!taxInfo.contactName.trim()) {
+      setError('Contact name is required');
       return false;
     }
     if (!taxInfo.contactEmail.trim()) {
@@ -217,6 +224,7 @@ export default function StripeTaxInfoCapture({
           business_id: businessId,
           business_entity_type: businessEntityType,
           legal_business_name: taxInfo.companyName,
+          tax_contact_name: taxInfo.contactName,
           tax_contact_email: taxInfo.contactEmail,
           tax_id: taxInfo.taxId,
           tax_id_type: taxIdTypeUpper,
@@ -308,6 +316,21 @@ export default function StripeTaxInfoCapture({
               placeholder="Enter your company name"
               required
             />
+          </div>
+
+          {/* Contact Name */}
+          <div className="space-y-2">
+            <Label htmlFor="contactName">Contact Name (Full Name) *</Label>
+            <Input
+              id="contactName"
+              value={taxInfo.contactName}
+              onChange={(e) => updateTaxInfo('contactName', e.target.value)}
+              placeholder="John Doe"
+              required
+            />
+            <p className="text-sm text-muted-foreground">
+              Legal name of the primary contact for tax and business correspondence
+            </p>
           </div>
 
           {/* Contact Email */}

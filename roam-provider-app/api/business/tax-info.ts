@@ -73,10 +73,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(400).json({ error: 'business_id is required' });
       }
 
-      // Get business profile for required contact fields if not provided
+      // Set contact name and email (email is provided from form, name defaults to business name)
       let contactName = tax_contact_name;
       let contactEmail = tax_contact_email;
 
+      // If contact name not provided, use legal business name
+      if (!contactName && legal_business_name) {
+        contactName = legal_business_name;
+      }
+
+      // If still no contact name or email, try to get from business profile
       if (!contactName || !contactEmail) {
         try {
           const { data: businessProfile, error: businessError } = await supabase
@@ -126,15 +132,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           console.error('Exception fetching business profile:', err);
           // Continue - we'll validate email at the end
         }
-
-        // Note: Cannot use supabase.auth.getUser() with service_role key
-        // Contact email must come from business_profile or provider
       }
 
+      // Validate required fields
       if (!contactEmail) {
         console.error('No contact email found:', { business_id, providedEmail: tax_contact_email });
         return res.status(400).json({ 
-          error: 'Contact email is required. Please ensure your business profile has a contact email.' 
+          error: 'Contact email is required. Please provide a business contact email.' 
+        });
+      }
+
+      if (!contactName) {
+        console.error('No contact name found:', { business_id, providedName: tax_contact_name, businessName: legal_business_name });
+        return res.status(400).json({ 
+          error: 'Contact name is required. Please provide a legal business name.' 
         });
       }
 
