@@ -216,6 +216,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       },
       // Note: Cannot use payment_method_types when automatic_payment_methods is enabled
       // automatic_payment_methods handles card, Apple Pay, Google Pay automatically
+      
+      // Enable automatic tax calculation
+      // ROAM Platform is responsible for tax collection and remittance
+      automatic_tax: {
+        enabled: true,
+        liability: {
+          type: 'self' // Platform assumes tax liability
+        }
+      }
     });
 
     // If bookingId provided, update booking with payment intent

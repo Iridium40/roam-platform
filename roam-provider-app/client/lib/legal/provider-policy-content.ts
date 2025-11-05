@@ -103,10 +103,19 @@ This Agreement constitutes a legally binding contract between you and ROAM Welln
    - You receive 88% of the service price, minus Stripe processing fees (typically 2.9% + $0.30)
 
 4.4 **Example Payment Breakdown**:
-   Service Price: $100.00
+   
+   **Customer Pays:**
+   - Service Price: $100.00
+   - Sales Tax (handled by ROAM): +$8.00
+   - **Total Customer Payment: $108.00**
+   
+   **Provider Receives:**
+   - Service Price: $100.00
    - Platform Commission (12%): -$12.00
-   - Stripe Processing Fee: -$3.20
-   - Your Net Payment: $84.80
+   - Stripe Processing Fee (~3%): -$3.20
+   - **Your Net Payment: $84.80**
+   
+   Note: Sales tax ($8.00) is collected and remitted by ROAM - you receive your portion of the service price only.
 
 4.5 **Payout Schedule**:
    - Payments are transferred to your connected Stripe account automatically
@@ -119,12 +128,20 @@ This Agreement constitutes a legally binding contract between you and ROAM Welln
    - Tips are processed separately and transferred to your account
    - Tips are subject to Stripe processing fees only
 
-4.7 **Tax Responsibilities**: You are solely responsible for:
-   - Reporting all income earned through the Platform
-   - Paying all applicable federal, state, and local taxes
-   - Self-employment taxes
-   - Sales tax collection and remittance (if applicable)
+4.7 **Tax Responsibilities**:
+
+**Sales Tax (Handled by ROAM):**
+   - ROAM automatically calculates, collects, and remits all applicable sales tax on customer transactions
+   - Sales tax is added to the customer's total at checkout
+   - You are NOT responsible for collecting or remitting sales tax
+   - Your payment amount excludes sales tax - you receive your share of the service price only
+
+**Income Tax (Your Responsibility):**
+   - You are responsible for reporting all income earned through the Platform
+   - You must pay all applicable federal, state, and local income taxes
+   - You are responsible for self-employment taxes (Social Security and Medicare)
    - ROAM will provide 1099-NEC forms for earnings over $600/year
+   - Consult with a tax professional regarding your specific tax obligations
 
 4.8 **Refunds & Chargebacks**:
    - If a customer receives a refund, the corresponding commission and your payment will be reversed

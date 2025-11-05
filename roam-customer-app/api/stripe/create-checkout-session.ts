@@ -195,10 +195,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         address: 'auto',
         name: 'auto'
       },
-      // Disable automatic tax calculation for now (requires Stripe tax configuration)
-      // automatic_tax: {
-      //   enabled: true
-      // }
+      // Enable automatic tax calculation
+      // ROAM Platform is responsible for tax collection and remittance
+      automatic_tax: {
+        enabled: true,
+        liability: {
+          type: 'self' // Platform assumes tax liability
+        }
+      }
     });
 
     console.log('✅ Checkout session created:', session.id);
