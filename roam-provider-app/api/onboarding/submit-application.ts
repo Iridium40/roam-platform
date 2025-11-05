@@ -231,8 +231,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(404).json({ error: "Business profile not found" });
     }
 
-    // Check if required documents are uploaded (simplified validation)
-    console.log("Checking documents for businessId:", businessId);
+    // Check identity verification status (NEW - Stripe Identity requirement)
+    console.log("Checking identity verification for businessId:", businessId);
+    
+    if (!businessProfile.identity_verification_status || businessProfile.identity_verification_status !== 'verified') {
+      console.error("Identity verification not completed:", {
+        status: businessProfile.identity_verification_status,
+        sessionId: businessProfile.identity_verification_session_id
+      });
+      
+      return res.status(400).json({
+        error: "Identity verification required",
+        details: "Please complete Stripe Identity verification (driver's license and proof of address) before submitting your application.",
+        currentStatus: businessProfile.identity_verification_status || 'not_started',
+        nextStep: "Complete identity verification in the onboarding flow"
+      });
+    }
+
+    console.log("Identity verification confirmed:", {
+      status: businessProfile.identity_verification_status,
+      verifiedAt: businessProfile.identity_verified_at
+    });
+
+    // Check if required documents are uploaded (business documents only - identity docs handled by Stripe)
+    console.log("Checking business documents for businessId:", businessId);
     
     const { data: documents, error: documentsError } = await supabase
       .from("business_documents")

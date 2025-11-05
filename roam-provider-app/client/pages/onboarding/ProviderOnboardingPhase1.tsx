@@ -19,12 +19,13 @@ import { ProviderSignupForm } from "@/components/ProviderSignupForm";
 import { BusinessInfoForm } from "@/components/BusinessInfoForm";
 import { DocumentUploadForm } from "@/components/DocumentUploadForm";
 import { ApplicationReviewPage } from "@/components/ApplicationReviewPage";
+import StripeIdentityVerification from "@/components/StripeIdentityVerification";
 
 // Import utilities
 import { postJson } from "@/lib/api-utils";
 import { useAuth } from "@/contexts/auth/AuthProvider";
 
-type Phase1Step = "signup" | "business_info" | "documents" | "review" | "submitted";
+type Phase1Step = "signup" | "business_info" | "identity_verification" | "business_documents" | "review" | "submitted";
 
 interface Phase1State {
   phase1Step: Phase1Step;
@@ -33,12 +34,15 @@ interface Phase1State {
   documents?: any[];
   businessId?: string;
   userId?: string;
+  identityVerified?: boolean;
+  identityVerificationSessionId?: string;
 }
 
 const phase1Steps = [
   { id: "signup", title: "Account Creation", icon: User },
   { id: "business_info", title: "Business Information", icon: Building },
-  { id: "documents", title: "Document Upload", icon: FileText },
+  { id: "identity_verification", title: "Identity Verification", icon: User },
+  { id: "business_documents", title: "Business Documents", icon: FileText },
   { id: "review", title: "Review & Submit", icon: CheckCircle },
 ];
 
@@ -293,7 +297,7 @@ export default function ProviderOnboardingPhase1() {
 
       setOnboardingState((prev) => ({
         ...prev,
-        phase1Step: "documents",
+        phase1Step: "identity_verification",
         businessData,
         businessId: result.business.id,
       }));
@@ -306,6 +310,27 @@ export default function ProviderOnboardingPhase1() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleIdentityVerificationComplete = async (verificationData: any) => {
+    console.log("Identity verification completed:", verificationData);
+    setOnboardingState((prev) => ({
+      ...prev,
+      phase1Step: "business_documents",
+      identityVerified: true,
+      identityVerificationSessionId: verificationData.id,
+    }));
+  };
+
+  const handleIdentityVerificationPending = () => {
+    console.log("Identity verification pending - processing...");
+    // User has submitted their information, we're waiting for results
+    // Can show a loading state or allow them to continue
+  };
+
+  const handleIdentityVerificationFailed = (error: string) => {
+    console.error("Identity verification failed:", error);
+    setError(`Identity verification failed: ${error}. Please try again or contact support.`);
   };
 
   const handleDocumentsComplete = async (documents: any[]) => {
@@ -399,7 +424,7 @@ export default function ProviderOnboardingPhase1() {
     }
   };
 
-  const handleEditSection = (section: "user" | "business" | "documents") => {
+  const handleEditSection = (section: "user" | "business" | "identity" | "documents") => {
     switch (section) {
       case "user":
         setOnboardingState((prev) => ({ ...prev, phase1Step: "signup" }));
@@ -410,8 +435,11 @@ export default function ProviderOnboardingPhase1() {
           phase1Step: "business_info",
         }));
         break;
+      case "identity":
+        setOnboardingState((prev) => ({ ...prev, phase1Step: "identity_verification" }));
+        break;
       case "documents":
-        setOnboardingState((prev) => ({ ...prev, phase1Step: "documents" }));
+        setOnboardingState((prev) => ({ ...prev, phase1Step: "business_documents" }));
         break;
     }
   };
@@ -461,7 +489,29 @@ export default function ProviderOnboardingPhase1() {
           />
         );
 
-      case "documents":
+      case "identity_verification":
+        // Ensure userId and businessId exist before allowing identity verification
+        if (!onboardingState.userId || !onboardingState.businessId) {
+          console.warn("UserId or BusinessId missing, redirecting to business_info");
+          setOnboardingState((prev) => ({
+            ...prev,
+            phase1Step: "business_info",
+          }));
+          setError("Please complete the previous steps first.");
+          return null;
+        }
+        return (
+          <StripeIdentityVerification
+            userId={onboardingState.userId}
+            businessId={onboardingState.businessId}
+            onVerificationComplete={handleIdentityVerificationComplete}
+            onVerificationPending={handleIdentityVerificationPending}
+            onVerificationFailed={handleIdentityVerificationFailed}
+            className="max-w-2xl mx-auto"
+          />
+        );
+
+      case "business_documents":
         // Ensure userId exists before allowing document upload
         if (!onboardingState.userId) {
           console.warn("UserId missing, redirecting to signup");

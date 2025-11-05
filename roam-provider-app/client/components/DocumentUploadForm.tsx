@@ -34,8 +34,6 @@ interface UploadedDocument {
 type DocumentType = BusinessDocumentType;
 
 interface RequiredDocuments {
-  drivers_license: boolean;
-  proof_of_address: boolean;
   liability_insurance: boolean;
   professional_license: boolean;
   business_license: boolean;
@@ -60,22 +58,24 @@ interface DocumentRequirement {
 }
 
 const documentRequirements: Record<DocumentType, DocumentRequirement> = {
+  // NOTE: These are verified via Stripe Identity in a separate step - not uploaded here
   drivers_license: {
     title: "Driver's License",
-    description: "Government-issued photo identification",
-    required: true,
-    acceptedFormats: [".pdf", ".jpg", ".jpeg", ".png"],
-    maxSize: 5, // MB
-    examples: ["Driver's License", "State ID", "Passport"],
+    description: "Verified via Stripe Identity",
+    required: false, // Verified separately
+    acceptedFormats: [],
+    maxSize: 0,
+    examples: ["Verified via Stripe Identity"],
   },
   proof_of_address: {
     title: "Proof of Address",
-    description: "Recent utility bill or lease agreement",
-    required: true,
-    acceptedFormats: [".pdf", ".jpg", ".jpeg", ".png"],
-    maxSize: 5, // MB
-    examples: ["Utility Bill", "Lease Agreement", "Bank Statement"],
+    description: "Verified via Stripe Identity",
+    required: false, // Verified separately  
+    acceptedFormats: [],
+    maxSize: 0,
+    examples: ["Verified via Stripe Identity"],
   },
+  // Business documents (uploaded in this step)
   liability_insurance: {
     title: "Liability Insurance",
     description: "Professional liability insurance certificate",
@@ -151,10 +151,10 @@ export function DocumentUploadForm({
   );
 
   // Determine which documents are required based on business type
+  // NOTE: Identity documents (driver's license, proof of address) are verified
+  // separately via Stripe Identity in the previous step
   const getRequiredDocuments = (): RequiredDocuments => {
     const base: RequiredDocuments = {
-      drivers_license: true,
-      proof_of_address: true,
       liability_insurance: false,
       professional_license: false,
       business_license: false,
@@ -505,14 +505,23 @@ export function DocumentUploadForm({
     <Card className="w-full max-w-4xl mx-auto">
       <CardHeader className="text-center">
         <CardTitle className="text-2xl font-bold text-roam-blue">
-          Document Upload
+          Business Documents
         </CardTitle>
         <p className="text-foreground/70">
-          Upload required documents for verification
+          Upload your professional licenses and business documents
         </p>
       </CardHeader>
       <CardContent>
         <div className="space-y-8">
+          {/* Identity Verification Complete Notice */}
+          <Alert className="border-green-200 bg-green-50">
+            <CheckCircle className="h-4 w-4 text-green-600" />
+            <AlertDescription className="text-green-800">
+              <strong>Identity Verified!</strong> Your driver's license and proof of address 
+              have been verified through Stripe Identity. Now upload your business-related documents below.
+            </AlertDescription>
+          </Alert>
+
           {/* Error Alert */}
           {error && (
             <Alert variant="destructive">
@@ -547,6 +556,8 @@ export function DocumentUploadForm({
                 
                 const entries = Object.entries(reqs);
                 return entries
+                  // Filter out identity documents (verified via Stripe Identity)
+                  .filter(([docType]) => docType !== "drivers_license" && docType !== "proof_of_address")
                   .filter(([docType]) => docType !== "professional_certificate") // Remove duplicate Professional Certificate
                   .filter(([, requirements]) => requirements !== undefined && requirements !== null) // Ensure requirements exists
                   .map(([docType, requirements]) => {
