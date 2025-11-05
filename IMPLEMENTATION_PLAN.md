@@ -134,17 +134,18 @@ ADD COLUMN identity_verified_at TIMESTAMPTZ;
 
 #### Example Updated Flow:
 ```
-Service Price: $100.00
-Sales Tax (calculated by Stripe): $8.00
-Total Customer Pays: $108.00
+Service Price (Provider's Rate): $100.00
+Platform Fee (20%): $20.00
+Subtotal: $120.00
+Sales Tax (7%, calculated by Stripe): $8.00
+Total Customer Pays: $128.00
 
-Platform receives: $108.00
-├─ Service amount: $100.00
-│  ├─ Platform fee (12%): $12.00
-│  └─ Provider payment: $88.00
-└─ Sales Tax: $8.00 (remitted to state)
+Platform receives: $128.00
+├─ Service amount: $100.00 → Provider (minus ~$3.20 Stripe fee = $96.80)
+├─ Platform fee (20%): $20.00 → Platform keeps
+└─ Sales Tax: $8.00 → Remitted to state by ROAM
 
-Provider receives: $88.00 (no tax responsibility)
+Provider receives: $96.80 (full service price minus only Stripe processing fees)
 ```
 
 ---

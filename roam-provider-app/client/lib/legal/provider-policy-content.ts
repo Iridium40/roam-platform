@@ -89,7 +89,7 @@ This Agreement constitutes a legally binding contract between you and ROAM Welln
    - Market reasonableness
    - Transparency in pricing (no hidden fees)
 
-4.2 **Platform Commission**: ROAM charges a service fee of 12% on the total service amount for each completed booking. This commission covers:
+4.2 **Platform Commission**: ROAM charges a service fee of 20% on the service amount, added to the customer's total. This commission covers:
    - Platform technology and maintenance
    - Customer acquisition and marketing
    - Payment processing infrastructure
@@ -98,24 +98,29 @@ This Agreement constitutes a legally binding contract between you and ROAM Welln
 
 4.3 **Payment Processing**:
    - All payments are processed through Stripe Connect
-   - Customers pay the full amount (service price + any applicable taxes) at booking
-   - ROAM retains the 12% platform commission
-   - You receive 88% of the service price, minus Stripe processing fees (typically 2.9% + $0.30)
+   - Customers pay the full amount (service price + platform fee + taxes) at booking
+   - The 20% platform fee is added to the customer's total (not deducted from your earnings)
+   - You receive 100% of your service price, minus Stripe processing fees (typically 2.9% + $0.30)
 
 4.4 **Example Payment Breakdown**:
    
    **Customer Pays:**
-   - Service Price: $100.00
-   - Sales Tax (handled by ROAM): +$8.00
-   - **Total Customer Payment: $108.00**
+   - Service Price (your rate): $100.00
+   - Platform Fee (20%): +$20.00
+   - Subtotal: $120.00
+   - Sales Tax (7%, handled by ROAM): +$8.00
+   - **Total Customer Payment: $128.00**
    
    **Provider Receives:**
    - Service Price: $100.00
-   - Platform Commission (12%): -$12.00
-   - Stripe Processing Fee (~3%): -$3.20
-   - **Your Net Payment: $84.80**
+   - Stripe Processing Fee (~3.2%): -$3.20
+   - **Your Net Payment: $96.80**
    
-   Note: Sales tax ($8.00) is collected and remitted by ROAM - you receive your portion of the service price only.
+   **Platform Receives:**
+   - Platform Fee: $20.00
+   - Tax Collected (remitted to state): $8.00
+   
+   Note: The platform fee is added to the customer's total, not deducted from your earnings. You receive your full service price minus only the payment processing fees.
 
 4.5 **Payout Schedule**:
    - Payments are transferred to your connected Stripe account automatically

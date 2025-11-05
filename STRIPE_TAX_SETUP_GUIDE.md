@@ -194,20 +194,22 @@ If using Autopilot:
 ### Previous Flow (Manual Tax)
 ```
 Customer pays: $100 (service only)
-Platform keeps: $12 (fee)
-Provider gets: $88
+Platform fee: Not transparent
+Provider gets: Variable
 Tax responsibility: Provider's problem ❌
 ```
 
 ### New Flow (Automatic Tax)
 ```
-Customer pays: $108 ($100 service + $8 tax)
-├─ Service amount: $100
-│  ├─ Platform keeps: $12 (fee)
-│  └─ Provider gets: $88
-└─ Tax collected: $8 → Remitted to state by ROAM ✅
+Customer pays: $128
+
+Breakdown:
+├─ Service Price: $100 → Provider receives $96.80 (after ~$3.20 Stripe fee)
+├─ Platform Fee (20%): $20 → Platform keeps
+└─ Sales Tax (7%): $8 → Remitted to state by ROAM ✅
 
 Tax responsibility: Platform handles it ✅
+Provider benefit: Receives full service price (minus only Stripe fees) ✅
 ```
 
 ### Benefits
