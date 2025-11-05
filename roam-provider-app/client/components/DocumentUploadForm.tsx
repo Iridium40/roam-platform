@@ -832,58 +832,6 @@ export function DocumentUploadForm({
             </Alert>
           )}
 
-          {/* Completion Requirements */}
-          {(() => {
-            try {
-              if (!requiredDocs || requiredDocs === null || typeof requiredDocs !== 'object' || Array.isArray(requiredDocs)) {
-                console.warn("Completion requirements: requiredDocs is invalid:", requiredDocs);
-                return null;
-              }
-              
-              const reqs = getDocumentRequirements();
-              if (!reqs || reqs === null || typeof reqs !== 'object' || Object.keys(reqs).length === 0) {
-                console.warn("Completion requirements: documentRequirements is invalid:", reqs);
-                return null;
-              }
-
-              const requiredList = Object.entries(requiredDocs)
-                .filter(([_, required]) => required)
-                .map(([type]) => {
-                  const docType = type as DocumentType;
-                  const uploaded = documents.some(
-                    (doc) =>
-                      doc.type === docType && doc.status === "uploaded",
-                  );
-                  const requirements = reqs[docType];
-                  const docTitle = requirements?.title || type;
-                  return (
-                    <li
-                      key={type}
-                      className={uploaded ? "text-green-700" : ""}
-                    >
-                      {uploaded ? "✓" : "•"}{" "}
-                      {docTitle}
-                    </li>
-                  );
-                });
-
-              return (
-                <Alert>
-                  <Info className="h-4 w-4" />
-                  <AlertDescription>
-                    <strong>Before you can submit:</strong>
-                    <ul className="list-disc list-inside mt-2 space-y-1">
-                      {requiredList}
-                    </ul>
-                  </AlertDescription>
-                </Alert>
-              );
-            } catch (error) {
-              console.error("Error rendering completion requirements:", error);
-              return null;
-            }
-          })()}
-
           {/* Submit Button */}
           <Button
             onClick={handleSubmit}

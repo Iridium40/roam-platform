@@ -422,6 +422,19 @@ export function ApplicationReviewPage({
         </CardContent>
       </Card>
 
+      {/* Identity Verification Section */}
+      <Card className="border-green-200 bg-green-50">
+        <CardContent className="pt-6">
+          <div className="flex items-center gap-3">
+            <CheckCircle className="h-6 w-6 text-green-600" />
+            <div>
+              <h3 className="font-semibold text-green-900">Identity Verified</h3>
+              <p className="text-sm text-green-700">Your identity has been successfully verified</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Documents Section */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">

@@ -823,7 +823,7 @@ export function BusinessInfoForm({
                 Saving Business Information...
               </>
             ) : (
-              "Continue to Document Upload"
+              "Continue to Identity Verification"
             )}
           </Button>
         </form>
