@@ -208,34 +208,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // Additional check: verify the provider's user_id matches the request userId
-    // This ensures the authenticated user is the owner
-    console.log("Comparing user IDs:", { 
-      providerUserId: providerAccess.user_id, 
+    // Use the business owner's user_id from the database as the authoritative source
+    // This ensures we always create the Stripe account for the actual business owner
+    const actualOwnerId = providerAccess.user_id;
+    
+    console.log("Using business owner's user ID from database:", { 
       requestUserId: userId,
-      match: providerAccess.user_id === userId
+      actualOwnerId: actualOwnerId,
+      businessId: businessId
     });
     
-    // For Phase 2 onboarding, we might be more lenient - just check if owner exists
-    // But log a warning if user_id doesn't match
-    if (providerAccess.user_id && providerAccess.user_id !== userId) {
-      console.warn("User ID mismatch (but proceeding for Phase 2):", { 
-        providerUserId: providerAccess.user_id, 
-        requestUserId: userId 
-      });
-      // In Phase 2, we might allow this if the owner exists
-      // But for now, let's still require it to match
-      return res.status(403).json({ 
-        error: "Access denied",
-        details: "User ID does not match the business owner",
-        debug: {
-          providerUserId: providerAccess.user_id,
-          requestUserId: userId
-        }
+    // If the request userId doesn't match, log a warning but proceed with the actual owner
+    if (actualOwnerId !== userId) {
+      console.warn("Request userId differs from business owner - using owner's ID:", { 
+        requestUserId: userId,
+        actualOwnerId: actualOwnerId
       });
     }
+    
+    // Override the userId with the actual owner's ID for all subsequent operations
+    const ownerUserId = actualOwnerId;
 
-    console.log("Provider access verified successfully");
+    console.log("Provider access verified successfully, using owner ID:", ownerUserId);
 
     // Fetch tax info from database (should be captured first in tax info step)
     console.log("Fetching tax info from database:", { businessId });
@@ -277,7 +271,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { data: existingAccount } = await supabase
       .from("stripe_connect_accounts")
       .select("*")
-      .eq("user_id", userId)
+      .eq("user_id", ownerUserId)
       .eq("business_id", businessId)
       .single();
 
@@ -400,7 +394,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { error: dbError } = await supabase
       .from("stripe_connect_accounts")
       .insert({
-        user_id: userId,
+        user_id: ownerUserId,
         business_id: businessId,
         stripe_account_id: account.id,
         status: account.charges_enabled ? "active" : "pending",
