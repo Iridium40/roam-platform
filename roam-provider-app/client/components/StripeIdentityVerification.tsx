@@ -87,8 +87,10 @@ export default function StripeIdentityVerification({
   const checkExistingVerification = async () => {
     try {
       setLoading(true);
+      
+      // First, check if there's an existing verification session in the database
       const response = await fetch(
-        `/api/stripe/check-verification-status/${userId}?businessId=${businessId}`,
+        `/api/stripe/get-existing-verification?userId=${userId}&businessId=${businessId}`,
       );
 
       if (response.ok) {
@@ -114,6 +116,8 @@ export default function StripeIdentityVerification({
 
   const createVerificationSession =
     async (): Promise<VerificationSessionData> => {
+      console.log('Creating verification session for:', { userId, businessId });
+      
       const response = await fetch("/api/stripe/create-verification-session", {
         method: "POST",
         headers: {
@@ -136,13 +140,21 @@ export default function StripeIdentityVerification({
 
       const result = await response.json();
 
+      console.log('Verification session response:', { 
+        ok: response.ok, 
+        status: response.status,
+        hasVerificationSession: !!result.verification_session 
+      });
+
       if (!response.ok) {
+        console.error('Verification error:', result);
         throw new Error(
           result.error || "Failed to create verification session",
         );
       }
 
-      return result;
+      // The API returns { verification_session: {...} }
+      return result.verification_session;
     };
 
   const startVerification = async () => {

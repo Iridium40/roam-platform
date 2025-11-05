@@ -134,14 +134,14 @@ export function ApplicationReviewPage({
       return "Not specified";
     }
     try {
-      return Object.entries(hours)
-        .map(([day, time]: [string, any]) => {
-          if (time.closed) {
-            return `${day.charAt(0).toUpperCase() + day.slice(1)}: Closed`;
-          }
-          return `${day.charAt(0).toUpperCase() + day.slice(1)}: ${time.open} - ${time.close}`;
-        })
-        .join(", ");
+    return Object.entries(hours)
+      .map(([day, time]: [string, any]) => {
+        if (time.closed) {
+          return `${day.charAt(0).toUpperCase() + day.slice(1)}: Closed`;
+        }
+        return `${day.charAt(0).toUpperCase() + day.slice(1)}: ${time.open} - ${time.close}`;
+      })
+      .join(", ");
     } catch (error) {
       console.error("Error formatting business hours:", error);
       return "Not specified";
@@ -352,27 +352,27 @@ export function ApplicationReviewPage({
           {/* Business Hours - Only show if data exists */}
           {businessInfo.businessHours && typeof businessInfo.businessHours === 'object' && Object.keys(businessInfo.businessHours).length > 0 && (
             <>
-              <Separator />
-              <div>
-                <Label className="text-sm font-medium flex items-center gap-1 mb-2">
-                  <Clock className="h-3 w-3" />
-                  Business Hours
-                </Label>
-                <div className="text-sm text-foreground/80 space-y-1">
-                  {Object.entries(businessInfo.businessHours).map(
-                    ([day, hours]: [string, any]) => (
-                      <div key={day} className="flex justify-between">
-                        <span className="capitalize font-medium">{day}:</span>
-                        <span>
-                          {hours.closed
-                            ? "Closed"
-                            : `${hours.open} - ${hours.close}`}
-                        </span>
-                      </div>
-                    ),
-                  )}
-                </div>
-              </div>
+          <Separator />
+          <div>
+            <Label className="text-sm font-medium flex items-center gap-1 mb-2">
+              <Clock className="h-3 w-3" />
+              Business Hours
+            </Label>
+            <div className="text-sm text-foreground/80 space-y-1">
+              {Object.entries(businessInfo.businessHours).map(
+                ([day, hours]: [string, any]) => (
+                  <div key={day} className="flex justify-between">
+                    <span className="capitalize font-medium">{day}:</span>
+                    <span>
+                      {hours.closed
+                        ? "Closed"
+                        : `${hours.open} - ${hours.close}`}
+                    </span>
+                  </div>
+                ),
+              )}
+            </div>
+          </div>
             </>
           )}
 

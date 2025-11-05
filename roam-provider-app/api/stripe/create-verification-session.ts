@@ -26,11 +26,23 @@ interface VerificationSessionRequest {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // Enable CORS
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
   try {
+    console.log('=== STRIPE IDENTITY VERIFICATION SESSION REQUEST ===');
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
+
     const {
       userId,
       businessId,
@@ -39,27 +51,70 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }: VerificationSessionRequest = req.body;
 
     if (!userId || !businessId) {
+      console.error('Missing required fields:', { userId: !!userId, businessId: !!businessId });
       return res.status(400).json({ error: "Missing userId or businessId" });
     }
 
-    // Verify business profile exists and is approved
+    // Verify business profile exists
+    // Note: We allow identity verification during Phase 1 onboarding, before business is approved
     const { data: businessProfile, error: businessError } = await supabase
       .from("business_profiles")
       .select("*")
       .eq("id", businessId)
-      .eq("owner_user_id", userId)
       .single();
 
-    if (businessError || !businessProfile) {
-      return res.status(404).json({ error: "Business profile not found" });
-    }
+    console.log('Business profile lookup:', {
+      found: !!businessProfile,
+      error: businessError,
+      businessId,
+      userId
+    });
 
-    if (businessProfile.verification_status !== "approved") {
-      return res.status(403).json({
-        error: "Business must be approved before identity verification",
-        currentStatus: businessProfile.verification_status,
+    if (businessError || !businessProfile) {
+      console.error('Business profile not found:', {
+        error: businessError,
+        businessId: businessId,
+        userId: userId
+      });
+      return res.status(404).json({ 
+        error: "Business profile not found",
+        details: businessError?.message || "No business profile exists with the provided businessId"
       });
     }
+
+    // Verify the user has a provider record for this business
+    // The providers table links users to businesses (user_id + business_id)
+    const { data: providerRecord, error: providerError } = await supabase
+      .from("providers")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("business_id", businessId)
+      .maybeSingle();
+
+    console.log('Provider access check:', {
+      found: !!providerRecord,
+      error: providerError,
+      providerRole: providerRecord?.provider_role
+    });
+
+    if (!providerRecord) {
+      console.error('Access denied - no provider record:', {
+        userId,
+        businessId,
+        error: providerError
+      });
+      return res.status(403).json({ 
+        error: "Access denied",
+        details: "User does not have provider access to this business"
+      });
+    }
+
+    console.log('Business and provider access verified:', {
+      businessName: businessProfile.business_name,
+      verificationStatus: businessProfile.verification_status,
+      providerRole: providerRecord.provider_role,
+      providerId: providerRecord.id
+    });
 
     // Check if there's already a recent verification session
     const { data: existingVerification } = await supabase
