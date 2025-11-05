@@ -55,6 +55,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
+    console.log('=== STRIPE CONNECT ACCOUNT REQUEST ===');
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
+    
     const {
       userId,
       businessId,
@@ -71,11 +74,36 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       phone,
     }: ConnectAccountRequest = req.body;
 
+    console.log('Extracted fields:', {
+      userId,
+      businessId,
+      businessName,
+      businessType,
+      email,
+      country
+    });
+
     // Validate required fields
     if (!userId || !businessId || !businessName || !businessType || !email || !country) {
+      console.error('Missing required fields:', {
+        userId: !!userId,
+        businessId: !!businessId,
+        businessName: !!businessName,
+        businessType: !!businessType,
+        email: !!email,
+        country: !!country
+      });
       return res.status(400).json({ 
         error: "Missing required fields",
-        required: ["userId", "businessId", "businessName", "businessType", "email", "country"]
+        required: ["userId", "businessId", "businessName", "businessType", "email", "country"],
+        received: {
+          userId: !!userId,
+          businessId: !!businessId,
+          businessName: !!businessName,
+          businessType: !!businessType,
+          email: !!email,
+          country: !!country
+        }
       });
     }
 

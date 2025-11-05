@@ -127,6 +127,18 @@ export default function BankingPayoutSetup({
       const email = tax_info.tax_contact_email;
       const businessType = tax_info.business_entity_type || 'llc';
 
+      const requestPayload = {
+        userId,
+        businessId,
+        businessType: businessType === 'llc' || businessType === 'corporation' || businessType === 'partnership' || businessType === 'non_profit' ? 'company' : 'individual',
+        businessName,
+        email,
+        country: 'US',
+      };
+
+      console.log('=== STRIPE CONNECT REQUEST ===');
+      console.log('Sending to Stripe Connect:', requestPayload);
+
       // Tax info should already be saved in database from the tax info step
       // The API endpoint will fetch it automatically
       const response = await fetch('/api/stripe/create-connect-account', {
@@ -134,16 +146,7 @@ export default function BankingPayoutSetup({
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          userId,
-          businessId,
-          businessType: businessType === 'llc' || businessType === 'corporation' || businessType === 'partnership' || businessType === 'non_profit' ? 'company' : 'individual',
-          businessName,
-          email,
-          country: 'US',
-          // Tax info will be fetched from database by the API endpoint
-          // No need to send mock data - it will use the saved tax info
-        }),
+        body: JSON.stringify(requestPayload),
       });
 
       if (!response.ok) {
