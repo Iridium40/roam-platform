@@ -218,12 +218,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // automatic_payment_methods handles card, Apple Pay, Google Pay automatically
       
       // Enable automatic tax calculation
-      // ROAM Platform is responsible for tax collection and remittance
+      // Note: Payment Intents only support 'enabled' - liability is for Checkout Sessions only
       automatic_tax: {
-        enabled: true,
-        liability: {
-          type: 'self' // Platform assumes tax liability
-        }
+        enabled: true
       }
     });
 
