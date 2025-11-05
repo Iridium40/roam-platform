@@ -429,23 +429,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Determine the base URL for return/refresh URLs
-    const host = req.headers.host || 'localhost:5175';
-    const protocol = host.includes('localhost') ? 'http' : 'https';
-    const baseUrl = process.env.VITE_APP_URL || `${protocol}://${host}`;
+    const baseUrl = process.env.VITE_PUBLIC_APP_URL || 'https://www.roamprovider.com';
     
     console.log('🔗 Creating account link with baseUrl:', baseUrl);
 
     // Create account link for onboarding
+    // Return to Phase 2 Banking page after completion
     const accountLink = await stripe.accountLinks.create({
       account: account.id,
-      refresh_url: `${baseUrl}/owner/financials?stripe_refresh=true`,
-      return_url: `${baseUrl}/owner/financials?stripe_success=true`,
+      refresh_url: `${baseUrl}/provider-onboarding/phase2/banking_payout?refresh=true`,
+      return_url: `${baseUrl}/provider-onboarding/phase2/banking_payout?success=true`,
       type: "account_onboarding",
       collect: "eventually_due",
     });
 
     return res.status(200).json({
       success: true,
+      account_id: account.id,
+      onboarding_url: accountLink.url,
       account: {
         id: account.id,
         status: account.charges_enabled ? "active" : "pending",
@@ -458,7 +459,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         url: accountLink.url,
         expires_at: accountLink.expires_at,
       },
-      message: "Stripe Connect account created successfully",
+      message: "Stripe Connect account created successfully. Redirecting to Stripe onboarding...",
     });
 
   } catch (error) {

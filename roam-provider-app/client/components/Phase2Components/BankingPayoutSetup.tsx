@@ -27,8 +27,8 @@ import {
   Lock,
   FileText
 } from 'lucide-react';
-import StripeConnectSetup from '@/components/StripeConnectSetup';
 import StripeTaxInfoCapture from '@/components/StripeTaxInfoCapture';
+import StripeAccountConnector from '@/components/StripeAccountConnector';
 
 interface BankingPayoutData {
   stripeConnected: boolean;
@@ -76,10 +76,11 @@ export default function BankingPayoutSetup({
     initialData?.taxInfoCompleted ? 'stripe-connect' : 'tax-info'
   );
   
-  // State to store business info from tax form or props
+  // State to store business info and tax data from tax form or props
   const [businessName, setBusinessName] = useState<string>(propBusinessName || '');
   const [businessType, setBusinessType] = useState<string>(propBusinessType || '');
   const [userEmail, setUserEmail] = useState<string>(propUserEmail || '');
+  const [taxInfo, setTaxInfo] = useState<any>(null);
 
   // Check if tax info exists in database on mount
   useEffect(() => {
@@ -93,6 +94,7 @@ export default function BankingPayoutSetup({
             setBusinessName(tax_info.legal_business_name || '');
             setBusinessType(tax_info.business_entity_type || 'llc');
             setUserEmail(tax_info.tax_contact_email || '');
+            setTaxInfo(tax_info); // Store full tax info for StripeAccountConnector
             
             setBankingData(prev => {
               // Only update if not already set
@@ -307,6 +309,7 @@ export default function BankingPayoutSetup({
                   if (taxData?.tax_contact_email) {
                     setUserEmail(taxData.tax_contact_email);
                   }
+                  setTaxInfo(taxData); // Store full tax info for StripeAccountConnector
                   
                   setBankingData(prev => ({
                     ...prev,
@@ -364,34 +367,29 @@ export default function BankingPayoutSetup({
               </div>
               
               {!bankingData.stripeConnected ? (
-                <Card className="p-6">
-                  <div className="text-center space-y-4">
-                    <Banknote className="w-12 h-12 text-gray-400 mx-auto" />
-                    <div>
-                      <h4 className="font-semibold text-gray-900">Connect Your Stripe Account</h4>
-                      <p className="text-gray-600">
-                        Securely connect your Stripe account using the tax information you provided
-                      </p>
-                    </div>
-                    <StripeConnectSetup
-                      userId={userId}
-                      businessId={businessId}
-                      businessName={businessName}
-                      businessType={businessType as any}
-                      userEmail={userEmail}
-                      onSetupComplete={(stripeData) => {
-                        console.log('Stripe Connect setup completed:', stripeData);
-                        setBankingData(prev => ({
-                          ...prev,
-                          stripeConnected: true,
-                          stripeAccountId: stripeData.id,
-                          stripeAccountStatus: stripeData.status
-                        }));
-                      }}
-                      className="w-full"
-                    />
-                  </div>
-                </Card>
+                <StripeAccountConnector
+                  businessId={businessId}
+                  userId={userId}
+                  taxInfo={taxInfo}
+                  onAccountLinked={(accountData) => {
+                    console.log('Stripe account linked:', accountData);
+                    setBankingData(prev => ({
+                      ...prev,
+                      stripeConnected: true,
+                      stripeAccountId: accountData.id,
+                      stripeAccountStatus: accountData.charges_enabled ? 'active' : 'pending'
+                    }));
+                  }}
+                  onAccountCreated={(accountData) => {
+                    console.log('Stripe account created:', accountData);
+                    setBankingData(prev => ({
+                      ...prev,
+                      stripeConnected: true,
+                      stripeAccountId: accountData.id,
+                      stripeAccountStatus: accountData.charges_enabled ? 'active' : 'pending'
+                    }));
+                  }}
+                />
               ) : (
                 <Card className="p-4 border-green-200 bg-green-50">
                   <div className="flex items-center gap-3">
