@@ -40,6 +40,9 @@ interface BankingPayoutData {
 interface BankingPayoutSetupProps {
   businessId: string;
   userId: string;
+  businessName?: string;
+  businessType?: string;
+  userEmail?: string;
   onComplete: (data: BankingPayoutData) => void;
   onBack?: () => void;
   initialData?: BankingPayoutData;
@@ -51,6 +54,9 @@ interface BankingPayoutSetupProps {
 export default function BankingPayoutSetup({
   businessId,
   userId,
+  businessName: propBusinessName,
+  businessType: propBusinessType,
+  userEmail: propUserEmail,
   onComplete,
   onBack,
   initialData,
@@ -69,6 +75,11 @@ export default function BankingPayoutSetup({
   const [currentStep, setCurrentStep] = useState<'tax-info' | 'stripe-connect'>(
     initialData?.taxInfoCompleted ? 'stripe-connect' : 'tax-info'
   );
+  
+  // State to store business info from tax form or props
+  const [businessName, setBusinessName] = useState<string>(propBusinessName || '');
+  const [businessType, setBusinessType] = useState<string>(propBusinessType || '');
+  const [userEmail, setUserEmail] = useState<string>(propUserEmail || '');
 
   // Check if tax info exists in database on mount
   useEffect(() => {
@@ -78,6 +89,11 @@ export default function BankingPayoutSetup({
         if (res.ok) {
           const { tax_info } = await res.json();
           if (tax_info && tax_info.tax_id && tax_info.legal_business_name) {
+            // Update business info from tax data
+            setBusinessName(tax_info.legal_business_name || '');
+            setBusinessType(tax_info.business_entity_type || 'llc');
+            setUserEmail(tax_info.tax_contact_email || '');
+            
             setBankingData(prev => {
               // Only update if not already set
               if (!prev.taxInfoCompleted) {
@@ -281,6 +297,17 @@ export default function BankingPayoutSetup({
                 userId={userId}
                 onComplete={(taxData) => {
                   // Tax info has been saved successfully
+                  // Update business info from tax data
+                  if (taxData?.legal_business_name) {
+                    setBusinessName(taxData.legal_business_name);
+                  }
+                  if (taxData?.business_entity_type) {
+                    setBusinessType(taxData.business_entity_type);
+                  }
+                  if (taxData?.tax_contact_email) {
+                    setUserEmail(taxData.tax_contact_email);
+                  }
+                  
                   setBankingData(prev => ({
                     ...prev,
                     taxInfoCompleted: true
@@ -349,17 +376,17 @@ export default function BankingPayoutSetup({
                     <StripeConnectSetup
                       userId={userId}
                       businessId={businessId}
-                      onConnectionComplete={(stripeData) => {
+                      businessName={businessName}
+                      businessType={businessType as any}
+                      userEmail={userEmail}
+                      onSetupComplete={(stripeData) => {
                         console.log('Stripe Connect setup completed:', stripeData);
                         setBankingData(prev => ({
                           ...prev,
                           stripeConnected: true,
-                          stripeAccountId: stripeData.accountId,
+                          stripeAccountId: stripeData.id,
                           stripeAccountStatus: stripeData.status
                         }));
-                      }}
-                      onConnectionError={(error) => {
-                        setError(error);
                       }}
                       className="w-full"
                     />
