@@ -84,10 +84,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
 
     // Check if account is already linked to a different business
+    // Use account_id (not stripe_account_id) per schema
     const { data: existingLink, error: linkCheckError } = await supabase
       .from("stripe_connect_accounts")
       .select("business_id, user_id")
-      .eq("stripe_account_id", accountId)
+      .eq("account_id", accountId) // Correct column name per schema
       .single();
 
     if (existingLink && existingLink.business_id !== businessId) {
@@ -113,23 +114,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Link the account by creating/updating the stripe_connect_accounts record
+    // Match the schema: account_id (not stripe_account_id), account_type, no status field
+    const accountType = stripeAccount.type || "express";
+    const businessType = stripeAccount.business_type || null;
+    
     const { data: linkedAccount, error: linkError } = await supabase
       .from("stripe_connect_accounts")
       .upsert({
         user_id: actualOwnerId,
         business_id: businessId,
-        stripe_account_id: accountId,
-        status: stripeAccount.charges_enabled ? "active" : "pending",
-        business_type: stripeAccount.business_type || "company",
+        account_id: accountId, // Correct column name per schema
+        account_type: accountType,
+        business_type: businessType,
         country: stripeAccount.country || "US",
+        default_currency: stripeAccount.default_currency || "usd",
+        details_submitted: stripeAccount.details_submitted || false,
         charges_enabled: stripeAccount.charges_enabled || false,
         payouts_enabled: stripeAccount.payouts_enabled || false,
-        details_submitted: stripeAccount.details_submitted || false,
+        capabilities: stripeAccount.capabilities || {},
         requirements: stripeAccount.requirements || {},
-        created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       }, {
-        onConflict: "business_id",
+        onConflict: "business_id", // Unique constraint on business_id
       })
       .select()
       .single();
@@ -142,11 +148,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // Also update business_profiles with stripe_account_id
+    // Also update business_profiles with stripe_connect_account_id
     const { error: businessUpdateError } = await supabase
       .from("business_profiles")
       .update({
-        stripe_account_id: accountId,
+        stripe_connect_account_id: accountId, // Correct column name per schema
       })
       .eq("id", businessId);
 

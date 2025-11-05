@@ -62,17 +62,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Get real-time status from Stripe API
-    const stripeAccount = await stripe.accounts.retrieve(connectAccount.stripe_account_id);
+    // Use account_id (not stripe_account_id) per schema
+    const stripeAccount = await stripe.accounts.retrieve(connectAccount.account_id);
 
     // Update database with latest status
+    // Note: No status column in schema, just update the boolean fields
     const { error: updateError } = await supabase
       .from("stripe_connect_accounts")
       .update({
-        status: stripeAccount.charges_enabled ? "active" : "pending",
         charges_enabled: stripeAccount.charges_enabled,
         payouts_enabled: stripeAccount.payouts_enabled,
         details_submitted: stripeAccount.details_submitted,
         requirements: stripeAccount.requirements,
+        capabilities: stripeAccount.capabilities,
         updated_at: new Date().toISOString(),
       })
       .eq("id", connectAccount.id);
@@ -82,11 +84,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Continue anyway - we still return the Stripe data
     }
 
-    // Also ensure business_profiles has the stripe_account_id
+    // Also ensure business_profiles has the stripe_connect_account_id
     const { error: businessUpdateError } = await supabase
       .from("business_profiles")
       .update({
-        stripe_account_id: connectAccount.stripe_account_id,
+        stripe_connect_account_id: connectAccount.account_id, // Correct column name per schema
       })
       .eq("id", businessId);
 
