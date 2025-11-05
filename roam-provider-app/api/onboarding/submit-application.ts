@@ -231,25 +231,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(404).json({ error: "Business profile not found" });
     }
 
-    // Check identity verification status (NEW - Stripe Identity requirement)
+    // Check identity verification status (Stripe Identity requirement)
     console.log("Checking identity verification for businessId:", businessId);
+    console.log("Identity verification fields:", {
+      identity_verified: businessProfile.identity_verified,
+      identity_verified_at: businessProfile.identity_verified_at,
+      identity_verification_status: businessProfile.identity_verification_status
+    });
     
-    if (!businessProfile.identity_verification_status || businessProfile.identity_verification_status !== 'verified') {
+    // Check identity_verified boolean field (set by Stripe Identity completion)
+    if (!businessProfile.identity_verified) {
       console.error("Identity verification not completed:", {
-        status: businessProfile.identity_verification_status,
-        sessionId: businessProfile.identity_verification_session_id
+        identity_verified: businessProfile.identity_verified,
+        identity_verified_at: businessProfile.identity_verified_at
       });
       
       return res.status(400).json({
         error: "Identity verification required",
-        details: "Please complete Stripe Identity verification (driver's license and proof of address) before submitting your application.",
-        currentStatus: businessProfile.identity_verification_status || 'not_started',
+        details: "Please complete Stripe Identity verification before submitting your application.",
+        currentStatus: businessProfile.identity_verified ? 'verified' : 'not_started',
         nextStep: "Complete identity verification in the onboarding flow"
       });
     }
 
     console.log("Identity verification confirmed:", {
-      status: businessProfile.identity_verification_status,
+      identity_verified: businessProfile.identity_verified,
       verifiedAt: businessProfile.identity_verified_at
     });
 

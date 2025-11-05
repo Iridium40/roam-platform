@@ -207,8 +207,9 @@ export default function StripeIdentityVerification({
 
     const poll = async () => {
       try {
+        console.log('Polling verification status:', { sessionId, businessId });
         const response = await fetch(
-          `/api/stripe/check-verification-status/${userId}?sessionId=${sessionId}`,
+          `/api/stripe/check-verification-status/${sessionId}?businessId=${businessId}`,
         );
 
         if (response.ok) {
