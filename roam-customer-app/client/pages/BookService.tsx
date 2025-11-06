@@ -52,6 +52,10 @@ interface Business {
   service_price?: number;
   service_duration_minutes?: number;
   business_hours?: any;
+  // Location data from business_locations
+  city?: string;
+  state?: string;
+  postal_code?: string;
 }
 
 interface BusinessLocation {
@@ -521,7 +525,13 @@ export default function BookService() {
             logo_url,
             business_type,
             business_hours,
-            is_active
+            is_active,
+            business_locations!inner (
+              city,
+              state,
+              postal_code,
+              is_primary
+            )
           )
         `)
         .eq('service_id', serviceId)
@@ -542,7 +552,22 @@ export default function BookService() {
         try {
           const { data: fallbackBusinesses, error: fallbackError } = await supabase
             .from('business_profiles')
-            .select('id, business_name, business_description, image_url, logo_url, business_type, business_hours, is_active')
+            .select(`
+              id, 
+              business_name, 
+              business_description, 
+              image_url, 
+              logo_url, 
+              business_type, 
+              business_hours, 
+              is_active,
+              business_locations!inner (
+                city,
+                state,
+                postal_code,
+                is_primary
+              )
+            `)
             .eq('is_active', true)
             .limit(10);
 
@@ -552,18 +577,26 @@ export default function BookService() {
 
           if (fallbackBusinesses && fallbackBusinesses.length > 0) {
             // Transform fallback data
-            const transformedFallback = fallbackBusinesses.map(business => ({
-              id: business.id,
-              business_name: business.business_name,
-              description: business.business_description || '',
-              image_url: business.image_url,
-              logo_url: business.logo_url,
-              business_type: business.business_type,
-              service_price: service?.min_price || 100, // Use service default price
-              business_hours: business.business_hours,
-              rating: 4.5,
-              review_count: 25,
-            }));
+            const transformedFallback = fallbackBusinesses.map(business => {
+              const locations = business.business_locations || [];
+              const primaryLocation = locations.find(loc => loc.is_primary) || locations[0];
+              
+              return {
+                id: business.id,
+                business_name: business.business_name,
+                description: business.business_description || '',
+                image_url: business.image_url,
+                logo_url: business.logo_url,
+                business_type: business.business_type,
+                service_price: service?.min_price || 100, // Use service default price
+                business_hours: business.business_hours,
+                rating: 4.5,
+                review_count: 25,
+                city: primaryLocation?.city,
+                state: primaryLocation?.state,
+                postal_code: primaryLocation?.postal_code,
+              };
+            });
 
             console.log('🔄 Using fallback businesses:', transformedFallback.length);
             setAllBusinesses(transformedFallback);
@@ -592,19 +625,29 @@ export default function BookService() {
       });
 
       // Transform data to match Business interface
-      const transformedBusinesses = availableBusinesses.map(item => ({
-        id: item.business_profiles.id,
-        business_name: item.business_profiles.business_name,
-        description: item.business_profiles.business_description || '',
-        image_url: item.business_profiles.image_url,
-        logo_url: item.business_profiles.logo_url,
-        business_type: item.business_profiles.business_type,
-        service_price: item.business_price || service?.min_price || 0,
-        service_duration_minutes: item.business_duration_minutes || service?.duration_minutes || 60,
-        business_hours: item.business_profiles.business_hours,
-        rating: 4.5, // Mock data - would come from reviews table
-        review_count: 25, // Mock data
-      }));
+      const transformedBusinesses = availableBusinesses.map(item => {
+        // Get primary location data
+        const locations = item.business_profiles.business_locations || [];
+        const primaryLocation = locations.find(loc => loc.is_primary) || locations[0];
+        
+        return {
+          id: item.business_profiles.id,
+          business_name: item.business_profiles.business_name,
+          description: item.business_profiles.business_description || '',
+          image_url: item.business_profiles.image_url,
+          logo_url: item.business_profiles.logo_url,
+          business_type: item.business_profiles.business_type,
+          service_price: item.business_price || service?.min_price || 0,
+          service_duration_minutes: item.business_duration_minutes || service?.duration_minutes || 60,
+          business_hours: item.business_profiles.business_hours,
+          rating: 4.5, // Mock data - would come from reviews table
+          review_count: 25, // Mock data
+          // Location data from primary business location
+          city: primaryLocation?.city,
+          state: primaryLocation?.state,
+          postal_code: primaryLocation?.postal_code,
+        };
+      });
 
       console.log('Loaded businesses with pricing:', transformedBusinesses.map(b => ({
         name: b.business_name,
@@ -667,22 +710,44 @@ export default function BookService() {
           console.log('🔄 Attempting simplified business loading...');
           const { data: simpleBusinesses, error: simpleError } = await supabase
             .from('business_profiles')
-            .select('id, business_name, business_description, image_url, logo_url, business_type, is_active')
+            .select(`
+              id, 
+              business_name, 
+              business_description, 
+              image_url, 
+              logo_url, 
+              business_type, 
+              is_active,
+              business_locations (
+                city,
+                state,
+                postal_code,
+                is_primary
+              )
+            `)
             .eq('is_active', true)
             .limit(5);
 
           if (!simpleError && simpleBusinesses) {
-            const transformedSimple = simpleBusinesses.map(business => ({
-              id: business.id,
-              business_name: business.business_name,
-              description: business.business_description || '',
-              image_url: business.image_url,
-              logo_url: business.logo_url,
-              business_type: business.business_type,
-              service_price: service?.min_price || 100,
-              rating: 4.5,
-              review_count: 25,
-            }));
+            const transformedSimple = simpleBusinesses.map(business => {
+              const locations = business.business_locations || [];
+              const primaryLocation = locations.find(loc => loc.is_primary) || locations[0];
+              
+              return {
+                id: business.id,
+                business_name: business.business_name,
+                description: business.business_description || '',
+                image_url: business.image_url,
+                logo_url: business.logo_url,
+                business_type: business.business_type,
+                service_price: service?.min_price || 100,
+                rating: 4.5,
+                review_count: 25,
+                city: primaryLocation?.city,
+                state: primaryLocation?.state,
+                postal_code: primaryLocation?.postal_code,
+              };
+            });
 
             setAllBusinesses(transformedSimple);
             const sorted = sortAndFilterBusinesses(transformedSimple, sortBy, sortOrder);
@@ -1763,10 +1828,12 @@ export default function BookService() {
                                     <span className="font-medium">{business.rating || '4.5'}</span>
                                     <span className="ml-1">({business.review_count || 0} reviews)</span>
                                   </div>
-                                  <div className="flex items-center">
-                                    <MapPin className="w-4 h-4 mr-1" />
-                                    <span>Miami, FL</span>
-                                  </div>
+                                  {business.city && business.state && (
+                                    <div className="flex items-center">
+                                      <MapPin className="w-4 h-4 mr-1" />
+                                      <span>{business.city}, {business.state}</span>
+                                    </div>
+                                  )}
                                 </div>
 
                                 {/* Service Pricing */}
