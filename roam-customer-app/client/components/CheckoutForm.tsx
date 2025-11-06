@@ -20,6 +20,8 @@ interface CheckoutFormProps {
     serviceAmount: number;
     platformFee?: number;
     discountAmount?: number;
+    taxAmount?: number;
+    taxRate?: number | null;
     total: number;
   };
   onSuccess: (paymentIntent: any) => void;
@@ -40,6 +42,8 @@ export function CheckoutForm({ bookingDetails, onSuccess, onError }: CheckoutFor
     serviceAmount,
     platformFee = 0,
     discountAmount = 0,
+    taxAmount = 0,
+    taxRate = null,
     total
   } = bookingDetails;
 
@@ -129,6 +133,16 @@ export function CheckoutForm({ bookingDetails, onSuccess, onError }: CheckoutFor
             <div className="flex justify-between text-sm text-green-600">
               <span>Discount</span>
               <span>-${discountAmount.toFixed(2)}</span>
+            </div>
+          )}
+          
+          {taxAmount > 0 && (
+            <div className="flex justify-between text-sm text-gray-600">
+              <span>
+                Sales Tax
+                {taxRate && ` (${(taxRate * 100).toFixed(2)}%)`}
+              </span>
+              <span>${taxAmount.toFixed(2)}</span>
             </div>
           )}
           

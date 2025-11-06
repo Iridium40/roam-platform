@@ -1331,7 +1331,15 @@ export default function BookService() {
         guestPhone: bookingDetails.guest_phone,
         deliveryType,
         specialInstructions: bookingDetails.special_instructions,
-        promotionId: promotion?.id || null
+        promotionId: promotion?.id || null,
+        // Customer address for tax calculation
+        customerAddress: selectedCustomerLocation ? {
+          line1: selectedCustomerLocation.street_address,
+          city: selectedCustomerLocation.city,
+          state: selectedCustomerLocation.state,
+          postal_code: selectedCustomerLocation.zip_code,
+          country: 'US'
+        } : null
       };
 
       const response = await fetch('/api/stripe/create-payment-intent', {
@@ -2453,6 +2461,8 @@ export default function BookService() {
                         serviceAmount: paymentBreakdown?.serviceAmount || calculateDiscountedPrice(),
                         platformFee: paymentBreakdown?.platformFee || calculateServiceFee(),
                         discountAmount: paymentBreakdown?.discountAmount || 0,
+                        taxAmount: paymentBreakdown?.taxAmount || 0,
+                        taxRate: paymentBreakdown?.taxRate || null,
                         total: paymentBreakdown?.total || calculateTotalWithFees(),
                       }}
                       onSuccess={(paymentIntent) => {

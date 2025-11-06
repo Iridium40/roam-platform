@@ -47,7 +47,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       guestPhone,
       deliveryType,
       specialInstructions,
-      promotionId
+      promotionId,
+      customerAddress
     } = req.body;
 
     // Validate required fields
@@ -135,9 +136,81 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
-    // Calculate final total in cents
+    // Calculate subtotal before tax
     const serviceAmountCents = Math.round(serviceAmount * 100);
-    const totalAmount = serviceAmountCents + platformFee - discountAmount;
+    const subtotalAmount = serviceAmountCents + platformFee - discountAmount;
+
+    // Calculate tax using Stripe Tax Calculation API
+    let taxAmount = 0;
+    let taxCalculation = null;
+    
+    // Get customer address for tax calculation (default to business address if not provided)
+    let taxAddress = customerAddress;
+    
+    if (!taxAddress || !taxAddress.postal_code) {
+      // Fallback to customer's saved address or business location
+      const { data: customerProfile } = await supabase
+        .from('customer_profiles')
+        .select('address, city, state, postal_code')
+        .eq('id', customerId)
+        .single();
+      
+      if (customerProfile && customerProfile.postal_code) {
+        taxAddress = {
+          line1: customerProfile.address,
+          city: customerProfile.city,
+          state: customerProfile.state,
+          postal_code: customerProfile.postal_code,
+          country: 'US'
+        };
+      }
+    }
+
+    // Calculate tax if we have a valid address
+    if (taxAddress && taxAddress.postal_code && taxAddress.state) {
+      try {
+        console.log('🧮 Calculating tax for address:', { 
+          city: taxAddress.city, 
+          state: taxAddress.state, 
+          postal_code: taxAddress.postal_code 
+        });
+
+        taxCalculation = await stripe.tax.calculations.create({
+          currency: 'usd',
+          line_items: [
+            {
+              amount: subtotalAmount,
+              reference: `service-${serviceId}`,
+            },
+          ],
+          customer_details: {
+            address: {
+              line1: taxAddress.line1 || '',
+              city: taxAddress.city || '',
+              state: taxAddress.state,
+              postal_code: taxAddress.postal_code,
+              country: taxAddress.country || 'US',
+            },
+            address_source: 'shipping',
+          },
+        });
+
+        taxAmount = taxCalculation.tax_amount_exclusive;
+        console.log('✅ Tax calculated:', {
+          taxAmount: taxAmount / 100,
+          taxRate: taxCalculation.tax_breakdown?.[0]?.tax_rate_details?.percentage_decimal
+        });
+      } catch (taxError) {
+        console.error('⚠️ Tax calculation failed:', taxError);
+        // Continue without tax if calculation fails
+        taxAmount = 0;
+      }
+    } else {
+      console.log('⚠️ No valid address for tax calculation - proceeding without tax');
+    }
+
+    // Calculate final total including tax
+    const totalAmount = subtotalAmount + taxAmount;
 
     if (totalAmount <= 0) {
       return res.status(400).json({ error: 'Invalid total amount' });
@@ -240,8 +313,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       breakdown: {
         serviceAmount: serviceAmount,
         platformFee: platformFee / 100,
-        processingFee: processingFee / 100,
         discountAmount: discountAmount / 100,
+        taxAmount: taxAmount / 100,
+        taxRate: taxCalculation?.tax_breakdown?.[0]?.tax_rate_details?.percentage_decimal || null,
+        subtotal: subtotalAmount / 100,
         total: totalAmount / 100
       }
     });
