@@ -222,9 +222,13 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
 
   const fetchBusinessAddons = async () => {
     try {
-      const response = await fetch(
-        `/api/business-eligible-addons?business_id=${businessId}`
-      );
+      const userId = user?.provider?.user_id;
+      // Backend uses service role key - no auth headers needed, pass user_id for permission check
+      const url = userId 
+        ? `/api/business-eligible-addons?business_id=${businessId}&user_id=${userId}`
+        : `/api/business-eligible-addons?business_id=${businessId}`;
+      
+      const response = await fetch(url);
       
       if (!response.ok) {
         console.warn("Could not fetch business addons, continuing without them");

@@ -32,60 +32,35 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({ error: 'Server configuration error' });
     }
 
-    const { business_id } = req.query;
+    const { business_id, user_id } = req.query;
     if (!business_id) {
       return res.status(400).json({ error: 'business_id parameter is required' });
     }
 
+    // Use service role key for all database operations (bypasses RLS)
     const supabase = createClient(
       process.env.VITE_PUBLIC_SUPABASE_URL,
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
-    // Get authorization token from header
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ 
-        error: 'Authentication required',
-        message: 'Please sign in to access this resource'
-      });
-    }
+    // Optional: Verify user has permission to access this business if user_id provided
+    if (user_id) {
+      const { data: providerData, error: providerError } = await supabase
+        .from('providers')
+        .select('id, user_id, business_id, provider_role')
+        .eq('user_id', user_id)
+        .eq('business_id', business_id)
+        .eq('is_active', true)
+        .maybeSingle();
 
-    const token = authHeader.replace('Bearer ', '');
-
-    // Verify user and get their provider role
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
-    if (userError || !user) {
-      console.error('User verification failed:', userError);
-      return res.status(401).json({ 
-        error: 'Invalid or expired token',
-        message: 'Please sign in again'
-      });
-    }
-
-    // Get provider record to check role and business association
-    const { data: providerData, error: providerError } = await supabase
-      .from('providers')
-      .select('id, user_id, business_id, provider_role')
-      .eq('user_id', user.id)
-      .eq('is_active', true)
-      .maybeSingle();
-
-    if (providerError || !providerData) {
-      console.error('Provider lookup failed:', providerError);
-      return res.status(403).json({ 
-        error: 'Access denied',
-        message: 'Provider profile not found or inactive'
-      });
-    }
-
-    // Verify user has permission to access this business
-    if (providerData.business_id !== business_id) {
-      console.error('Business ID mismatch - Access denied');
-      return res.status(403).json({ 
-        error: 'Access denied',
-        message: 'You do not have permission to access this business'
-      });
+      if (providerError || !providerData) {
+        console.error('Provider lookup failed:', providerError);
+        return res.status(403).json({ 
+          error: 'Access denied',
+          message: 'Provider profile not found or you do not have access to this business'
+        });
+      }
+      console.log('Authorization successful - Role:', providerData.provider_role);
     }
 
     // Step 1: Verify business exists

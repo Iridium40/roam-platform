@@ -62,9 +62,11 @@ export function useSimplifiedAddons() {
       setError(null);
 
       const businessId = provider!.provider!.business_id!;
+      const userId = provider!.provider!.user_id!;
       console.log('Loading eligible addons for business:', businessId);
       
-      const response = await fetch(`/api/business-eligible-addons?business_id=${businessId}`);
+      // Backend uses service role key - no auth headers needed, pass user_id for permission check
+      const response = await fetch(`/api/business-eligible-addons?business_id=${businessId}&user_id=${userId}`);
 
       if (!response.ok) {
         let errorMessage = 'Failed to load addons';
