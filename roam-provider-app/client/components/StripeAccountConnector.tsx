@@ -153,14 +153,17 @@ export default function StripeAccountConnector({
       const businessName = taxInfo.legal_business_name || 'Business';
       const email = taxInfo.tax_contact_email;
       const businessType = taxInfo.business_entity_type || 'llc';
+      const isCompany = ['llc', 'corporation', 'partnership', 'non_profit'].includes(businessType);
 
       const requestPayload = {
         userId,
         businessId,
-        businessType: ['llc', 'corporation', 'partnership', 'non_profit'].includes(businessType) ? 'company' : 'individual',
+        businessType: isCompany ? 'company' : 'individual',
         businessName,
         email,
         country: 'US',
+        // Add companyName for company accounts (required by Stripe)
+        ...(isCompany && { companyName: businessName }),
       };
 
       console.log('Creating Stripe Connect account:', requestPayload);
