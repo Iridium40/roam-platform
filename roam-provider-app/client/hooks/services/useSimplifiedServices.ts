@@ -63,12 +63,11 @@ export function useSimplifiedServices() {
       setError(null);
 
       const businessId = provider!.provider!.business_id!;
+      const userId = provider!.provider!.user_id!;
       console.log('Loading eligible services for business:', businessId);
       
-      // Use cached auth headers (much faster - no Supabase call needed)
-      const headers = await getAuthHeaders();
-      
-      const response = await fetch(`/api/business-eligible-services?business_id=${businessId}`, { headers });
+      // Backend uses service role key - no auth headers needed
+      const response = await fetch(`/api/business-eligible-services?business_id=${businessId}&user_id=${userId}`);
 
       if (!response.ok) {
         let errorMessage = 'Failed to load services';

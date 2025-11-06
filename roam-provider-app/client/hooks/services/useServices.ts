@@ -64,14 +64,16 @@ export function useServices() {
       setError(null);
 
       const businessId = provider!.provider!.business_id!;
+      const userId = provider!.provider!.user_id!;
       console.log('Loading services for business:', businessId);
       
-      // Use cached auth headers (much faster - no Supabase call needed)
+      // Use cached auth headers for business services endpoint
       const headers = await getAuthHeaders();
       
       const [servicesRes, eligibleRes] = await Promise.all([
         fetch(`/api/business/services?business_id=${businessId}&page=1&limit=50`, { headers }),
-        fetch(`/api/business-eligible-services?business_id=${businessId}`, { headers })
+        // Eligible services uses service role key - no auth headers needed
+        fetch(`/api/business-eligible-services?business_id=${businessId}&user_id=${userId}`)
       ]);
 
       // Handle services response
@@ -129,10 +131,13 @@ export function useServices() {
 
   const loadEligibleServices = async (businessId: string) => {
     try {
-      // Use cached auth headers
-      const headers = await getAuthHeaders();
+      if (!provider?.provider?.user_id) {
+        throw new Error('User ID not available');
+      }
+      const userId = provider.provider.user_id;
 
-      const response = await fetch(`/api/business-eligible-services?business_id=${businessId}`, { headers });
+      // Backend uses service role key - no auth headers needed
+      const response = await fetch(`/api/business-eligible-services?business_id=${businessId}&user_id=${userId}`);
       
       if (!response.ok) {
         const errorData = await safeJsonParse(response, 'eligible services');
