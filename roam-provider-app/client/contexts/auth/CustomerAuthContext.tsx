@@ -72,14 +72,15 @@ export const CustomerAuthProvider: React.FC<CustomerAuthProviderProps> = ({ chil
         
         if (session?.user) {
           // If we have a session, just fetch the customer profile directly
+          // Use maybeSingle() to avoid 406 error when user is not a customer (e.g., provider)
           const { data: customerProfile, error: profileError } = await import("@/lib/supabase").then(m => m.supabase
             .from("customer_profiles")
             .select("*")
             .eq("user_id", session.user.id)
-            .single());
+            .maybeSingle());
 
-          if (profileError && profileError.code !== "PGRST116") {
-            console.error("Failed to fetch customer profile:", profileError);
+          if (profileError) {
+            console.log("No customer profile found (user may be a provider):", profileError);
             clearStoredData();
             return;
           }

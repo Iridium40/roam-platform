@@ -105,11 +105,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           if (session?.user) {
             console.log("Session user found, checking for customer profile", session.user.id);
 
+            // Use maybeSingle() to avoid 406 error when user is not a customer (e.g., provider)
             const { data: customerProfile, error: customerError } = await supabase
               .from("customer_profiles")
               .select("id, user_id, email, first_name, last_name, phone, image_url")
               .eq("user_id", session.user.id)
-              .single();
+              .maybeSingle();
 
             console.log('Customer profile query result:', { customerProfile, customerError });
 
