@@ -23,6 +23,8 @@ declare global {
 
 // Provider Portal Pages Only
 import ProviderPortal from "./pages/ProviderPortal";
+import ProviderLogin from "./pages/ProviderLogin";
+import ProviderSignup from "./pages/ProviderSignup";
 import ProviderDashboard from "./pages/ProviderDashboard";
 import ProviderOnboardingFlow from "./pages/onboarding/ProviderOnboardingFlow";
 import ProviderOnboardingPhase1 from "./pages/onboarding/ProviderOnboardingPhase1";
@@ -64,12 +66,19 @@ const App = () => (
               <Route path="/about" element={<AboutPage />} />
               <Route path="/services" element={<Services />} />
               <Route path="/contact" element={<Contact />} />
-              <Route path="/provider-portal" element={<ProviderPortal />} />
+              {/* Legacy provider portal route - redirect to login */}
+              <Route path="/provider-portal" element={<Navigate to="/provider-login" replace />} />
               <Route path="/privacy" element={<PrivacyPolicy />} />
               <Route path="/terms" element={<TermsOfService />} />
               <Route path="/provider-agreement" element={<ProviderAgreement />} />
               <Route path="/cancellation" element={<CancellationPolicy />} />
             </Route>
+
+            {/* Provider Authentication - Separate Login & Signup */}
+            <Route path="/provider-login" element={<ProviderLogin />} />
+            <Route path="/provider-signup" element={<ProviderSignup />} />
+            {/* Legacy /login route - redirect to provider-login */}
+            <Route path="/login" element={<Navigate to="/provider-login" replace />} />
 
             {/* Landing redirect */}
             <Route path="/" element={<Navigate to="/roampro" replace />} />
