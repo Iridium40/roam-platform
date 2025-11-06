@@ -113,8 +113,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
     
     // Calculate platform fee (percentage of service amount)
+    // Note: Platform fee covers operational costs including Stripe processing fees
     const platformFee = Math.round(serviceAmount * (platformFeePercentage / 100) * 100); // in cents
-    const processingFee = 30; // Stripe processing fee in cents
     
     // Apply any promotions (server-side validation)
     let discountAmount = 0;
@@ -137,7 +137,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Calculate final total in cents
     const serviceAmountCents = Math.round(serviceAmount * 100);
-    const totalAmount = serviceAmountCents + platformFee + processingFee - discountAmount;
+    const totalAmount = serviceAmountCents + platformFee - discountAmount;
 
     if (totalAmount <= 0) {
       return res.status(400).json({ error: 'Invalid total amount' });

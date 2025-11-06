@@ -1175,7 +1175,7 @@ export default function BookService() {
     return (basePrice * platformFeePercentage) / 100;
   };
 
-  // Calculate total price including service fee
+  // Calculate total price including platform fee (covers operational costs including payment processing)
   const calculateTotalWithFees = () => {
     const basePrice = calculateDiscountedPrice();
     const serviceFee = calculateServiceFee();
@@ -2372,11 +2372,11 @@ export default function BookService() {
                       {platformFeePercentage > 0 && (
                         <div className="flex justify-between items-center">
                           <div className="flex items-center">
-                            <span className="text-gray-600">Service Fee ({platformFeePercentage}%):</span>
+                            <span className="text-gray-600">Platform Fee ({platformFeePercentage}%):</span>
                             <div className="ml-2 group relative">
                               <Info className="w-4 h-4 text-gray-400 cursor-help" />
                               <div className="invisible group-hover:visible absolute left-1/2 -translate-x-1/2 bottom-6 bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap z-10">
-                                Platform processing & support fee
+                                Covers payment processing & platform support
                               </div>
                             </div>
                           </div>
