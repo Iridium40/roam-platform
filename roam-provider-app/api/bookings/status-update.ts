@@ -1,16 +1,33 @@
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
-import { createNotificationService } from '@roam/shared';
 
-export const runtime = 'edge';
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-// Initialize Supabase client for Edge Runtime
-const supabaseUrl = process.env.VITE_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
 
-export default async function handler(request: Request) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
   try {
-    const body = await request.json();
+    // Initialize Supabase client
+    const supabaseUrl = process.env.VITE_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error('Missing Supabase credentials');
+      return res.status(500).json({ error: 'Server configuration error' });
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const body = req.body;
     const { 
       bookingId, 
       newStatus, 
@@ -22,11 +39,11 @@ export default async function handler(request: Request) {
 
     // Validate required fields
     if (!bookingId || !newStatus || !updatedBy) {
-      return new Response(JSON.stringify({ error: 'Missing required fields' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      console.error('Missing required fields:', { bookingId, newStatus, updatedBy });
+      return res.status(400).json({ error: 'Missing required fields' });
     }
+
+    console.log('Updating booking status:', { bookingId, newStatus, updatedBy });
 
     // Update booking status in Supabase
     const { data: booking, error: updateError } = await supabase
@@ -62,11 +79,13 @@ export default async function handler(request: Request) {
 
     if (updateError) {
       console.error('Error updating booking:', updateError);
-      return new Response(JSON.stringify({ error: 'Failed to update booking' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
+      return res.status(500).json({ 
+        error: 'Failed to update booking',
+        details: updateError.message 
       });
     }
+
+    console.log('Booking updated successfully:', { bookingId, newStatus });
 
     // Create status update record
     const { error: historyError } = await supabase
@@ -83,41 +102,19 @@ export default async function handler(request: Request) {
       console.error('Error creating status history:', historyError);
     }
 
-    // Send notifications using shared service (non-blocking)
-    // Wrap in try-catch to prevent notification failures from breaking status update
-    try {
-      const notificationService = createNotificationService();
-      
-      // Run notification async without blocking the response
-      notificationService.sendBookingStatusUpdate(
-        booking,
-        newStatus,
-        notifyCustomer,
-        notifyProvider
-      ).then((results) => {
-        console.log('✅ Notification results:', results);
-      }).catch((error) => {
-        console.error('⚠️ Notification error (non-blocking):', error);
-        // Don't throw - notifications are optional
-      });
-    } catch (error) {
-      console.error('⚠️ Notification service initialization error:', error);
-      // Continue anyway - notification failure shouldn't block status update
-    }
+    // TODO: Send notifications (currently disabled - causing Edge Runtime issues)
+    // Consider implementing via background job or webhook
 
-    return new Response(JSON.stringify({ 
+    return res.status(200).json({ 
       success: true, 
       booking
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
     });
 
   } catch (error) {
     console.error('Status update error:', error);
-    return new Response(JSON.stringify({ error: 'Internal server error' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
+    return res.status(500).json({ 
+      error: 'Internal server error',
+      details: error instanceof Error ? error.message : String(error)
     });
   }
 }
