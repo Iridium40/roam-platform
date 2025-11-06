@@ -92,9 +92,16 @@ export default function ProviderLogin() {
                   <img
                     src="/logo.png"
                     alt="ROAM"
-                    className="h-12 w-auto"
+                    className="h-16 w-auto mx-auto lg:mx-0"
                     onError={(e) => {
-                      e.currentTarget.style.display = 'none';
+                      const target = e.currentTarget;
+                      target.style.display = 'none';
+                      // Try alternative logo paths
+                      if (!target.dataset.triedAlt) {
+                        target.dataset.triedAlt = 'true';
+                        target.src = '/roam-icon.png';
+                        target.style.display = 'block';
+                      }
                     }}
                   />
                 </Link>
@@ -134,6 +141,23 @@ export default function ProviderLogin() {
             <div className="w-full max-w-md sm:max-w-lg mx-auto lg:mx-0">
               <Card className="border-border/50 shadow-lg">
                 <CardHeader className="text-center pb-4">
+                  {/* Logo for mobile/tablet view */}
+                  <div className="lg:hidden mb-4">
+                    <img
+                      src="/logo.png"
+                      alt="ROAM"
+                      className="h-12 w-auto mx-auto"
+                      onError={(e) => {
+                        const target = e.currentTarget;
+                        target.style.display = 'none';
+                        if (!target.dataset.triedAlt) {
+                          target.dataset.triedAlt = 'true';
+                          target.src = '/roam-icon.png';
+                          target.style.display = 'block';
+                        }
+                      }}
+                    />
+                  </div>
                   <div className="w-16 h-16 bg-gradient-to-br from-roam-blue to-roam-light-blue rounded-full flex items-center justify-center mx-auto mb-4">
                     <Users className="w-8 h-8 text-white" />
                   </div>
