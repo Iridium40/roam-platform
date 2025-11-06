@@ -217,10 +217,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Note: Cannot use payment_method_types when automatic_payment_methods is enabled
       // automatic_payment_methods handles card, Apple Pay, Google Pay automatically
       
-      // Enable automatic tax calculation
-      // Note: Payment Intents only support 'enabled' - liability is for Checkout Sessions only
+      // Enable automatic tax calculation for Payment Intents
+      // Note: Payment Intents only support 'enabled: true' - 'liability' is for Checkout Sessions only
       automatic_tax: {
-        enabled: true
+        enabled: true,
       }
     });
 
