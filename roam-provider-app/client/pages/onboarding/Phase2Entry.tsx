@@ -256,11 +256,11 @@ export default function Phase2Entry() {
             </Button>
 
             <Button
-              onClick={() => navigate("/provider-portal")}
+              onClick={() => navigate("/provider-login")}
               className="w-full bg-roam-blue hover:bg-roam-blue/90"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Return to Portal
+              Return to Login
             </Button>
           </div>
         </CardContent>

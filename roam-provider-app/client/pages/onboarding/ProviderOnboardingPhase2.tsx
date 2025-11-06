@@ -120,9 +120,9 @@ export default function ProviderOnboardingPhase2() {
       return;
     }
 
-    // Invalid or expired session - redirect to portal
-    console.log('No valid Phase 2 session, redirecting to portal');
-    navigate('/provider-portal');
+    // Invalid or expired session - redirect to login
+    console.log('No valid Phase 2 session, redirecting to login');
+    navigate('/provider-login');
   };
 
   const handleStepClick = (stepId: string) => {
@@ -140,10 +140,10 @@ export default function ProviderOnboardingPhase2() {
       phase2Step: "complete",
     }));
 
-    // Clear Phase 2 session and redirect to provider portal login
+    // Clear Phase 2 session and redirect to provider login
     sessionStorage.removeItem('phase2_session');
     setTimeout(() => {
-      navigate("/provider-portal");
+      navigate("/provider-login");
     }, 2000);
   };
 
@@ -378,10 +378,10 @@ export default function ProviderOnboardingPhase2() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => navigate("/provider-portal")}
+                onClick={() => navigate("/provider-login")}
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Portal
+                Back to Login
               </Button>
               <div className="flex items-center space-x-2">
                 <img

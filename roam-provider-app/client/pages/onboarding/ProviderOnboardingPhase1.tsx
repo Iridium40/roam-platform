@@ -568,10 +568,10 @@ export default function ProviderOnboardingPhase1() {
               </p>
 
               <Button
-                onClick={() => navigate("/provider-portal")}
+                onClick={() => navigate("/provider-login")}
                 className="bg-roam-blue hover:bg-roam-blue/90"
               >
-                Return to Provider Portal
+                Return to Provider Login
               </Button>
             </CardContent>
           </Card>
@@ -660,10 +660,10 @@ export default function ProviderOnboardingPhase1() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => navigate("/provider-portal")}
+                onClick={() => navigate("/provider-login")}
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Portal
+                Back to Login
               </Button>
               <div className="flex items-center space-x-2">
                 <img
