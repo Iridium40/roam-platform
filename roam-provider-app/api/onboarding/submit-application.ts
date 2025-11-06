@@ -239,23 +239,47 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       identity_verification_status: businessProfile.identity_verification_status
     });
     
-    // Check identity_verified boolean field (set by Stripe Identity completion)
-    if (!businessProfile.identity_verified) {
-      console.error("Identity verification not completed:", {
+    // Check if verification was started (we check for Stripe Identity session)
+    const { data: verificationSession, error: verificationError } = await supabase
+      .from("stripe_identity_verifications")
+      .select("session_id, status")
+      .eq("business_id", businessId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single();
+    
+    console.log("Stripe Identity verification session:", {
+      found: !!verificationSession,
+      status: verificationSession?.status,
+      error: verificationError?.message
+    });
+    
+    // Allow submission if:
+    // 1. identity_verified is true (verification completed), OR
+    // 2. There's a verification session with status "processing" or "verified" (in progress/pending)
+    const hasVerificationStarted = verificationSession && 
+      (verificationSession.status === 'processing' || verificationSession.status === 'verified');
+    
+    const canSubmit = businessProfile.identity_verified || hasVerificationStarted;
+    
+    if (!canSubmit) {
+      console.error("Identity verification not started or failed:", {
         identity_verified: businessProfile.identity_verified,
-        identity_verified_at: businessProfile.identity_verified_at
+        verificationStatus: verificationSession?.status,
+        hasSession: !!verificationSession
       });
       
       return res.status(400).json({
         error: "Identity verification required",
         details: "Please complete Stripe Identity verification before submitting your application.",
-        currentStatus: businessProfile.identity_verified ? 'verified' : 'not_started',
+        currentStatus: verificationSession?.status || 'not_started',
         nextStep: "Complete identity verification in the onboarding flow"
       });
     }
 
-    console.log("Identity verification confirmed:", {
+    console.log("Identity verification check passed:", {
       identity_verified: businessProfile.identity_verified,
+      verificationStatus: verificationSession?.status,
       verifiedAt: businessProfile.identity_verified_at
     });
 

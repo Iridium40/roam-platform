@@ -285,8 +285,11 @@ export default function ProviderLogin() {
                       <Button
                         variant="link"
                         className="p-0 h-auto text-roam-blue"
+                        asChild
                       >
-                        Contact Support
+                        <a href="https://www.roamprovider.com/contact" target="_blank" rel="noopener noreferrer">
+                          Contact Support
+                        </a>
                       </Button>
                     </p>
                   </div>
