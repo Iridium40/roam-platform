@@ -93,7 +93,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .eq("id", businessId);
 
     if (businessUpdateError) {
-      console.error("Error updating business_profiles.stripe_account_id:", businessUpdateError);
+      console.error("Error updating business_profiles.stripe_connect_account_id:", businessUpdateError);
       // Continue anyway
     }
 
