@@ -64,9 +64,9 @@ export default function Phase2Entry() {
       
       sessionStorage.setItem("phase2_session", JSON.stringify(testSessionData));
       
-      // Redirect to welcome step
+      // Redirect to quick_setup step
       setTimeout(() => {
-        navigate(`/provider-onboarding/phase2/welcome`, {
+        navigate(`/provider-onboarding/phase2/quick_setup`, {
           replace: true,
           state: {
             validated: true,
@@ -91,9 +91,9 @@ export default function Phase2Entry() {
       
       sessionStorage.setItem("phase2_session", JSON.stringify(testSessionData));
       
-      // Redirect to welcome step
+      // Redirect to quick_setup step
       setTimeout(() => {
-        navigate(`/provider-onboarding/phase2/welcome`, {
+        navigate(`/provider-onboarding/phase2/quick_setup`, {
           replace: true,
           state: {
             validated: true,
@@ -172,18 +172,13 @@ export default function Phase2Entry() {
   };
 
   const determineStartStep = (progress: any) => {
-    if (!progress) return "welcome";
+    if (!progress) return "quick_setup";
 
-    // Resume at the first incomplete step
+    // Resume at the first incomplete step (streamlined Phase 2)
     const steps = [
-      "welcome",
-      "business_profile",
-      "personal_profile",
-      "business_hours",
-      "staff_management",
-      "banking_payout",
+      "quick_setup",
       "service_pricing",
-      "final_review",
+      "banking_payout",
     ];
 
     for (const step of steps) {
@@ -192,7 +187,7 @@ export default function Phase2Entry() {
       }
     }
 
-    return "final_review"; // All steps completed
+    return "banking_payout"; // All steps completed
   };
 
   const handleContinueToPhase2 = () => {

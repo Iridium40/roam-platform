@@ -18,26 +18,17 @@ import {
 } from "lucide-react";
 
 // Import components
-import WelcomeBackStep from "@/components/WelcomeBackStep";
-import BusinessProfileSetup from "@/components/Phase2Components/BusinessProfileSetupSimplified";
-import PersonalProfileSetup from "@/components/Phase2Components/PersonalProfileSetup";
-import BusinessHoursSetup from "@/components/Phase2Components/BusinessHoursSetup";
-import StaffManagementSetup from "@/components/Phase2Components/StaffManagementSetup";
+import QuickSetup from "@/components/Phase2Components/QuickSetup";
 import BankingPayoutSetup from "@/components/Phase2Components/BankingPayoutSetup";
 import ServicePricingSetup from "@/components/Phase2Components/ServicePricingSetup";
-import FinalReviewSetup from "@/components/Phase2Components/FinalReviewSetup";
 import StripeIdentityVerification from "@/components/StripeIdentityVerification";
 import { PlaidBankConnection } from "@/components/PlaidBankConnection";
 import StripeConnectSetup from "@/components/StripeConnectSetup";
 
 type Phase2Step =
-  | "welcome"
-  | "business_profile"
-  | "personal_profile"
-  | "business_hours"
-  | "banking_payout"
+  | "quick_setup"
   | "service_pricing"
-  | "final_review"
+  | "banking_payout"
   | "identity_verification"
   | "bank_connection"
   | "stripe_setup"
@@ -52,17 +43,14 @@ interface Phase2State {
   serviceSubcategories?: any[];
 }
 
+// Streamlined Phase 2: 3 steps to go live
 const phase2Steps = [
-  { id: "welcome", title: "Welcome Back", icon: Shield },
-  { id: "business_profile", title: "Business Profile", icon: Building },
-  { id: "personal_profile", title: "Personal Profile", icon: User },
-  { id: "business_hours", title: "Business Hours", icon: Clock },
-  { id: "banking_payout", title: "Banking & Payouts", icon: Banknote },
+  { id: "quick_setup", title: "Quick Setup", icon: Building },
   { id: "service_pricing", title: "Service Pricing", icon: DollarSign },
-  { id: "final_review", title: "Final Review", icon: CheckCircle },
+  { id: "banking_payout", title: "Banking & Payouts", icon: Banknote },
 ];
 
-// Get Phase 2 steps (staff management removed - handled post-onboarding)
+// Get Phase 2 steps
 const getPhase2Steps = (businessType?: string) => {
   return phase2Steps;
 };
@@ -73,7 +61,7 @@ export default function ProviderOnboardingPhase2() {
   const params = useParams();
 
   const [onboardingState, setOnboardingState] = useState<Phase2State>({
-    phase2Step: "welcome",
+    phase2Step: "quick_setup",
     businessData: undefined,
     businessId: undefined,
     userId: undefined,
@@ -101,7 +89,7 @@ export default function ProviderOnboardingPhase2() {
             ...prev,
             businessId: session.business_id,
             userId: session.user_id,
-            phase2Step: (params.step as Phase2Step) || "welcome",
+            phase2Step: (params.step as Phase2Step) || "quick_setup",
             businessData: { businessName: session.business_name }
           }));
           return;
@@ -123,7 +111,7 @@ export default function ProviderOnboardingPhase2() {
         ...prev,
         businessId: '123e4567-e89b-12d3-a456-426614174000',
         userId: '987fcdeb-51a2-43d1-9f12-345678901234',
-        phase2Step: (params.step as Phase2Step) || 'welcome',
+        phase2Step: (params.step as Phase2Step) || 'quick_setup',
         businessData: { 
           businessName: 'Development Business',
           business_type: 'independent' // Set to independent to test staff management skip
@@ -137,26 +125,11 @@ export default function ProviderOnboardingPhase2() {
     navigate('/provider-portal');
   };
 
-  const handlePhase2Welcome = () => {
-    navigate('/provider-onboarding/phase2/business_profile');
-  };
-
   const handleStepClick = (stepId: string) => {
     navigate(`/provider-onboarding/phase2/${stepId}`);
   };
 
   const handlePhase2StepComplete = (nextStep: Phase2Step) => {
-    // If next step is staff_management but business type is independent, skip to banking_payout
-    if (nextStep === 'staff_management' && onboardingState.businessData?.business_type === 'independent') {
-      navigate('/provider-onboarding/phase2/banking_payout');
-      return;
-    }
-    
-    // If current step is staff_management and business type is independent, skip to banking_payout
-    if (onboardingState.phase2Step === 'staff_management' && onboardingState.businessData?.business_type === 'independent') {
-      navigate('/provider-onboarding/phase2/banking_payout');
-      return;
-    }
     
     navigate(`/provider-onboarding/phase2/${nextStep}`);
   };
@@ -221,57 +194,12 @@ export default function ProviderOnboardingPhase2() {
     const { phase2Step } = onboardingState;
 
     switch (phase2Step) {
-      case "welcome":
+      case "quick_setup":
         return (
-          <WelcomeBackStep
-            businessName={onboardingState.businessData?.businessName}
-            onContinue={handlePhase2Welcome}
-            onStepClick={handleStepClick}
-            userId={onboardingState.userId}
-            businessId={onboardingState.businessId}
-          />
-        );
-
-      case "business_profile":
-        return (
-          <BusinessProfileSetup
-            businessId={onboardingState.businessId || ""}
-            userId={onboardingState.userId || ""}
-            onComplete={() => handlePhase2StepComplete("personal_profile")}
-            onBack={() => handlePhase2StepComplete("welcome")}
-          />
-        );
-
-      case "personal_profile":
-        return (
-          <PersonalProfileSetup
-            businessId={onboardingState.businessId || ""}
-            userId={onboardingState.userId || ""}
-            onComplete={() => handlePhase2StepComplete("business_hours")}
-            onBack={() => handlePhase2StepComplete("business_profile")}
-            initialData={onboardingState.businessData?.personal_profile}
-          />
-        );
-
-      case "business_hours":
-        return (
-          <BusinessHoursSetup
-            businessId={onboardingState.businessId || ""}
-            userId={onboardingState.userId || ""}
-            onComplete={() => handlePhase2StepComplete("banking_payout")}
-            onBack={() => handlePhase2StepComplete("personal_profile")}
-            initialData={onboardingState.businessData?.business_hours}
-          />
-        );
-
-      case "banking_payout":
-        return (
-          <BankingPayoutSetup
+          <QuickSetup
             businessId={onboardingState.businessId || ""}
             userId={onboardingState.userId || ""}
             onComplete={() => handlePhase2StepComplete("service_pricing")}
-            onBack={() => handlePhase2StepComplete("business_hours")}
-            initialData={onboardingState.businessData?.banking_payout}
           />
         );
 
@@ -280,20 +208,20 @@ export default function ProviderOnboardingPhase2() {
           <ServicePricingSetup
             businessId={onboardingState.businessId || ""}
             userId={onboardingState.userId || ""}
-            onComplete={() => handlePhase2StepComplete("final_review")}
-            onBack={() => handlePhase2StepComplete("banking_payout")}
+            onComplete={() => handlePhase2StepComplete("banking_payout")}
+            onBack={() => handlePhase2StepComplete("quick_setup")}
             initialData={onboardingState.businessData?.service_pricing}
           />
         );
 
-      case "final_review":
+      case "banking_payout":
         return (
-          <FinalReviewSetup
+          <BankingPayoutSetup
             businessId={onboardingState.businessId || ""}
             userId={onboardingState.userId || ""}
             onComplete={() => handlePhase2StepComplete("complete")}
             onBack={() => handlePhase2StepComplete("service_pricing")}
-            phase2Data={onboardingState.businessData || {}}
+            initialData={onboardingState.businessData?.banking_payout}
           />
         );
 
@@ -477,7 +405,7 @@ export default function ProviderOnboardingPhase2() {
         {renderProgressBar()}
         
         {/* Informational Note */}
-        {onboardingState.phase2Step !== 'welcome' && onboardingState.phase2Step !== 'complete' && (
+        {onboardingState.phase2Step !== 'quick_setup' && onboardingState.phase2Step !== 'complete' && (
           <Alert className="max-w-4xl mx-auto mb-6 border-blue-200 bg-blue-50">
             <Shield className="h-4 w-4 text-blue-600" />
             <AlertDescription className="text-blue-800">

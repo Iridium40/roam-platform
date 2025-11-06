@@ -25,7 +25,7 @@ import StripeIdentityVerification from "@/components/StripeIdentityVerification"
 import { postJson } from "@/lib/api-utils";
 import { useAuth } from "@/contexts/auth/AuthProvider";
 
-type Phase1Step = "signup" | "business_info" | "identity_verification" | "business_documents" | "review" | "submitted";
+type Phase1Step = "application" | "identity_verification" | "business_documents" | "submitted";
 
 interface Phase1State {
   phase1Step: Phase1Step;
@@ -38,12 +38,11 @@ interface Phase1State {
   identityVerificationSessionId?: string;
 }
 
+// Streamlined Phase 1: 3 steps to approval
 const phase1Steps = [
-  { id: "signup", title: "Account Creation", icon: User },
-  { id: "business_info", title: "Business Information", icon: Building },
+  { id: "application", title: "Business Application", icon: Building },
   { id: "identity_verification", title: "Identity Verification", icon: User },
-  { id: "business_documents", title: "Business Documents", icon: FileText },
-  { id: "review", title: "Review & Submit", icon: CheckCircle },
+  { id: "business_documents", title: "Documents (Optional)", icon: FileText },
 ];
 
 export default function ProviderOnboardingPhase1() {
@@ -52,7 +51,7 @@ export default function ProviderOnboardingPhase1() {
   const { user, isAuthenticated } = useAuth();
 
   const [onboardingState, setOnboardingState] = useState<Phase1State>({
-    phase1Step: "signup",
+    phase1Step: "application",
     userData: undefined,
     businessData: undefined,
     documents: undefined,
@@ -62,6 +61,8 @@ export default function ProviderOnboardingPhase1() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Track sub-step within application step (signup -> business_info)
+  const [applicationSubStep, setApplicationSubStep] = useState<"signup" | "business_info">("signup");
 
   // Initialize onboarding state based on URL and auth
   useEffect(() => {
@@ -76,7 +77,7 @@ export default function ProviderOnboardingPhase1() {
       // Start from beginning
       setOnboardingState((prev) => ({
         ...prev,
-        phase1Step: "signup",
+        phase1Step: "application",
       }));
     }
   };
@@ -96,11 +97,11 @@ export default function ProviderOnboardingPhase1() {
           navigate("/provider-dashboard");
         } else if (status.phase === "phase2") {
           // Redirect to Phase 2
-          navigate("/provider-onboarding/phase2/welcome");
+          navigate("/provider-onboarding/phase2/quick_setup");
         } else {
           setOnboardingState((prev) => ({
             ...prev,
-            phase1Step: status.currentStep || "business_info",
+            phase1Step: status.currentStep || "application",
             userData: status.userData || undefined,
             businessData: status.businessData || undefined,
             businessId: status.businessId || undefined,
@@ -112,7 +113,7 @@ export default function ProviderOnboardingPhase1() {
         console.warn("Failed to check onboarding status, starting from beginning");
         setOnboardingState((prev) => ({
           ...prev,
-          phase1Step: "signup",
+          phase1Step: "application",
           userId: user?.id,
         }));
       }
@@ -121,7 +122,7 @@ export default function ProviderOnboardingPhase1() {
       // If there's an error, just start from the beginning
       setOnboardingState((prev) => ({
         ...prev,
-        phase1Step: "signup",
+        phase1Step: "application",
         userId: user?.id,
       }));
     } finally {
@@ -185,13 +186,14 @@ export default function ProviderOnboardingPhase1() {
         throw new Error("Invalid response: missing user data");
       }
 
-      console.log("Setting onboarding state to business_info phase");
+      console.log("Moving to business info sub-step");
       setOnboardingState((prev) => ({
         ...prev,
-        phase1Step: "business_info",
         userData: result.user,
         userId: result.user.id,
       }));
+      // Move to business info sub-step within application
+      setApplicationSubStep("business_info");
     } catch (error) {
       console.error("Signup error:", error);
       console.error("Error stack:", error instanceof Error ? error.stack : "No stack available");
@@ -334,11 +336,13 @@ export default function ProviderOnboardingPhase1() {
   };
 
   const handleDocumentsComplete = async (documents: any[]) => {
+    // Store documents and auto-submit application
     setOnboardingState((prev) => ({
       ...prev,
-      phase1Step: "review",
       documents,
     }));
+    // Auto-submit application after documents uploaded (or skipped)
+    await handleApplicationSubmit();
   };
 
   const handleApplicationSubmit = async () => {
@@ -424,26 +428,6 @@ export default function ProviderOnboardingPhase1() {
     }
   };
 
-  const handleEditSection = (section: "user" | "business" | "identity" | "documents") => {
-    switch (section) {
-      case "user":
-        setOnboardingState((prev) => ({ ...prev, phase1Step: "signup" }));
-        break;
-      case "business":
-        setOnboardingState((prev) => ({
-          ...prev,
-          phase1Step: "business_info",
-        }));
-        break;
-      case "identity":
-        setOnboardingState((prev) => ({ ...prev, phase1Step: "identity_verification" }));
-        break;
-      case "documents":
-        setOnboardingState((prev) => ({ ...prev, phase1Step: "business_documents" }));
-        break;
-    }
-  };
-
   const getCurrentStepIndex = () => {
     return phase1Steps.findIndex(
       (step) => step.id === onboardingState.phase1Step,
@@ -460,43 +444,55 @@ export default function ProviderOnboardingPhase1() {
     const { phase1Step } = onboardingState;
 
     switch (phase1Step) {
-      case "signup":
-        return (
-          <ProviderSignupForm
-            onSubmit={handleSignupComplete}
-            loading={loading}
-            error={error}
-          />
-        );
-
-      case "business_info":
-        // Ensure userId exists before allowing business info entry
-        if (!onboardingState.userId) {
-          console.warn("UserId missing, redirecting to signup");
-          setOnboardingState((prev) => ({
-            ...prev,
-            phase1Step: "signup",
-          }));
-          setError("Please complete the signup process first.");
-          return null;
+      case "application":
+        // Combined application step - shows signup then business info
+        if (applicationSubStep === "signup") {
+          return (
+            <div>
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold">Business Application</h2>
+                <p className="text-muted-foreground mt-2">Step 1 of 2: Create your account</p>
+              </div>
+              <ProviderSignupForm
+                onSubmit={handleSignupComplete}
+                loading={loading}
+                error={error}
+              />
+            </div>
+          );
+        } else {
+          // business_info sub-step
+          if (!onboardingState.userId) {
+            console.warn("UserId missing, redirecting to signup sub-step");
+            setApplicationSubStep("signup");
+            setError("Please complete the signup process first.");
+            return null;
+          }
+          return (
+            <div>
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold">Business Application</h2>
+                <p className="text-muted-foreground mt-2">Step 2 of 2: Tell us about your business</p>
+              </div>
+              <BusinessInfoForm
+                onSubmit={handleBusinessInfoComplete}
+                loading={loading}
+                error={error}
+                initialData={onboardingState.businessData}
+              />
+            </div>
+          );
         }
-        return (
-          <BusinessInfoForm
-            onSubmit={handleBusinessInfoComplete}
-            loading={loading}
-            error={error}
-            initialData={onboardingState.businessData}
-          />
-        );
 
       case "identity_verification":
         // Ensure userId and businessId exist before allowing identity verification
         if (!onboardingState.userId || !onboardingState.businessId) {
-          console.warn("UserId or BusinessId missing, redirecting to business_info");
+          console.warn("UserId or BusinessId missing, redirecting to application");
           setOnboardingState((prev) => ({
             ...prev,
-            phase1Step: "business_info",
+            phase1Step: "application",
           }));
+          setApplicationSubStep("signup");
           setError("Please complete the previous steps first.");
           return null;
         }
@@ -514,11 +510,12 @@ export default function ProviderOnboardingPhase1() {
       case "business_documents":
         // Ensure userId exists before allowing document upload
         if (!onboardingState.userId) {
-          console.warn("UserId missing, redirecting to signup");
+          console.warn("UserId missing, redirecting to application");
           setOnboardingState((prev) => ({
             ...prev,
-            phase1Step: "signup",
+            phase1Step: "application",
           }));
+          setApplicationSubStep("signup");
           setError("Please complete the signup process first.");
           return null;
         }
@@ -530,21 +527,6 @@ export default function ProviderOnboardingPhase1() {
             businessType={onboardingState.businessData?.businessType}
             userId={onboardingState.userId}
             businessId={onboardingState.businessId}
-          />
-        );
-
-      case "review":
-        return (
-          <ApplicationReviewPage
-            applicationData={{
-              userData: onboardingState.userData,
-              businessInfo: onboardingState.businessData,
-              documents: onboardingState.documents || [],
-            }}
-            onSubmit={handleApplicationSubmit}
-            onEdit={handleEditSection}
-            loading={loading}
-            error={error}
           />
         );
 

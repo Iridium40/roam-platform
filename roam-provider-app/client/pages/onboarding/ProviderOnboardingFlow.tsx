@@ -51,7 +51,7 @@ export default function ProviderOnboardingFlow() {
           navigate("/provider-dashboard");
         } else if (status.phase === "phase2") {
           // Redirect to Phase 2
-          navigate("/provider-onboarding/phase2/welcome");
+          navigate("/provider-onboarding/phase2/quick_setup");
         } else {
           // Still in Phase 1
           navigate("/provider-onboarding/phase1");
