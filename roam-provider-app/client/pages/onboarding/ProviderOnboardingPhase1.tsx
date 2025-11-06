@@ -396,7 +396,7 @@ export default function ProviderOnboardingPhase1() {
         if (response.status === 400) {
           // Don't try to read the body, just provide a helpful error based on the context
           throw new Error(
-            "Please ensure you have uploaded all required documents (Professional License, Professional Headshot, and Business License if applicable) before submitting your application.",
+            "Please ensure all required information is complete before submitting your application.",
           );
         } else if (response.status === 404) {
           throw new Error(

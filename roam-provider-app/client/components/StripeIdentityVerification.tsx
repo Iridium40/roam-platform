@@ -180,11 +180,23 @@ export default function StripeIdentityVerification({
         setVerificationStatus("canceled");
         onVerificationFailed?.(error.message || "Verification failed");
       } else {
-        // Verification completed, check status
+        // Modal completed successfully - treat as processing status
+        console.log("✅ Stripe Identity modal completed successfully");
         setVerificationStatus("processing");
-        onVerificationPending();
-
-        // Poll for verification results
+        
+        // Create a processing session object to allow progression
+        const processingSession = {
+          ...sessionData,
+          status: "processing",
+        };
+        setVerificationSession(processingSession);
+        
+        // Allow user to progress immediately with processing status
+        // The verification will complete in the background
+        onVerificationComplete(processingSession);
+        
+        // Still poll for final verification results in background
+        // This will update the status when verification actually completes
         pollVerificationStatus(sessionData.id);
       }
     } catch (error) {
@@ -207,7 +219,7 @@ export default function StripeIdentityVerification({
 
     const poll = async () => {
       try {
-        console.log('Polling verification status:', { sessionId, businessId });
+        console.log('Polling verification status:', { sessionId, businessId, attempt: attempts + 1 });
         const response = await fetch(
           `/api/stripe/check-verification-status/${sessionId}?businessId=${businessId}`,
         );
@@ -244,6 +256,19 @@ export default function StripeIdentityVerification({
             );
             onVerificationFailed?.("Verification timeout");
           }
+        } else if (response.status === 400 && attempts < maxAttempts) {
+          // Handle 400 errors (usually means Stripe hasn't processed the session yet)
+          console.warn('Verification session not ready yet, will retry...', await response.json());
+          attempts++;
+          // Retry after a delay - use longer delay for first few attempts
+          const delay = attempts <= 3 ? 5000 : 10000;
+          setTimeout(poll, delay);
+        } else {
+          console.error('Failed to check verification status:', response.status);
+          if (attempts < maxAttempts) {
+            attempts++;
+            setTimeout(poll, 10000);
+          }
         }
       } catch (error) {
         console.error("Error polling verification status:", error);
@@ -254,7 +279,8 @@ export default function StripeIdentityVerification({
       }
     };
 
-    poll();
+    // Add initial delay before first poll to give Stripe time to process
+    setTimeout(poll, 3000); // Start polling after 3 seconds
   };
 
   const retryVerification = () => {
