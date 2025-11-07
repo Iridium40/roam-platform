@@ -875,49 +875,34 @@ export default function Index() {
     setCurrentPromotionSlide(newPage);
   }, [currentPromotionSlide, promotionPages.length, promotions.length]);
 
-  const filteredBusinesses = featuredBusinesses.filter((business) => {
-    const matchesSearch =
-      searchQuery === "" ||
-      business.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      business.type.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      business.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      business.specialties.some((s) =>
-        s.toLowerCase().includes(searchQuery.toLowerCase()),
-      );
-
-    // Note: Category filter only applies to services, not businesses
-    // Businesses are always shown regardless of category selection
-    const matchesDelivery =
-      selectedDelivery === "all" ||
-      business.deliveryTypes.includes(selectedDelivery);
-
-    return matchesSearch && matchesDelivery;
-  });
+  // Featured Businesses are NOT filtered by search or delivery type
+  // They remain static regardless of user's search/filter selections
+  // Only services (Featured Services and Popular Services) are filtered
 
   // Featured Businesses: paginate into pages of 3 for desktop, 1 for mobile
   const businessPages = useMemo(() => {
     const pages: FeaturedService[][] = [];
     // Paginate by 3 cards per page for desktop, 1 for mobile
-    for (let i = 0; i < filteredBusinesses.length; i += 3) {
-      pages.push(filteredBusinesses.slice(i, i + 3));
+    for (let i = 0; i < featuredBusinesses.length; i += 3) {
+      pages.push(featuredBusinesses.slice(i, i + 3));
     }
     return pages;
-  }, [filteredBusinesses]);
+  }, [featuredBusinesses]);
 
   const nextBusinessSlide = useCallback(() => {
     const maxPage = Math.max(0, businessPages.length - 1);
     const newPage = Math.min(currentBusinessSlide + 1, maxPage);
     console.log('🔄 Next business slide clicked');
-    console.log('📊 Business state:', { currentBusinessSlide, maxPage, newPage, businessesCount: filteredBusinesses.length, pagesCount: businessPages.length });
+    console.log('📊 Business state:', { currentBusinessSlide, maxPage, newPage, businessesCount: featuredBusinesses.length, pagesCount: businessPages.length });
     setCurrentBusinessSlide(newPage);
-  }, [currentBusinessSlide, businessPages.length, filteredBusinesses.length]);
+  }, [currentBusinessSlide, businessPages.length, featuredBusinesses.length]);
 
   const prevBusinessSlide = useCallback(() => {
     const newPage = Math.max(currentBusinessSlide - 1, 0);
     console.log('🔄 Prev business slide clicked');
-    console.log('📊 Business state:', { currentBusinessSlide, newPage, businessesCount: filteredBusinesses.length, pagesCount: businessPages.length });
+    console.log('📊 Business state:', { currentBusinessSlide, newPage, businessesCount: featuredBusinesses.length, pagesCount: businessPages.length });
     setCurrentBusinessSlide(newPage);
-  }, [currentBusinessSlide, businessPages.length, filteredBusinesses.length]);
+  }, [currentBusinessSlide, businessPages.length, featuredBusinesses.length]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-accent/5 to-roam-light-blue/10">
@@ -1915,7 +1900,7 @@ export default function Index() {
             </p>
           </div>
 
-          {filteredBusinesses.length > 0 ? (
+          {featuredBusinesses.length > 0 ? (
             <div className="relative overflow-hidden">
               {/* Navigation Arrows */}
               {businessPages.length > 1 && (
