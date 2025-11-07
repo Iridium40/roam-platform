@@ -7,24 +7,29 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 
 export function NotificationPreferences() {
-  const { user } = useAuth();
+  const { customer, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const [settings, setSettings] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  const userId = customer?.user_id;
+
   useEffect(() => {
-    if (user?.id) {
+    if (userId) {
       loadSettings();
+    } else if (!authLoading) {
+      // Auth loaded but no user
+      setLoading(false);
     }
-  }, [user?.id]);
+  }, [userId, authLoading]);
 
   async function loadSettings() {
     try {
       const { data, error } = await supabase
         .from('user_settings')
         .select('*')
-        .eq('user_id', user?.id)
+        .eq('user_id', userId)
         .maybeSingle();
 
       if (error) throw error;
@@ -32,7 +37,7 @@ export function NotificationPreferences() {
       // If no settings exist, create defaults
       if (!data) {
         const defaultSettings = {
-          user_id: user?.id,
+          user_id: userId,
           email_notifications: true,
           sms_notifications: false,
           customer_booking_accepted_email: true,
@@ -74,7 +79,7 @@ export function NotificationPreferences() {
       const { error } = await supabase
         .from('user_settings')
         .upsert({
-          user_id: user?.id,
+          user_id: userId,
           ...settings,
           updated_at: new Date().toISOString(),
         });
@@ -97,7 +102,7 @@ export function NotificationPreferences() {
     }
   }
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="flex items-center justify-center p-8">
         <div className="text-gray-500">Loading preferences...</div>
@@ -105,7 +110,15 @@ export function NotificationPreferences() {
     );
   }
 
-  const userType = user?.user_metadata?.user_type;
+  if (!userId) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="text-gray-500">Please sign in to manage notification preferences.</div>
+      </div>
+    );
+  }
+
+  const userType = 'CUSTOMER'; // Customer app always shows customer notifications
 
   return (
     <div className="space-y-6">
