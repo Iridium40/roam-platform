@@ -514,18 +514,6 @@ export default function FinancialsTab({
         </div>
       </div>
 
-      {/* Alert if Stripe not connected */}
-      {!stripeBalance?.payoutsEnabled && (
-        <Alert>
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Stripe Account Setup</AlertTitle>
-          <AlertDescription>
-            Your Stripe Connect account will be automatically created during the business onboarding process. 
-            Once your business is approved, you'll have full access to payment processing and financial management.
-          </AlertDescription>
-        </Alert>
-      )}
-
       {/* Stripe Balance Cards - Primary Focus */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="p-6 border-2 border-green-200 bg-green-50">

@@ -55,7 +55,6 @@ import {
   Calendar,
   DollarSign,
   Settings,
-  Send,
   Package,
   Loader2,
 } from "lucide-react";
@@ -128,11 +127,8 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
   const [selectedStaff, setSelectedStaff] =
     useState<StaffMemberWithStats | null>(null);
   const [activeTab, setActiveTab] = useState("all");
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState<ProviderRole>("provider");
-  const [inviteLocation, setInviteLocation] = useState("no-location");
 
-  // Manual staff creation state
+  // Staff creation state
   const [showManualAddDialog, setShowManualAddDialog] = useState(false);
   const [manualStaffData, setManualStaffData] = useState({
     firstName: "",
@@ -770,69 +766,6 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
     }
   };
 
-  const sendInvite = async () => {
-    if (!inviteEmail || !inviteRole) return;
-
-    try {
-      // Get current user info for the invitation
-      const currentUser = user;
-      const invitedBy = currentUser
-        ? `${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim()
-        : 'ROAM Team';
-
-      // Call the staff invitation API
-      const response = await fetch('/api/staff/invite', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          businessId: businessId,
-          email: inviteEmail,
-          role: inviteRole,
-          locationId: inviteLocation === "no-location" ? null : inviteLocation,
-          invitedBy: invitedBy || 'ROAM Team',
-        }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || result.details || 'Failed to send invitation');
-      }
-
-      // Show success message (with warning if email didn't send)
-      const successMessage = result.emailSent 
-        ? `Staff invitation has been sent to ${inviteEmail}`
-        : `Invitation created for ${inviteEmail}. Note: Email may not have been delivered - please check server logs.`;
-      
-      toast({
-        title: result.emailSent ? "Invitation Sent!" : "Invitation Created",
-        description: successMessage,
-        variant: result.emailSent ? "default" : "default",
-      });
-
-      if (result.warning) {
-        console.warn('Invitation email warning:', result.warning);
-      }
-
-      // Reset form
-      setInviteEmail("");
-      setInviteRole("provider");
-      setInviteLocation("no-location");
-
-      // Refresh staff list
-      await fetchStaff();
-    } catch (error) {
-      console.error("Error sending invite:", error);
-      toast({
-        title: "Failed to Send Invitation",
-        description: error instanceof Error ? error.message : 'Unknown error occurred',
-        variant: "destructive",
-      });
-    }
-  };
-
   const getStatusBadge = (member: StaffMemberWithStats) => {
     if (!member.is_active) {
       return <Badge className="bg-red-100 text-red-800">Inactive</Badge>;
@@ -907,67 +840,20 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-lg">Add Staff Member</CardTitle>
+                <CardTitle className="text-lg">Staff Management</CardTitle>
                 <p className="text-sm text-foreground/60">
-                  Send an invitation email or create staff member manually
+                  Manage your team members, roles, and permissions
                 </p>
               </div>
               <Button
                 onClick={() => setShowManualAddDialog(true)}
-                variant="outline"
-                className="gap-2"
+                className="gap-2 bg-roam-blue hover:bg-roam-blue/90"
               >
-                <UserCheck className="w-4 h-4" />
-                Create Manually
+                <Plus className="w-4 h-4" />
+                Add Staff
               </Button>
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="flex gap-2">
-              <Input
-                placeholder="Enter email address..."
-                value={inviteEmail}
-                onChange={(e) => setInviteEmail(e.target.value)}
-                className="flex-1"
-              />
-              <Select
-                value={inviteRole}
-                onValueChange={(value) => setInviteRole(value as ProviderRole)}
-              >
-                <SelectTrigger className="w-32">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {roleOptions.map((role) => (
-                    <SelectItem key={role.value} value={role.value}>
-                      {role.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={inviteLocation} onValueChange={setInviteLocation}>
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="Location" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="no-location">No specific location</SelectItem>
-                  {safeLocations.map((location) => (
-                    <SelectItem key={location.id} value={location.id}>
-                      {location.location_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button
-                onClick={sendInvite}
-                disabled={!inviteEmail || !inviteRole}
-                className="bg-roam-blue hover:bg-roam-blue/90"
-              >
-                <Send className="w-4 h-4 mr-2" />
-                Send Invite
-              </Button>
-            </div>
-          </CardContent>
         </Card>
       )}
 
@@ -1551,9 +1437,9 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
       <Dialog open={showManualAddDialog} onOpenChange={setShowManualAddDialog}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
-            <DialogTitle>Create Staff Member Manually</DialogTitle>
+            <DialogTitle>Add Staff Member</DialogTitle>
             <DialogDescription>
-              Enter staff member details to create their account directly. A temporary password will be generated.
+              Create a new staff member account. They will receive a welcome email with login credentials and instructions.
             </DialogDescription>
           </DialogHeader>
 

@@ -1,6 +1,7 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
+import { EmailService } from '../../server/services/emailService';
 
 const supabase = createClient(
   process.env.VITE_PUBLIC_SUPABASE_URL!,
@@ -142,12 +143,41 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       console.log('✅ Staff member added to business (existing user)');
       
+      // Send welcome email (without password since user already has account)
+      try {
+        console.log('📧 Sending welcome email to existing user...');
+        const emailSent = await EmailService.sendEmail({
+          to: email,
+          subject: `Welcome to ${business.business_name} on ROAM! 🎉`,
+          html: `
+            <h1>Welcome to ${business.business_name}!</h1>
+            <p>Hi ${firstName},</p>
+            <p>You've been added as a ${role} at <strong>${business.business_name}</strong> on the ROAM platform.</p>
+            <p>Since you already have a ROAM account, you can login immediately at:</p>
+            <p><a href="https://www.roamprovider.com/provider-login" style="background-color: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Login to ROAM Provider Portal →</a></p>
+            <p>Use your existing email and password to access your new role at ${business.business_name}.</p>
+            <p>Best regards,<br>The ROAM Team</p>
+          `,
+          text: `Welcome to ${business.business_name}! You've been added as a ${role}. Login at https://www.roamprovider.com/provider-login with your existing credentials.`
+        });
+        
+        if (emailSent) {
+          console.log('✅ Welcome email sent successfully');
+        } else {
+          console.warn('⚠️ Welcome email may not have been delivered');
+        }
+      } catch (emailError) {
+        console.error('⚠️ Error sending welcome email (non-fatal):', emailError);
+        // Continue anyway - staff was created successfully
+      }
+      
       return res.status(200).json({
         success: true,
         message: 'Staff member added successfully (used existing account)',
         provider: newProvider,
         temporaryPassword: null, // No password needed - user already has account
-        existingUser: true
+        existingUser: true,
+        emailSent: true
       });
     }
 
@@ -217,12 +247,37 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.log('✅ Provider record created:', newProvider.id);
     console.log(`🎉 Staff member created successfully: ${firstName} ${lastName}`);
 
+    // Send welcome email with login credentials
+    let emailSent = false;
+    try {
+      console.log('📧 Sending welcome email with credentials...');
+      emailSent = await EmailService.sendStaffWelcomeEmail(
+        email,
+        firstName,
+        lastName,
+        business.business_name,
+        role,
+        temporaryPassword,
+        'https://www.roamprovider.com/provider-login'
+      );
+      
+      if (emailSent) {
+        console.log('✅ Welcome email sent successfully');
+      } else {
+        console.warn('⚠️ Welcome email may not have been delivered');
+      }
+    } catch (emailError) {
+      console.error('⚠️ Error sending welcome email (non-fatal):', emailError);
+      // Continue anyway - staff was created successfully
+    }
+
     return res.status(200).json({
       success: true,
       message: 'Staff member created successfully',
       provider: newProvider,
       temporaryPassword: temporaryPassword,
-      existingUser: false
+      existingUser: false,
+      emailSent: emailSent
     });
 
   } catch (error) {
