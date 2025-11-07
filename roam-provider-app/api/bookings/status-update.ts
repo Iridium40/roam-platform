@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
+import { notificationService } from '../../lib/notifications/notification-service';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS headers
@@ -137,8 +138,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       console.log('✅ Status history created');
     }
 
-    // TODO: Send notifications (currently disabled - causing Edge Runtime issues)
-    // Consider implementing via background job or webhook
+    // Send notifications based on status change
+    if (notifyCustomer || notifyProvider) {
+      console.log('📧 Sending notifications for status:', newStatus);
+      await sendStatusNotifications(booking, newStatus, { notifyCustomer, notifyProvider });
+    }
 
     console.log('🎉 Status update completed successfully');
     return res.status(200).json({ 
@@ -160,7 +164,107 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 }
 
+/**
+ * Send appropriate notifications based on booking status change
+ */
+async function sendStatusNotifications(
+  booking: any,
+  newStatus: string,
+  options: { notifyCustomer: boolean; notifyProvider: boolean }
+) {
+  try {
+    const customer = booking.customer_profiles;
+    const provider = booking.providers;
+    const business = booking.business_profiles;
 
+    if (!customer || !provider) {
+      console.warn('⚠️ Missing customer or provider data, skipping notifications');
+      return;
+    }
+
+    // Format booking data for templates
+    const bookingDate = new Date(booking.booking_date).toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+    const bookingTime = new Date(`2000-01-01T${booking.booking_time}`).toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    });
+
+    // Notify customer when booking is accepted
+    if (newStatus === 'accepted' && options.notifyCustomer && customer.user_id) {
+      console.log('📧 Sending acceptance notification to customer');
+      await notificationService.send({
+        userId: customer.user_id,
+        notificationType: 'customer_booking_accepted',
+        templateVariables: {
+          customer_name: customer.first_name,
+          service_name: booking.service_name || 'Service',
+          provider_name: `${provider.first_name} ${provider.last_name}`,
+          booking_date: bookingDate,
+          booking_time: bookingTime,
+          booking_location: booking.service_location || 'Location TBD',
+          total_amount: booking.total_amount?.toFixed(2) || '0.00',
+          booking_id: booking.id,
+        },
+        metadata: {
+          booking_id: booking.id,
+          event_type: 'booking_accepted',
+        },
+      });
+    }
+
+    // Notify customer when booking is completed
+    if (newStatus === 'completed' && options.notifyCustomer && customer.user_id) {
+      console.log('📧 Sending completion notification to customer');
+      await notificationService.send({
+        userId: customer.user_id,
+        notificationType: 'customer_booking_completed',
+        templateVariables: {
+          customer_name: customer.first_name,
+          service_name: booking.service_name || 'Service',
+          provider_name: `${provider.first_name} ${provider.last_name}`,
+          provider_id: provider.id,
+          booking_id: booking.id,
+        },
+        metadata: {
+          booking_id: booking.id,
+          event_type: 'booking_completed',
+        },
+      });
+    }
+
+    // Notify provider when booking is cancelled
+    if (newStatus === 'cancelled' && options.notifyProvider && provider.user_id) {
+      console.log('📧 Sending cancellation notification to provider');
+      await notificationService.send({
+        userId: provider.user_id,
+        notificationType: 'provider_booking_cancelled',
+        templateVariables: {
+          provider_name: provider.first_name,
+          customer_name: `${customer.first_name} ${customer.last_name}`,
+          service_name: booking.service_name || 'Service',
+          booking_date: bookingDate,
+          booking_time: bookingTime,
+          cancellation_reason: booking.cancellation_reason || 'No reason provided',
+        },
+        metadata: {
+          booking_id: booking.id,
+          event_type: 'booking_cancelled',
+        },
+      });
+    }
+
+    console.log('✅ Notifications sent successfully');
+  } catch (error) {
+    // Don't fail the request if notifications fail - log and continue
+    console.error('⚠️ Notification error (non-fatal):', error);
+  }
+}
 
 // Webhook endpoint for external status updates - removed for Vercel compatibility
 // export async function PUT(request: NextRequest) {

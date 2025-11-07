@@ -21,7 +21,7 @@ import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { ImageStorageService } from "@/utils/image/imageStorage";
 import type { ImageType } from "@/utils/image/imageTypes";
-import UserSettingsSection from "./UserSettingsSection";
+import { NotificationPreferences } from "@/components/NotificationPreferences";
 
 interface ProfileTabProps {
   providerData: any;
@@ -574,10 +574,7 @@ export default function ProfileTab({
         </TabsContent>
 
         <TabsContent value="settings" className="mt-6">
-          <UserSettingsSection 
-            userId={providerData?.user_id || ''} 
-            providerId={providerData?.id || ''}
-          />
+          <NotificationPreferences />
         </TabsContent>
       </Tabs>
     </div>
