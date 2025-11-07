@@ -84,16 +84,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Continue anyway - we still return the Stripe data
     }
 
-    // Also ensure business_profiles has the stripe_connect_account_id
+    // Also ensure business_profiles has the stripe_account_id
     const { error: businessUpdateError } = await supabase
       .from("business_profiles")
       .update({
-        stripe_connect_account_id: connectAccount.account_id, // Correct column name per schema
+        stripe_account_id: connectAccount.account_id, // Correct column name per schema
       })
       .eq("id", businessId);
 
     if (businessUpdateError) {
-      console.error("Error updating business_profiles.stripe_connect_account_id:", businessUpdateError);
+      console.error("Error updating business_profiles.stripe_account_id:", businessUpdateError);
       // Continue anyway
     }
 

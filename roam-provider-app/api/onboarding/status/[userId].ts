@@ -79,7 +79,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         currentStep = "identity_verification";
       } else if (!businessProfile.bank_connected) {
         currentStep = "bank_connection";
-      } else if (!businessProfile.stripe_connect_account_id) {
+      } else if (!businessProfile.stripe_account_id) {
         currentStep = "stripe_setup";
       } else {
         // Check if Stripe account is fully active

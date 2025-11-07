@@ -44,7 +44,7 @@ import {
   Video,
   RefreshCw
 } from 'lucide-react';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabase';
 import ServicePriceModal from '@/components/ServicePriceModal';
 import { getAuthHeaders } from '@/lib/api/authUtils';
 
@@ -127,12 +127,6 @@ interface ServicePricingSetupProps {
 // Platform defaults - no longer configurable
 const PLATFORM_PRICING_MODEL = 'fixed';
 const PLATFORM_CURRENCY = 'USD';
-
-// Initialize Supabase client
-const supabase = createClient(
-  import.meta.env.VITE_PUBLIC_SUPABASE_URL!,
-  import.meta.env.VITE_PUBLIC_SUPABASE_ANON_KEY!
-);
 
 export default function ServicePricingSetup({
   businessId,

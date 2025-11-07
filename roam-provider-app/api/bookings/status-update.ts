@@ -21,8 +21,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
     if (!supabaseUrl || !supabaseServiceKey) {
-      console.error('Missing Supabase credentials');
-      return res.status(500).json({ error: 'Server configuration error' });
+      console.error('❌ Missing Supabase credentials:', { 
+        hasUrl: !!supabaseUrl, 
+        hasKey: !!supabaseServiceKey 
+      });
+      return res.status(500).json({ 
+        error: 'Server configuration error',
+        details: 'Missing Supabase credentials'
+      });
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -39,13 +45,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Validate required fields
     if (!bookingId || !newStatus || !updatedBy) {
-      console.error('Missing required fields:', { bookingId, newStatus, updatedBy });
-      return res.status(400).json({ error: 'Missing required fields' });
+      console.error('❌ Missing required fields:', { bookingId, newStatus, updatedBy });
+      return res.status(400).json({ 
+        error: 'Missing required fields',
+        details: `bookingId: ${!!bookingId}, newStatus: ${!!newStatus}, updatedBy: ${!!updatedBy}`
+      });
     }
 
-    console.log('Updating booking status:', { bookingId, newStatus, updatedBy });
+    console.log('✅ Updating booking status:', { bookingId, newStatus, updatedBy, timestamp: new Date().toISOString() });
 
     // Update booking status in Supabase
+    console.log('🔍 Executing Supabase update query...');
     const { data: booking, error: updateError } = await supabase
       .from('bookings')
       .update({
@@ -72,22 +82,40 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         business_profiles (
           id,
           business_name,
-          email
+          contact_email
         )
       `)
       .single();
 
     if (updateError) {
-      console.error('Error updating booking:', updateError);
+      console.error('❌ Error updating booking:', {
+        error: updateError,
+        message: updateError.message,
+        details: updateError.details,
+        hint: updateError.hint,
+        code: updateError.code,
+        bookingId,
+        newStatus
+      });
       return res.status(500).json({ 
         error: 'Failed to update booking',
-        details: updateError.message 
+        details: updateError.message,
+        code: updateError.code
       });
     }
 
-    console.log('Booking updated successfully:', { bookingId, newStatus });
+    if (!booking) {
+      console.error('❌ No booking returned after update:', { bookingId });
+      return res.status(404).json({ 
+        error: 'Booking not found or not updated',
+        details: `No booking found with ID: ${bookingId}`
+      });
+    }
+
+    console.log('✅ Booking updated successfully:', { bookingId, newStatus, timestamp: new Date().toISOString() });
 
     // Create status update record
+    console.log('📝 Creating status history record...');
     const { error: historyError } = await supabase
       .from('booking_status_history')
       .insert({
@@ -99,19 +127,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
 
     if (historyError) {
-      console.error('Error creating status history:', historyError);
+      console.error('⚠️ Error creating status history (non-fatal):', {
+        error: historyError,
+        message: historyError.message,
+        bookingId
+      });
+      // Don't fail the request if history insert fails
+    } else {
+      console.log('✅ Status history created');
     }
 
     // TODO: Send notifications (currently disabled - causing Edge Runtime issues)
     // Consider implementing via background job or webhook
 
+    console.log('🎉 Status update completed successfully');
     return res.status(200).json({ 
       success: true, 
-      booking
+      booking,
+      timestamp: new Date().toISOString()
     });
 
   } catch (error) {
-    console.error('Status update error:', error);
+    console.error('❌ Status update error (catch block):', {
+      error,
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    });
     return res.status(500).json({ 
       error: 'Internal server error',
       details: error instanceof Error ? error.message : String(error)

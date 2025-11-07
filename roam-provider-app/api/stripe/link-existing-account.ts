@@ -148,11 +148,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // Also update business_profiles with stripe_connect_account_id
+    // Also update business_profiles with stripe_account_id
     const { error: businessUpdateError } = await supabase
       .from("business_profiles")
       .update({
-        stripe_connect_account_id: accountId, // Correct column name per schema
+        stripe_account_id: accountId, // Correct column name per schema
       })
       .eq("id", businessId);
 
