@@ -240,6 +240,10 @@
       "destination": "/api/test/generate-phase2-token.ts"
     },
     {
+      "source": "/api/notifications/send",
+      "destination": "/api/notifications/send.ts"
+    },
+    {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
