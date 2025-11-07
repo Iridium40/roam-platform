@@ -26,12 +26,7 @@ interface DocumentsSectionProps {
   onDocumentDelete: (documentId: string) => Promise<void>;
 }
 
-const REQUIRED_DOCUMENT_TYPES = [
-  { type: "drivers_license", label: "Driver's License", description: "Government-issued photo identification" },
-  { type: "proof_of_address", label: "Proof of Address", description: "Recent utility bill or lease agreement" },
-];
-
-const OPTIONAL_DOCUMENT_TYPES = [
+const DOCUMENT_TYPES = [
   { type: "liability_insurance", label: "Liability Insurance", description: "Professional liability insurance certificate" },
   { type: "professional_license", label: "Professional License/Certification", description: "Your professional license, certification, or training credentials" },
   { type: "business_license", label: "Business License", description: "Business registration or operating license (if applicable)" },
@@ -229,36 +224,17 @@ export function DocumentsSection({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Required Documents */}
-        <div>
-          <h3 className="text-lg font-semibold mb-4">Required Documents</h3>
-          <div className="space-y-4">
-            {REQUIRED_DOCUMENT_TYPES.map((docType) => (
-              <DocumentTypeCard
-                key={docType.type}
-                type={docType.type}
-                label={docType.label}
-                description={docType.description}
-                isRequired={true}
-              />
-            ))}
-          </div>
-        </div>
-
-        {/* Optional Documents */}
-        <div>
-          <h3 className="text-lg font-semibold mb-4">Optional Documents</h3>
-          <div className="space-y-4">
-            {OPTIONAL_DOCUMENT_TYPES.map((docType) => (
-              <DocumentTypeCard
-                key={docType.type}
-                type={docType.type}
-                label={docType.label}
-                description={docType.description}
-                isRequired={false}
-              />
-            ))}
-          </div>
+        {/* Business Documents */}
+        <div className="space-y-4">
+          {DOCUMENT_TYPES.map((docType) => (
+            <DocumentTypeCard
+              key={docType.type}
+              type={docType.type}
+              label={docType.label}
+              description={docType.description}
+              isRequired={false}
+            />
+          ))}
         </div>
 
         {/* Document Guidelines */}
@@ -270,7 +246,7 @@ export function DocumentsSection({
               <li>• Accepted formats: PDF, JPG, PNG, DOC, DOCX</li>
               <li>• Maximum file size: 50MB per document</li>
               <li>• Documents must be clear and legible</li>
-              <li>• Required documents must be approved before you can receive bookings</li>
+              <li>• Upload relevant documents to enhance your business credibility</li>
             </ul>
           </AlertDescription>
         </Alert>
