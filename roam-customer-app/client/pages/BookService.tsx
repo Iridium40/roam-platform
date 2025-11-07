@@ -1196,7 +1196,8 @@ export default function BookService() {
     }
 
     // Ensure all necessary data is available
-    if (!service || !selectedBusiness || !selectedProvider || !selectedDate || !selectedTime) {
+    // Note: selectedProvider can be null if noProviderPreference is true (business will assign)
+    if (!service || !selectedBusiness || (!selectedProvider && !noProviderPreference) || !selectedDate || !selectedTime) {
       toast({
         title: "Missing Information",
         description: "Please complete all booking steps before proceeding.",
