@@ -132,6 +132,10 @@
       "destination": "/api/business-eligible-services.ts"
     },
     {
+      "source": "/api/business-eligible-addons",
+      "destination": "/api/business-eligible-addons.ts"
+    },
+    {
       "source": "/api/diagnostic",
       "destination": "/api/diagnostic.ts"
     },
@@ -146,6 +150,10 @@
     {
       "source": "/api/staff/invite",
       "destination": "/api/staff/invite.ts"
+    },
+    {
+      "source": "/api/staff/create-manual",
+      "destination": "/api/staff/create-manual.ts"
     },
     {
       "source": "/api/staff/validate-invitation",
