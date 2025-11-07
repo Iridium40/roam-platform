@@ -9,7 +9,6 @@ import { useToast } from "@/hooks/use-toast";
 // Import our modular components
 import BasicInfoSection from "./business-settings/BasicInfoSection";
 import BusinessHoursSection from "./business-settings/BusinessHoursSection";
-import ServiceCategoriesSection from "./business-settings/ServiceCategoriesSection";
 import { DocumentsSection } from "./business-settings/DocumentsSection";
 import { LocationsSection } from "./business-settings/LocationsSection";
 
@@ -35,12 +34,6 @@ export function BusinessSettingsTab({ providerData, business, onBusinessUpdate }
     loading,
     logoUploading,
     coverUploading,
-    
-    // Service eligibility
-    serviceEligibility,
-    eligibilityLoading,
-    eligibilityError,
-    loadServiceEligibility,
     
     // Actions
     saveBusinessSettings,
@@ -432,10 +425,9 @@ export function BusinessSettingsTab({ providerData, business, onBusinessUpdate }
 
       {/* Main content in tabs */}
       <Tabs defaultValue="basic-info" className="w-full" onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="basic-info">Basic Info</TabsTrigger>
           <TabsTrigger value="hours">Hours</TabsTrigger>
-          <TabsTrigger value="services">Services</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
           <TabsTrigger value="locations">Locations</TabsTrigger>
         </TabsList>
@@ -463,15 +455,6 @@ export function BusinessSettingsTab({ providerData, business, onBusinessUpdate }
             onSave={saveBusinessSettings}
             onCancel={cancelEditing}
             onEdit={() => setIsEditing(true)}
-          />
-        </TabsContent>
-
-        <TabsContent value="services" className="space-y-6">
-          <ServiceCategoriesSection
-            serviceEligibility={serviceEligibility}
-            eligibilityLoading={eligibilityLoading}
-            eligibilityError={eligibilityError}
-            onLoadServiceEligibility={loadServiceEligibility}
           />
         </TabsContent>
 

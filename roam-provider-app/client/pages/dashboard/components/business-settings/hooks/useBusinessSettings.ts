@@ -72,10 +72,11 @@ export function useBusinessSettings(business: any) {
   const [eligibilityLoading, setEligibilityLoading] = useState(false);
   const [eligibilityError, setEligibilityError] = useState<string | null>(null);
 
-  // Load business data
+  // Load business data (excluding hours - those are loaded separately via API)
   useEffect(() => {
     if (business) {
-      setBusinessData({
+      setBusinessData(prev => ({
+        ...prev, // Preserve existing hours from loadBusinessHours()
         id: business.id,
         business_name: business.business_name || "",
         business_type: business.business_type || "",
@@ -85,16 +86,8 @@ export function useBusinessSettings(business: any) {
         business_description: business.business_description || "",
         logo_url: business.logo_url || "",
         cover_image_url: business.cover_image_url || "",
-        business_hours: business.business_hours || {
-          monday: { open: "09:00", close: "17:00", closed: false },
-          tuesday: { open: "09:00", close: "17:00", closed: false },
-          wednesday: { open: "09:00", close: "17:00", closed: false },
-          thursday: { open: "09:00", close: "17:00", closed: false },
-          friday: { open: "09:00", close: "17:00", closed: false },
-          saturday: { open: "09:00", close: "17:00", closed: false },
-          sunday: { open: "09:00", close: "17:00", closed: true },
-        },
-      });
+        // Note: business_hours intentionally excluded to prevent stale data from prop
+      }));
     }
   }, [business]);
 
@@ -215,6 +208,9 @@ export function useBusinessSettings(business: any) {
         });
         return false;
       }
+
+      // Reload hours from database to ensure UI reflects saved state
+      await loadBusinessHours();
 
       toast({
         title: "Success",
@@ -347,7 +343,9 @@ export function useBusinessSettings(business: any) {
   // Cancel editing
   const cancelEditing = () => {
     if (business) {
-      setBusinessData({
+      // Reload data from business prop (excluding hours)
+      setBusinessData(prev => ({
+        ...prev, // Preserve current hours
         id: business.id,
         business_name: business.business_name || "",
         business_type: business.business_type || "",
@@ -357,8 +355,11 @@ export function useBusinessSettings(business: any) {
         business_description: business.business_description || "",
         logo_url: business.logo_url || "",
         cover_image_url: business.cover_image_url || "",
-        business_hours: business.business_hours || businessData.business_hours,
-      });
+        // business_hours intentionally preserved from current state
+      }));
+      
+      // Reload hours from API to get fresh data
+      loadBusinessHours();
     }
     setIsEditing(false);
   };

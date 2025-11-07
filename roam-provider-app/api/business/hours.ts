@@ -163,7 +163,7 @@ function transformDbToFrontend(dbHours: Record<string, any>): Record<string, any
 /**
  * Transform frontend format to database format
  * Frontend: { "monday": { "open": "09:00", "close": "17:00", "closed": false } }
- * DB: { "Monday": { "open": "09:00", "close": "17:00" } }
+ * DB: { "Monday": { "open": "09:00", "close": "17:00", "closed": false } }
  */
 function transformFrontendToDb(frontendHours: Record<string, any>): Record<string, any> {
   const dbHours: Record<string, any> = {};
@@ -172,13 +172,12 @@ function transformFrontendToDb(frontendHours: Record<string, any>): Record<strin
     // Capitalize first letter
     const capitalizedDay = day.charAt(0).toUpperCase() + day.slice(1);
     
-    // Only include days that are open (not closed)
-    if (!hours.closed) {
-      dbHours[capitalizedDay] = {
-        open: hours.open,
-        close: hours.close
-      };
-    }
+    // Save all days with their closed status
+    dbHours[capitalizedDay] = {
+      open: hours.open,
+      close: hours.close,
+      closed: hours.closed !== undefined ? hours.closed : false
+    };
   });
 
   return dbHours;
