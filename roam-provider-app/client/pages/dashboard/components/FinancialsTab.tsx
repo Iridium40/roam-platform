@@ -80,19 +80,12 @@ export default function FinancialsTab({
   const [stripePayouts, setStripePayouts] = useState<any[]>([]);
   const [stripeTransactions, setStripeTransactions] = useState<any[]>([]);
   const [stripeLoading, setStripeLoading] = useState(false);
-  const [payoutSchedule, setPayoutSchedule] = useState<any>(null);
 
   // Supabase financial data state
   const [financialTransactions, setFinancialTransactions] = useState<any[]>([]);
   const [paymentTransactions, setPaymentTransactions] = useState<any[]>([]);
   const [businessPaymentTransactions, setBusinessPaymentTransactions] = useState<any[]>([]);
   const [supabaseLoading, setSupabaseLoading] = useState(false);
-
-  // Payout request state
-  const [payoutDialogOpen, setPayoutDialogOpen] = useState(false);
-  const [payoutAmount, setPayoutAmount] = useState("");
-  const [payoutMethod, setPayoutMethod] = useState<"standard" | "instant">("standard");
-  const [requestingPayout, setRequestingPayout] = useState(false);
 
   const businessId = business?.id || providerData?.business_id;
 
@@ -240,85 +233,6 @@ export default function FinancialsTab({
     }
   };
 
-  // Load payout schedule
-  const loadPayoutSchedule = async () => {
-    try {
-      const res = await fetch(`/api/stripe/payout-schedule?business_id=${businessId}`);
-      if (res.ok) {
-        const data = await res.json();
-        setPayoutSchedule(data.schedule);
-      }
-    } catch (error) {
-      console.error('Error loading payout schedule:', error);
-    }
-  };
-
-  // Request payout
-  const requestPayout = async () => {
-    try {
-      setRequestingPayout(true);
-      const amount = parseFloat(payoutAmount);
-
-      if (isNaN(amount) || amount <= 0) {
-        toast({
-          title: "Invalid Amount",
-          description: "Please enter a valid amount",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      if (amount > stripeBalance?.available) {
-        toast({
-          title: "Insufficient Balance",
-          description: `You only have $${stripeBalance?.available?.toFixed(2)} available`,
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const res = await fetch('/api/stripe/payouts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          business_id: businessId,
-          amount,
-          method: payoutMethod,
-        }),
-      });
-
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || 'Failed to request payout');
-      }
-
-      const data = await res.json();
-      
-      toast({
-        title: "Payout Requested",
-        description: payoutMethod === 'instant' 
-          ? `$${amount.toFixed(2)} will arrive in ~30 minutes (fee: $${data.payout.fee.toFixed(2)})`
-          : `$${amount.toFixed(2)} will arrive in 2 business days`,
-      });
-
-      setPayoutDialogOpen(false);
-      setPayoutAmount("");
-      
-      // Reload data
-      await loadStripeBalance();
-      await loadStripePayouts();
-
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to request payout",
-        variant: "destructive",
-      });
-    } finally {
-      setRequestingPayout(false);
-    }
-  };
-
   // Open Stripe Express Dashboard
   const openStripeDashboard = async () => {
     try {
@@ -360,7 +274,6 @@ export default function FinancialsTab({
       loadStripeBalance(),
       loadStripePayouts(),
       loadStripeTransactions(),
-      loadPayoutSchedule(),
       loadSupabaseFinancialData(), // Also refresh Supabase data
     ]);
     setStripeLoading(false);
@@ -379,7 +292,6 @@ export default function FinancialsTab({
     loadStripeBalance();
     loadStripePayouts();
     loadStripeTransactions();
-    loadPayoutSchedule();
     loadSupabaseFinancialData(); // Load Supabase financial data
   }, [providerData, business]);
 
@@ -483,9 +395,6 @@ export default function FinancialsTab({
     );
   }
 
-  const instantPayoutFee = payoutAmount ? (parseFloat(payoutAmount) * 0.015).toFixed(2) : "0.00";
-  const instantPayoutNet = payoutAmount ? (parseFloat(payoutAmount) - parseFloat(instantPayoutFee)).toFixed(2) : "0.00";
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -506,7 +415,7 @@ export default function FinancialsTab({
           <Button 
             variant="outline" 
             onClick={openStripeDashboard}
-            disabled={stripeLoading || !stripeBalance}
+            disabled={stripeLoading}
           >
             <ExternalLink className="w-4 h-4 mr-2" />
             Open Stripe Dashboard
@@ -564,151 +473,6 @@ export default function FinancialsTab({
             <div className="w-14 h-14 bg-purple-100 rounded-lg flex items-center justify-center">
               <TrendingUp className="w-7 h-7 text-purple-600" />
             </div>
-          </div>
-        </Card>
-      </div>
-
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card className="p-6">
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <h3 className="text-lg font-semibold flex items-center gap-2">
-                <Zap className="w-5 h-5 text-yellow-600" />
-                Request Instant Payout
-              </h3>
-              <p className="text-sm text-gray-500 mt-1">Get funds in ~30 minutes (1.5% fee)</p>
-            </div>
-          </div>
-          <Dialog open={payoutDialogOpen} onOpenChange={setPayoutDialogOpen}>
-            <DialogTrigger asChild>
-              <Button 
-                className="w-full" 
-                disabled={!stripeBalance?.payoutsEnabled || (stripeBalance?.available || 0) <= 0}
-              >
-                <Zap className="w-4 h-4 mr-2" />
-                Request Payout
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Request Payout</DialogTitle>
-                <DialogDescription>
-                  Choose your payout method and amount. Available balance: ${stripeBalance?.available?.toFixed(2) || "0.00"}
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Payout Method</label>
-                  <Select value={payoutMethod} onValueChange={(v: any) => setPayoutMethod(v)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="standard">
-                        <div className="flex items-center gap-2">
-                          <Clock className="w-4 h-4" />
-                          <div>
-                            <div>Standard (Free)</div>
-                            <div className="text-xs text-gray-500">2 business days</div>
-                          </div>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="instant">
-                        <div className="flex items-center gap-2">
-                          <Zap className="w-4 h-4 text-yellow-600" />
-                          <div>
-                            <div>Instant (1.5% fee)</div>
-                            <div className="text-xs text-gray-500">~30 minutes</div>
-                          </div>
-                        </div>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Amount</label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    max={stripeBalance?.available || 0}
-                    value={payoutAmount}
-                    onChange={(e) => setPayoutAmount(e.target.value)}
-                    placeholder="0.00"
-                  />
-                  <Button
-                    variant="link"
-                    size="sm"
-                    className="p-0 h-auto mt-1"
-                    onClick={() => setPayoutAmount(stripeBalance?.available?.toString() || "0")}
-                  >
-                    Use full balance
-                  </Button>
-                </div>
-                {payoutMethod === 'instant' && payoutAmount && (
-                  <Alert>
-                    <AlertDescription>
-                      <div className="space-y-1">
-                        <div className="flex justify-between text-sm">
-                          <span>Payout amount:</span>
-                          <span className="font-medium">${parseFloat(payoutAmount).toFixed(2)}</span>
-                        </div>
-                        <div className="flex justify-between text-sm text-gray-600">
-                          <span>Instant fee (1.5%):</span>
-                          <span>-${instantPayoutFee}</span>
-                        </div>
-                        <div className="flex justify-between text-sm font-semibold border-t pt-1">
-                          <span>You'll receive:</span>
-                          <span>${instantPayoutNet}</span>
-                        </div>
-                      </div>
-                    </AlertDescription>
-                  </Alert>
-                )}
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setPayoutDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={requestPayout} disabled={requestingPayout || !payoutAmount}>
-                  {requestingPayout ? "Processing..." : "Request Payout"}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </Card>
-
-        <Card className="p-6">
-          <div className="mb-4">
-            <h3 className="text-lg font-semibold flex items-center gap-2">
-              <Settings className="w-5 h-5" />
-              Payout Schedule
-            </h3>
-            <p className="text-sm text-gray-500 mt-1">Automatic payout frequency</p>
-            </div>
-          <div className="space-y-2">
-            {payoutSchedule && (
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div className="text-sm">
-                  <div className="font-medium capitalize">{payoutSchedule.interval} Payouts</div>
-                  {payoutSchedule.weekly_anchor && (
-                    <div className="text-gray-500">Every {payoutSchedule.weekly_anchor}</div>
-                  )}
-                  {payoutSchedule.monthly_anchor && (
-                    <div className="text-gray-500">On day {payoutSchedule.monthly_anchor}</div>
-                  )}
-            </div>
-                <Badge variant="outline">Active</Badge>
-              </div>
-            )}
-            <Button 
-              variant="outline" 
-              className="w-full mt-2"
-              onClick={openStripeDashboard}
-            >
-              Manage Schedule
-            </Button>
           </div>
         </Card>
       </div>
@@ -1204,44 +968,6 @@ export default function FinancialsTab({
                     <ExternalLink className="w-4 h-4 mr-2" />
                     View in Dashboard
                   </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Helpful Resources */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <AlertCircle className="w-5 h-5" />
-                <span>Help & Resources</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="p-3 bg-blue-50 rounded-lg">
-                  <p className="text-sm font-medium text-blue-900">💡 How Payouts Work</p>
-                  <p className="text-xs text-blue-700 mt-1">
-                    • Standard payouts are free and arrive in 2 business days<br />
-                    • Instant payouts arrive in ~30 minutes for a 1.5% fee<br />
-                    • Automatic payouts follow your schedule (daily/weekly/monthly)
-                  </p>
-                </div>
-                <div className="p-3 bg-green-50 rounded-lg">
-                  <p className="text-sm font-medium text-green-900">💳 Transaction Fees</p>
-                  <p className="text-xs text-green-700 mt-1">
-                    • Platform fee: 12% per booking<br />
-                    • Stripe processing: 2.9% + $0.30 per transaction<br />
-                    • No monthly fees or hidden charges
-                  </p>
-                </div>
-                <div className="p-3 bg-purple-50 rounded-lg">
-                  <p className="text-sm font-medium text-purple-900">📊 Tax Reporting</p>
-                  <p className="text-xs text-purple-700 mt-1">
-                    • 1099-K forms generated automatically for earnings $600+<br />
-                    • Forms available by January 31st each year<br />
-                    • Automatically filed with the IRS by Stripe
-                  </p>
                 </div>
               </div>
             </CardContent>
