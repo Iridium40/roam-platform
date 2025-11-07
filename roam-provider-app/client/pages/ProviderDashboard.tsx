@@ -628,6 +628,8 @@ export default function ProviderDashboard() {
         console.log('🔍 User ID from provider:', userId);
         
         // ✅ Optimized: Single query with nested relations (admin app pattern)
+        // Note: We don't filter by is_active here to allow approved providers to access
+        // the dashboard to complete Phase 2 onboarding (which sets is_active to true)
         const { data: providerData, error: providerError } = await supabase
           .from('providers')
           .select(`
@@ -647,7 +649,6 @@ export default function ProviderDashboard() {
             )
           `)
           .eq('user_id', userId)
-          .eq('is_active', true)
           .maybeSingle();
 
         console.log('🔍 Provider query result:', { providerData, providerError });
