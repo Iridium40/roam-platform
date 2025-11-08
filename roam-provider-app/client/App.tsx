@@ -329,6 +329,26 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/owner/settings"
+              element={
+                <ProtectedRoute
+                  allowedRoles={["owner", "dispatcher", "provider"]}
+                >
+                  <ProviderDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dispatcher/settings"
+              element={
+                <ProtectedRoute
+                  allowedRoles={["owner", "dispatcher", "provider"]}
+                >
+                  <ProviderDashboard />
+                </ProtectedRoute>
+              }
+            />
 
             {/* Legacy route redirects */}
             <Route
