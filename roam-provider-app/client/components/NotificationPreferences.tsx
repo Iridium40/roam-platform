@@ -4,6 +4,8 @@ import { useProviderAuth } from '@/contexts/auth/ProviderAuthContext';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 
 export function NotificationPreferences() {
@@ -130,6 +132,48 @@ export function NotificationPreferences() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          {/* Notification Contact Information */}
+          <div className="space-y-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <h3 className="text-lg font-medium text-blue-900">Notification Contact Information</h3>
+            <p className="text-sm text-blue-700">
+              Specify where you want to receive notifications. If left empty, we'll use your profile information.
+            </p>
+            
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="notification_email">Notification Email</Label>
+                <Input
+                  id="notification_email"
+                  type="email"
+                  placeholder="your-email@example.com"
+                  value={settings?.notification_email || ''}
+                  onChange={(e) =>
+                    setSettings({ ...settings, notification_email: e.target.value })
+                  }
+                />
+                <p className="text-xs text-gray-500">
+                  Leave empty to use your profile email
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="notification_phone">Notification Phone Number</Label>
+                <Input
+                  id="notification_phone"
+                  type="tel"
+                  placeholder="+1 (555) 123-4567"
+                  value={settings?.notification_phone || ''}
+                  onChange={(e) =>
+                    setSettings({ ...settings, notification_phone: e.target.value })
+                  }
+                />
+                <p className="text-xs text-gray-500">
+                  Leave empty to use your profile phone number
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* Master Switches */}
           <div className="space-y-4">
             <h3 className="text-lg font-medium">Notification Channels</h3>

@@ -45,7 +45,7 @@ export class NotificationService {
 
       const user = authUser.user;
 
-      // 2. Get user settings (includes notification preferences)
+      // 2. Get user settings (includes notification preferences and contact info)
       const { data: settings, error: settingsError } = await supabase
         .from('user_settings')
         .select('*')
@@ -56,7 +56,48 @@ export class NotificationService {
         console.error('Settings error, using defaults:', settingsError);
       }
 
-      // 3. Get notification template
+      // 3. Determine notification email and phone
+      // Priority: user_settings.notification_email/phone -> profile email/phone -> auth.users email/phone
+      let notificationEmail = settings?.notification_email?.trim() || null;
+      let notificationPhone = settings?.notification_phone?.trim() || null;
+
+      // Fallback to profile data if not set in user_settings
+      if (!notificationEmail || !notificationPhone) {
+        // Try to get from customer_profiles or providers table
+        const { data: customerProfile } = await supabase
+          .from('customer_profiles')
+          .select('email, phone')
+          .eq('user_id', data.userId)
+          .maybeSingle();
+
+        if (customerProfile) {
+          notificationEmail = notificationEmail || customerProfile.email;
+          notificationPhone = notificationPhone || customerProfile.phone;
+        } else {
+          // Try providers table
+          const { data: providerProfile } = await supabase
+            .from('providers')
+            .select('email, phone')
+            .eq('user_id', data.userId)
+            .maybeSingle();
+
+          if (providerProfile) {
+            notificationEmail = notificationEmail || providerProfile.email;
+            notificationPhone = notificationPhone || providerProfile.phone;
+          }
+        }
+      }
+
+      // Final fallback to auth.users
+      notificationEmail = notificationEmail || user.email;
+      notificationPhone = notificationPhone || user.phone;
+
+      console.log(`📧 Notification contact for user ${data.userId}:`, {
+        email: notificationEmail ? '✓' : '✗',
+        phone: notificationPhone ? '✓' : '✗'
+      });
+
+      // 4. Get notification template
       const { data: template, error: templateError } = await supabase
         .from('notification_templates')
         .select('*')
@@ -68,25 +109,25 @@ export class NotificationService {
         throw new Error(`Template not found: ${data.notificationType}`);
       }
 
-      // 4. Check quiet hours
+      // 5. Check quiet hours
       if (settings?.quiet_hours_enabled && this.isQuietHours(settings)) {
         console.log('⏰ Skipping notification - quiet hours active');
         return;
       }
 
-      // 5. Determine channels based on user preferences
+      // 6. Determine channels based on user preferences
       const channels = this.getChannelsForNotification(
         data.notificationType,
         settings
       );
 
-      // 6. Send via enabled channels
+      // 7. Send via enabled channels using notification contact info
       const promises: Promise<void>[] = [];
 
-      if (channels.email && user.email) {
+      if (channels.email && notificationEmail) {
         promises.push(
           this.sendEmailNotification(
-            user.email,
+            notificationEmail,
             template,
             data.templateVariables,
             data.userId,
@@ -96,10 +137,10 @@ export class NotificationService {
         );
       }
 
-      if (channels.sms && user.phone) {
+      if (channels.sms && notificationPhone) {
         promises.push(
           this.sendSMSNotification(
-            user.phone,
+            notificationPhone,
             template,
             data.templateVariables,
             data.userId,
