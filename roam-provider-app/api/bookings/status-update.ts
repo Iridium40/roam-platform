@@ -1,6 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
-import { notificationService } from '../../lib/notifications/notification-service';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS headers
@@ -138,10 +137,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       console.log('✅ Status history created');
     }
 
-    // Send notifications based on status change
+    // Send notifications based on status change (non-blocking)
     if (notifyCustomer || notifyProvider) {
-      console.log('📧 Sending notifications for status:', newStatus);
-      await sendStatusNotifications(booking, newStatus, { notifyCustomer, notifyProvider });
+      console.log('📧 Queuing notifications for status:', newStatus);
+      // Queue notifications asynchronously - don't await or block the response
+      sendStatusNotifications(booking, newStatus, { notifyCustomer, notifyProvider })
+        .catch(error => {
+          console.error('⚠️ Notification error (non-fatal):', error);
+        });
     }
 
     console.log('🎉 Status update completed successfully');
@@ -165,7 +168,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 }
 
 /**
- * Send appropriate notifications based on booking status change
+ * Queue notifications based on booking status change
+ * This is a lightweight approach that just queues notifications without external dependencies
  */
 async function sendStatusNotifications(
   booking: any,
@@ -175,115 +179,113 @@ async function sendStatusNotifications(
   try {
     const customer = booking.customer_profiles;
     const provider = booking.providers;
-    const business = booking.business_profiles;
 
-    if (!customer || !provider) {
-      console.warn('⚠️ Missing customer or provider data, skipping notifications');
+    if (!customer && !provider) {
+      console.warn('⚠️ Missing customer and provider data, skipping notifications');
       return;
     }
 
+    // Create a Supabase client for this function
+    const supabaseUrl = process.env.VITE_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.warn('⚠️ Missing Supabase credentials, skipping notifications');
+      return;
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
     // Format booking data for templates
-    const bookingDate = new Date(booking.booking_date).toLocaleDateString('en-US', {
+    const bookingDate = booking.booking_date ? new Date(booking.booking_date).toLocaleDateString('en-US', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
       day: 'numeric',
-    });
-    const bookingTime = new Date(`2000-01-01T${booking.booking_time}`).toLocaleTimeString('en-US', {
+    }) : 'Date TBD';
+    
+    const bookingTime = booking.booking_time ? new Date(`2000-01-01T${booking.booking_time}`).toLocaleTimeString('en-US', {
       hour: 'numeric',
       minute: '2-digit',
       hour12: true,
-    });
+    }) : 'Time TBD';
 
-    // Notify customer when booking is accepted
-    if (newStatus === 'accepted' && options.notifyCustomer && customer.user_id) {
-      console.log('📧 Sending acceptance notification to customer');
-      await notificationService.send({
-        userId: customer.user_id,
-        notificationType: 'customer_booking_accepted',
-        templateVariables: {
-          customer_name: customer.first_name,
-          service_name: booking.service_name || 'Service',
-          provider_name: `${provider.first_name} ${provider.last_name}`,
-          booking_date: bookingDate,
-          booking_time: bookingTime,
-          booking_location: booking.service_location || 'Location TBD',
-          total_amount: booking.total_amount?.toFixed(2) || '0.00',
-          booking_id: booking.id,
-        },
-        metadata: {
-          booking_id: booking.id,
-          event_type: 'booking_accepted',
-        },
-      });
+    // Determine notification type based on status
+    let notificationType: string | null = null;
+    let userId: string | null = null;
+    let templateVariables: Record<string, any> = {};
+
+    // Notify customer when booking is confirmed/accepted
+    if ((newStatus === 'confirmed' || newStatus === 'accepted') && options.notifyCustomer && customer?.user_id) {
+      notificationType = 'customer_booking_accepted';
+      userId = customer.user_id;
+      templateVariables = {
+        customer_name: customer.first_name || 'Customer',
+        service_name: booking.service_name || 'Service',
+        provider_name: provider ? `${provider.first_name} ${provider.last_name}` : 'Provider',
+        booking_date: bookingDate,
+        booking_time: bookingTime,
+        booking_location: booking.service_location || 'Location TBD',
+        total_amount: booking.total_amount?.toFixed(2) || '0.00',
+        booking_id: booking.id,
+      };
     }
-
     // Notify customer when booking is completed
-    if (newStatus === 'completed' && options.notifyCustomer && customer.user_id) {
-      console.log('📧 Sending completion notification to customer');
-      await notificationService.send({
-        userId: customer.user_id,
-        notificationType: 'customer_booking_completed',
-        templateVariables: {
-          customer_name: customer.first_name,
-          service_name: booking.service_name || 'Service',
-          provider_name: `${provider.first_name} ${provider.last_name}`,
-          provider_id: provider.id,
-          booking_id: booking.id,
-        },
-        metadata: {
-          booking_id: booking.id,
-          event_type: 'booking_completed',
-        },
-      });
+    else if (newStatus === 'completed' && options.notifyCustomer && customer?.user_id) {
+      notificationType = 'customer_booking_completed';
+      userId = customer.user_id;
+      templateVariables = {
+        customer_name: customer.first_name || 'Customer',
+        service_name: booking.service_name || 'Service',
+        provider_name: provider ? `${provider.first_name} ${provider.last_name}` : 'Provider',
+        provider_id: provider?.id || '',
+        booking_id: booking.id,
+      };
     }
-
     // Notify provider when booking is cancelled
-    if (newStatus === 'cancelled' && options.notifyProvider && provider.user_id) {
-      console.log('📧 Sending cancellation notification to provider');
-      await notificationService.send({
-        userId: provider.user_id,
-        notificationType: 'provider_booking_cancelled',
-        templateVariables: {
-          provider_name: provider.first_name,
-          customer_name: `${customer.first_name} ${customer.last_name}`,
-          service_name: booking.service_name || 'Service',
-          booking_date: bookingDate,
-          booking_time: bookingTime,
-          cancellation_reason: booking.cancellation_reason || 'No reason provided',
-        },
-        metadata: {
-          booking_id: booking.id,
-          event_type: 'booking_cancelled',
-        },
-      });
+    else if (newStatus === 'cancelled' && options.notifyProvider && provider?.user_id) {
+      notificationType = 'provider_booking_cancelled';
+      userId = provider.user_id;
+      templateVariables = {
+        provider_name: provider.first_name || 'Provider',
+        customer_name: customer ? `${customer.first_name} ${customer.last_name}` : 'Customer',
+        service_name: booking.service_name || 'Service',
+        booking_date: bookingDate,
+        booking_time: bookingTime,
+        cancellation_reason: booking.cancellation_reason || 'No reason provided',
+      };
     }
 
-    console.log('✅ Notifications sent successfully');
+    // Queue notification if we have a valid type and user
+    if (notificationType && userId) {
+      console.log(`📧 Queuing ${notificationType} notification for user ${userId}`);
+      
+      // Insert into notification queue table (or directly into notification_logs if no queue exists)
+      const { error: queueError } = await supabase
+        .from('notification_logs')
+        .insert({
+          user_id: userId,
+          notification_type: notificationType,
+          channel: 'email', // Default to email
+          status: 'pending',
+          body: JSON.stringify(templateVariables),
+          metadata: {
+            booking_id: booking.id,
+            event_type: `booking_${newStatus}`,
+            auto_queued: true,
+          },
+        });
+
+      if (queueError) {
+        console.error('⚠️ Failed to queue notification:', queueError);
+      } else {
+        console.log('✅ Notification queued successfully');
+      }
+    } else {
+      console.log('ℹ️ No notification needed for status:', newStatus);
+    }
   } catch (error) {
     // Don't fail the request if notifications fail - log and continue
     console.error('⚠️ Notification error (non-fatal):', error);
   }
 }
-
-// Webhook endpoint for external status updates - removed for Vercel compatibility
-// export async function PUT(request: NextRequest) {
-//   try {
-//     const body = await request.json();
-//     const { bookingId, status, source } = body;
-
-//     // Validate webhook signature if needed
-//     // const signature = request.headers.get('x-webhook-signature');
-//     // if (!verifyWebhookSignature(signature, body)) {
-//     //   return new Response('Invalid signature', { status: 401 });
-//     // }
-
-//     // Process external status update
-//     const response = await POST(request);
-//     return response;
-
-//   } catch (error) {
-//     console.error('Webhook error:', error);
-//     return new Response('Webhook processing failed', { status: 500 });
-//   }
-// }

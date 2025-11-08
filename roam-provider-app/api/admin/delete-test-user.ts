@@ -48,10 +48,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const userId = user.id;
     console.log(`Found user ID: ${userId}`);
 
+    // Get business_id from provider profile
+    const { data: provider } = await supabase
+      .from("providers")
+      .select("business_id")
+      .eq("user_id", userId)
+      .single();
+
+    const businessId = provider?.business_id;
+
     // Delete from related tables first (to avoid foreign key constraints)
     const deleteOperations = [
-      // Delete provider documents
-      supabase.from("business_documents").delete().eq("business_id", businessId),
+      // Delete provider documents (only if businessId exists)
+      ...(businessId ? [supabase.from("business_documents").delete().eq("business_id", businessId)] : []),
 
       // Delete provider applications
       supabase.from("provider_applications").delete().eq("user_id", userId),

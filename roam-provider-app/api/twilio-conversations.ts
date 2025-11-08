@@ -22,7 +22,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.log('Twilio Conversations API called with action:', req.body?.action);
     console.log('Request body:', JSON.stringify(req.body, null, 2));
     
-    const { action, ...data } = req.body as TwilioAction;
+    const body = req.body as TwilioAction;
 
     const accountSid = process.env.VITE_TWILIO_ACCOUNT_SID;
     const authToken = process.env.VITE_TWILIO_AUTH_TOKEN;
@@ -59,119 +59,123 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     let result;
 
-    switch (action) {
+    switch (body.action) {
       case 'create_conversation':
-        result = await conversationService.createConversation(data);
+        result = await conversationService.createConversation({
+          friendlyName: body.friendlyName,
+          uniqueName: body.uniqueName,
+          attributes: body.attributes
+        });
         break;
 
       case 'get_conversation':
-        result = await conversationService.getConversation(data.conversationSid);
+        result = await conversationService.getConversation(body.conversationSid);
         break;
 
       case 'list_conversations':
-        result = await conversationService.listConversations(data.limit);
+        result = await conversationService.listConversations(body.limit);
         break;
 
       case 'update_conversation':
-        result = await conversationService.updateConversation(data.conversationSid, data.updates);
+        result = await conversationService.updateConversation(body.conversationSid, body.updates);
         break;
 
       case 'delete_conversation':
-        result = await conversationService.deleteConversation(data.conversationSid);
+        result = await conversationService.deleteConversation(body.conversationSid);
         break;
 
       case 'close_conversation':
-        result = await conversationService.closeConversation(data.conversationSid);
+        result = await conversationService.closeConversation(body.conversationSid);
         break;
 
       case 'get_conversation_stats':
-        result = await conversationService.getConversationStats(data.conversationSid);
+        result = await conversationService.getConversationStats(body.conversationSid);
         break;
 
       case 'search_conversations':
-        result = await conversationService.searchConversations(data.query);
+        result = await conversationService.searchConversations(body.query);
         break;
 
       case 'add_participant':
-        result = await participantService.addParticipant(data.conversationSid, data.participantData);
+        result = await participantService.addParticipant(body.conversationSid, body.participantData);
         break;
 
       case 'remove_participant':
-        result = await participantService.removeParticipant(data.conversationSid, data.participantSid);
+        result = await participantService.removeParticipant(body.conversationSid, body.participantSid);
         break;
 
       case 'get_participant':
-        result = await participantService.getParticipant(data.conversationSid, data.participantSid);
+        result = await participantService.getParticipant(body.conversationSid, body.participantSid);
         break;
 
       case 'list_participants':
-        result = await participantService.listParticipants(data.conversationSid);
+        result = await participantService.listParticipants(body.conversationSid);
         break;
 
       case 'update_participant':
-        result = await participantService.updateParticipant(data.conversationSid, data.participantSid, data.updates);
+        result = await participantService.updateParticipant(body.conversationSid, body.participantSid, body.updates);
         break;
 
       case 'get_participant_by_identity':
-        result = await participantService.getParticipantByIdentity(data.conversationSid, data.identity);
+        result = await participantService.getParticipantByIdentity(body.conversationSid, body.identity);
         break;
 
       case 'participant_exists':
-        result = await participantService.participantExists(data.conversationSid, data.identity);
+        result = await participantService.participantExists(body.conversationSid, body.identity);
         break;
 
       case 'get_participant_count':
-        result = await participantService.getParticipantCount(data.conversationSid);
+        result = await participantService.getParticipantCount(body.conversationSid);
         break;
 
       case 'get_participants_by_role':
-        result = await participantService.getParticipantsByRole(data.conversationSid, data.role);
+        result = await participantService.getParticipantsByRole(body.conversationSid, body.role);
         break;
 
       case 'send_message':
-        result = await messageService.sendMessage(data.conversationSid, data.messageData, data.author);
+        result = await messageService.sendMessage(body.conversationSid, body.messageData, body.author);
         break;
 
       case 'get_message':
-        result = await messageService.getMessage(data.conversationSid, data.messageSid);
+        result = await messageService.getMessage(body.conversationSid, body.messageSid);
         break;
 
       case 'list_messages':
-        result = await messageService.listMessages(data.conversationSid, data.limit);
+        result = await messageService.listMessages(body.conversationSid, body.limit);
         break;
 
       case 'update_message':
-        result = await messageService.updateMessage(data.conversationSid, data.messageSid, data.updates);
+        result = await messageService.updateMessage(body.conversationSid, body.messageSid, body.updates);
         break;
 
       case 'delete_message':
-        result = await messageService.deleteMessage(data.conversationSid, data.messageSid);
+        result = await messageService.deleteMessage(body.conversationSid, body.messageSid);
         break;
 
       case 'get_message_delivery_status':
-        result = await messageService.getMessageDeliveryStatus(data.conversationSid, data.messageSid);
+        result = await messageService.getMessageDeliveryStatus(body.conversationSid, body.messageSid);
         break;
 
       case 'get_messages_by_author':
-        result = await messageService.getMessagesByAuthor(data.conversationSid, data.author, data.limit);
+        result = await messageService.getMessagesByAuthor(body.conversationSid, body.author, body.limit);
         break;
 
       case 'search_messages':
-        result = await messageService.searchMessages(data.conversationSid, data.query, data.limit);
+        result = await messageService.searchMessages(body.conversationSid, body.query, body.limit);
         break;
 
       case 'get_message_count':
-        result = await messageService.getMessageCount(data.conversationSid);
+        result = await messageService.getMessageCount(body.conversationSid);
         break;
 
       case 'get_recent_messages':
-        result = await messageService.getRecentMessages(data.conversationSid, data.hours);
+        result = await messageService.getRecentMessages(body.conversationSid, body.hours);
         break;
 
       default:
         return res.status(400).json({ 
           error: 'Invalid action', 
-          message: `Unknown action: ${action}` 
+          message: `Unknown action: ${(body as any).action}` 
         });
     }
 

@@ -4,11 +4,15 @@ export interface TwilioConfig {
   conversationsServiceSid: string;
 }
 
-export interface ConversationData {
-  conversationSid: string;
+// Separate interfaces for create vs update operations
+export interface CreateConversationData {
   friendlyName?: string;
   uniqueName?: string;
   attributes?: Record<string, any>;
+}
+
+export interface ConversationData extends CreateConversationData {
+  conversationSid: string;
 }
 
 export interface ParticipantData {
@@ -31,20 +35,35 @@ export interface WebhookData {
   timestamp: string;
 }
 
-export interface TwilioAction {
-  action: 
-    | 'create_conversation'
-    | 'add_participant'
-    | 'remove_participant'
-    | 'send_message'
-    | 'get_conversation'
-    | 'list_conversations'
-    | 'list_participants'
-    | 'list_messages'
-    | 'update_conversation'
-    | 'delete_conversation';
-  data?: any;
-}
+// Discriminated union for all Twilio actions
+export type TwilioAction = 
+  | { action: 'create_conversation'; friendlyName?: string; uniqueName?: string; attributes?: Record<string, any> }
+  | { action: 'get_conversation'; conversationSid: string }
+  | { action: 'list_conversations'; limit?: number }
+  | { action: 'update_conversation'; conversationSid: string; updates: Partial<CreateConversationData> }
+  | { action: 'delete_conversation'; conversationSid: string }
+  | { action: 'close_conversation'; conversationSid: string }
+  | { action: 'get_conversation_stats'; conversationSid: string }
+  | { action: 'search_conversations'; query: string }
+  | { action: 'add_participant'; conversationSid: string; participantData: ParticipantData }
+  | { action: 'remove_participant'; conversationSid: string; participantSid: string }
+  | { action: 'get_participant'; conversationSid: string; participantSid: string }
+  | { action: 'list_participants'; conversationSid: string }
+  | { action: 'update_participant'; conversationSid: string; participantSid: string; updates: Partial<ParticipantData> }
+  | { action: 'get_participant_by_identity'; conversationSid: string; identity: string }
+  | { action: 'participant_exists'; conversationSid: string; identity: string }
+  | { action: 'get_participant_count'; conversationSid: string }
+  | { action: 'get_participants_by_role'; conversationSid: string; role: ParticipantRole }
+  | { action: 'send_message'; conversationSid: string; messageData: MessageData; author: string }
+  | { action: 'get_message'; conversationSid: string; messageSid: string }
+  | { action: 'list_messages'; conversationSid: string; limit?: number }
+  | { action: 'update_message'; conversationSid: string; messageSid: string; updates: Partial<MessageData> }
+  | { action: 'delete_message'; conversationSid: string; messageSid: string }
+  | { action: 'get_message_delivery_status'; conversationSid: string; messageSid: string }
+  | { action: 'get_messages_by_author'; conversationSid: string; author: string; limit?: number }
+  | { action: 'search_messages'; conversationSid: string; query: string; limit?: number }
+  | { action: 'get_message_count'; conversationSid: string }
+  | { action: 'get_recent_messages'; conversationSid: string; hours?: number };
 
 export interface TwilioResponse {
   success: boolean;

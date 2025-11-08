@@ -4,7 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 
 // Initialize Stripe with latest API version
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2024-12-18.acacia",
+  apiVersion: "2024-12-18.acacia" as any,
 });
 
 // Initialize Supabase client
@@ -127,8 +127,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
+    // Extract connected account data (TypeScript workaround for Supabase join types)
+    const connectedAccount = productData.stripe_connect_accounts as any;
+    const businessProfile = productData.business_profiles as any;
+
     // Verify connected account is ready
-    if (!productData.stripe_connect_accounts.charges_enabled) {
+    if (!connectedAccount.charges_enabled) {
       return res.status(400).json({ 
         error: "Connected account not ready",
         details: "Business account is not ready to accept payments"
@@ -151,12 +155,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       unitAmount,
       totalAmount,
       applicationFeeAmount,
-      connectedAccountId: productData.stripe_connect_accounts.stripe_account_id,
+      connectedAccountId: connectedAccount.stripe_account_id,
     });
 
     // Create Stripe Checkout Session with destination charge
     const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
       line_items: [
         {
           price_data: {
@@ -166,7 +169,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               description: product.description || undefined,
               metadata: {
                 business_id: productData.business_id,
-                connected_account_id: productData.stripe_connect_accounts.stripe_account_id,
+                connected_account_id: connectedAccount.stripe_account_id,
               },
             },
             unit_amount: unitAmount,
@@ -182,8 +185,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       metadata: {
         product_id: productId,
         business_id: productData.business_id,
-        connected_account_id: productData.stripe_connect_accounts.stripe_account_id,
-        business_name: productData.business_profiles.business_name,
+        connected_account_id: connectedAccount.stripe_account_id,
+        business_name: businessProfile.business_name,
         quantity: quantity.toString(),
         platform_fee: (applicationFeeAmount / 100).toString(),
       },
@@ -191,12 +194,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       payment_intent_data: {
         application_fee_amount: applicationFeeAmount,
         transfer_data: {
-          destination: productData.stripe_connect_accounts.stripe_account_id,
+          destination: connectedAccount.stripe_account_id,
         },
         metadata: {
           product_id: productId,
           business_id: productData.business_id,
-          connected_account_id: productData.stripe_connect_accounts.stripe_account_id,
+          connected_account_id: connectedAccount.stripe_account_id,
           platform_fee: (applicationFeeAmount / 100).toString(),
         },
       },

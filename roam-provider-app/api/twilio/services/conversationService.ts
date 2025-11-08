@@ -1,7 +1,7 @@
 import twilio from "twilio";
 import type { 
   TwilioConfig, 
-  ConversationData, 
+  CreateConversationData, 
   TwilioResponse, 
   ConversationDetails,
   ConversationState 
@@ -23,7 +23,7 @@ export class ConversationService {
   /**
    * Create a new conversation
    */
-  async createConversation(data: ConversationData): Promise<TwilioResponse> {
+  async createConversation(data: CreateConversationData): Promise<TwilioResponse> {
     try {
       console.log('Creating conversation with data:', data);
 
@@ -123,7 +123,7 @@ export class ConversationService {
    */
   async updateConversation(
     conversationSid: string, 
-    updates: Partial<ConversationData>
+    updates: Partial<CreateConversationData>
   ): Promise<TwilioResponse> {
     try {
       console.log('Updating conversation:', conversationSid, 'with updates:', updates);
