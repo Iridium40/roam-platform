@@ -24,7 +24,7 @@ export default function CustomerSettings() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Notification Settings</h1>
           <p className="text-muted-foreground">
-            Manage how you want to be notified about bookings and updates
+            Choose how you want to receive updates about your bookings
           </p>
         </div>
 
