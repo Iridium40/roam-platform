@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   User,
-  Settings,
+  Bell,
   CreditCard,
   Heart,
   MapPin,
@@ -113,8 +113,8 @@ export const CustomerAvatarDropdown: React.FC = () => {
             to="/customer/settings"
             className="w-full flex items-center cursor-pointer"
           >
-            <Settings className="mr-2 h-4 w-4" />
-            <span>Settings</span>
+            <Bell className="mr-2 h-4 w-4" />
+            <span>Notification Settings</span>
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
