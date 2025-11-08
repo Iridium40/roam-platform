@@ -21,7 +21,6 @@ import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { ImageStorageService } from "@/utils/image/imageStorage";
 import type { ImageType } from "@/utils/image/imageTypes";
-import { NotificationPreferences } from "@/components/NotificationPreferences";
 
 interface ProfileTabProps {
   providerData: any;
@@ -349,16 +348,12 @@ export default function ProfileTab({
         <p className="text-sm text-gray-600">Manage your profile information and preferences</p>
       </div>
 
-      {/* Tabs for Profile and Settings */}
+      {/* Profile Content */}
       <Tabs defaultValue="profile" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-1">
           <TabsTrigger value="profile" className="flex items-center space-x-2">
             <User className="w-4 h-4" />
             <span>Profile</span>
-          </TabsTrigger>
-          <TabsTrigger value="settings" className="flex items-center space-x-2">
-            <Settings className="w-4 h-4" />
-            <span>Settings</span>
           </TabsTrigger>
         </TabsList>
 
@@ -571,10 +566,6 @@ export default function ProfileTab({
         </CardContent>
       </Card>
           </div>
-        </TabsContent>
-
-        <TabsContent value="settings" className="mt-6">
-          <NotificationPreferences />
         </TabsContent>
       </Tabs>
     </div>

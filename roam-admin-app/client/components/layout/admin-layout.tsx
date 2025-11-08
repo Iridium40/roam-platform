@@ -521,8 +521,8 @@ export function AdminLayout({
                   className="cursor-pointer"
                   onClick={handleSettingsClick}
                 >
-                  <Settings className="mr-2 h-4 w-4" />
-                  <span>Settings</span>
+                  <Bell className="mr-2 h-4 w-4" />
+                  <span>Notification Settings</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem

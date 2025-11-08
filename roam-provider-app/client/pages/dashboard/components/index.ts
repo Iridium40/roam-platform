@@ -6,4 +6,5 @@ export { default as StaffTab } from './StaffTab';
 export { default as FinancialsTab } from './FinancialsTab';
 export { default as ProfileTab } from './ProfileTab';
 export { BusinessSettingsTab } from './BusinessSettingsTabRefactored';
+export { default as SettingsTab } from './SettingsTab';
 

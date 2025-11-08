@@ -118,6 +118,7 @@ import {
   FinancialsTab,
   ProfileTab,
   BusinessSettingsTab,
+  SettingsTab,
 } from "./dashboard/components";
 
 // Extended Provider type with nested relations for dashboard optimization
@@ -186,15 +187,15 @@ export default function ProviderDashboard() {
     if (isOwner) return true; // Owners have full access
     
     if (isDispatcher) {
-      // Dispatchers can access: Dashboard, Bookings, Messages, Staff (read-only), Services (read-only), Profile (own profile settings)
+      // Dispatchers can access: Dashboard, Bookings, Messages, Staff (read-only), Services (read-only), Profile (own profile settings), Settings
       // NO access to: Financials, Business Settings
-      return ['dashboard', 'bookings', 'messages', 'staff', 'services', 'profile'].includes(feature);
+      return ['dashboard', 'bookings', 'messages', 'staff', 'services', 'profile', 'settings'].includes(feature);
     }
     
     if (isProvider) {
-      // Providers can access: Dashboard, My Bookings, Messages, My Profile, My Services (read-only)
+      // Providers can access: Dashboard, My Bookings, Messages, My Profile, My Services (read-only), Settings
       // NO access to: Staff, Financials, Business Settings
-      return ['dashboard', 'bookings', 'messages', 'profile', 'services'].includes(feature);
+      return ['dashboard', 'bookings', 'messages', 'profile', 'services', 'settings'].includes(feature);
     }
     
     return false;
@@ -223,6 +224,8 @@ export default function ProviderDashboard() {
         return 'profile';
       case 'business-settings':
         return 'business-settings';
+      case 'settings':
+        return 'settings';
       default:
         return 'dashboard';
     }
@@ -836,6 +839,12 @@ export default function ProviderDashboard() {
                     {isProvider || isDispatcher ? 'My Profile' : 'Profile'}
                   </DropdownMenuItem>
                 )}
+                {hasAccess('settings') && (
+                  <DropdownMenuItem onClick={() => navigateToTab("settings")}>
+                    <Bell className="w-4 h-4 mr-2" />
+                    Notification Settings
+                  </DropdownMenuItem>
+                )}
                 {hasAccess('business-settings') && (
                   <DropdownMenuItem onClick={() => navigateToTab("business-settings")}>
                     <Building className="w-4 h-4 mr-2" />
@@ -927,6 +936,13 @@ export default function ProviderDashboard() {
           <BusinessSettingsTab
             providerData={providerData}
             business={business}
+          />
+        )}
+
+        {/* Settings Tab (Notification Settings) */}
+        {activeTab === "settings" && (
+          <SettingsTab
+            providerData={providerData}
           />
         )}
 
