@@ -1,6 +1,12 @@
 {
   "buildCommand": "npm run build",
   "outputDirectory": "dist/spa",
+  "functions": {
+    "api/**/*.ts": {
+      "memory": 1024,
+      "maxDuration": 10
+    }
+  },
   "headers": [
     {
       "source": "/(.*)",
@@ -24,7 +30,7 @@
       ]
     },
     {
-      "source": "/api/notifications/edge",
+      "source": "/api/(.*)",
       "headers": [
         {
           "key": "Cache-Control",
@@ -36,11 +42,11 @@
         },
         {
           "key": "Access-Control-Allow-Methods",
-          "value": "GET, POST, PATCH, OPTIONS"
+          "value": "GET, POST, PUT, DELETE, PATCH, OPTIONS"
         },
         {
           "key": "Access-Control-Allow-Headers",
-          "value": "Content-Type, Cache-Control"
+          "value": "Content-Type, Authorization, Cache-Control"
         }
       ]
     }
