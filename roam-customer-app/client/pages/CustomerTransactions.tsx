@@ -127,6 +127,7 @@ export default function CustomerTransactions() {
   const getTransactionIcon = (type: string | null) => {
     switch (type?.toLowerCase()) {
       case 'payment':
+      case 'service_payment':
         return <ArrowUpRight className="w-4 h-4 text-red-500" />;
       case 'refund':
         return <ArrowDownRight className="w-4 h-4 text-green-500" />;
@@ -144,13 +145,37 @@ export default function CustomerTransactions() {
     }).format(amount);
   };
 
+  const formatTransactionType = (type: string | null) => {
+    switch (type?.toLowerCase()) {
+      case 'service_payment':
+        return 'Payment';
+      case 'payment':
+        return 'Payment';
+      case 'refund':
+        return 'Refund';
+      case 'tip':
+        return 'Tip';
+      default:
+        return type || 'Transaction';
+    }
+  };
+
   const filteredTransactions = transactions.filter((transaction) => {
     if (filter === 'all') return true;
-    return transaction.transaction_type?.toLowerCase() === filter;
+    const txType = transaction.transaction_type?.toLowerCase();
+    
+    // Map transaction types to filter categories
+    if (filter === 'payment') {
+      return txType === 'payment' || txType === 'service_payment';
+    }
+    return txType === filter;
   });
 
   const totalSpent = transactions
-    .filter(t => t.transaction_type?.toLowerCase() === 'payment' && t.status?.toLowerCase() === 'completed')
+    .filter(t => {
+      const txType = t.transaction_type?.toLowerCase();
+      return (txType === 'payment' || txType === 'service_payment') && t.status?.toLowerCase() === 'completed';
+    })
     .reduce((sum, t) => sum + Number(t.amount), 0);
 
   const totalRefunds = transactions
@@ -298,8 +323,8 @@ export default function CustomerTransactions() {
                                     {transaction.payment_method}
                                   </span>
                                 )}
-                                <span className="capitalize">
-                                  {transaction.transaction_type || 'Transaction'}
+                                <span>
+                                  {formatTransactionType(transaction.transaction_type)}
                                 </span>
                               </div>
                               {transaction.description && (

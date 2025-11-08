@@ -63,8 +63,10 @@ Added explicit serverless function configuration:
 
 ### Step 1: Get Your Webhook URL
 
-**Production:** `https://roamyourbestlife.com/api/webhooks/stripe`  
-**OR:** `https://roamyourbestlife.com/api/stripe/webhook`
+**Production Webhook URL:**  
+```
+https://roamyourbestlife.com/api/stripe/webhook
+```
 
 ### Step 2: Configure in Stripe Dashboard
 
