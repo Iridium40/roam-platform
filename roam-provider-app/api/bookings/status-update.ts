@@ -222,28 +222,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     console.log('✅ Booking updated successfully:', { bookingId, newStatus, timestamp: new Date().toISOString() });
 
-    // Create status update record
-    console.log('📝 Creating status history record...');
-    const { error: historyError } = await supabase
-      .from('booking_status_history')
-      .insert({
-        booking_id: bookingId,
-        status: newStatus,
-        changed_by: updatedBy,
-        reason: reason,
-        changed_at: new Date().toISOString()
-      });
-
-    if (historyError) {
-      console.error('⚠️ Error creating status history (non-fatal):', {
-        error: historyError,
-        message: historyError.message,
-        bookingId
-      });
-      // Don't fail the request if history insert fails
-    } else {
-      console.log('✅ Status history created');
-    }
+    // Note: Status history tracking removed - table doesn't exist in current schema
+    // The booking record itself maintains the current status
 
     // Send notifications based on status change (non-blocking)
     if (notifyCustomer || notifyProvider) {
