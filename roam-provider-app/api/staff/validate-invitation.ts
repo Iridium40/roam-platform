@@ -1,5 +1,6 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
 import jwt from 'jsonwebtoken';
 
 const supabase = createClient(
@@ -61,7 +62,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Check if user already has an account
     const { data: existingUsers } = await supabase.auth.admin.listUsers();
-    const userExists = existingUsers?.users?.some(user => user.email === decodedToken.email);
+    const users = (existingUsers?.users ?? []) as SupabaseUser[];
+    const normalizedEmail = decodedToken.email.toLowerCase();
+    const userExists = users.some((user) => (user.email || '').toLowerCase() === normalizedEmail);
 
     if (userExists) {
       return res.status(400).json({ 

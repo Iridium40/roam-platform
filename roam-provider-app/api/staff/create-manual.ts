@@ -1,5 +1,6 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
 import crypto from 'crypto';
 import { EmailService } from '../../server/services/emailService';
 
@@ -94,7 +95,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({ error: 'Failed to check existing users' });
     }
 
-    const userExists = existingUsers?.users?.find(user => user.email?.toLowerCase() === email.toLowerCase());
+    const users = (existingUsers?.users ?? []) as SupabaseUser[];
+    const normalizedEmail = email.toLowerCase();
+    const userExists = users.find((user) => (user.email || '').toLowerCase() === normalizedEmail);
 
     if (userExists) {
       // Check if they're already part of this business

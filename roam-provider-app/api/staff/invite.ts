@@ -1,5 +1,6 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { EmailService } from '../../server/services/emailService';
 import jwt from 'jsonwebtoken';
 
@@ -61,7 +62,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Check if user already exists with this email
     const { data: existingUser } = await supabase.auth.admin.listUsers();
-    const userExists = existingUser?.users?.some(user => user.email === email);
+    const users = (existingUser?.users ?? []) as SupabaseUser[];
+    const normalizedEmail = email.toLowerCase();
+    const userExists = users.some((user) => (user.email || '').toLowerCase() === normalizedEmail);
 
     if (userExists) {
       // Check if they're already part of this business
