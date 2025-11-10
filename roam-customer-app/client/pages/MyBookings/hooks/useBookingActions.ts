@@ -131,18 +131,25 @@ export const useBookingActions = (
       setIsRescheduling(true);
 
       // Prepare reschedule data with new schema fields
+      const originalBookingDate =
+        selectedBookingForReschedule.original_booking_date ||
+        selectedBookingForReschedule.booking_date;
+
+      const originalStartTime =
+        selectedBookingForReschedule.original_start_time ||
+        selectedBookingForReschedule.start_time ||
+        selectedBookingForReschedule.booking_time ||
+        newBookingTime;
+
       const rescheduleData = {
         booking_date: newBookingDate,
-        booking_time: newBookingTime,
+        start_time: newBookingTime,
         reschedule_reason: rescheduleReason.trim() || "Rescheduled by customer",
         rescheduled_at: new Date().toISOString(),
         rescheduled_by: currentUser.id,
-        // New reschedule tracking fields
-        original_booking_date: selectedBookingForReschedule.booking_date,
-        original_booking_time: selectedBookingForReschedule.booking_time,
-        // Store original booking details if this is the first reschedule
+        original_booking_date: originalBookingDate,
+        original_start_time: originalStartTime,
         reschedule_count: (selectedBookingForReschedule.reschedule_count || 0) + 1,
-        // Increment reschedule count
         last_reschedule_date: new Date().toISOString(),
       };
 
@@ -162,13 +169,14 @@ export const useBookingActions = (
             ? {
                 ...booking,
                 booking_date: newBookingDate,
+                start_time: newBookingTime,
                 booking_time: newBookingTime,
                 reschedule_reason: rescheduleReason.trim() || "Rescheduled by customer",
                 rescheduled_at: new Date().toISOString(),
                 rescheduled_by: currentUser.id,
                 // Update reschedule tracking fields in local state
-                original_booking_date: selectedBookingForReschedule.booking_date,
-                original_booking_time: selectedBookingForReschedule.booking_time,
+                original_booking_date: originalBookingDate,
+                original_start_time: originalStartTime,
                 reschedule_count: (selectedBookingForReschedule.reschedule_count || 0) + 1,
                 last_reschedule_date: new Date().toISOString(),
               }

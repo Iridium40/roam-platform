@@ -13,20 +13,24 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
 
-type StripeProductRecord = {
+type BusinessProfileRecord = {
+  business_name: string | null;
+  business_address: string | null;
+  business_city: string | null;
+  business_state: string | null;
+  business_zip: string | null;
+};
+
+type StripeConnectAccountRecord = {
+  account_id: string;
+  charges_enabled: boolean;
+  payouts_enabled: boolean;
+};
+
+type StripeProductRecordRaw = {
   business_id: string;
-  business_profiles: {
-    business_name: string | null;
-    business_address: string | null;
-    business_city: string | null;
-    business_state: string | null;
-    business_zip: string | null;
-  } | null;
-  stripe_connect_accounts: {
-    account_id: string;
-    charges_enabled: boolean;
-    payouts_enabled: boolean;
-  } | null;
+  business_profiles: BusinessProfileRecord[];
+  stripe_connect_accounts: StripeConnectAccountRecord[];
 };
 
 interface CreateCheckoutSessionRequest {
@@ -143,9 +147,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    const productData = productRecordRaw as StripeProductRecord;
-    const connectedAccount = productData.stripe_connect_accounts;
-    const businessProfile = productData.business_profiles;
+    const productData = productRecordRaw as StripeProductRecordRaw;
+    const businessProfile = productData.business_profiles?.[0] || null;
+    const connectedAccount = productData.stripe_connect_accounts?.[0] || null;
 
     if (!connectedAccount || !connectedAccount.account_id) {
       return res.status(400).json({

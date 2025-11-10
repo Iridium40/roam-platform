@@ -99,12 +99,12 @@ class BookingsAPI extends BaseAPI {
     bookingId: string,
     rescheduleData: {
       booking_date: string;
-      booking_time: string;
+      start_time: string;
       reschedule_reason: string;
       rescheduled_at: string;
       rescheduled_by: string;
       original_booking_date: string;
-      original_booking_time: string;
+      original_start_time: string;
       reschedule_count: number;
       last_reschedule_date: string;
     },
