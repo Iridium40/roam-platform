@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -6,10 +6,27 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
 };
 
-export async function GET(request: NextRequest) {
+function applyCors(res: VercelResponse) {
+  Object.entries(corsHeaders).forEach(([key, value]) => {
+    res.setHeader(key, value);
+  });
+}
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  applyCors(res);
+
+  if (req.method === 'OPTIONS') {
+    res.status(200).send('ok');
+    return;
+  }
+
+  if (req.method !== 'GET') {
+    res.status(405).json({ error: 'Method not allowed' });
+    return;
+  }
+
   try {
-    const { searchParams } = new URL(request.url);
-    const testParam = searchParams.get('test');
+    const testParam = typeof req.query.test === 'string' ? req.query.test : undefined;
 
     const response = {
       status: 'success',
@@ -20,38 +37,24 @@ export async function GET(request: NextRequest) {
         supabase_url: process.env.VITE_PUBLIC_SUPABASE_URL ? 'configured' : 'missing',
         service_role_key: process.env.SUPABASE_SERVICE_ROLE_KEY ? 'configured' : 'missing',
         stripe_key: process.env.STRIPE_SECRET_KEY ? 'configured' : 'missing',
-        plaid_client_id: process.env.PLAID_CLIENT_ID ? 'configured' : 'missing'
+        plaid_client_id: process.env.PLAID_CLIENT_ID ? 'configured' : 'missing',
       },
       api_endpoints: {
         business_services: '/api/business/services',
         eligible_services: '/api/business-eligible-services',
         staff_invite: '/api/staff/invite',
-        upload_documents: '/api/business/upload-documents'
-      }
+        upload_documents: '/api/business/upload-documents',
+      },
     };
 
-    return NextResponse.json(response, { 
-      status: 200, 
-      headers: corsHeaders 
-    });
-
+    res.status(200).json(response);
   } catch (error) {
     console.error('Error in diagnostic endpoint:', error);
-    return NextResponse.json(
-      { 
-        status: 'error',
-        message: 'API diagnostic failed',
-        error: error instanceof Error ? error.message : 'Unknown error',
-        timestamp: new Date().toISOString()
-      },
-      { 
-        status: 500, 
-        headers: corsHeaders 
-      }
-    );
+    res.status(500).json({
+      status: 'error',
+      message: 'API diagnostic failed',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString(),
+    });
   }
-}
-
-export async function OPTIONS() {
-  return new NextResponse('ok', { headers: corsHeaders });
 }

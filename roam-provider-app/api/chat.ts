@@ -332,8 +332,13 @@ Always provide actionable steps and direct users to the appropriate sections of 
 
     // Convert messages to Anthropic format
     const conversation = messages.map((msg) => ({
-      role: msg.role === "assistant" ? "assistant" : "user" as const,
-      content: msg.content,
+      role: (msg.role === "assistant" ? "assistant" : "user") as "assistant" | "user",
+      content: [
+        {
+          type: "text" as const,
+          text: msg.content,
+        },
+      ],
     }));
 
     // Use Anthropic SDK directly
@@ -349,7 +354,10 @@ Always provide actionable steps and direct users to the appropriate sections of 
       messages: conversation,
     });
 
-    const responseText = response.content[0].type === "text" ? response.content[0].text : "Error: Unexpected response type";
+    const textBlock = response.content.find((block) => block.type === "text");
+    const responseText = textBlock && textBlock.type === "text"
+      ? textBlock.text
+      : "Error: Unexpected response type";
 
     return res.status(200).json({
       message: {

@@ -3,7 +3,7 @@ import { createStripePaymentService } from '@roam/shared';
 import { createClient } from "@supabase/supabase-js";
 
 const stripeService = createStripePaymentService();
-const stripe = stripeService.stripe;
+const stripe = stripeService.getStripe();
 
 const supabase = createClient(
   process.env.VITE_PUBLIC_SUPABASE_URL!,

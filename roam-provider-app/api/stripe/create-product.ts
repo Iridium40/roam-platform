@@ -93,7 +93,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { data: connectAccount, error: connectError } = await supabase
       .from("stripe_connect_accounts")
       .select("*")
-      .eq("stripe_account_id", connectedAccountId)
+      .eq("account_id", connectedAccountId)
       .eq("business_id", businessId)
       .single();
 
@@ -140,22 +140,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       default_price_data: {
         unit_amount: priceInCents,
         currency: currency.toLowerCase(),
-        metadata: {
-          business_id: businessId,
-          connected_account_id: connectedAccountId,
-        },
       },
       metadata: productMetadata,
     });
 
     console.log("Stripe product created:", product.id);
 
+    const defaultPriceId = typeof product.default_price === 'string'
+      ? product.default_price
+      : product.default_price?.id;
+
+    if (!defaultPriceId) {
+      throw new Error('Stripe product creation did not return a default price ID');
+    }
+
     // Store product information in database
     const { error: dbError } = await supabase
       .from("stripe_products")
       .insert({
         stripe_product_id: product.id,
-        stripe_price_id: product.default_price as string,
+        stripe_price_id: defaultPriceId,
         business_id: businessId,
         user_id: userId,
         connected_account_id: connectedAccountId,
@@ -183,7 +187,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         name: product.name,
         description: product.description,
         price: {
-          id: product.default_price,
+          id: defaultPriceId,
           amount: priceInCents,
           currency: currency.toLowerCase(),
           formatted: `$${price.toFixed(2)}`,

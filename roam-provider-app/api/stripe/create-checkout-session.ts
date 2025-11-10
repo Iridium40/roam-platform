@@ -13,6 +13,22 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
 
+type StripeProductRecord = {
+  business_id: string;
+  business_profiles: {
+    business_name: string | null;
+    business_address: string | null;
+    business_city: string | null;
+    business_state: string | null;
+    business_zip: string | null;
+  } | null;
+  stripe_connect_accounts: {
+    account_id: string;
+    charges_enabled: boolean;
+    payouts_enabled: boolean;
+  } | null;
+};
+
 interface CreateCheckoutSessionRequest {
   productId: string;
   quantity: number;
@@ -99,7 +115,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Get business and connected account information from database
-    const { data: productData, error: dbError } = await supabase
+    const { data: productRecordRaw, error: dbError } = await supabase
       .from("stripe_products")
       .select(`
         business_id,
@@ -111,7 +127,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           business_zip
         ),
         stripe_connect_accounts!inner (
-          stripe_account_id,
+          account_id,
           charges_enabled,
           payouts_enabled
         )
@@ -120,16 +136,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .eq("status", "active")
       .single();
 
-    if (dbError || !productData) {
+    if (dbError || !productRecordRaw) {
       return res.status(404).json({ 
         error: "Product not found in database",
         details: "Product mapping information is missing"
       });
     }
 
-    // Extract connected account data (TypeScript workaround for Supabase join types)
-    const connectedAccount = productData.stripe_connect_accounts as any;
-    const businessProfile = productData.business_profiles as any;
+    const productData = productRecordRaw as StripeProductRecord;
+    const connectedAccount = productData.stripe_connect_accounts;
+    const businessProfile = productData.business_profiles;
+
+    if (!connectedAccount || !connectedAccount.account_id) {
+      return res.status(400).json({
+        error: "Connected account missing",
+        details: "Product is not linked to a Stripe Connect account",
+      });
+    }
 
     // Verify connected account is ready
     if (!connectedAccount.charges_enabled) {
@@ -155,8 +178,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       unitAmount,
       totalAmount,
       applicationFeeAmount,
-      connectedAccountId: connectedAccount.stripe_account_id,
+      connectedAccountId: connectedAccount.account_id,
     });
+
+    const businessName = businessProfile?.business_name || "Business";
+    const businessAddress = businessProfile?.business_address || "";
+    const businessCity = businessProfile?.business_city || "";
+    const businessState = businessProfile?.business_state || "";
+    const businessZip = businessProfile?.business_zip || "";
+    const connectedAccountId = connectedAccount.account_id;
 
     // Create Stripe Checkout Session with destination charge
     const session = await stripe.checkout.sessions.create({
@@ -169,7 +199,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               description: product.description || undefined,
               metadata: {
                 business_id: productData.business_id,
-                connected_account_id: connectedAccount.stripe_account_id,
+                connected_account_id: connectedAccountId,
               },
             },
             unit_amount: unitAmount,
@@ -185,8 +215,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       metadata: {
         product_id: productId,
         business_id: productData.business_id,
-        connected_account_id: connectedAccount.stripe_account_id,
-        business_name: businessProfile.business_name,
+        connected_account_id: connectedAccountId,
+        business_name: businessName,
         quantity: quantity.toString(),
         platform_fee: (applicationFeeAmount / 100).toString(),
       },
@@ -194,38 +224,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       payment_intent_data: {
         application_fee_amount: applicationFeeAmount,
         transfer_data: {
-          destination: connectedAccount.stripe_account_id,
+          destination: connectedAccountId,
         },
         metadata: {
           product_id: productId,
           business_id: productData.business_id,
-          connected_account_id: connectedAccount.stripe_account_id,
+          connected_account_id: connectedAccountId,
           platform_fee: (applicationFeeAmount / 100).toString(),
         },
       },
-      // Customize appearance
-      custom_fields: [
-        {
-          key: 'business_name',
-          label: {
-            type: 'custom',
-            custom: 'Business'
-          },
-          type: 'text',
-          optional: false,
-          default: productData.business_profiles.business_name,
-        },
-        {
-          key: 'quantity',
-          label: {
-            type: 'custom',
-            custom: 'Quantity'
-          },
-          type: 'text',
-          optional: false,
-          default: quantity.toString(),
-        },
-      ],
       // Apply branding
       billing_address_collection: 'required',
       customer_update: {
@@ -247,7 +254,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         session_id: session.id,
         product_id: productId,
         business_id: productData.business_id,
-        connected_account_id: productData.stripe_connect_accounts.stripe_account_id,
+        connected_account_id: connectedAccountId,
         customer_email: customerEmail,
         customer_name: customerName,
         quantity,
@@ -256,8 +263,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         application_fee_amount: applicationFeeAmount,
         currency: price.currency,
         status: session.status,
-        success_url: session.success_url,
-        cancel_url: session.cancel_url,
+        success_url: session.success_url ?? null,
+        cancel_url: session.cancel_url ?? null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       });
@@ -288,11 +295,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         },
       },
       business: {
-        name: productData.business_profiles.business_name,
-        address: productData.business_profiles.business_address,
-        city: productData.business_profiles.business_city,
-        state: productData.business_profiles.business_state,
-        zip: productData.business_profiles.business_zip,
+        name: businessName,
+        address: businessAddress,
+        city: businessCity,
+        state: businessState,
+        zip: businessZip,
       },
       fees: {
         platformFee: (platformFee / 100).toFixed(2),
