@@ -265,8 +265,17 @@ async function sendStatusNotifications(
   options: { notifyCustomer: boolean; notifyProvider: boolean }
 ) {
   try {
-    const customer = booking.customer_profiles;
-    const provider = booking.providers;
+    const customer = Array.isArray(booking.customer_profiles)
+      ? booking.customer_profiles[0]
+      : booking.customer_profiles;
+    const provider = Array.isArray(booking.providers)
+      ? booking.providers[0]
+      : booking.providers;
+
+    const customerName = customer
+      ? `${customer.first_name || ''} ${customer.last_name || ''}`.trim() || 'Customer'
+      : booking.guest_name || 'Customer';
+    const customerEmail = customer?.email || booking.guest_email;
 
     if (!customer && !provider) {
       console.warn('⚠️ Missing customer and provider data, skipping notifications');
@@ -308,7 +317,7 @@ async function sendStatusNotifications(
       notificationType = 'customer_booking_accepted';
       userId = customer.user_id;
       templateVariables = {
-        customer_name: customer.first_name || 'Customer',
+        customer_name: customerName,
         service_name: booking.service_name || 'Service',
         provider_name: provider ? `${provider.first_name} ${provider.last_name}` : 'Provider',
         booking_date: bookingDate,
@@ -323,7 +332,7 @@ async function sendStatusNotifications(
       notificationType = 'customer_booking_completed';
       userId = customer.user_id;
       templateVariables = {
-        customer_name: customer.first_name || 'Customer',
+        customer_name: customerName,
         service_name: booking.service_name || 'Service',
         provider_name: provider ? `${provider.first_name} ${provider.last_name}` : 'Provider',
         provider_id: provider?.id || '',
@@ -344,9 +353,84 @@ async function sendStatusNotifications(
       };
     }
 
-    // Send notification email if we have a valid type and user
-    if (notificationType && userId && customer?.email) {
-      console.log(`📧 Sending ${notificationType} email to ${customer.email}`);
+    // Respect user notification preferences from user_settings
+    let emailEnabled = true;
+    let smsEnabled = false;
+
+    if (notificationType && userId) {
+      try {
+        const { data: settings, error: settingsError } = await supabase
+          .from('user_settings')
+          .select('email_notifications, sms_notifications')
+          .eq('user_id', userId)
+          .maybeSingle();
+
+        if (settingsError) {
+          console.warn('⚠️ Failed to load user notification settings, using defaults (email enabled):', {
+            userId,
+            error: settingsError.message,
+          });
+        } else if (settings) {
+          // email_notifications defaults to true in schema, but respect explicit false
+          if (settings.email_notifications === false) {
+            emailEnabled = false;
+          }
+          if (settings.sms_notifications === true) {
+            smsEnabled = true;
+          }
+        }
+      } catch (settingsCatchError) {
+        console.warn('⚠️ Error fetching user settings, using defaults (email enabled):', {
+          userId,
+          error: settingsCatchError instanceof Error ? settingsCatchError.message : String(settingsCatchError),
+        });
+      }
+    }
+
+    // Placeholder: SMS delivery not yet implemented
+    if (smsEnabled) {
+      console.log('ℹ️ SMS notifications requested but not yet implemented for booking updates:', {
+        userId,
+        notificationType,
+      });
+    }
+
+    // Override contact details with user_settings notification email/phone if provided
+    let targetEmail = customerEmail;
+    let targetPhone = booking.guest_phone || (customer ? customer.phone : undefined);
+
+    if (notificationType && userId) {
+      try {
+        const { data: contactSettings, error: contactSettingsError } = await supabase
+          .from('user_settings')
+          .select('notification_email, notification_phone')
+          .eq('user_id', userId)
+          .maybeSingle();
+
+        if (contactSettingsError) {
+          console.warn('⚠️ Failed to load notification contact overrides:', {
+            userId,
+            error: contactSettingsError.message,
+          });
+        } else if (contactSettings) {
+          if (contactSettings.notification_email) {
+            targetEmail = contactSettings.notification_email;
+          }
+          if (contactSettings.notification_phone) {
+            targetPhone = contactSettings.notification_phone;
+          }
+        }
+      } catch (contactCatchError) {
+        console.warn('⚠️ Error retrieving notification contact overrides:', {
+          userId,
+          error: contactCatchError instanceof Error ? contactCatchError.message : String(contactCatchError),
+        });
+      }
+    }
+
+    // Send notification email if we have a valid type, user, email preference enabled, and recipient email
+    if (notificationType && userId && emailEnabled && targetEmail) {
+      console.log(`📧 Sending ${notificationType} email to ${targetEmail}`);
       
       try {
         // Send booking confirmation email directly using inline template
@@ -362,7 +446,7 @@ async function sendStatusNotifications(
           );
 
           const emailSent = await sendEmail(
-            customer.email,
+            targetEmail,
             `Booking Confirmed - ${templateVariables.service_name}`,
             emailHtml
           );
@@ -383,7 +467,7 @@ async function sendStatusNotifications(
                   booking_id: booking.id,
                   event_type: `booking_${newStatus}`,
                   sent_at: new Date().toISOString(),
-                  email_to: customer.email
+                  email_to: targetEmail
                 },
               });
           } else {
@@ -402,7 +486,7 @@ async function sendStatusNotifications(
                   booking_id: booking.id,
                   event_type: `booking_${newStatus}`,
                   error: 'Email service returned false',
-                  email_to: customer.email
+                  email_to: targetEmail
                 },
               });
           }
@@ -423,12 +507,18 @@ async function sendStatusNotifications(
               booking_id: booking.id,
               event_type: `booking_${newStatus}`,
               error: emailError instanceof Error ? emailError.message : String(emailError),
-              email_to: customer.email
+              email_to: targetEmail
             },
           });
       }
     } else {
-      console.log('ℹ️ No notification needed for status:', newStatus);
+      console.log('ℹ️ No notification sent (preference or email missing):', {
+        newStatus,
+        notificationType,
+        userId,
+        emailEnabled,
+        customerEmail,
+      });
     }
   } catch (error) {
     // Don't fail the request if notifications fail - log and continue
