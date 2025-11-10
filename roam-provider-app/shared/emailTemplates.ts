@@ -238,5 +238,64 @@ export const ROAM_EMAIL_TEMPLATES = {
       </p>
     `;
     return getROAMEmailTemplate(content);
+  },
+
+  bookingCompleted: (customerName: string, serviceName: string, providerName: string, bookingId: string) => {
+    const content = `
+      <h1>Service Completed! 🎉</h1>
+      <p>Hi ${customerName},</p>
+      <p>Your ${serviceName} service with ${providerName} has been completed. We hope you had a great experience!</p>
+      
+      <div class="highlight">
+        <h3>📝 How Was Your Experience?</h3>
+        <p>Your feedback helps other customers find great providers and supports the ones you love!</p>
+      </div>
+      
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="https://roamyourbestlife.com/review/${bookingId}" class="button">Leave a Review & Tip</a>
+      </div>
+      
+      <div class="info-box">
+        <p style="margin: 5px 0;">⭐ Rate your experience (1-5 stars)</p>
+        <p style="margin: 5px 0;">💬 Share what you loved</p>
+        <p style="margin: 5px 0;">💵 Add a tip for exceptional service (optional)</p>
+      </div>
+      
+      <p>Thank you for choosing ROAM!<br><strong>The ROAM Team</strong></p>
+    `;
+    return getROAMEmailTemplate(content);
+  },
+
+  businessVerificationNeeded: (businessName: string, businessId: string, submittedDate: string, applicantEmail: string) => {
+    const content = `
+      <h1>🔔 New Business Application Submitted</h1>
+      <p>A new business has completed their application and requires verification.</p>
+      
+      <div class="info-box">
+        <h2 style="margin-top: 0;">Application Details</h2>
+        <p style="margin: 10px 0;"><strong>Business Name:</strong> ${businessName}</p>
+        <p style="margin: 10px 0;"><strong>Application ID:</strong> ${businessId}</p>
+        <p style="margin: 10px 0;"><strong>Applicant Email:</strong> ${applicantEmail}</p>
+        <p style="margin: 10px 0;"><strong>Submitted:</strong> ${submittedDate}</p>
+      </div>
+      
+      <div class="highlight">
+        <h3>⏰ Action Required</h3>
+        <p><strong>Review Tasks:</strong></p>
+        <ul style="margin: 10px 0;">
+          <li>Verify business documents</li>
+          <li>Check credentials and certifications</li>
+          <li>Review background check results</li>
+          <li>Approve or reject application</li>
+        </ul>
+      </div>
+      
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="https://admin.roamyourbestlife.com/applications/${businessId}" class="button">Review Application</a>
+      </div>
+      
+      <p>Best regards,<br><strong>ROAM Admin System</strong></p>
+    `;
+    return getROAMEmailTemplate(content);
   }
 };
