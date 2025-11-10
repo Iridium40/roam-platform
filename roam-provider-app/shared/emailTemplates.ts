@@ -200,5 +200,43 @@ export const ROAM_EMAIL_TEMPLATES = {
       <p>Best regards,<br><strong>The ROAM Team</strong></p>
     `;
     return getROAMEmailTemplate(content);
+  },
+
+  bookingConfirmed: (customerName: string, serviceName: string, providerName: string, bookingDate: string, bookingTime: string, location: string, totalAmount: string) => {
+    const content = `
+      <h1>🎉 Your Booking Has Been Confirmed!</h1>
+      <p>Hi ${customerName},</p>
+      <p>Great news! Your booking has been confirmed by ${providerName}. We're excited to serve you!</p>
+      
+      <div class="info-box">
+        <h2 style="margin-top: 0;">Booking Details</h2>
+        <p style="margin: 10px 0;"><strong>Service:</strong> ${serviceName}</p>
+        <p style="margin: 10px 0;"><strong>Provider:</strong> ${providerName}</p>
+        <p style="margin: 10px 0;"><strong>Date:</strong> ${bookingDate}</p>
+        <p style="margin: 10px 0;"><strong>Time:</strong> ${bookingTime}</p>
+        <p style="margin: 10px 0;"><strong>Location:</strong> ${location}</p>
+        <p style="margin: 10px 0;"><strong>Total:</strong> $${totalAmount}</p>
+      </div>
+      
+      <div class="highlight">
+        <h3>What's Next?</h3>
+        <ul style="margin: 10px 0;">
+          <li>You'll receive a reminder email 24 hours before your appointment</li>
+          <li>If you need to make changes, please contact ${providerName} directly</li>
+          <li>Arrive 5-10 minutes early if visiting a business location</li>
+        </ul>
+      </div>
+      
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="https://roamyourbestlife.com/my-bookings" class="button">View My Bookings</a>
+      </div>
+      
+      <p>Looking forward to seeing you!<br><strong>The ROAM Team</strong></p>
+      
+      <p style="font-size: 14px; color: #6b7280; margin-top: 20px;">
+        <em>If you have any questions or concerns about your booking, please reply to this email or contact us at support@roamyourbestlife.com</em>
+      </p>
+    `;
+    return getROAMEmailTemplate(content);
   }
 };

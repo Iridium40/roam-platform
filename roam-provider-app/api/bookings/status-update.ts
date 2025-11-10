@@ -1,5 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
+import { EmailService } from '../../server/services/emailService';
+import { ROAM_EMAIL_TEMPLATES } from '../../shared/emailTemplates';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS headers
@@ -69,7 +71,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           first_name,
           last_name,
           email,
-          phone
+          phone,
+          user_id
         ),
         providers (
           id,
@@ -256,30 +259,89 @@ async function sendStatusNotifications(
       };
     }
 
-    // Queue notification if we have a valid type and user
-    if (notificationType && userId) {
-      console.log(`📧 Queuing ${notificationType} notification for user ${userId}`);
+    // Send notification email if we have a valid type and user
+    if (notificationType && userId && customer?.email) {
+      console.log(`📧 Sending ${notificationType} email to ${customer.email}`);
       
-      // Insert into notification queue table (or directly into notification_logs if no queue exists)
-      const { error: queueError } = await supabase
-        .from('notification_logs')
-        .insert({
-          user_id: userId,
-          notification_type: notificationType,
-          channel: 'email', // Default to email
-          status: 'pending',
-          body: JSON.stringify(templateVariables),
-          metadata: {
-            booking_id: booking.id,
-            event_type: `booking_${newStatus}`,
-            auto_queued: true,
-          },
-        });
+      try {
+        // Send booking confirmation email directly using email template
+        if (notificationType === 'customer_booking_accepted') {
+          const emailHtml = ROAM_EMAIL_TEMPLATES.bookingConfirmed(
+            templateVariables.customer_name,
+            templateVariables.service_name,
+            templateVariables.provider_name,
+            templateVariables.booking_date,
+            templateVariables.booking_time,
+            templateVariables.booking_location,
+            templateVariables.total_amount
+          );
 
-      if (queueError) {
-        console.error('⚠️ Failed to queue notification:', queueError);
-      } else {
-        console.log('✅ Notification queued successfully');
+          const emailSent = await EmailService.sendEmail({
+            to: customer.email,
+            subject: `Booking Confirmed - ${templateVariables.service_name}`,
+            html: emailHtml,
+            text: `Your booking for ${templateVariables.service_name} with ${templateVariables.provider_name} on ${templateVariables.booking_date} at ${templateVariables.booking_time} has been confirmed!`
+          });
+
+          if (emailSent) {
+            console.log('✅ Booking confirmation email sent successfully');
+            
+            // Log the sent notification
+            await supabase
+              .from('notification_logs')
+              .insert({
+                user_id: userId,
+                notification_type: notificationType,
+                channel: 'email',
+                status: 'sent',
+                body: JSON.stringify(templateVariables),
+                metadata: {
+                  booking_id: booking.id,
+                  event_type: `booking_${newStatus}`,
+                  sent_at: new Date().toISOString(),
+                  email_to: customer.email
+                },
+              });
+          } else {
+            console.error('❌ Failed to send booking confirmation email');
+            
+            // Log the failed notification
+            await supabase
+              .from('notification_logs')
+              .insert({
+                user_id: userId,
+                notification_type: notificationType,
+                channel: 'email',
+                status: 'failed',
+                body: JSON.stringify(templateVariables),
+                metadata: {
+                  booking_id: booking.id,
+                  event_type: `booking_${newStatus}`,
+                  error: 'Email service returned false',
+                  email_to: customer.email
+                },
+              });
+          }
+        }
+      } catch (emailError) {
+        console.error('❌ Error sending notification email:', emailError);
+        
+        // Log the failed notification
+        await supabase
+          .from('notification_logs')
+          .insert({
+            user_id: userId,
+            notification_type: notificationType,
+            channel: 'email',
+            status: 'failed',
+            body: JSON.stringify(templateVariables),
+            metadata: {
+              booking_id: booking.id,
+              event_type: `booking_${newStatus}`,
+              error: emailError instanceof Error ? emailError.message : String(emailError),
+              email_to: customer.email
+            },
+          });
       }
     } else {
       console.log('ℹ️ No notification needed for status:', newStatus);
