@@ -1,7 +1,112 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
-import { EmailService } from '../_lib/emailService';
-import { ROAM_EMAIL_TEMPLATES } from '../_lib/emailTemplates';
+import { Resend } from 'resend';
+
+// Initialize Resend
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+// Email service - inline to avoid module resolution issues in Vercel
+const sendEmail = async (to: string, subject: string, html: string): Promise<boolean> => {
+  try {
+    if (!process.env.RESEND_API_KEY) {
+      console.error('❌ RESEND_API_KEY not configured');
+      return false;
+    }
+
+    const { data, error } = await resend.emails.send({
+      from: 'ROAM Provider Support <providersupport@roamyourbestlife.com>',
+      to: [to],
+      subject,
+      html,
+    });
+
+    if (error) {
+      console.error('❌ Resend error:', error);
+      return false;
+    }
+
+    console.log('✅ Email sent:', data?.id);
+    return true;
+  } catch (error) {
+    console.error('❌ Email error:', error);
+    return false;
+  }
+};
+
+// Email template - inline
+const getBookingConfirmationEmail = (
+  customerName: string,
+  serviceName: string,
+  providerName: string,
+  bookingDate: string,
+  bookingTime: string,
+  location: string,
+  totalAmount: string
+): string => {
+  const logoUrl = "https://cdn.builder.io/api/v1/image/assets%2Fa42b6f9ec53e4654a92af75aad56d14f%2F993952d908754e5dbe0cceda03eb2224?format=webp&width=200";
+  const brandColor = "#4F46E5";
+  
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 20px; background-color: #f9fafb; }
+        .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; padding: 40px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .header { text-align: center; margin-bottom: 30px; padding: 30px 20px; background: #f5f5f5; border-radius: 8px; margin: -40px -40px 30px -40px; }
+        .logo img { max-width: 200px; height: auto; }
+        .info-box { background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 25px 0; }
+        .highlight { background: #f8f9fa; padding: 20px; border-radius: 8px; border-left: 4px solid ${brandColor}; margin: 20px 0; }
+        .button { display: inline-block; background: ${brandColor}; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; margin: 20px 0; }
+        h1, h2, h3 { color: ${brandColor}; }
+        .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; font-size: 14px; color: #6b7280; text-align: center; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <div class="logo"><img src="${logoUrl}" alt="ROAM" /></div>
+        </div>
+        <h1>🎉 Your Booking Has Been Confirmed!</h1>
+        <p>Hi ${customerName},</p>
+        <p>Great news! Your booking has been confirmed by ${providerName}. We're excited to serve you!</p>
+        
+        <div class="info-box">
+          <h2 style="margin-top: 0;">Booking Details</h2>
+          <p style="margin: 10px 0;"><strong>Service:</strong> ${serviceName}</p>
+          <p style="margin: 10px 0;"><strong>Provider:</strong> ${providerName}</p>
+          <p style="margin: 10px 0;"><strong>Date:</strong> ${bookingDate}</p>
+          <p style="margin: 10px 0;"><strong>Time:</strong> ${bookingTime}</p>
+          <p style="margin: 10px 0;"><strong>Location:</strong> ${location}</p>
+          <p style="margin: 10px 0;"><strong>Total:</strong> $${totalAmount}</p>
+        </div>
+        
+        <div class="highlight">
+          <h3>What's Next?</h3>
+          <ul style="margin: 10px 0;">
+            <li>You'll receive a reminder email 24 hours before your appointment</li>
+            <li>If you need to make changes, please contact ${providerName} directly</li>
+            <li>Arrive 5-10 minutes early if visiting a business location</li>
+          </ul>
+        </div>
+        
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="https://roamyourbestlife.com/my-bookings" class="button">View My Bookings</a>
+        </div>
+        
+        <p>Looking forward to seeing you!<br><strong>The ROAM Team</strong></p>
+        
+        <div class="footer">
+          <p>Need help? Contact us at <a href="mailto:support@roamyourbestlife.com">support@roamyourbestlife.com</a></p>
+          <p>© 2024 ROAM. All rights reserved.</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+};
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS headers
@@ -264,9 +369,9 @@ async function sendStatusNotifications(
       console.log(`📧 Sending ${notificationType} email to ${customer.email}`);
       
       try {
-        // Send booking confirmation email directly using email template
+        // Send booking confirmation email directly using inline template
         if (notificationType === 'customer_booking_accepted') {
-          const emailHtml = ROAM_EMAIL_TEMPLATES.bookingConfirmed(
+          const emailHtml = getBookingConfirmationEmail(
             templateVariables.customer_name,
             templateVariables.service_name,
             templateVariables.provider_name,
@@ -276,12 +381,11 @@ async function sendStatusNotifications(
             templateVariables.total_amount
           );
 
-          const emailSent = await EmailService.sendEmail({
-            to: customer.email,
-            subject: `Booking Confirmed - ${templateVariables.service_name}`,
-            html: emailHtml,
-            text: `Your booking for ${templateVariables.service_name} with ${templateVariables.provider_name} on ${templateVariables.booking_date} at ${templateVariables.booking_time} has been confirmed!`
-          });
+          const emailSent = await sendEmail(
+            customer.email,
+            `Booking Confirmed - ${templateVariables.service_name}`,
+            emailHtml
+          );
 
           if (emailSent) {
             console.log('✅ Booking confirmation email sent successfully');
