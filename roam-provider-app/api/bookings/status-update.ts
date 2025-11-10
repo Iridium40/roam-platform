@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
-import { EmailService } from '../../server/services/emailService';
-import { ROAM_EMAIL_TEMPLATES } from '../../shared/emailTemplates';
+import { EmailService } from '../_lib/emailService';
+import { ROAM_EMAIL_TEMPLATES } from '../_lib/emailTemplates';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS headers
