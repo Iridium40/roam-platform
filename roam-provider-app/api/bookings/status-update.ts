@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
+import { sendSMS } from '../../lib/notifications/sms-service';
 
 // Initialize Resend
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -409,11 +410,18 @@ async function sendStatusNotifications(
       }
     }
 
+    const smsConfigured = Boolean(
+      process.env.TWILIO_ACCOUNT_SID &&
+      process.env.TWILIO_AUTH_TOKEN &&
+      process.env.TWILIO_PHONE_NUMBER
+    );
+
     // Placeholder: SMS delivery not yet implemented
     if (smsEnabled) {
-      console.log('ℹ️ SMS notifications requested but not yet implemented for booking updates:', {
+      console.log('ℹ️ SMS notifications requested for booking updates:', {
         userId,
         notificationType,
+        smsConfigured,
       });
     }
 
@@ -542,8 +550,41 @@ async function sendStatusNotifications(
         customerEmail,
       });
     }
-  } catch (error) {
-    // Don't fail the request if notifications fail - log and continue
-    console.error('⚠️ Notification error (non-fatal):', error);
-  }
-}
+
+    // Send SMS if enabled and configured
+    if (notificationType && userId && smsEnabled && smsConfigured && targetPhone) {
+      let smsBody: string | null = null;
+
+      switch (notificationType) {
+        case 'customer_booking_accepted':
+          smsBody = `ROAM: Booking confirmed for ${templateVariables.service_name} on ${templateVariables.booking_date} at ${templateVariables.booking_time}. Location: ${templateVariables.booking_location}. Reply STOP to opt out.`;
+          break;
+        case 'customer_booking_completed':
+          smsBody = `ROAM: Thanks for visiting ${templateVariables.provider_name}. We hope your ${templateVariables.service_name} went great! Reply STOP to opt out.`;
+          break;
+        case 'provider_booking_cancelled':
+          smsBody = `ROAM: Booking with ${templateVariables.customer_name} on ${templateVariables.booking_date} at ${templateVariables.booking_time} was cancelled. Reason: ${templateVariables.cancellation_reason}. Reply STOP to opt out.`;
+          break;
+        default:
+          smsBody = null;
+      }
+
+      if (smsBody) {
+        try {
+          console.log(`📱 Sending ${notificationType} SMS to ${targetPhone}`);
+          await sendSMS({ to: targetPhone, body: smsBody });
+        } catch (smsError) {
+          console.error('❌ Failed to send SMS notification:', smsError);
+        }
+      } else {
+        console.log('ℹ️ No SMS template defined for notification type:', notificationType);
+      }
+    } else if (smsEnabled && !smsConfigured) {
+      console.warn('⚠️ SMS notifications enabled but Twilio credentials are missing. Skipping SMS delivery.');
+    }
+
+    if (notificationType && userId && !emailEnabled) {
+      console.log('ℹ️ Email notifications disabled for user:', { userId, notificationType });
+    }
+
+    if (notificationType && userId && !targetEmail) {
