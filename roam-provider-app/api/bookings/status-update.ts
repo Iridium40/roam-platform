@@ -272,6 +272,22 @@ async function sendStatusNotifications(
       ? booking.providers[0]
       : booking.providers;
 
+    const business = Array.isArray(booking.business_profiles)
+      ? booking.business_profiles[0]
+      : booking.business_profiles;
+
+    const bookingDateRaw = booking.booking_date || booking.original_booking_date;
+    const startTimeRaw = booking.start_time || booking.booking_time || booking.original_start_time;
+    const locationName = business?.business_name || booking.business_name || 'Location';
+    const locationAddress = business?.business_address || booking.business_address || booking.service_location;
+
+    const totalAmountValue =
+      (booking.total_amount ?? 0) +
+      (booking.service_fee ?? 0) +
+      (booking.remaining_balance ?? 0);
+
+    const totalAmountFormatted = totalAmountValue.toFixed(2);
+
     const customerName = customer
       ? `${customer.first_name || ''} ${customer.last_name || ''}`.trim() || 'Customer'
       : booking.guest_name || 'Customer';
@@ -294,14 +310,14 @@ async function sendStatusNotifications(
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Format booking data for templates
-    const bookingDate = booking.booking_date ? new Date(booking.booking_date).toLocaleDateString('en-US', {
+    const bookingDate = bookingDateRaw ? new Date(bookingDateRaw).toLocaleDateString('en-US', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
       day: 'numeric',
     }) : 'Date TBD';
     
-    const bookingTime = booking.booking_time ? new Date(`2000-01-01T${booking.booking_time}`).toLocaleTimeString('en-US', {
+    const bookingTime = startTimeRaw ? new Date(`2000-01-01T${startTimeRaw}`).toLocaleTimeString('en-US', {
       hour: 'numeric',
       minute: '2-digit',
       hour12: true,
@@ -322,9 +338,10 @@ async function sendStatusNotifications(
         provider_name: provider ? `${provider.first_name} ${provider.last_name}` : 'Provider',
         booking_date: bookingDate,
         booking_time: bookingTime,
-        booking_location: booking.service_location || 'Location TBD',
-        total_amount: booking.total_amount?.toFixed(2) || '0.00',
+        booking_location: locationAddress || 'Location TBD',
+        total_amount: totalAmountFormatted,
         booking_id: booking.id,
+        location_name: locationName,
       };
     }
     // Notify customer when booking is completed
@@ -337,6 +354,11 @@ async function sendStatusNotifications(
         provider_name: provider ? `${provider.first_name} ${provider.last_name}` : 'Provider',
         provider_id: provider?.id || '',
         booking_id: booking.id,
+        booking_date: bookingDate,
+        booking_time: bookingTime,
+        booking_location: locationAddress || 'Location TBD',
+        total_amount: totalAmountFormatted,
+        location_name: locationName,
       };
     }
     // Notify provider when booking is cancelled
