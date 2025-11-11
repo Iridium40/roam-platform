@@ -45,7 +45,8 @@
     "vercel-build": "npm run build",
     "vercel:dev": "vercel dev",
     "env:pull": "vercel env pull",
-    "env:add": "vercel env add"
+    "env:add": "vercel env add",
+    "test:twilio": "tsx scripts/test-twilio-sms.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.67.0",
