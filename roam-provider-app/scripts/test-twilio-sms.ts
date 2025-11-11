@@ -45,17 +45,28 @@ async function testTwilioSMS() {
     process.exit(1);
   }
 
-  // Test phone number formatting
+  // Test phone number formatting - ensure US numbers start with +1
   const formatPhoneNumber = (phone: string): string => {
     if (!phone) return phone;
     const cleaned = phone.replace(/\D/g, ''); // Remove non-digits
-    return cleaned.startsWith('1') && cleaned.length === 11
-      ? `+${cleaned}`
-      : cleaned.length === 10
-      ? `+1${cleaned}`
-      : phone.startsWith('+')
-      ? phone
-      : `+${cleaned}`;
+    
+    // If it's 10 digits, it's a US number - add +1
+    if (cleaned.length === 10) {
+      return `+1${cleaned}`;
+    }
+    
+    // If it's 11 digits and starts with 1, it's a US number - add +
+    if (cleaned.length === 11 && cleaned.startsWith('1')) {
+      return `+${cleaned}`;
+    }
+    
+    // If it already starts with +, return as is
+    if (phone.startsWith('+')) {
+      return phone;
+    }
+    
+    // Otherwise, add + prefix
+    return `+${cleaned}`;
   };
 
   // Get test phone number from command line or use default

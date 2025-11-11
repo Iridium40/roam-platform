@@ -109,6 +109,81 @@ const getBookingConfirmationEmail = (
   `;
 };
 
+// Email template for booking completion
+const getBookingCompletionEmail = (
+  customerName: string,
+  serviceName: string,
+  providerName: string,
+  bookingDate: string,
+  bookingTime: string,
+  location: string,
+  totalAmount: string
+): string => {
+  const logoUrl = "https://cdn.builder.io/api/v1/image/assets%2Fa42b6f9ec53e4654a92af75aad56d14f%2F993952d908754e5dbe0cceda03eb2224?format=webp&width=200";
+  const brandColor = "#4F46E5";
+  
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 20px; background-color: #f9fafb; }
+        .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; padding: 40px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .header { text-align: center; margin-bottom: 30px; padding: 30px 20px; background: #f5f5f5; border-radius: 8px; margin: -40px -40px 30px -40px; }
+        .logo img { max-width: 200px; height: auto; }
+        .info-box { background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 25px 0; }
+        .highlight { background: #f8f9fa; padding: 20px; border-radius: 8px; border-left: 4px solid ${brandColor}; margin: 20px 0; }
+        .button { display: inline-block; background: ${brandColor}; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; margin: 20px 0; }
+        h1, h2, h3 { color: ${brandColor}; }
+        .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; font-size: 14px; color: #6b7280; text-align: center; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <div class="logo"><img src="${logoUrl}" alt="ROAM" /></div>
+        </div>
+        <h1>✨ Your Service Has Been Completed!</h1>
+        <p>Hi ${customerName},</p>
+        <p>Thank you for choosing ROAM! We hope you enjoyed your ${serviceName} service with ${providerName}.</p>
+        
+        <div class="info-box">
+          <h2 style="margin-top: 0;">Service Details</h2>
+          <p style="margin: 10px 0;"><strong>Service:</strong> ${serviceName}</p>
+          <p style="margin: 10px 0;"><strong>Provider:</strong> ${providerName}</p>
+          <p style="margin: 10px 0;"><strong>Date:</strong> ${bookingDate}</p>
+          <p style="margin: 10px 0;"><strong>Time:</strong> ${bookingTime}</p>
+          <p style="margin: 10px 0;"><strong>Location:</strong> ${location}</p>
+          <p style="margin: 10px 0;"><strong>Total:</strong> $${totalAmount}</p>
+        </div>
+        
+        <div class="highlight">
+          <h3>What's Next?</h3>
+          <ul style="margin: 10px 0;">
+            <li>Share your experience by leaving a review</li>
+            <li>Book again with ${providerName} or explore other services</li>
+            <li>Check your booking history anytime</li>
+          </ul>
+        </div>
+        
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="https://roamyourbestlife.com/my-bookings" class="button">View My Bookings</a>
+        </div>
+        
+        <p>We appreciate your business!<br><strong>The ROAM Team</strong></p>
+        
+        <div class="footer">
+          <p>Need help? Contact us at <a href="mailto:support@roamyourbestlife.com">support@roamyourbestlife.com</a></p>
+          <p>© 2024 ROAM. All rights reserved.</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+};
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -192,6 +267,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           id,
           business_name,
           contact_email
+        ),
+        services (
+          id,
+          name
         )
       `)
       .single();
@@ -277,10 +356,15 @@ async function sendStatusNotifications(
       ? booking.business_profiles[0]
       : booking.business_profiles;
 
+    const service = Array.isArray(booking.services)
+      ? booking.services[0]
+      : booking.services;
+
     const bookingDateRaw = booking.booking_date || booking.original_booking_date;
     const startTimeRaw = booking.start_time || booking.booking_time || booking.original_start_time;
     const locationName = business?.business_name || booking.business_name || 'Location';
     const locationAddress = business?.business_address || booking.business_address || booking.service_location;
+    const serviceName = service?.name || booking.service_name || 'Service';
 
     const totalAmountValue =
       (booking.total_amount ?? 0) +
@@ -335,7 +419,7 @@ async function sendStatusNotifications(
       userId = customer.user_id;
       templateVariables = {
         customer_name: customerName,
-        service_name: booking.service_name || 'Service',
+        service_name: serviceName,
         provider_name: provider ? `${provider.first_name} ${provider.last_name}` : 'Provider',
         booking_date: bookingDate,
         booking_time: bookingTime,
@@ -351,7 +435,7 @@ async function sendStatusNotifications(
       userId = customer.user_id;
       templateVariables = {
         customer_name: customerName,
-        service_name: booking.service_name || 'Service',
+        service_name: serviceName,
         provider_name: provider ? `${provider.first_name} ${provider.last_name}` : 'Provider',
         provider_id: provider?.id || '',
         booking_id: booking.id,
@@ -369,7 +453,7 @@ async function sendStatusNotifications(
       templateVariables = {
         provider_name: provider.first_name || 'Provider',
         customer_name: customer ? `${customer.first_name} ${customer.last_name}` : 'Customer',
-        service_name: booking.service_name || 'Service',
+        service_name: serviceName,
         booking_date: bookingDate,
         booking_time: bookingTime,
         cancellation_reason: booking.cancellation_reason || 'No reason provided',
@@ -463,9 +547,12 @@ async function sendStatusNotifications(
       console.log(`📧 Sending ${notificationType} email to ${targetEmail}`);
       
       try {
+        let emailHtml: string | null = null;
+        let emailSubject: string | null = null;
+
         // Send booking confirmation email directly using inline template
         if (notificationType === 'customer_booking_accepted') {
-          const emailHtml = getBookingConfirmationEmail(
+          emailHtml = getBookingConfirmationEmail(
             templateVariables.customer_name,
             templateVariables.service_name,
             templateVariables.provider_name,
@@ -474,15 +561,29 @@ async function sendStatusNotifications(
             templateVariables.booking_location,
             templateVariables.total_amount
           );
+          emailSubject = `Booking Confirmed - ${templateVariables.service_name}`;
+        } else if (notificationType === 'customer_booking_completed') {
+          emailHtml = getBookingCompletionEmail(
+            templateVariables.customer_name,
+            templateVariables.service_name,
+            templateVariables.provider_name,
+            templateVariables.booking_date,
+            templateVariables.booking_time,
+            templateVariables.booking_location,
+            templateVariables.total_amount
+          );
+          emailSubject = `Service Completed - ${templateVariables.service_name}`;
+        }
 
+        if (emailHtml && emailSubject) {
           const emailSent = await sendEmail(
             targetEmail,
-            `Booking Confirmed - ${templateVariables.service_name}`,
+            emailSubject,
             emailHtml
           );
 
           if (emailSent) {
-            console.log('✅ Booking confirmation email sent successfully');
+            console.log(`✅ ${notificationType} email sent successfully`);
             
             // Log the sent notification
             await supabase
@@ -501,7 +602,7 @@ async function sendStatusNotifications(
                 },
               });
           } else {
-            console.error('❌ Failed to send booking confirmation email');
+            console.error(`❌ Failed to send ${notificationType} email`);
             
             // Log the failed notification
             await supabase
@@ -520,6 +621,8 @@ async function sendStatusNotifications(
                 },
               });
           }
+        } else {
+          console.warn(`⚠️ No email template defined for notification type: ${notificationType}`);
         }
       } catch (emailError) {
         console.error('❌ Error sending notification email:', emailError);
@@ -560,7 +663,7 @@ async function sendStatusNotifications(
           smsBody = `ROAM: Booking confirmed for ${templateVariables.service_name} on ${templateVariables.booking_date} at ${templateVariables.booking_time}. Location: ${templateVariables.booking_location}. Reply STOP to opt out.`;
           break;
         case 'customer_booking_completed':
-          smsBody = `ROAM: Thanks for visiting ${templateVariables.provider_name}. We hope your ${templateVariables.service_name} went great! Reply STOP to opt out.`;
+          smsBody = `ROAM: Thank you! Your ${templateVariables.service_name} with ${templateVariables.provider_name} on ${templateVariables.booking_date} is complete. We hope you enjoyed your service! Reply STOP to opt out.`;
           break;
         case 'provider_booking_cancelled':
           smsBody = `ROAM: Booking with ${templateVariables.customer_name} on ${templateVariables.booking_date} at ${templateVariables.booking_time} was cancelled. Reason: ${templateVariables.cancellation_reason}. Reply STOP to opt out.`;
