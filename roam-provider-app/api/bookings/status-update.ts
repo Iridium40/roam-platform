@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
-import { sendSMS } from '../../lib/notifications/sms-service';
+import { sendSMS } from '../../lib/notifications/sms-service.js';
 
 // Initialize Resend
 const resend = new Resend(process.env.RESEND_API_KEY);

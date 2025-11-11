@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { sendEmail } from './email-service';
-import { sendSMS } from './sms-service';
+import { sendSMS } from './sms-service.js';
 
 // Initialize Supabase client with service role key for server-side operations
 const getSupabaseServiceClient = () => {
