@@ -413,7 +413,7 @@ async function sendStatusNotifications(
     const smsConfigured = Boolean(
       process.env.TWILIO_ACCOUNT_SID &&
       process.env.TWILIO_AUTH_TOKEN &&
-      process.env.TWILIO_PHONE_NUMBER
+      (process.env.TWILIO_PHONE_NUMBER || process.env.TWILIO_FROM_NUMBER)
     );
 
     // Placeholder: SMS delivery not yet implemented
