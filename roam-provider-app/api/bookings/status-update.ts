@@ -227,12 +227,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Send notifications based on status change (non-blocking)
     if (notifyCustomer || notifyProvider) {
-      console.log('📧 Queuing notifications for status:', newStatus);
-      // Queue notifications asynchronously - don't await or block the response
-      sendStatusNotifications(booking, newStatus, { notifyCustomer, notifyProvider })
-        .catch(error => {
-          console.error('⚠️ Notification error (non-fatal):', error);
-        });
+      console.log('📧 Sending notifications for status:', newStatus);
+      try {
+        await sendStatusNotifications(booking, newStatus, { notifyCustomer, notifyProvider });
+      } catch (notificationError) {
+        console.error('⚠️ Notification error (non-fatal):', notificationError);
+      }
     }
 
     console.log('🎉 Status update completed successfully');
