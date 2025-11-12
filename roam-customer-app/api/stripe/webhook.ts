@@ -1,6 +1,7 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
+import { notifyProvidersNewBooking } from '../../lib/notifications/notify-providers-new-booking';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2023-10-16',
@@ -235,10 +236,33 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
 
     console.log(`📋 Confirming booking: ${bookingId}`);
 
-    // Get booking details for transaction recording
+    // Get booking details for transaction recording and notifications
     const { data: booking, error: bookingError } = await supabase
       .from('bookings')
-      .select('business_id, total_amount')
+      .select(`
+        id,
+        business_id,
+        provider_id,
+        total_amount,
+        booking_date,
+        start_time,
+        special_instructions,
+        services (
+          name
+        ),
+        customer_profiles (
+          id,
+          first_name,
+          last_name,
+          email,
+          phone
+        ),
+        business_profiles (
+          id,
+          name,
+          business_address
+        )
+      `)
       .eq('id', bookingId)
       .single();
 
@@ -266,6 +290,43 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
     }
 
     console.log(`✅ Booking ${bookingId} status updated to confirmed`);
+
+    // Notify providers about the new booking (non-blocking)
+    try {
+      const service = Array.isArray(booking.services) ? booking.services[0] : booking.services;
+      const customer = Array.isArray(booking.customer_profiles) ? booking.customer_profiles[0] : booking.customer_profiles;
+      const business = Array.isArray(booking.business_profiles) ? booking.business_profiles[0] : booking.business_profiles;
+
+      if (service && customer && business) {
+        await notifyProvidersNewBooking({
+          booking: {
+            id: booking.id,
+            business_id: booking.business_id,
+            provider_id: booking.provider_id,
+            booking_date: booking.booking_date,
+            start_time: booking.start_time,
+            total_amount: booking.total_amount,
+            special_instructions: booking.special_instructions,
+          },
+          service: {
+            name: service.name,
+          },
+          customer: {
+            first_name: customer.first_name || '',
+            last_name: customer.last_name || '',
+            email: customer.email,
+            phone: customer.phone,
+          },
+          business: {
+            name: business.name,
+            business_address: business.business_address,
+          },
+        });
+      }
+    } catch (notificationError) {
+      console.error('⚠️ Error sending provider notifications (non-fatal):', notificationError);
+      // Continue - don't fail the webhook if notifications fail
+    }
 
     // Record in financial_transactions (overall payment ledger)
     const totalAmount = paymentIntent.amount / 100;
