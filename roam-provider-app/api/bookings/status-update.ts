@@ -675,9 +675,46 @@ async function sendStatusNotifications(
       if (smsBody) {
         try {
           console.log(`📱 Sending ${notificationType} SMS to ${targetPhone}`);
-          await sendSMS({ to: targetPhone, body: smsBody });
+          const smsResult = await sendSMS({ to: targetPhone, body: smsBody });
+          
+          console.log(`✅ ${notificationType} SMS sent successfully`);
+          
+          // Log the sent notification
+          await supabase
+            .from('notification_logs')
+            .insert({
+              user_id: userId,
+              notification_type: notificationType,
+              channel: 'sms',
+              status: 'sent',
+              body: JSON.stringify(templateVariables),
+              metadata: {
+                booking_id: booking.id,
+                event_type: `booking_${newStatus}`,
+                sent_at: new Date().toISOString(),
+                phone_to: targetPhone,
+                sms_sid: smsResult.sid
+              },
+            });
         } catch (smsError) {
           console.error('❌ Failed to send SMS notification:', smsError);
+          
+          // Log the failed notification
+          await supabase
+            .from('notification_logs')
+            .insert({
+              user_id: userId,
+              notification_type: notificationType,
+              channel: 'sms',
+              status: 'failed',
+              body: JSON.stringify(templateVariables),
+              metadata: {
+                booking_id: booking.id,
+                event_type: `booking_${newStatus}`,
+                error: smsError instanceof Error ? smsError.message : String(smsError),
+                phone_to: targetPhone
+              },
+            });
         }
       } else {
         console.log('ℹ️ No SMS template defined for notification type:', notificationType);
