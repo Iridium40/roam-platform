@@ -323,18 +323,28 @@ export const BookingCard: React.FC<BookingCardProps> = ({
 
     setIsLoading(true);
     try {
-      const { error } = await supabase
-        .from("bookings")
-        .update({
-          booking_status: "cancelled",
-          cancelled_at: new Date().toISOString(),
-          cancelled_by: user.id,
-          cancellation_reason: cancelReason,
-          refund_amount: refundAmount,
-        })
-        .eq("id", booking.id);
+      // Calculate cancellation fee (total - refund)
+      const cancellationFee = (booking.total_amount || 0) - refundAmount;
 
-      if (error) throw error;
+      // Use API endpoint to cancel booking (handles notifications)
+      const response = await fetch('/api/bookings/cancel', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          bookingId: booking.id,
+          cancellationReason: cancelReason,
+          cancellationFee,
+          refundAmount,
+          cancelledBy: user.id,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to cancel booking');
+      }
 
       await logBookingAction(
         "booking_cancelled",

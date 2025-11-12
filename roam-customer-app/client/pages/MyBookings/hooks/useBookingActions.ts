@@ -34,37 +34,39 @@ export const useBookingActions = (
       const cancellationDetails = calculateCancellationDetails(selectedBookingForCancel);
       const { totalAmount, cancellationFee, refundAmount } = cancellationDetails;
 
-      const { error } = await supabase
-        .from("bookings")
-        .update({
-          booking_status: "cancelled",
-          cancelled_at: new Date().toISOString(),
-          cancelled_by: currentUser.id,
-          cancellation_reason: cancellationReason.trim() || "Cancelled by customer",
-          cancellation_fee: cancellationFee,
-          refund_amount: refundAmount,
-        })
-        .eq("id", selectedBookingForCancel.id);
+      // Use API endpoint to cancel booking (handles notifications)
+      const response = await fetch('/api/bookings/cancel', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          bookingId: selectedBookingForCancel.id,
+          cancellationReason: cancellationReason.trim() || "Cancelled by customer",
+          cancellationFee,
+          refundAmount,
+          cancelledBy: currentUser.id,
+        }),
+      });
 
-      if (error) {
-        throw error;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to cancel booking');
       }
 
-      // Update local state
+      const { booking } = await response.json();
+
+      // Update local state with returned booking data
       setBookings((prev) =>
-        prev.map((booking) =>
-          booking.id === selectedBookingForCancel.id
+        prev.map((b) =>
+          b.id === selectedBookingForCancel.id
             ? {
+                ...b,
                 ...booking,
                 status: "cancelled",
                 booking_status: "cancelled",
-                cancelled_at: new Date().toISOString(),
-                cancelled_by: currentUser.id,
-                cancellation_reason: cancellationReason.trim() || "Cancelled by customer",
-                cancellation_fee: cancellationFee,
-                refund_amount: refundAmount,
               }
-            : booking,
+            : b,
         ),
       );
 
@@ -141,46 +143,42 @@ export const useBookingActions = (
         selectedBookingForReschedule.booking_time ||
         newBookingTime;
 
-      const rescheduleData = {
-        booking_date: newBookingDate,
-        start_time: newBookingTime,
-        reschedule_reason: rescheduleReason.trim() || "Rescheduled by customer",
-        rescheduled_at: new Date().toISOString(),
-        rescheduled_by: currentUser.id,
-        original_booking_date: originalBookingDate,
-        original_start_time: originalStartTime,
-        reschedule_count: (selectedBookingForReschedule.reschedule_count || 0) + 1,
-        last_reschedule_date: new Date().toISOString(),
-      };
+      // Use API endpoint to reschedule booking (handles notifications)
+      const response = await fetch('/api/bookings/reschedule', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          bookingId: selectedBookingForReschedule.id,
+          bookingDate: newBookingDate,
+          startTime: newBookingTime,
+          rescheduleReason: rescheduleReason.trim() || "Rescheduled by customer",
+          rescheduledBy: currentUser.id,
+          originalBookingDate: originalBookingDate,
+          originalStartTime: originalStartTime,
+        }),
+      });
 
-      const { error } = await supabase
-        .from("bookings")
-        .update(rescheduleData)
-        .eq("id", selectedBookingForReschedule.id);
-
-      if (error) {
-        throw error;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to reschedule booking');
       }
 
-      // Update local state with reschedule tracking
+      const { booking } = await response.json();
+
+      // Update local state with returned booking data
       setBookings((prev) =>
-        prev.map((booking) =>
-          booking.id === selectedBookingForReschedule.id
+        prev.map((b) =>
+          b.id === selectedBookingForReschedule.id
             ? {
+                ...b,
                 ...booking,
                 booking_date: newBookingDate,
                 start_time: newBookingTime,
                 booking_time: newBookingTime,
-                reschedule_reason: rescheduleReason.trim() || "Rescheduled by customer",
-                rescheduled_at: new Date().toISOString(),
-                rescheduled_by: currentUser.id,
-                // Update reschedule tracking fields in local state
-                original_booking_date: originalBookingDate,
-                original_start_time: originalStartTime,
-                reschedule_count: (selectedBookingForReschedule.reschedule_count || 0) + 1,
-                last_reschedule_date: new Date().toISOString(),
               }
-            : booking,
+            : b,
         ),
       );
 

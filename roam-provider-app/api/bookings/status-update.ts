@@ -2,6 +2,8 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
 import { sendSMS } from '../../lib/notifications/sms-service.js';
+import { notifyProvidersBookingCancelled } from '../../lib/notifications/notify-providers-booking-cancelled.js';
+import { notifyProvidersBookingRescheduled } from '../../lib/notifications/notify-providers-booking-rescheduled.js';
 
 // Initialize Resend
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -446,18 +448,70 @@ async function sendStatusNotifications(
         location_name: locationName,
       };
     }
-    // Notify provider when booking is cancelled
-    else if (newStatus === 'cancelled' && options.notifyProvider && provider?.user_id) {
-      notificationType = 'provider_booking_cancelled';
-      userId = provider.user_id;
-      templateVariables = {
-        provider_name: provider.first_name || 'Provider',
-        customer_name: customer ? `${customer.first_name} ${customer.last_name}` : 'Customer',
-        service_name: serviceName,
-        booking_date: bookingDate,
-        booking_time: bookingTime,
-        cancellation_reason: booking.cancellation_reason || 'No reason provided',
-      };
+    // Notify providers when booking is cancelled (owners/dispatchers + assigned provider)
+    if (newStatus === 'cancelled' && options.notifyProvider && business) {
+      try {
+        await notifyProvidersBookingCancelled({
+          booking: {
+            id: booking.id,
+            business_id: booking.business_id,
+            provider_id: booking.provider_id,
+            booking_date: bookingDateRaw || '',
+            start_time: startTimeRaw || '',
+            cancellation_reason: booking.cancellation_reason,
+          },
+          service: {
+            name: serviceName,
+          },
+          customer: {
+            first_name: customer?.first_name || booking.guest_name?.split(' ')[0] || 'Customer',
+            last_name: customer?.last_name || booking.guest_name?.split(' ').slice(1).join(' ') || '',
+          },
+          business: {
+            name: locationName,
+            business_address: locationAddress,
+          },
+        });
+      } catch (notificationError) {
+        console.error('⚠️ Error sending cancellation notifications (non-fatal):', notificationError);
+      }
+    }
+
+    // Notify providers when booking is rescheduled (owners/dispatchers + assigned provider)
+    // Check if this is a reschedule by looking for reschedule fields
+    if (options.notifyProvider && business && (
+      booking.rescheduled_at || 
+      booking.reschedule_reason || 
+      (booking.original_booking_date && booking.original_booking_date !== booking.booking_date) ||
+      (booking.original_start_time && booking.original_start_time !== booking.start_time)
+    )) {
+      try {
+        await notifyProvidersBookingRescheduled({
+          booking: {
+            id: booking.id,
+            business_id: booking.business_id,
+            provider_id: booking.provider_id,
+            booking_date: booking.booking_date || '',
+            start_time: booking.start_time || '',
+            original_booking_date: booking.original_booking_date,
+            original_start_time: booking.original_start_time,
+            reschedule_reason: booking.reschedule_reason,
+          },
+          service: {
+            name: serviceName,
+          },
+          customer: {
+            first_name: customer?.first_name || booking.guest_name?.split(' ')[0] || 'Customer',
+            last_name: customer?.last_name || booking.guest_name?.split(' ').slice(1).join(' ') || '',
+          },
+          business: {
+            name: locationName,
+            business_address: locationAddress,
+          },
+        });
+      } catch (notificationError) {
+        console.error('⚠️ Error sending reschedule notifications (non-fatal):', notificationError);
+      }
     }
 
     // Respect user notification preferences from user_settings
