@@ -18,19 +18,27 @@ export async function sendSMS(params: SendSMSParams): Promise<SMSResult> {
   try {
     // Check for Twilio credentials (support both VITE_ and non-VITE_ prefixed variables)
     // VITE_ prefix is for client-side, but we check both for server-side compatibility
+    // Support both Auth Token and API Key authentication methods
     const accountSid = process.env.TWILIO_ACCOUNT_SID || process.env.VITE_TWILIO_ACCOUNT_SID;
     const authToken = process.env.TWILIO_AUTH_TOKEN || process.env.VITE_TWILIO_AUTH_TOKEN;
+    const apiKeySid = process.env.TWILIO_API_KEY_SID || process.env.VITE_TWILIO_API_KEY_SID;
+    const apiKeySecret = process.env.TWILIO_API_KEY_SECRET || process.env.VITE_TWILIO_API_KEY_SECRET;
     const fromNumber = process.env.TWILIO_PHONE_NUMBER || process.env.TWILIO_FROM_NUMBER;
 
-    if (!accountSid || !authToken || !fromNumber) {
+    // Determine authentication method: API Key (preferred) or Auth Token (fallback)
+    const useApiKey = !!(apiKeySid && apiKeySecret);
+    const useAuthToken = !!(authToken);
+    
+    if (!accountSid || (!useApiKey && !useAuthToken) || !fromNumber) {
       const envKeys = Object.keys(process.env).filter(k => k.includes('TWILIO'));
       console.warn('⚠️ Twilio is not configured - SMS will be skipped', {
         hasAccountSid: !!accountSid,
         hasAuthToken: !!authToken,
+        hasApiKey: !!useApiKey,
         hasFromNumber: !!fromNumber,
         envKeys,
         accountSidSource: accountSid ? (process.env.TWILIO_ACCOUNT_SID ? 'TWILIO_ACCOUNT_SID' : 'VITE_TWILIO_ACCOUNT_SID') : 'none',
-        authTokenSource: authToken ? (process.env.TWILIO_AUTH_TOKEN ? 'TWILIO_AUTH_TOKEN' : 'VITE_TWILIO_AUTH_TOKEN') : 'none',
+        authMethod: useApiKey ? 'API Key' : (useAuthToken ? 'Auth Token' : 'none'),
       });
       throw new Error('SMS service not configured');
     }
@@ -38,7 +46,7 @@ export async function sendSMS(params: SendSMSParams): Promise<SMSResult> {
     // Log which credentials are being used (without exposing actual values)
     console.log('🔐 Using Twilio credentials:', {
       accountSidLength: accountSid.length,
-      authTokenLength: authToken.length,
+      authMethod: useApiKey ? 'API Key' : 'Auth Token',
       fromNumber,
       accountSidPrefix: accountSid.substring(0, 2),
     });
@@ -77,10 +85,10 @@ export async function sendSMS(params: SendSMSParams): Promise<SMSResult> {
     });
 
     // Initialize Twilio client
-    const client = twilio(
-      accountSid,
-      authToken
-    );
+    // Use API Key authentication if available (more secure), otherwise use Auth Token
+    const client = useApiKey
+      ? twilio(apiKeySid!, apiKeySecret!, { accountSid })
+      : twilio(accountSid, authToken!);
     
     // Send SMS
     const message = await client.messages.create({

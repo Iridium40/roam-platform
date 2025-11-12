@@ -17,21 +17,52 @@ Error 20003 indicates that Twilio rejected your authentication credentials. This
 
 ## Solution Steps
 
-### Step 1: Verify Twilio Credentials in Twilio Console
+### Step 1: Choose Authentication Method
+
+Twilio supports two authentication methods:
+
+**Option A: API Keys (Recommended - More Secure)**
+- Can be revoked without affecting other services
+- Better for production environments
+- Requires: Account SID + API Key SID + API Key Secret
+
+**Option B: Auth Token (Simpler)**
+- Uses your main account credentials
+- Requires: Account SID + Auth Token
+
+### Step 2: Get Your Credentials from Twilio Console
 
 1. Log into [Twilio Console](https://console.twilio.com/)
 2. Go to **Account** → **API Keys & Tokens**
-3. Copy your **Account SID** (starts with `AC`)
-4. Copy your **Auth Token** (click "Show" to reveal it)
 
-### Step 2: Set Environment Variables in Vercel
+**For API Key Authentication (Recommended):**
+- Copy your **Account SID** (starts with `AC`)
+- Create a new API Key (or use existing):
+  - Click **Create API Key**
+  - Give it a friendly name (e.g., "ROAM SMS Service")
+  - Copy the **API Key SID** (starts with `SK`)
+  - Copy the **API Key Secret** (shown only once - save it!)
 
-The SMS service checks for credentials in this order:
-1. `TWILIO_ACCOUNT_SID` (preferred for server-side)
-2. `VITE_TWILIO_ACCOUNT_SID` (fallback)
-3. `TWILIO_AUTH_TOKEN` (preferred for server-side)
-4. `VITE_TWILIO_AUTH_TOKEN` (fallback)
-5. `TWILIO_PHONE_NUMBER` or `TWILIO_FROM_NUMBER`
+**For Auth Token Authentication:**
+- Copy your **Account SID** (starts with `AC`)
+- Copy your **Auth Token** (click "Show" to reveal it)
+
+### Step 3: Set Environment Variables in Vercel
+
+The SMS service supports both authentication methods and checks for credentials in this order:
+
+**For API Key Authentication (Preferred):**
+1. `TWILIO_ACCOUNT_SID` or `VITE_TWILIO_ACCOUNT_SID`
+2. `TWILIO_API_KEY_SID` or `VITE_TWILIO_API_KEY_SID`
+3. `TWILIO_API_KEY_SECRET` or `VITE_TWILIO_API_KEY_SECRET`
+4. `TWILIO_PHONE_NUMBER` or `TWILIO_FROM_NUMBER`
+
+**For Auth Token Authentication (Fallback):**
+1. `TWILIO_ACCOUNT_SID` or `VITE_TWILIO_ACCOUNT_SID`
+2. `TWILIO_AUTH_TOKEN` or `VITE_TWILIO_AUTH_TOKEN`
+3. `TWILIO_PHONE_NUMBER` or `TWILIO_FROM_NUMBER`
+
+**Note:** If both API Key and Auth Token are provided, API Key will be used (more secure).
 
 #### Option A: Via Vercel Dashboard
 
@@ -39,6 +70,15 @@ The SMS service checks for credentials in this order:
 2. Navigate to **Settings** → **Environment Variables**
 3. Add/Update these variables:
 
+**Using API Keys (Recommended):**
+```
+TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+TWILIO_API_KEY_SID=SKxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+TWILIO_API_KEY_SECRET=your_api_key_secret_here
+TWILIO_PHONE_NUMBER=+1234567890
+```
+
+**OR Using Auth Token:**
 ```
 TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 TWILIO_AUTH_TOKEN=your_auth_token_here
@@ -53,6 +93,22 @@ TWILIO_PHONE_NUMBER=+1234567890
 
 #### Option B: Via Vercel CLI
 
+**Using API Keys (Recommended):**
+```bash
+# Set Account SID
+vercel env add TWILIO_ACCOUNT_SID production
+
+# Set API Key SID
+vercel env add TWILIO_API_KEY_SID production
+
+# Set API Key Secret
+vercel env add TWILIO_API_KEY_SECRET production
+
+# Set Phone Number
+vercel env add TWILIO_PHONE_NUMBER production
+```
+
+**OR Using Auth Token:**
 ```bash
 # Set Account SID
 vercel env add TWILIO_ACCOUNT_SID production
@@ -64,14 +120,25 @@ vercel env add TWILIO_AUTH_TOKEN production
 vercel env add TWILIO_PHONE_NUMBER production
 ```
 
-### Step 3: Verify Environment Variables Are Set
+### Step 4: Verify Environment Variables Are Set
 
 After setting the variables, check the logs on your next deployment. You should see:
 
+**If using API Keys:**
 ```
 🔐 Using Twilio credentials: {
   accountSidLength: 34,
-  authTokenLength: 32,
+  authMethod: 'API Key',
+  fromNumber: '+1234567890',
+  accountSidPrefix: 'AC'
+}
+```
+
+**If using Auth Token:**
+```
+🔐 Using Twilio credentials: {
+  accountSidLength: 34,
+  authMethod: 'Auth Token',
   fromNumber: '+1234567890',
   accountSidPrefix: 'AC'
 }
@@ -79,7 +146,7 @@ After setting the variables, check the logs on your next deployment. You should 
 
 If you see `⚠️ Twilio is not configured`, the environment variables are not being read correctly.
 
-### Step 4: Redeploy Your Application
+### Step 5: Redeploy Your Application
 
 After setting environment variables:
 
@@ -87,7 +154,7 @@ After setting environment variables:
 2. **For Preview**: You may need to redeploy or set variables for preview environment
 3. **For Development**: Restart your local dev server
 
-### Step 5: Test SMS Sending
+### Step 6: Test SMS Sending
 
 Use the test script to verify:
 
@@ -113,9 +180,15 @@ npx tsx scripts/test-booking-completion-sms.ts [your_phone_number]
 
 **Solution**:
 - Double-check credentials in Twilio Console
-- Ensure you're using the **Account SID** (not API Key SID)
-- Ensure you're using the **Auth Token** (not API Secret)
+- **If using API Keys:** Ensure you're using:
+  - Account SID (starts with `AC`)
+  - API Key SID (starts with `SK`)
+  - API Key Secret (not the Auth Token)
+- **If using Auth Token:** Ensure you're using:
+  - Account SID (starts with `AC`)
+  - Auth Token (not API Key Secret)
 - Verify credentials haven't been rotated/changed
+- For API Keys: Ensure the API Key hasn't been revoked
 
 ### Issue 3: Phone Number Format
 
@@ -138,6 +211,18 @@ npx tsx scripts/test-booking-completion-sms.ts [your_phone_number]
 
 ## Verification Checklist
 
+**For API Key Authentication:**
+- [ ] Twilio Account SID starts with `AC` and is 34 characters
+- [ ] API Key SID starts with `SK` and is 34 characters
+- [ ] API Key Secret is 32 characters
+- [ ] Phone number is in E.164 format (`+1...`)
+- [ ] Environment variables set in Vercel (correct environment)
+- [ ] Application redeployed after setting variables
+- [ ] No quotes or spaces in environment variable values
+- [ ] Credentials match Twilio Console exactly
+- [ ] API Key hasn't been revoked
+
+**For Auth Token Authentication:**
 - [ ] Twilio Account SID starts with `AC` and is 34 characters
 - [ ] Auth Token is 32 characters
 - [ ] Phone number is in E.164 format (`+1...`)
