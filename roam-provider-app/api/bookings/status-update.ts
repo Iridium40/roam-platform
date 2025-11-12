@@ -728,3 +728,14 @@ async function sendStatusNotifications(
     }
 
     if (notificationType && userId && !targetEmail) {
+      console.log('ℹ️ No email address found for user:', { userId, notificationType });
+    }
+
+    if (notificationType && userId && !targetPhone) {
+      console.log('ℹ️ No phone number found for user:', { userId, notificationType });
+    }
+
+  } catch (error) {
+    console.error('❌ Error in sendStatusNotifications:', error);
+  }
+}
