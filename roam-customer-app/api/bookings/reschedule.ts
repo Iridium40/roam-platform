@@ -1,6 +1,15 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
-import { notifyProvidersBookingRescheduled } from '../../lib/notifications/notify-providers-booking-rescheduled';
+
+// Import notification function - make it optional to prevent build failures
+let notifyProvidersBookingRescheduled: any = null;
+try {
+  const notificationModule = require('../../lib/notifications/notify-providers-booking-rescheduled');
+  notifyProvidersBookingRescheduled = notificationModule.notifyProvidersBookingRescheduled;
+} catch (e) {
+  // Notification function not available - reschedule will still work
+  console.warn('Notification module not available, reschedule will proceed without notifications');
+}
 
 const supabase = createClient(
   process.env.VITE_PUBLIC_SUPABASE_URL!,
@@ -32,16 +41,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       originalStartTime,
     } = req.body;
 
+    console.log('📋 Reschedule request received:', { bookingId, bookingDate, startTime });
+
     if (!bookingId || !bookingDate || !startTime) {
       return res.status(400).json({ error: 'bookingId, bookingDate, and startTime are required' });
     }
 
     // Get current booking to preserve original dates if not provided
-    const { data: currentBooking } = await supabase
+    const { data: currentBooking, error: fetchError } = await supabase
       .from('bookings')
       .select('original_booking_date, original_start_time, booking_date, start_time, reschedule_count')
       .eq('id', bookingId)
       .single();
+
+    if (fetchError) {
+      console.error('❌ Error fetching booking for reschedule:', fetchError);
+      return res.status(404).json({ error: 'Booking not found' });
+    }
 
     const originalDate = originalBookingDate || currentBooking?.original_booking_date || currentBooking?.booking_date;
     const originalTime = originalStartTime || currentBooking?.original_start_time || currentBooking?.start_time;
@@ -82,47 +98,78 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       `)
       .single();
 
-    if (updateError || !booking) {
-      console.error('Error rescheduling booking:', updateError);
-      return res.status(500).json({ error: 'Failed to reschedule booking' });
+    if (updateError) {
+      console.error('❌ Error rescheduling booking:', {
+        error: updateError,
+        message: updateError.message,
+        details: updateError.details,
+        hint: updateError.hint,
+        code: updateError.code,
+      });
+      return res.status(500).json({ 
+        error: 'Failed to reschedule booking',
+        details: updateError.message 
+      });
     }
 
-    // Notify providers about the reschedule (non-blocking)
-    try {
-      const service = Array.isArray(booking.services) ? booking.services[0] : booking.services;
-      const customer = Array.isArray(booking.customer_profiles) ? booking.customer_profiles[0] : booking.customer_profiles;
-      const business = Array.isArray(booking.business_profiles) ? booking.business_profiles[0] : booking.business_profiles;
+    if (!booking) {
+      console.error('❌ No booking returned after reschedule:', { bookingId });
+      return res.status(404).json({ error: 'Booking not found' });
+    }
 
-      if (service && customer && business) {
-        await notifyProvidersBookingRescheduled({
-          booking: {
-            id: booking.id,
-            business_id: booking.business_id,
-            provider_id: booking.provider_id,
-            booking_date: booking.booking_date,
-            start_time: booking.start_time,
-            original_booking_date: booking.original_booking_date,
-            original_start_time: booking.original_start_time,
-            reschedule_reason: booking.reschedule_reason,
-          },
-          service: {
-            name: service.name,
-          },
-          customer: {
-            first_name: customer.first_name || '',
-            last_name: customer.last_name || '',
-            email: customer.email,
-            phone: customer.phone,
-          },
-          business: {
-            name: business.name,
-            business_address: business.business_address,
-          },
+    console.log('✅ Booking rescheduled successfully:', booking.id);
+
+    // Notify providers about the reschedule (non-blocking)
+    if (notifyProvidersBookingRescheduled) {
+      try {
+        const service = Array.isArray(booking.services) ? booking.services[0] : booking.services;
+        const customer = Array.isArray(booking.customer_profiles) ? booking.customer_profiles[0] : booking.customer_profiles;
+        const business = Array.isArray(booking.business_profiles) ? booking.business_profiles[0] : booking.business_profiles;
+
+        if (!service || !customer || !business) {
+          console.warn('⚠️ Missing booking data for notifications:', {
+            hasService: !!service,
+            hasCustomer: !!customer,
+            hasBusiness: !!business,
+          });
+        } else {
+          console.log('📧 Sending reschedule notifications...');
+          await notifyProvidersBookingRescheduled({
+            booking: {
+              id: booking.id,
+              business_id: booking.business_id,
+              provider_id: booking.provider_id,
+              booking_date: booking.booking_date,
+              start_time: booking.start_time,
+              original_booking_date: booking.original_booking_date,
+              original_start_time: booking.original_start_time,
+              reschedule_reason: booking.reschedule_reason,
+            },
+            service: {
+              name: service.name,
+            },
+            customer: {
+              first_name: customer.first_name || '',
+              last_name: customer.last_name || '',
+              email: customer.email,
+              phone: customer.phone,
+            },
+            business: {
+              name: business.name,
+              business_address: business.business_address,
+            },
+          });
+          console.log('✅ Reschedule notifications sent');
+        }
+      } catch (notificationError) {
+        console.error('⚠️ Error sending reschedule notifications (non-fatal):', {
+          error: notificationError instanceof Error ? notificationError.message : String(notificationError),
+          stack: notificationError instanceof Error ? notificationError.stack : undefined,
         });
+        // Continue - don't fail the reschedule if notifications fail
       }
-    } catch (notificationError) {
-      console.error('⚠️ Error sending reschedule notifications (non-fatal):', notificationError);
-      // Continue - don't fail the reschedule if notifications fail
+    } else {
+      console.log('ℹ️ Notification function not available, skipping provider notifications');
     }
 
     return res.status(200).json({

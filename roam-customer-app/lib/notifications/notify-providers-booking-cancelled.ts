@@ -122,11 +122,17 @@ export async function notifyProvidersBookingCancelled(data: BookingCancellationN
       || process.env.VITE_PROVIDER_APP_URL 
       || 'https://provider.roamyourbestlife.com';
     
+    // Check if fetch is available (Node.js 18+ has it, but some environments might not)
+    if (typeof fetch === 'undefined') {
+      console.warn('⚠️ fetch is not available, skipping HTTP-based notifications');
+      return;
+    }
+    
     const notificationPromises = providersToNotify.map(async (provider) => {
       try {
         const apiEndpoint = `${providerApiUrl}/api/notifications/send`;
         
-        console.log(`📤 Calling cancellation notification API for provider ${provider.id}`);
+        console.log(`📤 Calling cancellation notification API for provider ${provider.id}: ${apiEndpoint}`);
 
         const response = await fetch(apiEndpoint, {
           method: 'POST',

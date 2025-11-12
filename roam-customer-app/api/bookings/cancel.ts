@@ -1,5 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
+
+// Import notification function
 import { notifyProvidersBookingCancelled } from '../../lib/notifications/notify-providers-booking-cancelled';
 
 const supabase = createClient(
@@ -23,6 +25,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const { bookingId, cancellationReason, cancellationFee, refundAmount, cancelledBy } = req.body;
+
+    console.log('📋 Cancellation request received:', { bookingId, cancellationReason, cancellationFee, refundAmount });
 
     if (!bookingId) {
       return res.status(400).json({ error: 'bookingId is required' });
@@ -60,19 +64,42 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       `)
       .single();
 
-    if (updateError || !booking) {
-      console.error('Error cancelling booking:', updateError);
-      return res.status(500).json({ error: 'Failed to cancel booking' });
+    if (updateError) {
+      console.error('❌ Error cancelling booking:', {
+        error: updateError,
+        message: updateError.message,
+        details: updateError.details,
+        hint: updateError.hint,
+        code: updateError.code,
+      });
+      return res.status(500).json({ 
+        error: 'Failed to cancel booking',
+        details: updateError.message 
+      });
     }
+
+    if (!booking) {
+      console.error('❌ No booking returned after update:', { bookingId });
+      return res.status(404).json({ error: 'Booking not found' });
+    }
+
+    console.log('✅ Booking cancelled successfully:', booking.id);
 
     // Notify providers about the cancellation (non-blocking)
     try {
-      const service = Array.isArray(booking.services) ? booking.services[0] : booking.services;
-      const customer = Array.isArray(booking.customer_profiles) ? booking.customer_profiles[0] : booking.customer_profiles;
-      const business = Array.isArray(booking.business_profiles) ? booking.business_profiles[0] : booking.business_profiles;
+        const service = Array.isArray(booking.services) ? booking.services[0] : booking.services;
+        const customer = Array.isArray(booking.customer_profiles) ? booking.customer_profiles[0] : booking.customer_profiles;
+        const business = Array.isArray(booking.business_profiles) ? booking.business_profiles[0] : booking.business_profiles;
 
-      if (service && customer && business) {
-        await notifyProvidersBookingCancelled({
+        if (!service || !customer || !business) {
+          console.warn('⚠️ Missing booking data for notifications:', {
+            hasService: !!service,
+            hasCustomer: !!customer,
+            hasBusiness: !!business,
+          });
+        } else {
+          console.log('📧 Sending cancellation notifications...');
+          await notifyProvidersBookingCancelled({
           booking: {
             id: booking.id,
             business_id: booking.business_id,
@@ -94,12 +121,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             name: business.name,
             business_address: business.business_address,
           },
+          });
+          console.log('✅ Cancellation notifications sent');
+        }
+      } catch (notificationError) {
+        console.error('⚠️ Error sending cancellation notifications (non-fatal):', {
+          error: notificationError instanceof Error ? notificationError.message : String(notificationError),
+          stack: notificationError instanceof Error ? notificationError.stack : undefined,
         });
+        // Continue - don't fail the cancellation if notifications fail
       }
-    } catch (notificationError) {
-      console.error('⚠️ Error sending cancellation notifications (non-fatal):', notificationError);
-      // Continue - don't fail the cancellation if notifications fail
-    }
 
     return res.status(200).json({
       success: true,

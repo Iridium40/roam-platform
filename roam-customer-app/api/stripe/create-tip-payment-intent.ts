@@ -60,27 +60,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // Get customer details
+    // Get customer details - customer_id is the customer_profile id, not user_id
     const { data: customer, error: customerError } = await supabase
       .from('customer_profiles')
-      .select('user_id, email, first_name, last_name, phone')
-      .eq('user_id', customer_id)
+      .select('id, user_id, email, first_name, last_name, phone')
+      .eq('id', customer_id)
       .single();
 
     if (customerError || !customer) {
+      console.error('❌ Customer lookup error:', customerError);
       return res.status(404).json({ 
-        error: 'Customer not found' 
+        error: 'Customer not found',
+        details: customerError?.message 
       });
     }
 
     // Get or create Stripe customer
     let stripeCustomerId: string;
     
-    // Check if customer already has Stripe profile
+    // Check if customer already has Stripe profile (using user_id from customer profile)
     const { data: existingStripeProfile } = await supabase
       .from('customer_stripe_profiles')
       .select('stripe_customer_id')
-      .eq('user_id', customer_id)
+      .eq('user_id', customer.user_id)
       .single();
 
     if (existingStripeProfile?.stripe_customer_id) {
@@ -105,7 +107,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       console.log('✅ Created Stripe customer for tip:', stripeCustomerId);
 
       // Save to database
-      await supabase
+      const { error: upsertError } = await supabase
         .from('customer_stripe_profiles')
         .upsert({
           user_id: customer.user_id,
@@ -114,6 +116,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }, {
           onConflict: 'user_id'
         });
+      
+      if (upsertError) {
+        console.warn('⚠️ Failed to save Stripe profile (non-fatal):', upsertError);
+      }
     }
 
     // Calculate amounts in cents
