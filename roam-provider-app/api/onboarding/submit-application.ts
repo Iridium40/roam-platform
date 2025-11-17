@@ -240,13 +240,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
     
     // Check if verification was started (we check for Stripe Identity session)
-    const { data: verificationSession, error: verificationError } = await supabase
+    const { data: verificationSessionData, error: verificationError } = await supabase
       .from("stripe_identity_verifications")
       .select("session_id, status")
       .eq("business_id", businessId)
       .order("created_at", { ascending: false })
-      .limit(1)
-      .single();
+      .limit(1);
+    
+    // Handle case where no verification session exists yet (use maybeSingle or check array)
+    const verificationSession = verificationSessionData && Array.isArray(verificationSessionData) 
+      ? verificationSessionData[0] 
+      : verificationSessionData;
     
     console.log("Stripe Identity verification session:", {
       found: !!verificationSession,
@@ -266,7 +270,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       console.error("Identity verification not started or failed:", {
         identity_verified: businessProfile.identity_verified,
         verificationStatus: verificationSession?.status,
-        hasSession: !!verificationSession
+        hasSession: !!verificationSession,
+        verificationError: verificationError?.message
       });
       
       return res.status(400).json({
@@ -283,25 +288,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       verifiedAt: businessProfile.identity_verified_at
     });
 
-    // Check if required documents are uploaded (business documents only - identity docs handled by Stripe)
-    console.log("Checking business documents for businessId:", businessId);
-    
-    const { data: documents, error: documentsError } = await supabase
-      .from("business_documents")
-      .select("document_type")
-      .eq("business_id", businessId);
-
-    if (documentsError) {
-      console.error("Error querying documents:", documentsError);
-      // Continue anyway - don't fail submission for document query issues
-    }
-
-    const uploadedTypes = documents?.map((doc) => doc.document_type) || [];
-    console.log("Uploaded document types:", uploadedTypes);
-
-    // For now, skip strict document validation to avoid blocking submissions
-    // TODO: Re-enable document validation once upload issues are resolved
-    console.log("Skipping document validation for now");
+    // Note: All documents are optional in Phase 1 onboarding
+    // Documents can be uploaded but are not required for submission
+    console.log("Phase 1 documents are optional - no validation required");
 
     // Create application submission record
     const submissionData = {

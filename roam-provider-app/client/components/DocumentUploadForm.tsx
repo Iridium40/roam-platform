@@ -548,25 +548,9 @@ export function DocumentUploadForm({
   };
 
   const canSubmit = () => {
-    if (!requiredDocs || requiredDocs === null || typeof requiredDocs !== 'object' || Array.isArray(requiredDocs)) {
-      console.warn("canSubmit: requiredDocs is invalid:", requiredDocs);
-      return false;
-    }
-
-    try {
-      const requiredDocTypes = Object.entries(requiredDocs)
-        .filter(([_, required]) => required)
-        .map(([type]) => type as DocumentType);
-
-      const uploadedRequiredDocs = requiredDocTypes.every((type) =>
-        documents.some((doc) => doc.type === type && doc.status === "uploaded"),
-      );
-
-      return uploadedRequiredDocs && uploadingCount === 0;
-    } catch (error) {
-      console.error("Error in canSubmit:", error, "requiredDocs:", requiredDocs);
-      return false;
-    }
+    // All documents are optional in Phase 1 onboarding
+    // Only check that no uploads are currently in progress
+    return uploadingCount === 0;
   };
 
   const handleSubmit = async () => {

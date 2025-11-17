@@ -778,11 +778,8 @@ export default function BusinessResults() {
                         selectedBusiness?.id === business.id && "ring-2 ring-roam-blue"
                       )}
                       onClick={() => {
-                        setSelectedBusiness(business);
-                        const location = business.business_locations?.[0] as BusinessLocation | undefined;
-                        if (location?.latitude && location?.longitude) {
-                          setMapCenter({ lat: location.latitude, lng: location.longitude });
-                        }
+                        // Navigate to business profile with Services tab active
+                        navigate(`/business/${business.id}?tab=services`);
                       }}
                     >
                       <CardContent className="p-3 sm:p-4">
@@ -842,19 +839,32 @@ export default function BusinessResults() {
                             </div>
                           </div>
 
-                          {/* View Business Button */}
+                          {/* Book Now Button */}
                           <div className="flex-shrink-0 flex items-center">
                             <Button
-                              variant="outline"
+                              variant="default"
                               size="sm"
                               onClick={(e) => {
                                 e.stopPropagation(); // Prevent card click
-                                window.open(`/business/${business.id}`, '_blank', 'noopener,noreferrer');
+                                // Navigate to booking flow
+                                const firstServiceId = selectedServices.size > 0 
+                                  ? Array.from(selectedServices)[0]
+                                  : services && services.length > 0 
+                                    ? services[0].id 
+                                    : null;
+                                
+                                if (firstServiceId) {
+                                  navigate(`/book-service/${firstServiceId}?business_id=${business.id}`);
+                                } else {
+                                  // If no service available, navigate to business profile
+                                  navigate(`/business/${business.id}`);
+                                }
                               }}
-                              className="h-8 sm:h-9 px-2 sm:px-3 text-xs sm:text-sm"
-                              title="View business profile"
+                              className="h-8 sm:h-9 px-2 sm:px-3 text-xs sm:text-sm bg-roam-blue hover:bg-roam-light-blue text-white"
+                              title="Book this business"
                             >
-                              <span className="hidden sm:inline">View</span>
+                              <span className="hidden sm:inline">Book Now</span>
+                              <span className="sm:hidden">Book</span>
                               <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 sm:ml-1.5" />
                             </Button>
                           </div>

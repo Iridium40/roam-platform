@@ -64,20 +64,118 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       businessIds = businessSubcategories?.map(bs => bs.business_id) || [];
     } else if (searchQuery) {
-      // Search by business name
-      const { data: searchResults, error: searchError } = await supabase
+      const searchTerm = (searchQuery as string).toLowerCase().trim();
+      const allBusinessIds = new Set<string>();
+
+      // 1. Search by business name
+      const { data: businessNameResults, error: businessNameError } = await supabase
         .from('business_profiles')
         .select('id')
-        .ilike('business_name', `%${searchQuery}%`)
+        .ilike('business_name', `%${searchTerm}%`)
         .eq('is_active', true)
         .limit(100);
 
-      if (searchError) {
-        console.error('Error searching businesses:', searchError);
-        return res.status(500).json({ error: 'Failed to search businesses', details: searchError.message });
+      if (businessNameError) {
+        console.error('Error searching businesses by name:', businessNameError);
+      } else {
+        businessNameResults?.forEach(b => allBusinessIds.add(b.id));
       }
 
-      businessIds = searchResults?.map(b => b.id) || [];
+      // 2. Search by service name (find services with search term in name)
+      const { data: serviceResults, error: serviceError } = await supabase
+        .from('services')
+        .select(`
+          id,
+          business_services!inner(
+            business_id
+          )
+        `)
+        .ilike('name', `%${searchTerm}%`)
+        .eq('is_active', true)
+        .eq('business_services.is_active', true);
+
+      if (serviceError) {
+        console.error('Error searching services:', serviceError);
+      } else {
+        serviceResults?.forEach((service: any) => {
+          if (service.business_services && Array.isArray(service.business_services)) {
+            service.business_services.forEach((bs: any) => {
+              if (bs.business_id) {
+                allBusinessIds.add(bs.business_id);
+              }
+            });
+          }
+        });
+      }
+
+      // 3. Search by subcategory type (e.g., "massage_therapy" for "massage")
+      // Check if search term matches subcategory types
+      const subcategoryTypeMap: Record<string, string[]> = {
+        'massage': ['massage_therapy'],
+        'therapy': ['massage_therapy', 'physical_therapy', 'iv_therapy'],
+        'yoga': ['yoga_instructor'],
+        'trainer': ['personal_trainer'],
+        'hair': ['hair_and_makeup'],
+        'makeup': ['hair_and_makeup'],
+        'physician': ['physician'],
+        'nurse': ['nurse_practitioner'],
+        'chiropractor': ['chiropractor'],
+        'esthetician': ['esthetician'],
+        'tan': ['spray_tan'],
+        'coach': ['health_coach'],
+        'injectables': ['injectables'],
+        'pilates': ['pilates_instructor'],
+      };
+
+      // Find matching subcategory types
+      const matchingSubcategoryTypes: string[] = [];
+      for (const [key, types] of Object.entries(subcategoryTypeMap)) {
+        if (searchTerm.includes(key) || types.some(type => searchTerm.includes(type.replace('_', ' ')))) {
+          matchingSubcategoryTypes.push(...types);
+        }
+      }
+
+      // Also check if search term directly matches a subcategory type (e.g., "massage_therapy")
+      const normalizedSearchTerm = searchTerm.replace(/\s+/g, '_');
+      if (subcategoryTypeMap[normalizedSearchTerm]) {
+        matchingSubcategoryTypes.push(...subcategoryTypeMap[normalizedSearchTerm]);
+      }
+
+      // Query businesses with matching subcategories
+      if (matchingSubcategoryTypes.length > 0) {
+        // First, get subcategory IDs for the matching types
+        const { data: subcategoryIds, error: subcatIdsError } = await supabase
+          .from('service_subcategories')
+          .select('id')
+          .in('service_subcategory_type', matchingSubcategoryTypes)
+          .eq('is_active', true);
+
+        if (subcatIdsError) {
+          console.error('Error fetching subcategory IDs:', subcatIdsError);
+        } else if (subcategoryIds && subcategoryIds.length > 0) {
+          const subcatIds = subcategoryIds.map(sc => sc.id);
+          
+          // Then find businesses with these subcategories
+          const { data: subcategoryResults, error: subcategoryError } = await supabase
+            .from('business_service_subcategories')
+            .select('business_id')
+            .in('subcategory_id', subcatIds)
+            .eq('is_active', true);
+
+          if (subcategoryError) {
+            console.error('Error searching by subcategory:', subcategoryError);
+          } else {
+            subcategoryResults?.forEach((bs: any) => {
+              if (bs.business_id) {
+                allBusinessIds.add(bs.business_id);
+              }
+            });
+          }
+        }
+      }
+
+      // Convert Set to Array
+      businessIds = Array.from(allBusinessIds);
     }
 
     if (businessIds.length === 0) {
@@ -225,7 +323,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }).sort((a: any, b: any) => a._distance - b._distance);
     }
 
-    // Fetch services for the subcategory if provided
+    // Fetch services for the subcategory if provided, or services matching search query
     let services: any[] = [];
     if (subcategoryId) {
       const { data: servicesData, error: servicesError } = await supabase
@@ -246,6 +344,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       if (servicesError) {
         console.error('Error fetching services:', servicesError);
+        // Don't fail the request if services fetch fails
+      } else {
+        services = servicesData || [];
+      }
+    } else if (searchQuery) {
+      // Fetch services matching the search query
+      const searchTerm = (searchQuery as string).toLowerCase().trim();
+      const { data: servicesData, error: servicesError } = await supabase
+        .from('services')
+        .select(`
+          id,
+          name,
+          description,
+          min_price,
+          duration_minutes,
+          service_subcategories(
+            id,
+            service_subcategory_type
+          )
+        `)
+        .ilike('name', `%${searchTerm}%`)
+        .eq('is_active', true)
+        .limit(50);
+
+      if (servicesError) {
+        console.error('Error fetching services by search:', servicesError);
         // Don't fail the request if services fetch fails
       } else {
         services = servicesData || [];

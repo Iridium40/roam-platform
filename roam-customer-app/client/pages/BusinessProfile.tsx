@@ -59,14 +59,21 @@ export default function BusinessProfile() {
     pathname: window.location.pathname
   });
   
-  // Check if user wants to book directly
+  // Check if user wants to book directly or which tab to show
   const shouldBook = searchParams.get('book') === 'true';
+  const tabParam = searchParams.get('tab');
   
   const [business, setBusiness] = useState<Business | null>(null);
   const [services, setServices] = useState<Service[]>([]);
   const [staff, setStaff] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState(shouldBook ? 'services' : 'overview');
+  // Set active tab based on query parameter, default to 'services' if coming from search, otherwise 'overview'
+  const [activeTab, setActiveTab] = useState(
+    tabParam === 'services' || shouldBook ? 'services' : 
+    tabParam === 'staff' ? 'staff' :
+    tabParam === 'reviews' ? 'reviews' :
+    'overview'
+  );
   const [shareModalOpen, setShareModalOpen] = useState(false);
 
   // Load business details and services
