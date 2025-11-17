@@ -53,6 +53,7 @@ export default function CustomerTransactions() {
     if (customer) {
       loadTransactions();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [customer]);
 
   const loadTransactions = async () => {
@@ -73,31 +74,64 @@ export default function CustomerTransactions() {
 
       if (bookingIds.length === 0) {
         setTransactions([]);
+        setLoading(false);
         return;
       }
 
-      // Get financial transactions for these bookings
+      // Get financial transactions for these bookings with proper joins
       const { data, error } = await supabase
         .from('financial_transactions')
         .select(`
           *,
-          bookings (
+          bookings!inner (
             booking_date,
-            services (name),
-            business_profiles (business_name)
+            service_id,
+            business_id,
+            services!left (
+              name
+            ),
+            business_profiles!left (
+              business_name
+            )
           )
         `)
         .in('booking_id', bookingIds)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase query error:', error);
+        throw error;
+      }
 
-      setTransactions(data || []);
-    } catch (error) {
+      // Transform the data to match the expected interface
+      // Handle case where bookings might be an array (from !inner join) or single object
+      const transformedTransactions = (data || []).map((tx: any) => {
+        // bookings might be an array if multiple bookings match, or a single object
+        const booking = Array.isArray(tx.bookings) ? tx.bookings[0] : tx.bookings;
+        
+        return {
+          ...tx,
+          bookings: booking ? {
+            booking_date: booking.booking_date,
+            services: booking.services ? {
+              name: Array.isArray(booking.services) ? booking.services[0]?.name : booking.services.name
+            } : null,
+            business_profiles: booking.business_profiles ? {
+              business_name: Array.isArray(booking.business_profiles) 
+                ? booking.business_profiles[0]?.business_name 
+                : booking.business_profiles.business_name
+            } : null
+          } : null
+        };
+      });
+
+      console.log('Loaded transactions:', transformedTransactions.length);
+      setTransactions(transformedTransactions);
+    } catch (error: any) {
       console.error('Error loading transactions:', error);
       toast({
         title: 'Error',
-        description: 'Failed to load transaction history',
+        description: error?.message || 'Failed to load transaction history',
         variant: 'destructive',
       });
     } finally {
