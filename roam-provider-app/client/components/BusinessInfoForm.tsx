@@ -25,6 +25,14 @@ import {
   Star,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import GooglePlacesAutocomplete from "@/components/GooglePlacesAutocomplete";
+
+// Declare global Google Maps types
+declare global {
+  interface Window {
+    google?: typeof google;
+  }
+}
 
 // Database schema interfaces
 interface ServiceCategoryDB {
@@ -294,6 +302,90 @@ export function BusinessInfoForm({
         return null;
       default:
         return null;
+    }
+  };
+
+  // Parse Google Places address components
+  const parseAddressComponents = (place: google.maps.places.PlaceResult) => {
+    const addressComponents = place.address_components || [];
+    const address: Partial<BusinessAddress> = {
+      addressLine1: "",
+      addressLine2: "",
+      city: "",
+      state: "",
+      postalCode: "",
+      country: "United States",
+    };
+
+    // Extract address components
+    addressComponents.forEach((component) => {
+      const types = component.types;
+      
+      if (types.includes("street_number")) {
+        address.addressLine1 = component.long_name + " ";
+      }
+      if (types.includes("route")) {
+        address.addressLine1 = (address.addressLine1 || "") + component.long_name;
+      }
+      if (types.includes("subpremise") || types.includes("premise")) {
+        address.addressLine2 = component.long_name;
+      }
+      if (types.includes("locality")) {
+        address.city = component.long_name;
+      }
+      if (types.includes("administrative_area_level_1")) {
+        address.state = component.short_name;
+      }
+      if (types.includes("postal_code")) {
+        address.postalCode = component.long_name;
+      }
+      if (types.includes("country")) {
+        address.country = component.long_name;
+      }
+    });
+
+    // Fallback to formatted_address if addressLine1 is empty
+    if (!address.addressLine1 && place.formatted_address) {
+      address.addressLine1 = place.formatted_address;
+    }
+
+    return address;
+  };
+
+  // Handle Google Places autocomplete selection
+  const handleAddressSelect = (value: string, place?: google.maps.places.PlaceResult) => {
+    if (place) {
+      const parsedAddress = parseAddressComponents(place);
+      setFormData((prev) => ({
+        ...prev,
+        businessAddress: {
+          ...prev.businessAddress,
+          ...parsedAddress,
+          addressLine1: parsedAddress.addressLine1 || value,
+          // Only update addressLine2 if it comes from the place (subpremise/premise)
+          // Otherwise preserve manually entered value
+          addressLine2: parsedAddress.addressLine2 || prev.businessAddress.addressLine2,
+        },
+      }));
+      
+      // Clear any address-related errors
+      setFieldErrors((prev) => {
+        const updated = { ...prev };
+        delete updated.addressLine1;
+        delete updated.city;
+        delete updated.state;
+        delete updated.postalCode;
+        return updated;
+      });
+    } else {
+      // Manual input - just update addressLine1
+      setFormData((prev) => ({
+        ...prev,
+        businessAddress: {
+          ...prev.businessAddress,
+          addressLine1: value,
+        },
+      }));
     }
   };
 
@@ -664,11 +756,10 @@ export function BusinessInfoForm({
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="addressLine1">Street Address *</Label>
-                <Input
-                  id="addressLine1"
-                  placeholder="123 Main Street"
+                <GooglePlacesAutocomplete
                   value={formData.businessAddress.addressLine1}
-                  onChange={handleInputChange("address.addressLine1")}
+                  onChange={handleAddressSelect}
+                  placeholder="123 Main Street"
                   disabled={loading}
                 />
                 {fieldErrors.addressLine1 && (
