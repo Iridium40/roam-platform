@@ -783,7 +783,7 @@ export default function ProviderDashboard() {
                   onClick={() => navigateToTab("bookings")}
                   className={`text-sm font-medium px-3 py-2 rounded-lg ${activeTab === "bookings" ? "bg-gray-100 text-gray-900" : "text-gray-600 hover:text-gray-900"}`}
                 >
-                  {isProvider ? 'My Bookings' : 'Bookings'}
+                  Bookings
                 </button>
               )}
               {hasAccess('messages') && (
@@ -799,7 +799,7 @@ export default function ProviderDashboard() {
                   onClick={() => navigateToTab("services")}
                   className={`text-sm font-medium px-3 py-2 rounded-lg ${activeTab === "services" ? "bg-gray-100 text-gray-900" : "text-gray-600 hover:text-gray-900"}`}
                 >
-                  {isProvider ? 'My Services' : 'Services'}
+                  Services
                 </button>
               )}
               {hasAccess('staff') && (

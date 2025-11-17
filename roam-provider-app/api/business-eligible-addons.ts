@@ -141,6 +141,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         id,
         name,
         description,
+        image_url,
         price,
         is_active,
         subcategory_id,
@@ -166,7 +167,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Step 5: Get currently configured business addons
     const { data: businessAddons, error: businessAddonsError } = await supabase
       .from('business_addons')
-      .select('addon_id, business_price, is_active')
+      .select('addon_id, custom_price, is_available')
       .eq('business_id', business_id);
 
     if (businessAddonsError) {
@@ -180,17 +181,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const processedAddons = (eligibleAddons || []).map((addon: any) => {
       const subcategoryName = addon.service_subcategories?.service_subcategory_type || 'Unknown';
+      const businessAddon = businessAddonsMap.get(addon.id);
       return {
         id: addon.id,
         name: addon.name,
         description: addon.description,
-        price: addon.price,
+        image_url: addon.image_url || null,
         is_active: addon.is_active,
         subcategory_id: addon.subcategory_id,
         subcategory_name: subcategoryName,
         is_configured: configuredIds.has(addon.id),
-        business_price: businessAddonsMap.get(addon.id)?.business_price,
-        business_is_active: businessAddonsMap.get(addon.id)?.is_active
+        custom_price: businessAddon?.custom_price ?? null,
+        is_available: businessAddon?.is_available ?? null
       };
     });
 
