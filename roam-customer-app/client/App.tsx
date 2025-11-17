@@ -49,6 +49,7 @@ const TipSuccess = lazy(() => import("./pages/TipSuccess"));
 const TipCancel = lazy(() => import("./pages/TipCancel"));
 const Privacy = lazy(() => import("./pages/Privacy"));
 const Services = lazy(() => import("./pages/Services"));
+const BusinessResults = lazy(() => import("./pages/BusinessResults"));
 
 // Loading component for Suspense fallback
 const PageLoader = () => (
@@ -170,6 +171,7 @@ const App = () => (
                 <Route path="/tip-cancel" element={<TipCancel />} />
                 <Route path="/privacy" element={<Privacy />} />
                 <Route path="/services" element={<Services />} />
+                <Route path="/businesses" element={<BusinessResults />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>
