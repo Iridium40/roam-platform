@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -164,6 +164,60 @@ export function DocumentUploadForm({
   };
 
   const requiredDocs = getRequiredDocuments();
+
+  // Load existing documents when component mounts
+  useEffect(() => {
+    const loadExistingDocuments = async () => {
+      if (!businessId) {
+        console.log("No businessId provided, skipping document load");
+        return;
+      }
+
+      try {
+        console.log("Loading existing documents for businessId:", businessId);
+        const { data: existingDocs, error } = await supabase
+          .from('business_documents')
+          .select('id, document_type, document_name, file_url, file_size_bytes, verification_status, created_at')
+          .eq('business_id', businessId)
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          console.error("Error loading existing documents:", error);
+          return;
+        }
+
+        if (existingDocs && existingDocs.length > 0) {
+          console.log("Found existing documents:", existingDocs.length);
+          
+          // Convert database documents to UploadedDocument format
+          const loadedDocuments: UploadedDocument[] = existingDocs.map((doc: any) => {
+            // Create a dummy File object for display purposes
+            // We'll use the document_name to create a File-like object
+            const fileName = doc.document_name || `document.${doc.file_url?.split('.').pop() || 'pdf'}`;
+            const dummyFile = new File([], fileName, { type: 'application/pdf' });
+            
+            return {
+              id: doc.id,
+              file: dummyFile,
+              type: doc.document_type as DocumentType,
+              url: doc.file_url || undefined,
+              uploadProgress: 100,
+              status: "uploaded" as const,
+            };
+          });
+
+          setDocuments(loadedDocuments);
+          console.log("Loaded documents into state:", loadedDocuments.length);
+        } else {
+          console.log("No existing documents found");
+        }
+      } catch (error) {
+        console.error("Error in loadExistingDocuments:", error);
+      }
+    };
+
+    loadExistingDocuments();
+  }, [businessId]);
 
   const validateFile = (
     file: File,
@@ -429,20 +483,59 @@ export function DocumentUploadForm({
     setDocuments((prev) => prev.filter((doc) => doc.id !== docId));
   };
 
-  const retryUpload = (docId: string) => {
+  const retryUpload = async (docId: string) => {
     console.log("Retrying upload for document ID:", docId);
     console.log("Available documents:", documents);
     
     const document = documents.find((doc) => doc.id === docId);
-    if (document) {
+    if (document && document.file) {
       console.log("Found document to retry:", document);
-      // Remove the failed document and re-upload
+      
+      // Get the updated documents list (without the failed one) for validation
+      const updatedDocuments = documents.filter((doc) => doc.id !== docId);
+      
+      // Validate the file again before retrying
+      // Check file size and type
+      const reqs = getDocumentRequirements();
+      const requirements = reqs[document.type];
+      
+      if (!requirements) {
+        console.error("No requirements found for document type:", document.type);
+        return;
+      }
+      
+      // Check file size
+      const maxSizeBytes = requirements.maxSize * 1024 * 1024;
+      if (document.file.size > maxSizeBytes) {
+        // File is still too large, keep the error state
+        console.warn("File still too large, cannot retry:", document.file.size, ">", maxSizeBytes);
+        return;
+      }
+      
+      // Check file type
+      const fileExtension = "." + document.file.name.split(".").pop()?.toLowerCase();
+      if (!requirements.acceptedFormats.includes(fileExtension)) {
+        // File type still invalid, keep the error state
+        console.warn("File type still invalid, cannot retry:", fileExtension);
+        return;
+      }
+      
+      // Check for duplicate (using updated documents list)
+      if (document.type !== "professional_license") {
+        const existingDoc = updatedDocuments.find(
+          (doc) => doc.type === document.type && doc.status !== "error",
+        );
+        if (existingDoc) {
+          console.warn("Duplicate document already exists, cannot retry");
+          return;
+        }
+      }
+      
+      // Remove the failed document from state
       setDocuments((prev) => prev.filter((doc) => doc.id !== docId));
-      const fileList = {
-        0: document.file,
-        length: 1,
-      } as unknown as FileList;
-      handleFileSelect(fileList, document.type);
+      
+      // Directly call processFileUpload to retry the upload
+      await processFileUpload(document.file, document.type);
     } else {
       console.error("Document not found for retry:", docId);
     }
