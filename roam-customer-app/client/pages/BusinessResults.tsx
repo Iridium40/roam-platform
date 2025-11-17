@@ -581,7 +581,7 @@ export default function BusinessResults() {
                           loading="lazy"
                           allowFullScreen
                           referrerPolicy="no-referrer-when-downgrade"
-                          src={`https://www.google.com/maps/embed/v1/view?key=${process.env.VITE_GOOGLE_MAPS_API_KEY || 'YOUR_API_KEY'}&center=${mapCenter.lat},${mapCenter.lng}&zoom=12`}
+                          src={`https://www.google.com/maps/embed/v1/view?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'YOUR_API_KEY'}&center=${mapCenter.lat},${mapCenter.lng}&zoom=12`}
                         />
                       );
                     }
@@ -599,7 +599,7 @@ export default function BusinessResults() {
                       .slice(0, 5)
                       .join('|');
                     
-                    const mapUrl = `https://www.google.com/maps/embed/v1/search?key=${process.env.VITE_GOOGLE_MAPS_API_KEY || 'YOUR_API_KEY'}&q=${encodeURIComponent(searchQuery)}&center=${centerLat},${centerLng}&zoom=12`;
+                    const mapUrl = `https://www.google.com/maps/embed/v1/search?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'YOUR_API_KEY'}&q=${encodeURIComponent(searchQuery)}&center=${centerLat},${centerLng}&zoom=12`;
 
                     return (
                       <iframe
