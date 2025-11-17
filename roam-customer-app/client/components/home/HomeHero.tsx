@@ -2,7 +2,8 @@ import React, { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, MapPin, ChevronDown } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Search, MapPin, ChevronDown, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 
@@ -19,6 +20,19 @@ interface ServiceSubcategory {
   service_subcategory_type: string;
   name: string;
   description: string | null;
+  category_id?: string;
+  service_categories?: {
+    id: string;
+    service_category_type: string;
+    description: string | null;
+  };
+}
+
+interface CategoryWithSubcategories {
+  id: string;
+  service_category_type: string;
+  description: string | null;
+  subcategories: ServiceSubcategory[];
 }
 
 export function HomeHero({ 
@@ -33,8 +47,10 @@ export function HomeHero({
   const [serviceSearch, setServiceSearch] = useState("");
   const [selectedTime, setSelectedTime] = useState("anytime");
   const [currentLocation, setCurrentLocation] = useState<string | null>(null);
-  const [subcategories, setSubcategories] = useState<ServiceSubcategory[]>([]);
+  const [featuredSubcategories, setFeaturedSubcategories] = useState<ServiceSubcategory[]>([]);
+  const [allCategories, setAllCategories] = useState<CategoryWithSubcategories[]>([]);
   const [loadingSubcategories, setLoadingSubcategories] = useState(true);
+  const [showMoreModal, setShowMoreModal] = useState(false);
 
   const handleGetCurrentLocation = () => {
     if (navigator.geolocation) {
@@ -51,32 +67,121 @@ export function HomeHero({
     }
   };
 
-  // Fetch service subcategories from Supabase
+  // Fetch featured subcategories and all categories with subcategories
   useEffect(() => {
     const fetchSubcategories = async () => {
       try {
         setLoadingSubcategories(true);
-        const { data, error } = await supabase
-          .from('service_subcategories')
-          .select('id, service_subcategory_type, name, description')
-          .eq('is_active', true)
-          .order('name', { ascending: true })
-          .limit(12); // Limit to top 12 for display
+        
+        // Fetch specific featured subcategories by name
+        const featuredNames = [
+          'Hair & Makeup',
+          'Massage Therapy',
+          'IV Therapy',
+          'Yoga Instructor',
+          'Physician'
+        ];
 
-        if (error) {
-          console.error('Error fetching subcategories:', error);
-          // Set empty array on error so UI doesn't break
-          setSubcategories([]);
-        } else if (data) {
-          console.log('✅ Loaded subcategories:', data.length);
-          setSubcategories(data);
-        } else {
-          console.warn('No subcategories data returned');
-          setSubcategories([]);
+        const { data: featuredData, error: featuredError } = await supabase
+          .from('service_subcategories')
+          .select('id, service_subcategory_type, name, description, category_id')
+          .in('name', featuredNames)
+          .eq('is_active', true);
+
+        if (featuredError) {
+          console.error('Error fetching featured subcategories:', featuredError);
+          // Fallback: try fetching by type if name doesn't work
+          const featuredTypes = [
+            'hair_and_makeup',
+            'massage_therapy',
+            'iv_therapy',
+            'yoga_instructor',
+            'physician'
+          ];
+          const { data: fallbackData } = await supabase
+            .from('service_subcategories')
+            .select('id, service_subcategory_type, name, description, category_id')
+            .in('service_subcategory_type', featuredTypes)
+            .eq('is_active', true);
+          
+          if (fallbackData) {
+            // Map types to display names
+            const nameMap: Record<string, string> = {
+              'hair_and_makeup': 'Hair & Makeup',
+              'massage_therapy': 'Massage Therapy',
+              'iv_therapy': 'IV Therapy',
+              'yoga_instructor': 'Yoga Instructor',
+              'physician': 'Physician',
+            };
+            const mapped = fallbackData.map(sub => ({
+              ...sub,
+              name: nameMap[sub.service_subcategory_type] || sub.name
+            }));
+            
+            // Sort to match the order requested
+            const orderMap: Record<string, number> = {
+              'hair_and_makeup': 1,
+              'massage_therapy': 2,
+              'iv_therapy': 3,
+              'yoga_instructor': 4,
+              'physician': 5,
+            };
+            const sorted = mapped.sort((a, b) => {
+              const orderA = orderMap[a.service_subcategory_type] || 999;
+              const orderB = orderMap[b.service_subcategory_type] || 999;
+              return orderA - orderB;
+            });
+            setFeaturedSubcategories(sorted);
+          }
+        } else if (featuredData) {
+          // Sort to match the order requested
+          const orderMap: Record<string, number> = {
+            'Hair & Makeup': 1,
+            'Massage Therapy': 2,
+            'IV Therapy': 3,
+            'Yoga Instructor': 4,
+            'Physician': 5,
+          };
+          const sorted = featuredData.sort((a, b) => {
+            const orderA = orderMap[a.name] || 999;
+            const orderB = orderMap[b.name] || 999;
+            return orderA - orderB;
+          });
+          setFeaturedSubcategories(sorted);
+        }
+
+        // Fetch all categories with their subcategories for the modal
+        const { data: categoriesData, error: categoriesError } = await supabase
+          .from('service_categories')
+          .select(`
+            id,
+            service_category_type,
+            description,
+            service_subcategories!inner (
+              id,
+              service_subcategory_type,
+              name,
+              description,
+              is_active
+            )
+          `)
+          .eq('is_active', true)
+          .eq('service_subcategories.is_active', true)
+          .order('sort_order', { ascending: true });
+
+        if (categoriesError) {
+          console.error('Error fetching categories:', categoriesError);
+        } else if (categoriesData) {
+          const organized = categoriesData.map((cat: any) => ({
+            id: cat.id,
+            service_category_type: cat.service_category_type,
+            description: cat.description,
+            subcategories: (cat.service_subcategories || []).filter((sub: any) => sub.is_active !== false),
+          }));
+          setAllCategories(organized);
         }
       } catch (error) {
         console.error('Error fetching subcategories:', error);
-        setSubcategories([]);
       } finally {
         setLoadingSubcategories(false);
       }
@@ -233,37 +338,70 @@ export function HomeHero({
           </div>
 
           {/* Service Subcategory Buttons */}
-          {subcategories.length > 0 && (
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-              {loadingSubcategories ? (
-                <div className="text-white/90 drop-shadow-md">Loading categories...</div>
-              ) : (
-                <>
-                  {subcategories.slice(0, 9).map((subcategory) => (
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+            {loadingSubcategories ? (
+              <div className="text-white/90 drop-shadow-md">Loading categories...</div>
+            ) : (
+              <>
+                {featuredSubcategories.map((subcategory) => (
+                  <Button
+                    key={subcategory.id}
+                    variant="outline"
+                    className="rounded-full px-6 py-2 bg-white/95 backdrop-blur-sm border-white/30 text-gray-800 hover:bg-white hover:text-roam-blue hover:border-roam-blue transition-all shadow-lg font-medium"
+                    onClick={() => handleSubcategoryClick(subcategory.id, subcategory.name)}
+                  >
+                    {subcategory.name}
+                  </Button>
+                ))}
+                <Button
+                  variant="outline"
+                  className="rounded-full px-6 py-2 bg-white/95 backdrop-blur-sm border-white/30 text-gray-800 hover:bg-white hover:text-roam-blue hover:border-roam-blue transition-all shadow-lg font-medium"
+                  onClick={() => setShowMoreModal(true)}
+                >
+                  More...
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* More Categories Modal */}
+      <Dialog open={showMoreModal} onOpenChange={setShowMoreModal}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold">All Service Categories</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-8 mt-4">
+            {allCategories.map((category) => (
+              <div key={category.id}>
+                <h3 className="text-xl font-semibold mb-4 capitalize">
+                  {category.service_category_type === 'beauty' ? 'Beauty' :
+                   category.service_category_type === 'fitness' ? 'Fitness' :
+                   category.service_category_type === 'therapy' ? 'Wellness' :
+                   category.service_category_type === 'healthcare' ? 'Healthcare' :
+                   category.service_category_type}
+                </h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                  {category.subcategories.map((subcategory) => (
                     <Button
                       key={subcategory.id}
                       variant="outline"
-                      className="rounded-full px-6 py-2 bg-white/95 backdrop-blur-sm border-white/30 text-gray-800 hover:bg-white hover:text-roam-blue hover:border-roam-blue transition-all shadow-lg font-medium"
-                      onClick={() => handleSubcategoryClick(subcategory.id, subcategory.name)}
+                      className="rounded-full px-4 py-2 h-auto text-sm font-medium hover:bg-roam-blue hover:text-white hover:border-roam-blue transition-all"
+                      onClick={() => {
+                        handleSubcategoryClick(subcategory.id, subcategory.name);
+                        setShowMoreModal(false);
+                      }}
                     >
                       {subcategory.name}
                     </Button>
                   ))}
-                  {subcategories.length > 9 && (
-                    <Button
-                      variant="outline"
-                      className="rounded-full px-6 py-2 bg-white/95 backdrop-blur-sm border-white/30 text-gray-800 hover:bg-white hover:text-roam-blue hover:border-roam-blue transition-all shadow-lg font-medium"
-                      onClick={() => navigate('/businesses')}
-                    >
-                      More...
-                    </Button>
-                  )}
-                </>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }
