@@ -69,8 +69,8 @@ export function HomeHero({
   const [loadingSubcategories, setLoadingSubcategories] = useState(true);
   const [showMoreModal, setShowMoreModal] = useState(false);
   
-  // Default location: Seaside, Florida 32459
-  const DEFAULT_LOCATION = "Seaside, Florida 32459";
+  // Default location: Seaside, Florida (lat/long)
+  const DEFAULT_LOCATION = "30.3226432,-86.1447833";
 
   // Fetch featured subcategories and all categories with subcategories
   useEffect(() => {

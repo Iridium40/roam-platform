@@ -286,6 +286,19 @@ export function createServer() {
     }
   );
 
+  // Business search route
+  app.get("/api/businesses/search",
+    async (req, res) => {
+      try {
+        const searchHandler = await import("../api/businesses/search");
+        await searchHandler.default(req, res);
+      } catch (error) {
+        console.error("Error importing businesses search handler:", error);
+        res.status(500).json({ error: "Failed to load businesses search handler" });
+      }
+    }
+  );
+
   // Error handling middleware
   app.use((error: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
     console.error('Server error:', error);
