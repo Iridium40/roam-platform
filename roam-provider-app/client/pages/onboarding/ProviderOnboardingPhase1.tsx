@@ -396,23 +396,45 @@ export default function ProviderOnboardingPhase1() {
           );
         }
       } else {
-        // For error responses, provide helpful messages based on status code
-        if (response.status === 400) {
-          // Don't try to read the body, just provide a helpful error based on the context
-          throw new Error(
-            "Please ensure all required information is complete before submitting your application.",
-          );
-        } else if (response.status === 404) {
-          throw new Error(
-            "Business profile not found. Please complete the business information step first.",
-          );
-        } else if (response.status >= 500) {
-          throw new Error("Server error occurred. Please try again later.");
-        } else {
-          throw new Error(
-            `Application submission failed (${response.status}). Please check your information and try again.`,
-          );
+        // For error responses, try to read the actual error message from the API
+        let errorMessage = "Failed to submit application";
+        try {
+          // First try to read as text to see what we're dealing with
+          const responseText = await response.text();
+          console.log("Error response text:", responseText);
+          
+          // Try to parse as JSON
+          try {
+            const errorData = JSON.parse(responseText);
+            // Use the API's error message if available
+            if (errorData.details) {
+              errorMessage = errorData.details;
+            } else if (errorData.error) {
+              errorMessage = errorData.error;
+            } else if (responseText && responseText.trim()) {
+              // If there's text but no structured error, use it
+              errorMessage = responseText;
+            }
+          } catch (parseError) {
+            // If JSON parsing fails, use the text if available
+            if (responseText && responseText.trim()) {
+              errorMessage = responseText;
+            }
+          }
+        } catch (readError) {
+          console.error("Error reading response:", readError);
+          // If we can't read the response, fall back to status code-based messages
+          if (response.status === 400) {
+            errorMessage = "Please check your information and try again. If the issue persists, contact support.";
+          } else if (response.status === 404) {
+            errorMessage = "Business profile not found. Please complete the business information step first.";
+          } else if (response.status >= 500) {
+            errorMessage = "Server error occurred. Please try again later.";
+          } else {
+            errorMessage = `Application submission failed (${response.status}). Please check your information and try again.`;
+          }
         }
+        throw new Error(errorMessage);
       }
 
       setOnboardingState((prev) => ({

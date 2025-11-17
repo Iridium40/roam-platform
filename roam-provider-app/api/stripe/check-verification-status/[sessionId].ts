@@ -26,19 +26,63 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { sessionId } = req.query;
+    // Extract sessionId - try multiple methods (Vercel dynamic routing)
+    let sessionId: string | undefined;
+    
+    // Method 1: Direct from req.query (standard Vercel file-based routing)
+    if (req.query.sessionId && typeof req.query.sessionId === 'string') {
+      sessionId = req.query.sessionId;
+      console.log('✓ Found sessionId in req.query.sessionId:', sessionId);
+    }
+    
+    // Method 2: Extract from URL path if not found
+    if (!sessionId && req.url) {
+      const urlMatch = req.url.match(/\/api\/stripe\/check-verification-status\/([^/?]+)/);
+      if (urlMatch && urlMatch[1]) {
+        sessionId = urlMatch[1];
+        console.log('✓ Extracted sessionId from URL path:', sessionId);
+      }
+    }
+    
+    // Method 3: Check all query keys for Stripe session ID pattern
+    if (!sessionId) {
+      for (const [key, value] of Object.entries(req.query)) {
+        const strValue = Array.isArray(value) ? value[0] : String(value);
+        if (strValue && (strValue.startsWith('vs_') || /^[a-zA-Z0-9_-]+$/.test(strValue))) {
+          sessionId = strValue;
+          console.log(`✓ Found sessionId in req.query.${key}:`, sessionId);
+          break;
+        }
+      }
+    }
+
     const { businessId } = req.query;
 
     console.log('=== CHECK VERIFICATION STATUS REQUEST ===');
+    console.log('req.url:', req.url);
+    console.log('req.query:', JSON.stringify(req.query, null, 2));
     console.log('Session ID:', sessionId);
     console.log('Business ID:', businessId);
 
     if (!sessionId || typeof sessionId !== 'string') {
-      return res.status(400).json({ error: "Missing or invalid sessionId" });
+      return res.status(400).json({ 
+        error: "Missing or invalid sessionId",
+        debug: {
+          url: req.url,
+          query: req.query,
+          extracted: sessionId
+        }
+      });
     }
 
     if (!businessId || typeof businessId !== 'string') {
-      return res.status(400).json({ error: "Missing or invalid businessId" });
+      return res.status(400).json({ 
+        error: "Missing or invalid businessId",
+        debug: {
+          url: req.url,
+          query: req.query
+        }
+      });
     }
 
     // Retrieve verification session from Stripe
@@ -106,12 +150,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   } catch (error) {
     console.error("Error checking verification status:", error);
+    console.error("Error details:", {
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      type: error instanceof Stripe.errors.StripeError ? error.type : undefined,
+      code: error instanceof Stripe.errors.StripeError ? error.code : undefined,
+    });
 
     if (error instanceof Stripe.errors.StripeError) {
+      // Handle specific Stripe error types
+      if (error.type === 'StripeInvalidRequestError') {
+        return res.status(400).json({
+          error: "Invalid verification session",
+          details: error.message,
+          type: error.type,
+          code: error.code,
+        });
+      }
+      
       return res.status(400).json({
         error: "Stripe error",
         details: error.message,
         type: error.type,
+        code: error.code,
       });
     }
 

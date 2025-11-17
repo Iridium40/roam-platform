@@ -256,18 +256,46 @@ export default function StripeIdentityVerification({
             );
             onVerificationFailed?.("Verification timeout");
           }
-        } else if (response.status === 400 && attempts < maxAttempts) {
-          // Handle 400 errors (usually means Stripe hasn't processed the session yet)
-          console.warn('Verification session not ready yet, will retry...', await response.json());
-          attempts++;
-          // Retry after a delay - use longer delay for first few attempts
-          const delay = attempts <= 3 ? 5000 : 10000;
-          setTimeout(poll, delay);
+        } else if (response.status === 400) {
+          // Handle 400 errors - check if it's a fatal error or retryable
+          const errorData = await response.json().catch(() => ({}));
+          console.warn('Verification status check returned 400:', errorData);
+          
+          // If it's an invalid session error, stop polling
+          if (errorData.error && (
+            errorData.error.includes('Missing or invalid sessionId') ||
+            errorData.error.includes('Invalid verification session') ||
+            errorData.error.includes('Stripe error')
+          )) {
+            setError(
+              errorData.details || "Verification session error. Please try again.",
+            );
+            onVerificationFailed?.(errorData.details || "Verification session error");
+            return;
+          }
+          
+          // Otherwise, retry if we haven't exceeded max attempts
+          if (attempts < maxAttempts) {
+            attempts++;
+            // Retry after a delay - use longer delay for first few attempts
+            const delay = attempts <= 3 ? 5000 : 10000;
+            setTimeout(poll, delay);
+          } else {
+            setError(
+              "Verification is taking longer than expected. Please contact support.",
+            );
+            onVerificationFailed?.("Verification timeout");
+          }
         } else {
           console.error('Failed to check verification status:', response.status);
           if (attempts < maxAttempts) {
             attempts++;
             setTimeout(poll, 10000);
+          } else {
+            setError(
+              "Failed to check verification status. Please contact support.",
+            );
+            onVerificationFailed?.("Verification check failed");
           }
         }
       } catch (error) {
