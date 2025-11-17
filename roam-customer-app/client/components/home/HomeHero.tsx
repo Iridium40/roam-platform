@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Search, MapPin, ChevronDown, X } from "lucide-react";
+import { MapPin, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 
@@ -244,47 +244,45 @@ export function HomeHero({
         <div className="max-w-5xl mx-auto">
           <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl p-4 md:p-6">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              {/* Business Name or Location */}
+              {/* Business Name */}
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <Input
                   type="text"
-                  placeholder="Business Name or Location"
+                  placeholder="Business Name"
                   value={businessSearch}
                   onChange={(e) => setBusinessSearch(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                  className="pl-10 h-12 border-gray-200 focus:border-roam-blue focus:ring-roam-blue"
+                  className="h-12 border-gray-200 focus:border-roam-blue focus:ring-roam-blue"
                 />
                 {!currentLocation && (
                   <button
                     onClick={handleGetCurrentLocation}
-                    className="mt-2 text-sm text-roam-blue hover:text-roam-light-blue flex items-center gap-1"
+                    className="mt-2 text-sm text-roam-blue hover:text-roam-light-blue flex items-center gap-1 mx-auto justify-center w-full"
                   >
                     <MapPin className="h-4 w-4" />
                     Current Location
                   </button>
                 )}
                 {currentLocation && (
-                  <div className="mt-2 text-sm text-green-600 flex items-center gap-1">
+                  <div className="mt-2 text-sm text-green-600 flex items-center gap-1 justify-center">
                     <MapPin className="h-4 w-4" />
                     Location set
                   </div>
                 )}
               </div>
 
-              {/* Search Services and Classes */}
+              {/* Service Type */}
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <Input
                   type="text"
-                  placeholder="Search Services and Classes"
+                  placeholder="Service Type"
                   value={serviceSearch}
                   onChange={(e) => {
                     setServiceSearch(e.target.value);
                     onServiceSearch?.(e.target.value);
                   }}
                   onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                  className="pl-10 h-12 border-gray-200 focus:border-roam-blue focus:ring-roam-blue"
+                  className="h-12 border-gray-200 focus:border-roam-blue focus:ring-roam-blue"
                 />
               </div>
 
@@ -296,7 +294,6 @@ export function HomeHero({
                 }}>
                   <SelectTrigger className="h-12 border-gray-200 focus:border-roam-blue focus:ring-roam-blue">
                     <SelectValue placeholder="Anytime" />
-                    <ChevronDown className="h-4 w-4 opacity-50" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="anytime">Anytime</SelectItem>
