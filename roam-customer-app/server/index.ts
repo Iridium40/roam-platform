@@ -299,6 +299,43 @@ export function createServer() {
     }
   );
 
+  // Favorites routes
+  app.get("/api/favorites/service",
+    async (req, res) => {
+      try {
+        const favoritesHandler = await import("../api/favorites/service");
+        await favoritesHandler.default(req, res);
+      } catch (error) {
+        console.error("Error importing service favorites handler:", error);
+        res.status(500).json({ error: "Failed to load service favorites handler" });
+      }
+    }
+  );
+
+  app.post("/api/favorites/service",
+    async (req, res) => {
+      try {
+        const favoritesHandler = await import("../api/favorites/service");
+        await favoritesHandler.default(req, res);
+      } catch (error) {
+        console.error("Error importing service favorites handler:", error);
+        res.status(500).json({ error: "Failed to load service favorites handler" });
+      }
+    }
+  );
+
+  app.delete("/api/favorites/service",
+    async (req, res) => {
+      try {
+        const favoritesHandler = await import("../api/favorites/service");
+        await favoritesHandler.default(req, res);
+      } catch (error) {
+        console.error("Error importing service favorites handler:", error);
+        res.status(500).json({ error: "Failed to load service favorites handler" });
+      }
+    }
+  );
+
   // Error handling middleware
   app.use((error: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
     console.error('Server error:', error);

@@ -71,15 +71,22 @@ export const useServiceFavorites = () => {
     }
 
     try {
-      const { error: insertError } = await supabase
-        .from("customer_favorite_services")
-        .insert({
-          customer_id: customer.id,
-          service_id: serviceId,
-        });
+      const response = await fetch('/api/favorites/service', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          customerId: customer.id,
+          serviceId,
+          action: 'add',
+        }),
+      });
 
-      if (insertError) {
-        throw insertError;
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to add favorite');
       }
 
       await loadFavorites();
@@ -95,14 +102,21 @@ export const useServiceFavorites = () => {
     }
 
     try {
-      const { error: deleteError } = await supabase
-        .from("customer_favorite_services")
-        .delete()
-        .eq("customer_id", customer.id)
-        .eq("service_id", serviceId);
+      const response = await fetch('/api/favorites/service', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          customerId: customer.id,
+          serviceId,
+        }),
+      });
 
-      if (deleteError) {
-        throw deleteError;
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to remove favorite');
       }
 
       await loadFavorites();
