@@ -83,10 +83,12 @@ export default function BusinessResults() {
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | null>(null);
 
-  // Fetch businesses by subcategory
+  // Fetch businesses by subcategory or search query
   useEffect(() => {
     const fetchBusinesses = async () => {
-      if (!subcategoryId) {
+      // If no subcategory and no search query, show empty state
+      if (!subcategoryId && !searchQuery) {
+        setBusinesses([]);
         setLoading(false);
         return;
       }
@@ -94,26 +96,47 @@ export default function BusinessResults() {
       try {
         setLoading(true);
         
-        // First, get all businesses that offer this subcategory
-        const { data: businessSubcategories, error: subcatError } = await supabase
-          .from('business_service_subcategories')
-          .select(`
-            business_id,
-            service_subcategories!inner (
-              id,
-              name
-            )
-          `)
-          .eq('subcategory_id', subcategoryId)
-          .eq('is_active', true);
+        let businessIds: string[] = [];
 
-        if (subcatError) {
-          console.error('Error fetching business subcategories:', subcatError);
-          setLoading(false);
-          return;
+        // If subcategory is provided, filter by subcategory
+        if (subcategoryId) {
+          // First, get all businesses that offer this subcategory
+          const { data: businessSubcategories, error: subcatError } = await supabase
+            .from('business_service_subcategories')
+            .select(`
+              business_id,
+              service_subcategories!inner (
+                id,
+                name
+              )
+            `)
+            .eq('subcategory_id', subcategoryId)
+            .eq('is_active', true);
+
+          if (subcatError) {
+            console.error('Error fetching business subcategories:', subcatError);
+            setLoading(false);
+            return;
+          }
+
+          businessIds = businessSubcategories?.map(bs => bs.business_id) || [];
+        } else if (searchQuery) {
+          // If search query is provided, search by business name
+          const { data: searchResults, error: searchError } = await supabase
+            .from('business_profiles')
+            .select('id')
+            .ilike('business_name', `%${searchQuery}%`)
+            .eq('is_active', true)
+            .limit(100);
+
+          if (searchError) {
+            console.error('Error searching businesses:', searchError);
+            setLoading(false);
+            return;
+          }
+
+          businessIds = searchResults?.map(b => b.id) || [];
         }
-
-        const businessIds = businessSubcategories?.map(bs => bs.business_id) || [];
 
         if (businessIds.length === 0) {
           setBusinesses([]);
@@ -169,31 +192,37 @@ export default function BusinessResults() {
           }
         }
 
-        // Fetch services for this subcategory
-        const { data: servicesData, error: servicesError } = await supabase
-          .from('services')
-          .select(`
-            id,
-            name,
-            subcategory_id,
-            service_subcategories (
+        // Fetch services for this subcategory (only if subcategory is provided)
+        if (subcategoryId) {
+          const { data: servicesData, error: servicesError } = await supabase
+            .from('services')
+            .select(`
               id,
-              name
-            )
-          `)
-          .eq('subcategory_id', subcategoryId)
-          .eq('is_active', true)
-          .order('name');
+              name,
+              subcategory_id,
+              service_subcategories (
+                id,
+                name
+              )
+            `)
+            .eq('subcategory_id', subcategoryId)
+            .eq('is_active', true)
+            .order('name');
 
-        if (servicesError) {
-          console.error('Error fetching services:', servicesError);
-        } else if (servicesData) {
-          const servicesList = servicesData as Service[];
-          setServices(servicesList);
-          // Select all services by default
-          if (servicesList.length > 0) {
-            setSelectedServices(new Set(servicesList.map(s => s.id)));
+          if (servicesError) {
+            console.error('Error fetching services:', servicesError);
+          } else if (servicesData) {
+            const servicesList = servicesData as Service[];
+            setServices(servicesList);
+            // Select all services by default
+            if (servicesList.length > 0) {
+              setSelectedServices(new Set(servicesList.map(s => s.id)));
+            }
           }
+        } else {
+          // If no subcategory, clear services
+          setServices([]);
+          setSelectedServices(new Set());
         }
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -203,7 +232,7 @@ export default function BusinessResults() {
     };
 
     fetchBusinesses();
-  }, [subcategoryId]);
+  }, [subcategoryId, searchQuery]);
 
   // Fetch business services for filtering
   const [businessServicesMap, setBusinessServicesMap] = useState<Map<string, Set<string>>>(new Map());
@@ -265,18 +294,6 @@ export default function BusinessResults() {
     });
   }, [businesses, selectedServices, businessServicesMap]);
 
-  const toggleService = (serviceId: string) => {
-    setSelectedServices(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(serviceId)) {
-        newSet.delete(serviceId);
-      } else {
-        newSet.add(serviceId);
-      }
-      return newSet;
-    });
-  };
-
   const selectAllServices = () => {
     setSelectedServices(new Set(services.map(s => s.id)));
   };
@@ -323,10 +340,14 @@ export default function BusinessResults() {
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
-                  Best {subcategoryName} in {searchQuery || "Your Area"}
+                  {subcategoryId 
+                    ? `Best ${subcategoryName} in ${searchQuery || "Your Area"}`
+                    : searchQuery 
+                      ? `Businesses matching "${searchQuery}"`
+                      : "Search Results"}
                 </h1>
                 <p className="text-gray-600 mt-1">
-                  {filteredBusinesses.length} Businesses Available
+                  {filteredBusinesses.length} {filteredBusinesses.length === 1 ? 'Business' : 'Businesses'} Available
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -403,7 +424,17 @@ export default function BusinessResults() {
                             <Checkbox
                               id={`service-${service.id}`}
                               checked={selectedServices.has(service.id)}
-                              onCheckedChange={() => toggleService(service.id)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setSelectedServices(prev => new Set([...prev, service.id]));
+                                } else {
+                                  setSelectedServices(prev => {
+                                    const newSet = new Set(prev);
+                                    newSet.delete(service.id);
+                                    return newSet;
+                                  });
+                                }
+                              }}
                             />
                             <Label
                               htmlFor={`service-${service.id}`}

@@ -18,7 +18,6 @@ interface HomeHeroProps {
 interface ServiceSubcategory {
   id: string;
   service_subcategory_type: string;
-  name: string;
   description: string | null;
   category_id?: string;
   service_categories?: {
@@ -27,6 +26,27 @@ interface ServiceSubcategory {
     description: string | null;
   };
 }
+
+// Helper function to format subcategory type enum to display name
+const formatSubcategoryName = (type: string): string => {
+  const nameMap: Record<string, string> = {
+    'hair_and_makeup': 'Hair & Makeup',
+    'spray_tan': 'Spray Tan',
+    'esthetician': 'Esthetician',
+    'massage_therapy': 'Massage Therapy',
+    'iv_therapy': 'IV Therapy',
+    'physical_therapy': 'Physical Therapy',
+    'nurse_practitioner': 'Nurse Practitioner',
+    'physician': 'Physician',
+    'chiropractor': 'Chiropractor',
+    'yoga_instructor': 'Yoga Instructor',
+    'pilates_instructor': 'Pilates Instructor',
+    'personal_trainer': 'Personal Trainer',
+    'injectables': 'Injectables',
+    'health_coach': 'Health Coach',
+  };
+  return nameMap[type] || type.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+};
 
 interface CategoryWithSubcategories {
   id: string;
@@ -73,100 +93,56 @@ export function HomeHero({
       try {
         setLoadingSubcategories(true);
         
-        // Fetch specific featured subcategories by name
-        const featuredNames = [
-          'Hair & Makeup',
-          'Massage Therapy',
-          'IV Therapy',
-          'Yoga Instructor',
-          'Physician'
+        // Fetch specific featured subcategories by type (enum values)
+        const featuredTypes = [
+          'hair_and_makeup',
+          'massage_therapy',
+          'iv_therapy',
+          'yoga_instructor',
+          'physician'
         ];
 
         const { data: featuredData, error: featuredError } = await supabase
           .from('service_subcategories')
-          .select('id, service_subcategory_type, name, description, category_id')
-          .in('name', featuredNames)
+          .select('id, service_subcategory_type, description, category_id')
+          .in('service_subcategory_type', featuredTypes)
           .eq('is_active', true);
 
         if (featuredError) {
           console.error('Error fetching featured subcategories:', featuredError);
-          // Fallback: try fetching by type if name doesn't work
-          const featuredTypes = [
-            'hair_and_makeup',
-            'massage_therapy',
-            'iv_therapy',
-            'yoga_instructor',
-            'physician'
-          ];
-          const { data: fallbackData } = await supabase
-            .from('service_subcategories')
-            .select('id, service_subcategory_type, name, description, category_id')
-            .in('service_subcategory_type', featuredTypes)
-            .eq('is_active', true);
-          
-          if (fallbackData) {
-            // Map types to display names
-            const nameMap: Record<string, string> = {
-              'hair_and_makeup': 'Hair & Makeup',
-              'massage_therapy': 'Massage Therapy',
-              'iv_therapy': 'IV Therapy',
-              'yoga_instructor': 'Yoga Instructor',
-              'physician': 'Physician',
-            };
-            const mapped = fallbackData.map(sub => ({
-              ...sub,
-              name: nameMap[sub.service_subcategory_type] || sub.name
-            }));
-            
-            // Sort to match the order requested
-            const orderMap: Record<string, number> = {
-              'hair_and_makeup': 1,
-              'massage_therapy': 2,
-              'iv_therapy': 3,
-              'yoga_instructor': 4,
-              'physician': 5,
-            };
-            const sorted = mapped.sort((a, b) => {
-              const orderA = orderMap[a.service_subcategory_type] || 999;
-              const orderB = orderMap[b.service_subcategory_type] || 999;
-              return orderA - orderB;
-            });
-            setFeaturedSubcategories(sorted);
-          }
         } else if (featuredData) {
           // Sort to match the order requested
           const orderMap: Record<string, number> = {
-            'Hair & Makeup': 1,
-            'Massage Therapy': 2,
-            'IV Therapy': 3,
-            'Yoga Instructor': 4,
-            'Physician': 5,
+            'hair_and_makeup': 1,
+            'massage_therapy': 2,
+            'iv_therapy': 3,
+            'yoga_instructor': 4,
+            'physician': 5,
           };
           const sorted = featuredData.sort((a, b) => {
-            const orderA = orderMap[a.name] || 999;
-            const orderB = orderMap[b.name] || 999;
+            const orderA = orderMap[a.service_subcategory_type] || 999;
+            const orderB = orderMap[b.service_subcategory_type] || 999;
             return orderA - orderB;
           });
           setFeaturedSubcategories(sorted);
         }
 
         // Fetch all categories with their subcategories for the modal
+        // Use left join (no !inner) to get all categories, even if they have no subcategories
         const { data: categoriesData, error: categoriesError } = await supabase
           .from('service_categories')
           .select(`
             id,
             service_category_type,
             description,
-            service_subcategories!inner (
+            service_subcategories (
               id,
               service_subcategory_type,
-              name,
               description,
               is_active
             )
           `)
           .eq('is_active', true)
-          .eq('service_subcategories.is_active', true)
           .order('sort_order', { ascending: true });
 
         if (categoriesError) {
@@ -176,7 +152,13 @@ export function HomeHero({
             id: cat.id,
             service_category_type: cat.service_category_type,
             description: cat.description,
-            subcategories: (cat.service_subcategories || []).filter((sub: any) => sub.is_active !== false),
+            subcategories: (cat.service_subcategories || [])
+              .filter((sub: any) => sub.is_active !== false)
+              .map((sub: any) => ({
+                ...sub,
+                // Add formatted name for display
+                displayName: formatSubcategoryName(sub.service_subcategory_type),
+              })),
           }));
           setAllCategories(organized);
         }
@@ -190,9 +172,10 @@ export function HomeHero({
     fetchSubcategories();
   }, []);
 
-  const handleSubcategoryClick = (subcategoryId: string, subcategoryName: string) => {
+  const handleSubcategoryClick = (subcategoryId: string, subcategoryType: string) => {
     // Navigate to results page with subcategory filter
-    navigate(`/businesses?subcategory=${subcategoryId}&name=${encodeURIComponent(subcategoryName)}`);
+    const displayName = formatSubcategoryName(subcategoryType);
+    navigate(`/businesses?subcategory=${subcategoryId}&name=${encodeURIComponent(displayName)}`);
   };
 
   const handleSearch = () => {
@@ -348,9 +331,9 @@ export function HomeHero({
                     key={subcategory.id}
                     variant="outline"
                     className="rounded-full px-6 py-2 bg-white/95 backdrop-blur-sm border-white/30 text-gray-800 hover:bg-white hover:text-roam-blue hover:border-roam-blue transition-all shadow-lg font-medium"
-                    onClick={() => handleSubcategoryClick(subcategory.id, subcategory.name)}
+                    onClick={() => handleSubcategoryClick(subcategory.id, subcategory.service_subcategory_type)}
                   >
-                    {subcategory.name}
+                    {formatSubcategoryName(subcategory.service_subcategory_type)}
                   </Button>
                 ))}
                 <Button
@@ -373,32 +356,38 @@ export function HomeHero({
             <DialogTitle className="text-2xl font-bold">All Service Categories</DialogTitle>
           </DialogHeader>
           <div className="space-y-8 mt-4">
-            {allCategories.map((category) => (
-              <div key={category.id}>
-                <h3 className="text-xl font-semibold mb-4 capitalize">
-                  {category.service_category_type === 'beauty' ? 'Beauty' :
-                   category.service_category_type === 'fitness' ? 'Fitness' :
-                   category.service_category_type === 'therapy' ? 'Wellness' :
-                   category.service_category_type === 'healthcare' ? 'Healthcare' :
-                   category.service_category_type}
-                </h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                  {category.subcategories.map((subcategory) => (
-                    <Button
-                      key={subcategory.id}
-                      variant="outline"
-                      className="rounded-full px-4 py-2 h-auto text-sm font-medium hover:bg-roam-blue hover:text-white hover:border-roam-blue transition-all"
-                      onClick={() => {
-                        handleSubcategoryClick(subcategory.id, subcategory.name);
-                        setShowMoreModal(false);
-                      }}
-                    >
-                      {subcategory.name}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            ))}
+            {allCategories.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">No categories available</div>
+            ) : (
+              allCategories
+                .filter(category => category.subcategories.length > 0)
+                .map((category) => (
+                  <div key={category.id}>
+                    <h3 className="text-xl font-semibold mb-4 capitalize">
+                      {category.service_category_type === 'beauty' ? 'Beauty' :
+                       category.service_category_type === 'fitness' ? 'Fitness' :
+                       category.service_category_type === 'therapy' ? 'Wellness' :
+                       category.service_category_type === 'healthcare' ? 'Healthcare' :
+                       category.service_category_type}
+                    </h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                      {category.subcategories.map((subcategory: any) => (
+                        <Button
+                          key={subcategory.id}
+                          variant="outline"
+                          className="rounded-full px-4 py-2 h-auto text-sm font-medium hover:bg-roam-blue hover:text-white hover:border-roam-blue transition-all"
+                          onClick={() => {
+                            handleSubcategoryClick(subcategory.id, subcategory.service_subcategory_type);
+                            setShowMoreModal(false);
+                          }}
+                        >
+                          {subcategory.displayName || formatSubcategoryName(subcategory.service_subcategory_type)}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                ))
+            )}
           </div>
         </DialogContent>
       </Dialog>
