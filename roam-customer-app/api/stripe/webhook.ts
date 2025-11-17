@@ -339,7 +339,7 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
       stripe_transaction_id: paymentIntent.id,
       payment_method: 'card',
       description: 'Service booking payment received',
-      transaction_type: 'service_payment',
+      transaction_type: 'booking_payment', // Fixed: use enum value 'booking_payment' instead of 'service_payment'
       status: 'completed',
       processed_at: new Date().toISOString(),
       metadata: {
@@ -365,7 +365,7 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
     // Platform fee transaction
     const { error: platformError } = await supabase.from('payment_transactions').insert({
       booking_id: bookingId,
-      transaction_type: 'service_fee',
+      transaction_type: 'platform_fee', // Fixed: use enum value 'platform_fee' instead of 'service_fee'
       amount: platformFee,
       destination_account: 'roam_platform',
       stripe_payment_intent_id: paymentIntent.id,
@@ -384,7 +384,7 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
     // Provider payment transaction (pending transfer)
     const { error: providerError } = await supabase.from('payment_transactions').insert({
       booking_id: bookingId,
-      transaction_type: 'remaining_balance',
+      transaction_type: 'provider_payout', // Fixed: use enum value 'provider_payout' instead of 'remaining_balance'
       amount: providerAmount,
       destination_account: 'provider_connected',
       stripe_payment_intent_id: paymentIntent.id,
@@ -470,7 +470,7 @@ async function handleTipPaymentIntent(paymentIntent: Stripe.PaymentIntent) {
       stripe_transaction_id: paymentIntent.id,
       payment_method: 'card',
       description: 'Tip payment received',
-      transaction_type: 'tip_payment',
+      transaction_type: 'tip', // Fixed: use enum value 'tip' instead of 'tip_payment'
       status: 'completed',
       processed_at: new Date().toISOString(),
       metadata: {
