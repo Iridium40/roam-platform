@@ -1,7 +1,40 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
-import { notifyProvidersNewBooking } from '../../lib/notifications/notify-providers-new-booking';
+
+// Helper function to dynamically import notification function
+// Uses dynamic import to handle module resolution issues in Vercel's serverless environment
+async function getNotifyProvidersNewBooking() {
+  try {
+    // Try multiple import paths to handle different Vercel build configurations
+    const importPaths = [
+      '../../lib/notifications/notify-providers-new-booking.js',
+      '../../lib/notifications/notify-providers-new-booking',
+      './lib/notifications/notify-providers-new-booking.js',
+      './lib/notifications/notify-providers-new-booking',
+    ];
+
+    for (const importPath of importPaths) {
+      try {
+        const module = await import(importPath);
+        const fn = module.notifyProvidersNewBooking || module.default;
+        if (fn && typeof fn === 'function') {
+          console.log(`✅ Successfully loaded notify-providers-new-booking from: ${importPath}`);
+          return fn;
+        }
+      } catch (err) {
+        // Continue to next import path
+        continue;
+      }
+    }
+
+    console.warn('⚠️ Could not load notify-providers-new-booking module from any path');
+    return null;
+  } catch (err) {
+    console.warn('⚠️ Error loading notify-providers-new-booking module:', err);
+    return null;
+  }
+}
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2023-10-16',
@@ -29,29 +62,40 @@ export const config = {
 };
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  console.log('🔔 Webhook received:', req.method);
-  
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  const sig = req.headers['stripe-signature'] as string;
-  const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET!;
-
-  console.log('🔐 Verifying webhook signature...');
-  let event: Stripe.Event;
-
   try {
-    // Get raw body as buffer for signature verification
-    const buf = await buffer(req);
-    const rawBody = buf.toString('utf8');
+    console.log('🔔 Webhook received:', req.method);
     
-    event = stripe.webhooks.constructEvent(rawBody, sig, endpointSecret);
-    console.log('✅ Webhook signature verified:', event.type);
-  } catch (err: any) {
-    console.error('❌ Webhook signature verification failed:', err.message);
-    return res.status(400).json({ error: `Webhook signature verification failed: ${err.message}` });
-  }
+    if (req.method !== 'POST') {
+      return res.status(405).json({ error: 'Method not allowed' });
+    }
+
+    const sig = req.headers['stripe-signature'] as string;
+    const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+    if (!endpointSecret) {
+      console.error('❌ STRIPE_WEBHOOK_SECRET is not configured');
+      return res.status(500).json({ 
+        error: {
+          code: '500',
+          message: 'Webhook secret not configured'
+        }
+      });
+    }
+
+    console.log('🔐 Verifying webhook signature...');
+    let event: Stripe.Event;
+
+    try {
+      // Get raw body as buffer for signature verification
+      const buf = await buffer(req);
+      const rawBody = buf.toString('utf8');
+      
+      event = stripe.webhooks.constructEvent(rawBody, sig, endpointSecret);
+      console.log('✅ Webhook signature verified:', event.type);
+    } catch (err: any) {
+      console.error('❌ Webhook signature verification failed:', err.message);
+      return res.status(400).json({ error: `Webhook signature verification failed: ${err.message}` });
+    }
 
   // Record webhook event in database for audit trail
   let webhookEventId: string | null = null;
@@ -83,31 +127,58 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Continue processing anyway
   }
 
-  try {
     console.log('📋 Processing event type:', event.type);
+    console.log('📋 Event ID:', event.id);
+    
+    let processed = false;
     
     switch (event.type) {
       case 'checkout.session.completed':
-        await handleCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session);
+        try {
+          await handleCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session);
+          processed = true;
+        } catch (err: any) {
+          console.error(`❌ Error handling checkout.session.completed:`, err);
+          throw err; // Re-throw to be caught by outer catch
+        }
         break;
       
       case 'payment_intent.succeeded':
-        await handlePaymentIntentSucceeded(event.data.object as Stripe.PaymentIntent);
+        try {
+          await handlePaymentIntentSucceeded(event.data.object as Stripe.PaymentIntent);
+          processed = true;
+        } catch (err: any) {
+          console.error(`❌ Error handling payment_intent.succeeded:`, err);
+          throw err; // Re-throw to be caught by outer catch
+        }
+        break;
+
+      case 'charge.updated':
+      case 'charge.succeeded':
+      case 'charge.failed':
+        // These events don't require processing for our use case
+        console.log(`ℹ️ Event ${event.type} received but not processed (not needed for transaction recording)`);
+        processed = true;
         break;
 
       default:
-        console.log(`⚠️ Unhandled event type: ${event.type}`);
+        console.log(`⚠️ Unhandled event type: ${event.type} - acknowledging but not processing`);
+        processed = true; // Acknowledge unhandled events to prevent retries
     }
 
     // Mark webhook event as processed
     if (webhookEventId) {
-      await supabase
-        .from('stripe_tax_webhook_events')
-        .update({
-          processed: true,
-          processed_at: new Date().toISOString(),
-        })
-        .eq('id', webhookEventId);
+      try {
+        await supabase
+          .from('stripe_tax_webhook_events')
+          .update({
+            processed: processed,
+            processed_at: new Date().toISOString(),
+          })
+          .eq('id', webhookEventId);
+      } catch (updateError) {
+        console.error('⚠️ Error updating webhook event status (non-fatal):', updateError);
+      }
     }
 
     console.log('✅ Webhook processed successfully');
@@ -116,22 +187,35 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.error('❌ Webhook handler error:', error);
     console.error('Error details:', {
       message: error.message,
-      stack: error.stack
+      stack: error.stack,
+      eventType: event?.type || 'unknown',
+      eventId: event?.id || 'unknown'
     });
 
     // Mark webhook event as failed with error
     if (webhookEventId) {
-      await supabase
-        .from('stripe_tax_webhook_events')
-        .update({
-          processed: false,
-          processing_error: error.message || 'Unknown error',
-          processed_at: new Date().toISOString(),
-        })
-        .eq('id', webhookEventId);
+      try {
+        await supabase
+          .from('stripe_tax_webhook_events')
+          .update({
+            processed: false,
+            processing_error: error.message || 'Unknown error',
+            processed_at: new Date().toISOString(),
+          })
+          .eq('id', webhookEventId);
+      } catch (updateError) {
+        console.error('⚠️ Error updating webhook event status (non-fatal):', updateError);
+      }
     }
 
-    return res.status(500).json({ error: error.message });
+    // Return proper error response
+    return res.status(500).json({ 
+      error: {
+        code: '500',
+        message: error.message || 'A server error has occurred',
+        type: error.type || 'server_error'
+      }
+    });
   }
 }
 
@@ -230,22 +314,31 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
     
     if (!bookingId) {
       console.error('❌ No booking ID in payment intent metadata');
-      console.error('Available metadata:', paymentIntent.metadata);
+      console.error('Available metadata:', JSON.stringify(paymentIntent.metadata, null, 2));
+      console.error('Payment Intent ID:', paymentIntent.id);
+      console.error('Payment Intent Amount:', paymentIntent.amount);
+      console.error('Payment Intent Status:', paymentIntent.status);
       return;
     }
 
     console.log(`📋 Confirming booking: ${bookingId}`);
+    console.log(`💳 Payment Intent ID: ${paymentIntent.id}`);
+    console.log(`💰 Payment Amount: $${(paymentIntent.amount / 100).toFixed(2)}`);
 
     // Get booking details for transaction recording and notifications
     const { data: booking, error: bookingError } = await supabase
       .from('bookings')
       .select(`
         id,
+        customer_id,
         business_id,
         provider_id,
         total_amount,
         booking_date,
         start_time,
+        booking_reference,
+        booking_status,
+        payment_status,
         special_instructions,
         services (
           name
@@ -268,10 +361,24 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
 
     if (bookingError) {
       console.error('❌ Error fetching booking:', bookingError);
+      console.error('❌ Booking ID searched:', bookingId);
       throw bookingError;
     }
 
-    console.log('📦 Booking data:', booking);
+    if (!booking) {
+      console.error('❌ Booking not found:', bookingId);
+      throw new Error(`Booking ${bookingId} not found`);
+    }
+
+    console.log('📦 Booking data:', {
+      id: booking.id,
+      booking_reference: booking.booking_reference,
+      customer_id: booking.customer_id,
+      business_id: booking.business_id,
+      total_amount: booking.total_amount,
+      booking_status: booking.booking_status,
+      payment_status: booking.payment_status
+    });
 
     // Update booking status to confirmed
     const { error: updateError } = await supabase
@@ -293,35 +400,43 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
 
     // Notify providers about the new booking (non-blocking)
     try {
-      const service = Array.isArray(booking.services) ? booking.services[0] : booking.services;
-      const customer = Array.isArray(booking.customer_profiles) ? booking.customer_profiles[0] : booking.customer_profiles;
-      const business = Array.isArray(booking.business_profiles) ? booking.business_profiles[0] : booking.business_profiles;
+      const notifyFn = await getNotifyProvidersNewBooking();
+      if (notifyFn) {
+        const service = Array.isArray(booking.services) ? booking.services[0] : booking.services;
+        const customer = Array.isArray(booking.customer_profiles) ? booking.customer_profiles[0] : booking.customer_profiles;
+        const business = Array.isArray(booking.business_profiles) ? booking.business_profiles[0] : booking.business_profiles;
 
-      if (service && customer && business) {
-        await notifyProvidersNewBooking({
-          booking: {
-            id: booking.id,
-            business_id: booking.business_id,
-            provider_id: booking.provider_id,
-            booking_date: booking.booking_date,
-            start_time: booking.start_time,
-            total_amount: booking.total_amount,
-            special_instructions: booking.special_instructions,
-          },
-          service: {
-            name: service.name,
-          },
-          customer: {
-            first_name: customer.first_name || '',
-            last_name: customer.last_name || '',
-            email: customer.email,
-            phone: customer.phone,
-          },
-          business: {
-            name: business.name,
-            business_address: business.business_address,
-          },
-        });
+        if (service && customer && business) {
+          await notifyFn({
+            booking: {
+              id: booking.id,
+              business_id: booking.business_id,
+              provider_id: booking.provider_id,
+              booking_date: booking.booking_date,
+              start_time: booking.start_time,
+              total_amount: booking.total_amount,
+              special_instructions: booking.special_instructions,
+            },
+            service: {
+              name: service.name,
+            },
+            customer: {
+              first_name: customer.first_name || '',
+              last_name: customer.last_name || '',
+              email: customer.email,
+              phone: customer.phone,
+            },
+            business: {
+              name: business.name,
+              business_address: business.business_address,
+            },
+          });
+          console.log('✅ Provider notifications sent successfully');
+        } else {
+          console.warn('⚠️ Missing booking data for notifications:', { service: !!service, customer: !!customer, business: !!business });
+        }
+      } else {
+        console.warn('⚠️ notifyProvidersNewBooking function not available - skipping provider notifications');
       }
     } catch (notificationError) {
       console.error('⚠️ Error sending provider notifications (non-fatal):', notificationError);
@@ -330,31 +445,67 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
 
     // Record in financial_transactions (overall payment ledger)
     const totalAmount = paymentIntent.amount / 100;
-    console.log(`💵 Recording financial transaction: $${totalAmount}`);
+    console.log(`💵 Recording financial transaction: $${totalAmount} for booking ${bookingId}`);
+    console.log(`📋 Booking reference: ${booking.booking_reference || 'N/A'}`);
+    console.log(`👤 Customer ID: ${booking.customer_id || 'N/A'}`);
     
-    const { error: financialError } = await supabase.from('financial_transactions').insert({
+    const financialTransactionData: any = {
       booking_id: bookingId,
       amount: totalAmount,
       currency: paymentIntent.currency.toUpperCase(),
       stripe_transaction_id: paymentIntent.id,
       payment_method: 'card',
       description: 'Service booking payment received',
-      transaction_type: 'booking_payment', // Fixed: use enum value 'booking_payment' instead of 'service_payment'
+      transaction_type: 'booking_payment',
       status: 'completed',
       processed_at: new Date().toISOString(),
       metadata: {
         charge_id: paymentIntent.latest_charge,
         customer_id: paymentIntent.customer,
-        payment_method_types: paymentIntent.payment_method_types
+        payment_method_types: paymentIntent.payment_method_types,
+        booking_reference: booking.booking_reference || null,
+        booking_customer_id: booking.customer_id || null
       }
-    });
+    };
 
-    if (financialError) {
-      console.error('❌ Error recording financial transaction:', financialError);
-      throw financialError;
+    // Add customer_id if available (some tables may require it)
+    if (booking.customer_id) {
+      financialTransactionData.customer_id = booking.customer_id;
     }
 
-    console.log('✅ Financial transaction recorded');
+    console.log('📝 Financial transaction data:', JSON.stringify(financialTransactionData, null, 2));
+    
+    try {
+      const { data: financialTransaction, error: financialError } = await supabase
+        .from('financial_transactions')
+        .insert(financialTransactionData)
+        .select()
+        .single();
+
+      if (financialError) {
+        console.error('❌ Error recording financial transaction:', financialError);
+        console.error('❌ Error code:', financialError.code);
+        console.error('❌ Error message:', financialError.message);
+        console.error('❌ Error details:', JSON.stringify(financialError, null, 2));
+        console.error('❌ Transaction data attempted:', JSON.stringify(financialTransactionData, null, 2));
+        
+        // Check for specific error types
+        if (financialError.code === '23505') {
+          console.error('⚠️ Duplicate transaction detected - transaction may already exist');
+          // Don't throw - this is not a critical error
+        } else if (financialError.code === '23503') {
+          console.error('⚠️ Foreign key constraint violation - booking may not exist');
+          throw new Error(`Booking ${bookingId} not found or invalid`);
+        } else {
+          throw financialError;
+        }
+      } else {
+        console.log('✅ Financial transaction recorded:', financialTransaction?.id);
+      }
+    } catch (dbError: any) {
+      console.error('❌ Database error in financial transaction insert:', dbError);
+      throw dbError;
+    }
 
     // Record payment splits in payment_transactions
     const platformFee = totalAmount * 0.12; // 12% platform fee
