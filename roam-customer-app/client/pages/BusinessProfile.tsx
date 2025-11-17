@@ -75,6 +75,7 @@ export default function BusinessProfile() {
     'overview'
   );
   const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [expandedServices, setExpandedServices] = useState<Set<string>>(new Set());
 
   // Load business details and services
   useEffect(() => {
@@ -411,42 +412,84 @@ export default function BusinessProfile() {
                 <div>
                   <h2 className="text-2xl font-semibold mb-6">Available Services</h2>
                   {services.length > 0 ? (
-                    <div className="grid gap-6">
-                      {services.map((service) => (
-                        <Card key={service.id} className="hover:shadow-md transition-shadow">
-                          <CardContent className="p-6">
-                            <div className="flex gap-6">
-                              <div className="w-24 h-32 bg-gray-200 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
-                                {service.image_url ? (
-                                  <img src={service.image_url} alt={service.name} className="w-full h-full object-cover" />
-                                ) : (
-                                  <Clock className="w-12 h-12 text-gray-400" />
+                    <div className="grid md:grid-cols-2 gap-6">
+                      {services.map((service) => {
+                        const isExpanded = expandedServices.has(service.id);
+                        const descriptionLength = 200; // Character limit before truncation
+                        const shouldTruncate = service.description.length > descriptionLength;
+                        const displayDescription = isExpanded || !shouldTruncate
+                          ? service.description
+                          : service.description.substring(0, descriptionLength) + '...';
+
+                        return (
+                          <Card key={service.id} className="hover:shadow-md transition-shadow flex flex-col overflow-hidden">
+                            {/* Hero Banner Image */}
+                            <div className="w-full h-48 bg-gray-200 relative overflow-hidden">
+                              {service.image_url ? (
+                                <img 
+                                  src={service.image_url} 
+                                  alt={service.name} 
+                                  className="w-full h-full object-cover" 
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center">
+                                  <Clock className="w-16 h-16 text-gray-400" />
+                                </div>
+                              )}
+                            </div>
+                            
+                            <CardContent className="p-6 flex flex-col flex-1">
+                              {/* Title and Price Row */}
+                              <div className="flex items-start justify-between mb-3">
+                                <h3 className="font-semibold text-xl flex-1">{service.name}</h3>
+                                <Badge variant="secondary" className="text-sm ml-4 flex-shrink-0">
+                                  ${service.business_price || service.min_price} Starting
+                                </Badge>
+                              </div>
+                              
+                              {/* Duration Badge */}
+                              <div className="mb-4">
+                                <Badge variant="outline" className="text-sm">
+                                  {service.business_duration_minutes || service.duration_minutes} Minutes
+                                </Badge>
+                              </div>
+                              
+                              {/* Description */}
+                              <div className="flex-1 mb-4">
+                                <p className="text-gray-600 leading-relaxed">{displayDescription}</p>
+                                {shouldTruncate && (
+                                  <button
+                                    onClick={() => {
+                                      setExpandedServices((prev) => {
+                                        const newSet = new Set(prev);
+                                        if (isExpanded) {
+                                          newSet.delete(service.id);
+                                        } else {
+                                          newSet.add(service.id);
+                                        }
+                                        return newSet;
+                                      });
+                                    }}
+                                    className="text-roam-blue hover:text-roam-blue/80 text-sm font-medium mt-2"
+                                  >
+                                    {isExpanded ? 'Read less' : 'Read more'}
+                                  </button>
                                 )}
                               </div>
-                              <div className="flex-1">
-                                <h3 className="font-semibold text-xl mb-2">{service.name}</h3>
-                                <p className="text-gray-600 mb-4 leading-relaxed">{service.description}</p>
-                                <div className="flex items-center gap-4 mb-4">
-                                  <Badge variant="secondary" className="text-sm">
-                                    ${service.min_price} Starting
-                                  </Badge>
-                                  <Badge variant="outline" className="text-sm">
-                                    {service.business_duration_minutes || service.duration_minutes} Minutes
-                                  </Badge>
-                                </div>
-                              </div>
-                              <div className="flex items-center">
-                                <Button asChild>
+                              
+                              {/* Book Now Button */}
+                              <div className="mt-auto pt-4">
+                                <Button asChild className="w-full">
                                   <Link to={`/book-service/${service.id}?business_id=${business.id}`}>
                                     <Calendar className="w-4 h-4 mr-2" />
                                     Book Now
                                   </Link>
                                 </Button>
                               </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
                     </div>
                   ) : (
                     <div className="text-center py-8">
