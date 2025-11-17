@@ -236,7 +236,7 @@ export default function BusinessProfile() {
         <div className="text-center">
           <h2 className="text-2xl font-semibold mb-4">Business Not Found</h2>
           <Button asChild>
-            <Link to="/">Return to Home</Link>
+            <Link to="/booknow">Return to Home</Link>
           </Button>
         </div>
       </div>
@@ -256,7 +256,7 @@ export default function BusinessProfile() {
                 size="sm"
                 className="text-foreground hover:text-roam-blue"
               >
-                <Link to="/">
+                <Link to="/booknow">
                   <ArrowLeft className="w-4 h-4 mr-2" />
                   Back to Home
                 </Link>

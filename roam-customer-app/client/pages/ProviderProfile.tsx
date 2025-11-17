@@ -156,7 +156,7 @@ export default function ProviderProfile() {
                 size="sm"
                 className="text-foreground hover:text-roam-blue"
               >
-                <Link to="/">
+                <Link to="/booknow">
                   <ArrowLeft className="w-4 h-4 mr-2" />
                   Back to Home
                 </Link>

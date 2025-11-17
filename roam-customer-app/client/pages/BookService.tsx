@@ -1106,8 +1106,8 @@ export default function BookService() {
   const handleBack = () => {
     switch (currentStep) {
       case 'datetime':
-        // Navigate back to home page
-        navigate('/');
+        // Navigate back to booknow page
+        navigate('/booknow');
         break;
       case 'business':
         setCurrentStep('datetime');
@@ -1437,7 +1437,7 @@ export default function BookService() {
                   size="sm"
                   className="text-foreground hover:text-roam-blue font-medium"
                 >
-                  <Link to="/">
+                  <Link to="/booknow">
                     <ArrowLeft className="w-4 h-4 mr-2" />
                     Back to Home
                   </Link>
@@ -1474,7 +1474,7 @@ export default function BookService() {
                           asChild
                           variant="destructive"
                         >
-                          <Link to="/">
+                          <Link to="/booknow">
                             Exit to Home
                           </Link>
                         </Button>

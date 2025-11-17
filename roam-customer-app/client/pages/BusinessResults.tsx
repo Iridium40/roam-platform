@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useSearchParams, useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -23,7 +23,8 @@ import {
   Store,
   ExternalLink,
   ArrowRight,
-  ArrowLeft
+  ArrowLeft,
+  Info
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { Header } from "@/components/Header";
@@ -771,106 +772,117 @@ export default function BusinessResults() {
                   </div>
                 ) : (
                   filteredBusinesses.map((business) => (
-                    <Card
-                      key={business.id}
-                      className={cn(
-                        "cursor-pointer hover:shadow-md transition-shadow relative",
-                        selectedBusiness?.id === business.id && "ring-2 ring-roam-blue"
-                      )}
-                      onClick={() => {
-                        // Navigate to business profile with Services tab active
-                        navigate(`/business/${business.id}?tab=services`);
-                      }}
-                    >
-                      <CardContent className="p-3 sm:p-4">
-                        <div className="flex gap-3 sm:gap-4">
-                          {/* Business Image/Logo */}
-                          <div className="flex-shrink-0">
-                            {business.logo_url || business.image_url ? (
-                              <img
-                                src={business.logo_url || business.image_url || ""}
-                                alt={business.business_name}
-                                className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg object-cover"
-                              />
-                            ) : (
-                              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg bg-gray-200 flex items-center justify-center">
-                                <Building className="w-6 h-6 sm:w-8 sm:h-8 text-gray-400" />
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Business Info */}
-                          <div className="flex-1 min-w-0">
-                            <h3 className="font-semibold text-base sm:text-lg mb-1 truncate">
-                              {business.business_name}
-                            </h3>
-                            <div className="flex items-center gap-2 mb-1.5 sm:mb-2">
-                              <div className="flex items-center">
-                                <Star className="w-3 h-3 sm:w-4 sm:h-4 fill-yellow-400 text-yellow-400" />
-                                <span className="text-xs sm:text-sm font-medium ml-1">
-                                  {business.rating.toFixed(1)}
-                                </span>
-                                <span className="text-xs sm:text-sm text-gray-500 ml-1">
-                                  ({business.review_count} Reviews)
-                                </span>
-                              </div>
+                      <Card
+                        key={business.id}
+                        className={cn(
+                          "cursor-pointer transition-all hover:shadow-lg",
+                          selectedBusiness?.id === business.id
+                            ? 'ring-2 ring-roam-blue border-roam-blue bg-blue-50/50'
+                            : 'hover:shadow-md'
+                        )}
+                        onClick={() => {
+                          // Select business and navigate to business profile (services tab)
+                          // User will choose a specific service from there
+                          setSelectedBusiness(business);
+                          navigate(`/business/${business.id}?tab=services`);
+                        }}
+                      >
+                        <CardContent className="p-3 sm:p-4">
+                          <div className="flex items-start space-x-3 sm:space-x-4">
+                            {/* Business Image/Logo */}
+                            <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm overflow-hidden">
+                              {business.logo_url || business.image_url ? (
+                                <img
+                                  src={business.logo_url || business.image_url || ""}
+                                  alt={business.business_name}
+                                  className="w-full h-full object-cover rounded-xl"
+                                  onError={(e) => {
+                                    const target = e.target as HTMLImageElement;
+                                    target.style.display = 'none';
+                                  }}
+                                />
+                              ) : (
+                                <Building className="w-8 h-8 sm:w-10 sm:h-10 text-gray-400" />
+                              )}
                             </div>
-                            {business.business_locations?.[0] && (
-                              <div className="flex items-center text-xs sm:text-sm text-gray-600 mb-1.5 sm:mb-2">
-                                <MapPin className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
-                                <span className="truncate">
-                                  {(business.business_locations[0] as BusinessLocation).city}, {(business.business_locations[0] as BusinessLocation).state}
-                                </span>
+
+                            <div className="flex-1 min-w-0">
+                              {/* Business Header with More Info Button */}
+                              <div className="flex items-start justify-between mb-2">
+                                <div className="flex-1 min-w-0">
+                                  <h3 className="font-semibold text-base sm:text-lg mb-1 truncate">
+                                    {business.business_name}
+                                  </h3>
+                                  <div className="flex items-center space-x-3 sm:space-x-4 text-xs sm:text-sm text-gray-600">
+                                    <div className="flex items-center">
+                                      <Star className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-500 mr-1 fill-yellow-500" />
+                                      <span className="font-medium">{business.rating.toFixed(1)}</span>
+                                      <span className="ml-1">({business.review_count || 0} reviews)</span>
+                                    </div>
+                                    {business.business_locations?.[0] && (
+                                      <div className="flex items-center">
+                                        <MapPin className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                                        <span className="truncate">
+                                          {(business.business_locations[0] as BusinessLocation).city}, {(business.business_locations[0] as BusinessLocation).state}
+                                        </span>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* More Info Button */}
+                                <div
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="ml-2 sm:ml-4 flex-shrink-0"
+                                >
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    asChild
+                                    className="hover:bg-roam-blue hover:text-white text-xs sm:text-sm h-7 sm:h-8 px-2 sm:px-3"
+                                  >
+                                    <Link to={`/business/${business.id}?tab=services`} target="_blank" rel="noopener noreferrer">
+                                      <Info className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                                      <span className="hidden sm:inline">More Info</span>
+                                      <ExternalLink className="w-3 h-3 ml-1" />
+                                    </Link>
+                                  </Button>
+                                </div>
                               </div>
-                            )}
-                            {business.description && (
-                              <p className="text-xs sm:text-sm text-gray-600 line-clamp-2">
-                                {business.description}
-                              </p>
-                            )}
-                            <div className="flex flex-wrap gap-1 mt-2">
-                              {business.business_service_subcategories?.slice(0, 3).map((bss) => (
-                                <Badge key={bss.id} variant="secondary" className="text-xs px-1.5 py-0.5">
-                                  {bss.service_subcategories?.service_subcategory_type 
-                                    ? formatSubcategoryName(bss.service_subcategories.service_subcategory_type)
-                                    : 'Service'}
-                                </Badge>
-                              ))}
+
+                              {/* Business Description */}
+                              {business.description && (
+                                <p className="text-xs sm:text-sm text-gray-600 mb-2 leading-relaxed line-clamp-2">
+                                  {business.description}
+                                </p>
+                              )}
+
+                              {/* Service Categories */}
+                              <div className="flex flex-wrap gap-1 mb-2">
+                                {business.business_service_subcategories?.slice(0, 3).map((bss) => (
+                                  <Badge key={bss.id} variant="secondary" className="text-xs px-1.5 py-0.5">
+                                    {bss.service_subcategories?.service_subcategory_type 
+                                      ? formatSubcategoryName(bss.service_subcategories.service_subcategory_type)
+                                      : 'Service'}
+                                  </Badge>
+                                ))}
+                              </div>
+
+                              {/* Selection Indicator */}
+                              {selectedBusiness?.id === business.id && (
+                                <div className="mt-2 pt-2 border-t border-roam-blue/20">
+                                  <div className="flex items-center text-roam-blue text-xs sm:text-sm font-medium">
+                                    <div className="w-3 h-3 sm:w-4 sm:h-4 rounded-full bg-roam-blue flex items-center justify-center mr-2">
+                                      <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-white"></div>
+                                    </div>
+                                    Selected for your booking
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           </div>
-
-                          {/* Book Now Button */}
-                          <div className="flex-shrink-0 flex items-center">
-                            <Button
-                              variant="default"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation(); // Prevent card click
-                                // Navigate to booking flow
-                                const firstServiceId = selectedServices.size > 0 
-                                  ? Array.from(selectedServices)[0]
-                                  : services && services.length > 0 
-                                    ? services[0].id 
-                                    : null;
-                                
-                                if (firstServiceId) {
-                                  navigate(`/book-service/${firstServiceId}?business_id=${business.id}`);
-                                } else {
-                                  // If no service available, navigate to business profile
-                                  navigate(`/business/${business.id}`);
-                                }
-                              }}
-                              className="h-8 sm:h-9 px-2 sm:px-3 text-xs sm:text-sm bg-roam-blue hover:bg-roam-light-blue text-white"
-                              title="Book this business"
-                            >
-                              <span className="hidden sm:inline">Book Now</span>
-                              <span className="sm:hidden">Book</span>
-                              <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 sm:ml-1.5" />
-                            </Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
+                        </CardContent>
+                      </Card>
                   ))
                 )}
               </div>
