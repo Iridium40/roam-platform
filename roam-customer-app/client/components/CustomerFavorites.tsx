@@ -52,7 +52,7 @@ interface BusinessFavorite {
 
 export function CustomerFavorites() {
   const { isCustomer, customer } = useAuth();
-  const { favorites: providerFavorites, loading: providersLoading, error: providersError } = useFavorites();
+  const { favorites: providerFavorites, loading: providersLoading, error: providersError, removeFavorite: removeProviderFavorite } = useFavorites();
   const [serviceFavorites, setServiceFavorites] = useState<ServiceFavorite[]>([]);
   const [businessFavorites, setBusinessFavorites] = useState<BusinessFavorite[]>([]);
   const [servicesLoading, setServicesLoading] = useState(true);
@@ -299,11 +299,6 @@ export function CustomerFavorites() {
                               {favorite.services.description}
                             </p>
                           )}
-                          {favorite.services.min_price && (
-                            <p className="text-sm font-semibold text-roam-blue">
-                              From ${favorite.services.min_price}
-                            </p>
-                          )}
                         </div>
                       </div>
                       <div className="flex gap-2 mt-4">
@@ -350,7 +345,7 @@ export function CustomerFavorites() {
                 </Button>
               </Card>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {providerFavorites.map((favorite) => (
                 <Card
                   key={favorite.id}
@@ -358,7 +353,7 @@ export function CustomerFavorites() {
                 >
                   <CardContent className="p-4">
                     <div className="flex items-start gap-4">
-                      <div className="w-16 h-16 bg-gradient-to-br from-roam-blue to-roam-light-blue rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+                      <div className="w-16 h-16 bg-gradient-to-br from-roam-blue to-roam-light-blue rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
                         {favorite.providers.image_url ? (
                           <img
                             src={favorite.providers.image_url}
@@ -369,50 +364,37 @@ export function CustomerFavorites() {
                           <User className="w-8 h-8 text-white" />
                         )}
                       </div>
-                      <div className="flex-1">
-                        <div className="flex items-start justify-between mb-2">
-                          <div>
-                            <h3 className="font-semibold text-lg">
-                              {favorite.providers.first_name} {favorite.providers.last_name}
-                            </h3>
-                            <p className="text-sm text-foreground/60">
-                              {favorite.providers.business_profiles?.business_name}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="flex gap-2">
-                          <Button
-                            asChild
-                            size="sm"
-                            className="flex-1 bg-roam-blue hover:bg-roam-blue/90"
-                          >
-                            <Link
-                              to={`/provider/${favorite.provider_id}?booking=true`}
-                            >
-                              <Calendar className="w-4 h-4 mr-2" />
-                              Book Now
-                            </Link>
-                          </Button>
-                          <Button
-                            asChild
-                            size="sm"
-                            variant="outline"
-                            className="border-roam-blue text-roam-blue hover:bg-roam-blue hover:text-white"
-                          >
-                            <Link to={`/provider/${favorite.provider_id}`}>
-                              View Profile
-                            </Link>
-                          </Button>
-                          <FavoriteButton
-                            type="provider"
-                            itemId={favorite.provider_id}
-                            size="sm"
-                            variant="outline"
-                            className="border-gray-300 text-gray-600 hover:bg-gray-50"
-                          />
-                        </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-lg mb-1 truncate">
+                          {favorite.providers.first_name} {favorite.providers.last_name}
+                        </h3>
+                        {favorite.providers.business_profiles?.business_name && (
+                          <p className="text-sm text-foreground/60 line-clamp-2 mb-2">
+                            {favorite.providers.business_profiles.business_name}
+                          </p>
+                        )}
                       </div>
+                    </div>
+                    <div className="flex gap-2 mt-4">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => removeProviderFavorite(favorite.provider_id)}
+                        className="flex-1"
+                      >
+                        <Heart className="w-4 h-4 mr-1 fill-current" />
+                        Remove
+                      </Button>
+                      <Button 
+                        asChild 
+                        size="sm" 
+                        className="flex-1 bg-roam-blue hover:bg-roam-blue/90"
+                      >
+                        <Link to={`/provider/${favorite.providers.user_id || favorite.provider_id}?booking=true`}>
+                          <Calendar className="w-4 h-4 mr-2" />
+                          Book Now
+                        </Link>
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>

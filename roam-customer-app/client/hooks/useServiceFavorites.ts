@@ -34,29 +34,21 @@ export const useServiceFavorites = () => {
       setLoading(true);
       setError(null);
 
-      const { data, error: fetchError } = await supabase
-        .from("customer_favorite_services")
-        .select(`
-          id,
-          customer_id,
-          service_id,
-          created_at,
-          services (
-            id,
-            name,
-            description,
-            min_price,
-            image_url
-          )
-        `)
-        .eq("customer_id", customer.id)
-        .order("created_at", { ascending: false });
+      // Use API endpoint to bypass RLS
+      const response = await fetch(`/api/favorites/service?customerId=${customer.id}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
 
-      if (fetchError) {
-        throw fetchError;
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to load favorites');
       }
 
-      setFavorites(data || []);
+      setFavorites(result.data || []);
     } catch (err) {
       logger.error("Error loading service favorites:", err);
       setError(err instanceof Error ? err.message : "Failed to load service favorites");

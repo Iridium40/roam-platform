@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { FavoriteButton } from "@/components/FavoriteButton";
 
 // Lazy load ShareModal
 const ShareModal = lazy(() => import("@/components/ShareModal"));
@@ -513,7 +514,7 @@ export default function BusinessProfile() {
                       {staff.map((provider) => (
                         <Card 
                           key={provider.id} 
-                          className="hover:shadow-lg transition-all cursor-pointer group border-2 hover:border-roam-blue/30"
+                          className="hover:shadow-lg transition-all cursor-pointer group border-2 hover:border-roam-blue/30 relative"
                           onClick={() => window.location.href = `/provider/${provider.user_id}`}
                         >
                           <CardContent className="p-6">
@@ -541,7 +542,15 @@ export default function BusinessProfile() {
                                       </Badge>
                                     )}
                                   </div>
-                                  <ExternalLink className="w-5 h-5 text-gray-400 group-hover:text-roam-blue transition-colors flex-shrink-0" />
+                                  <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                                    <FavoriteButton
+                                      type="provider"
+                                      itemId={provider.id}
+                                      size="sm"
+                                      variant="ghost"
+                                    />
+                                    <ExternalLink className="w-5 h-5 text-gray-400 group-hover:text-roam-blue transition-colors flex-shrink-0" />
+                                  </div>
                                 </div>
                                 {provider.bio && (
                                   <p className="text-gray-600 text-sm mb-3 line-clamp-2">

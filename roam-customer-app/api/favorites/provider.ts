@@ -29,25 +29,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       const { data, error } = await supabase
-        .from('customer_favorite_services')
+        .from('customer_favorite_providers')
         .select(`
           id,
           customer_id,
-          service_id,
+          provider_id,
           created_at,
-          services (
+          providers (
             id,
-            name,
-            description,
-            min_price,
+            user_id,
+            first_name,
+            last_name,
+            business_profiles (
+              business_name
+            ),
             image_url
           )
         `)
-        .eq('customer_id', queryCustomerId)
+        .eq('customer_id', queryCustomerId as string)
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Error fetching service favorites:', error);
+        console.error('Error fetching provider favorites:', error);
         return res.status(500).json({ 
           error: 'Failed to fetch favorites',
           details: error.message,
@@ -62,7 +65,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Handle POST and DELETE requests
-    const { customerId, serviceId, action } = req.body;
+    const { customerId, providerId, action } = req.body;
 
     if (!customerId) {
       return res.status(400).json({ 
@@ -72,19 +75,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     if (req.method === 'POST' && action === 'add') {
-      if (!serviceId) {
+      if (!providerId) {
         return res.status(400).json({ 
-          error: 'Service ID is required',
-          code: 'MISSING_SERVICE_ID'
+          error: 'Provider ID is required',
+          code: 'MISSING_PROVIDER_ID'
         });
       }
 
       // Check if favorite already exists
       const { data: existing } = await supabase
-        .from('customer_favorite_services')
+        .from('customer_favorite_providers')
         .select('id')
         .eq('customer_id', customerId)
-        .eq('service_id', serviceId)
+        .eq('provider_id', providerId)
         .single();
 
       if (existing) {
@@ -97,16 +100,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // Insert new favorite
       const { data, error } = await supabase
-        .from('customer_favorite_services')
+        .from('customer_favorite_providers')
         .insert({
           customer_id: customerId,
-          service_id: serviceId,
+          provider_id: providerId,
         })
         .select()
         .single();
 
       if (error) {
-        console.error('Error adding service favorite:', error);
+        console.error('Error adding provider favorite:', error);
         return res.status(500).json({ 
           error: 'Failed to add favorite',
           details: error.message,
@@ -121,21 +124,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     if (req.method === 'DELETE' || (req.method === 'POST' && action === 'remove')) {
-      if (!serviceId) {
+      if (!providerId) {
         return res.status(400).json({ 
-          error: 'Service ID is required',
-          code: 'MISSING_SERVICE_ID'
+          error: 'Provider ID is required',
+          code: 'MISSING_PROVIDER_ID'
         });
       }
 
       const { error } = await supabase
-        .from('customer_favorite_services')
+        .from('customer_favorite_providers')
         .delete()
         .eq('customer_id', customerId)
-        .eq('service_id', serviceId);
+        .eq('provider_id', providerId);
 
       if (error) {
-        console.error('Error removing service favorite:', error);
+        console.error('Error removing provider favorite:', error);
         return res.status(500).json({ 
           error: 'Failed to remove favorite',
           details: error.message,
@@ -154,7 +157,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       code: 'METHOD_NOT_ALLOWED'
     });
   } catch (error: any) {
-    console.error('Unexpected error in service favorites API:', error);
+    console.error('Unexpected error in provider favorites API:', error);
     return res.status(500).json({ 
       error: 'Internal server error',
       details: error.message,

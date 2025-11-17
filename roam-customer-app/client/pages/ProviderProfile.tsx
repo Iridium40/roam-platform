@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
+import { FavoriteButton } from "@/components/FavoriteButton";
 
 // Lazy load ShareModal
 const ShareModal = lazy(() => import("@/components/ShareModal"));
@@ -212,15 +213,24 @@ export default function ProviderProfile() {
                       </Badge>
                     )}
                   </div>
-                  <Button
-                    onClick={() => setShareModalOpen(true)}
-                    variant="outline"
-                    size="sm"
-                    className="gap-2"
-                  >
-                    <Share2 className="w-4 h-4" />
-                    Share
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <FavoriteButton
+                      type="provider"
+                      itemId={provider.id}
+                      size="sm"
+                      variant="outline"
+                      showText={false}
+                    />
+                    <Button
+                      onClick={() => setShareModalOpen(true)}
+                      variant="outline"
+                      size="sm"
+                      className="gap-2"
+                    >
+                      <Share2 className="w-4 h-4" />
+                      Share
+                    </Button>
+                  </div>
                 </div>
                 <div className="flex items-center gap-4 mb-4 flex-wrap">
                   {provider.business && (

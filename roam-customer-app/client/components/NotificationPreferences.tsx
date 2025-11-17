@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -28,16 +27,21 @@ export function NotificationPreferences() {
 
   async function loadSettings() {
     try {
-      const { data, error } = await supabase
-        .from('user_settings')
-        .select('*')
-        .eq('user_id', userId)
-        .maybeSingle();
+      const response = await fetch(`/api/user-settings?userId=${userId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
 
-      if (error) throw error;
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to load settings');
+      }
       
       // If no settings exist, create defaults
-      if (!data) {
+      if (!result.data) {
         const defaultSettings = {
           user_id: userId,
           email_notifications: true,
@@ -61,7 +65,7 @@ export function NotificationPreferences() {
         };
         setSettings(defaultSettings);
       } else {
-        setSettings(data);
+        setSettings(result.data);
       }
     } catch (error) {
       console.error('Error loading settings:', error);
@@ -78,15 +82,22 @@ export function NotificationPreferences() {
   async function saveSettings() {
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from('user_settings')
-        .upsert({
-          user_id: userId,
+      const response = await fetch('/api/user-settings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId,
           ...settings,
-          updated_at: new Date().toISOString(),
-        });
+        }),
+      });
 
-      if (error) throw error;
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to save settings');
+      }
 
       toast({
         title: 'Settings saved',

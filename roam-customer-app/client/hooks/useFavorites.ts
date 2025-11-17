@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/lib/supabase";
 import { logger } from '@/utils/logger';
 
 export interface Favorite {
@@ -10,6 +9,7 @@ export interface Favorite {
   created_at: string;
   providers: {
     id: string;
+    user_id?: string;
     first_name: string;
     last_name: string;
     business_profiles: {
@@ -36,31 +36,21 @@ export const useFavorites = () => {
       setLoading(true);
       setError(null);
 
-      const { data, error: fetchError } = await supabase
-        .from("customer_favorite_providers")
-        .select(`
-          id,
-          customer_id,
-          provider_id,
-          created_at,
-          providers (
-            id,
-            first_name,
-            last_name,
-            business_profiles (
-              business_name
-            ),
-            image_url
-          )
-        `)
-        .eq("customer_id", customer.id)
-        .order("created_at", { ascending: false });
+      // Use API endpoint to bypass RLS
+      const response = await fetch(`/api/favorites/provider?customerId=${customer.id}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
 
-      if (fetchError) {
-        throw fetchError;
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to load favorites');
       }
 
-      setFavorites(data || []);
+      setFavorites(result.data || []);
     } catch (err) {
       logger.error("Error loading favorites:", err);
       setError(err instanceof Error ? err.message : "Failed to load favorites");
@@ -75,15 +65,22 @@ export const useFavorites = () => {
     }
 
     try {
-      const { error: insertError } = await supabase
-        .from("customer_favorite_providers")
-        .insert({
-          customer_id: customer.id,
-          provider_id: providerId,
-        });
+      const response = await fetch('/api/favorites/provider', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          customerId: customer.id,
+          providerId,
+          action: 'add',
+        }),
+      });
 
-      if (insertError) {
-        throw insertError;
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to add favorite');
       }
 
       await loadFavorites();
@@ -99,14 +96,21 @@ export const useFavorites = () => {
     }
 
     try {
-      const { error: deleteError } = await supabase
-        .from("customer_favorite_providers")
-        .delete()
-        .eq("customer_id", customer.id)
-        .eq("provider_id", providerId);
+      const response = await fetch('/api/favorites/provider', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          customerId: customer.id,
+          providerId,
+        }),
+      });
 
-      if (deleteError) {
-        throw deleteError;
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to remove favorite');
       }
 
       await loadFavorites();

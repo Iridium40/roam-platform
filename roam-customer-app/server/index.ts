@@ -336,6 +336,80 @@ export function createServer() {
     }
   );
 
+  // Provider favorites routes
+  app.get("/api/favorites/provider",
+    async (req, res) => {
+      try {
+        const favoritesHandler = await import("../api/favorites/provider");
+        await favoritesHandler.default(req, res);
+      } catch (error) {
+        console.error("Error importing provider favorites handler:", error);
+        res.status(500).json({ error: "Failed to load provider favorites handler" });
+      }
+    }
+  );
+
+  app.post("/api/favorites/provider",
+    async (req, res) => {
+      try {
+        const favoritesHandler = await import("../api/favorites/provider");
+        await favoritesHandler.default(req, res);
+      } catch (error) {
+        console.error("Error importing provider favorites handler:", error);
+        res.status(500).json({ error: "Failed to load provider favorites handler" });
+      }
+    }
+  );
+
+  app.delete("/api/favorites/provider",
+    async (req, res) => {
+      try {
+        const favoritesHandler = await import("../api/favorites/provider");
+        await favoritesHandler.default(req, res);
+      } catch (error) {
+        console.error("Error importing provider favorites handler:", error);
+        res.status(500).json({ error: "Failed to load provider favorites handler" });
+      }
+    }
+  );
+
+  // User settings routes
+  app.get("/api/user-settings",
+    async (req, res) => {
+      try {
+        const userSettingsHandler = await import("../api/user-settings");
+        await userSettingsHandler.default(req, res);
+      } catch (error) {
+        console.error("Error importing user settings handler:", error);
+        res.status(500).json({ error: "Failed to load user settings handler" });
+      }
+    }
+  );
+
+  app.post("/api/user-settings",
+    async (req, res) => {
+      try {
+        const userSettingsHandler = await import("../api/user-settings");
+        await userSettingsHandler.default(req, res);
+      } catch (error) {
+        console.error("Error importing user settings handler:", error);
+        res.status(500).json({ error: "Failed to load user settings handler" });
+      }
+    }
+  );
+
+  app.put("/api/user-settings",
+    async (req, res) => {
+      try {
+        const userSettingsHandler = await import("../api/user-settings");
+        await userSettingsHandler.default(req, res);
+      } catch (error) {
+        console.error("Error importing user settings handler:", error);
+        res.status(500).json({ error: "Failed to load user settings handler" });
+      }
+    }
+  );
+
   // Error handling middleware
   app.use((error: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
     console.error('Server error:', error);
