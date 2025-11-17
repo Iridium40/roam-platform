@@ -185,7 +185,7 @@ export default function CustomerProfile() {
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         {/* Back to Home Button */}
         <div className="mb-6">
-          <Link to="/">
+          <Link to="/booknow">
             <Button
               variant="ghost"
               className="flex items-center gap-2 text-foreground/70 hover:text-foreground hover:bg-accent/50 px-3 py-2 rounded-lg transition-colors"
