@@ -51,10 +51,30 @@ interface BusinessServiceSubcategory {
   subcategory_id: string;
   service_subcategories?: {
     id: string;
-    name: string;
     service_subcategory_type: string;
   };
 }
+
+// Helper function to format subcategory type enum to display name
+const formatSubcategoryName = (type: string): string => {
+  const nameMap: Record<string, string> = {
+    'hair_and_makeup': 'Hair & Makeup',
+    'spray_tan': 'Spray Tan',
+    'esthetician': 'Esthetician',
+    'massage_therapy': 'Massage Therapy',
+    'iv_therapy': 'IV Therapy',
+    'physical_therapy': 'Physical Therapy',
+    'nurse_practitioner': 'Nurse Practitioner',
+    'physician': 'Physician',
+    'chiropractor': 'Chiropractor',
+    'yoga_instructor': 'Yoga Instructor',
+    'pilates_instructor': 'Pilates Instructor',
+    'personal_trainer': 'Personal Trainer',
+    'injectables': 'Injectables',
+    'health_coach': 'Health Coach',
+  };
+  return nameMap[type] || type.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+};
 
 interface Service {
   id: string;
@@ -62,7 +82,7 @@ interface Service {
   subcategory_id: string;
   service_subcategories?: {
     id: string;
-    name: string;
+    service_subcategory_type: string;
   };
 }
 
@@ -107,7 +127,7 @@ export default function BusinessResults() {
               business_id,
               service_subcategories!inner (
                 id,
-                name
+                service_subcategory_type
               )
             `)
             .eq('subcategory_id', subcategoryId)
@@ -170,7 +190,6 @@ export default function BusinessResults() {
               subcategory_id,
               service_subcategories (
                 id,
-                name,
                 service_subcategory_type
               )
             )
@@ -202,7 +221,7 @@ export default function BusinessResults() {
               subcategory_id,
               service_subcategories (
                 id,
-                name
+                service_subcategory_type
               )
             `)
             .eq('subcategory_id', subcategoryId)
@@ -521,7 +540,9 @@ export default function BusinessResults() {
                             <div className="flex flex-wrap gap-1 mt-2">
                               {business.business_service_subcategories?.slice(0, 3).map((bss) => (
                                 <Badge key={bss.id} variant="secondary" className="text-xs">
-                                  {bss.service_subcategories?.name}
+                                  {bss.service_subcategories?.service_subcategory_type 
+                                    ? formatSubcategoryName(bss.service_subcategories.service_subcategory_type)
+                                    : 'Service'}
                                 </Badge>
                               ))}
                             </div>

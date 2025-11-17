@@ -117,7 +117,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // Step 4: Fetch eligible add-ons based on approved subcategories
+    // Step 4: Get all services that belong to approved subcategories
     // Filter out any null or invalid UUIDs from validSubcategoryIds
     const cleanSubcategoryIds = validSubcategoryIds.filter(id => {
       // Check if it's a valid UUID format
@@ -134,35 +134,86 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // Query service_addons with eligibility
-    const { data: eligibleAddons, error: addonsError } = await supabase
-      .from('service_addons')
-      .select(`
-        id,
-        name,
-        description,
-        image_url,
-        price,
-        is_active,
-        subcategory_id,
-        service_subcategories (
-          id,
-          service_subcategory_type,
-          category_id
-        )
-      `)
+    // Get all services for the approved subcategories
+    const { data: eligibleServices, error: servicesError } = await supabase
+      .from('services')
+      .select('id')
       .in('subcategory_id', cleanSubcategoryIds)
       .eq('is_active', true);
 
-    if (addonsError) {
-      console.error('Error fetching eligible addons:', addonsError);
+    if (servicesError) {
+      console.error('Error fetching eligible services:', servicesError);
       return res.status(500).json({ 
-        error: 'Failed to fetch eligible addons',
-        details: addonsError.message,
-        hint: addonsError.hint,
-        code: addonsError.code
+        error: 'Failed to fetch eligible services',
+        details: servicesError.message,
+        hint: servicesError.hint,
+        code: servicesError.code
       });
     }
+
+    if (!eligibleServices || eligibleServices.length === 0) {
+      return res.status(200).json({
+        business_id,
+        addon_count: 0,
+        eligible_addons: [],
+        message: 'No services found for approved subcategories'
+      });
+    }
+
+    const serviceIds = eligibleServices.map(s => s.id);
+
+    // Step 5: Get addon eligibility for these services
+    const { data: addonEligibility, error: eligibilityError } = await supabase
+      .from('service_addon_eligibility')
+      .select(`
+        addon_id,
+        service_id,
+        is_recommended,
+        service_addons (
+          id,
+          name,
+          description,
+          image_url,
+          is_active
+        ),
+        services (
+          id,
+          subcategory_id,
+          service_subcategories (
+            id,
+            service_subcategory_type,
+            category_id
+          )
+        )
+      `)
+      .in('service_id', serviceIds);
+
+    if (eligibilityError) {
+      console.error('Error fetching addon eligibility:', eligibilityError);
+      return res.status(500).json({ 
+        error: 'Failed to fetch addon eligibility',
+        details: eligibilityError.message,
+        hint: eligibilityError.hint,
+        code: eligibilityError.code
+      });
+    }
+
+    // Extract unique addons from eligibility data
+    const addonMap = new Map();
+    (addonEligibility || []).forEach((eligibility: any) => {
+      if (eligibility.service_addons && eligibility.service_addons.is_active) {
+        const addonId = eligibility.addon_id;
+        if (!addonMap.has(addonId)) {
+          addonMap.set(addonId, {
+            ...eligibility.service_addons,
+            subcategory_id: eligibility.services?.subcategory_id || null,
+            service_subcategories: eligibility.services?.service_subcategories || null,
+          });
+        }
+      }
+    });
+
+    const eligibleAddons = Array.from(addonMap.values());
 
     // Step 5: Get currently configured business addons
     const { data: businessAddons, error: businessAddonsError } = await supabase
@@ -188,7 +239,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         description: addon.description,
         image_url: addon.image_url || null,
         is_active: addon.is_active,
-        subcategory_id: addon.subcategory_id,
+        subcategory_id: addon.subcategory_id || null,
         subcategory_name: subcategoryName,
         is_configured: configuredIds.has(addon.id),
         custom_price: businessAddon?.custom_price ?? null,
