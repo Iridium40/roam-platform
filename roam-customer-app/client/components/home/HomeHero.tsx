@@ -3,14 +3,13 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { MapPin, X } from "lucide-react";
+import { X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 
 interface HomeHeroProps {
   className?: string;
   onSearch?: (query: string) => void;
-  onLocationChange?: (location: string) => void;
   onServiceSearch?: (query: string) => void;
   onTimeSelect?: (time: string) => void;
 }
@@ -58,7 +57,6 @@ interface CategoryWithSubcategories {
 export function HomeHero({ 
   className = "",
   onSearch,
-  onLocationChange,
   onServiceSearch,
   onTimeSelect
 }: HomeHeroProps) {
@@ -66,26 +64,13 @@ export function HomeHero({
   const [businessSearch, setBusinessSearch] = useState("");
   const [serviceSearch, setServiceSearch] = useState("");
   const [selectedTime, setSelectedTime] = useState("anytime");
-  const [currentLocation, setCurrentLocation] = useState<string | null>(null);
   const [featuredSubcategories, setFeaturedSubcategories] = useState<ServiceSubcategory[]>([]);
   const [allCategories, setAllCategories] = useState<CategoryWithSubcategories[]>([]);
   const [loadingSubcategories, setLoadingSubcategories] = useState(true);
   const [showMoreModal, setShowMoreModal] = useState(false);
-
-  const handleGetCurrentLocation = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          setCurrentLocation(`${latitude},${longitude}`);
-          onLocationChange?.(`${latitude},${longitude}`);
-        },
-        (error) => {
-          console.error("Error getting location:", error);
-        }
-      );
-    }
-  };
+  
+  // Default location: Seaside, Florida 32459
+  const DEFAULT_LOCATION = "Seaside, Florida 32459";
 
   // Fetch featured subcategories and all categories with subcategories
   useEffect(() => {
@@ -173,20 +158,22 @@ export function HomeHero({
   }, []);
 
   const handleSubcategoryClick = (subcategoryId: string, subcategoryType: string) => {
-    // Navigate to results page with subcategory filter
+    // Navigate to results page with subcategory filter and default location
     const displayName = formatSubcategoryName(subcategoryType);
-    navigate(`/businesses?subcategory=${subcategoryId}&name=${encodeURIComponent(displayName)}`);
+    navigate(`/businesses?subcategory=${subcategoryId}&name=${encodeURIComponent(displayName)}&location=${encodeURIComponent(DEFAULT_LOCATION)}`);
   };
 
   const handleSearch = () => {
     if (onSearch) {
       onSearch(businessSearch);
     } else {
-      // Default behavior: navigate to search results
+      // Default behavior: navigate to search results with default location
       const params = new URLSearchParams();
       if (businessSearch) params.set("q", businessSearch);
       if (serviceSearch) params.set("service", serviceSearch);
       if (selectedTime !== "anytime") params.set("time", selectedTime);
+      // Always include default location
+      params.set("location", DEFAULT_LOCATION);
       navigate(`/businesses?${params.toString()}`);
     }
   };
@@ -254,21 +241,6 @@ export function HomeHero({
                   onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                   className="h-12 border-gray-200 focus:border-roam-blue focus:ring-roam-blue"
                 />
-                {!currentLocation && (
-                  <button
-                    onClick={handleGetCurrentLocation}
-                    className="mt-2 text-sm text-roam-blue hover:text-roam-light-blue flex items-center gap-1 mx-auto justify-center w-full"
-                  >
-                    <MapPin className="h-4 w-4" />
-                    Current Location
-                  </button>
-                )}
-                {currentLocation && (
-                  <div className="mt-2 text-sm text-green-600 flex items-center gap-1 justify-center">
-                    <MapPin className="h-4 w-4" />
-                    Location set
-                  </div>
-                )}
               </div>
 
               {/* Service Type */}
@@ -310,7 +282,7 @@ export function HomeHero({
               {/* Search Button */}
               <Button
                 onClick={handleSearch}
-                className="h-12 bg-roam-blue hover:bg-roam-light-blue text-white font-semibold text-lg"
+                className="h-12 bg-roam-blue hover:bg-roam-light-blue text-white font-semibold text-lg rounded-lg"
               >
                 Search
               </Button>
@@ -327,7 +299,7 @@ export function HomeHero({
                   <Button
                     key={subcategory.id}
                     variant="outline"
-                    className="rounded-full px-6 py-2 bg-white/95 backdrop-blur-sm border-white/30 text-gray-800 hover:bg-white hover:text-roam-blue hover:border-roam-blue transition-all shadow-lg font-medium"
+                    className="rounded-lg px-6 py-2 bg-white/95 backdrop-blur-sm border-white/30 text-gray-800 hover:bg-white hover:text-roam-blue hover:border-roam-blue transition-all shadow-lg font-medium"
                     onClick={() => handleSubcategoryClick(subcategory.id, subcategory.service_subcategory_type)}
                   >
                     {formatSubcategoryName(subcategory.service_subcategory_type)}
@@ -335,7 +307,7 @@ export function HomeHero({
                 ))}
                 <Button
                   variant="outline"
-                  className="rounded-full px-6 py-2 bg-white/95 backdrop-blur-sm border-white/30 text-gray-800 hover:bg-white hover:text-roam-blue hover:border-roam-blue transition-all shadow-lg font-medium"
+                  className="rounded-lg px-6 py-2 bg-white/95 backdrop-blur-sm border-white/30 text-gray-800 hover:bg-white hover:text-roam-blue hover:border-roam-blue transition-all shadow-lg font-medium"
                   onClick={() => setShowMoreModal(true)}
                 >
                   More...
@@ -372,7 +344,7 @@ export function HomeHero({
                         <Button
                           key={subcategory.id}
                           variant="outline"
-                          className="rounded-full px-4 py-2 h-auto text-sm font-medium hover:bg-roam-blue hover:text-white hover:border-roam-blue transition-all"
+                          className="rounded-lg px-4 py-2 h-auto text-sm font-medium hover:bg-roam-blue hover:text-white hover:border-roam-blue transition-all"
                           onClick={() => {
                             handleSubcategoryClick(subcategory.id, subcategory.service_subcategory_type);
                             setShowMoreModal(false);

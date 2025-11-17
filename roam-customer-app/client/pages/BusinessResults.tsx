@@ -9,7 +9,7 @@ import {
   MapPin, 
   Star, 
   Clock, 
-  Map, 
+  Map as MapIcon, 
   List, 
   Filter,
   X,
@@ -116,90 +116,30 @@ export default function BusinessResults() {
       try {
         setLoading(true);
         
-        let businessIds: string[] = [];
-
-        // If subcategory is provided, filter by subcategory
+        // Build query parameters
+        const params = new URLSearchParams();
         if (subcategoryId) {
-          // First, get all businesses that offer this subcategory
-          const { data: businessSubcategories, error: subcatError } = await supabase
-            .from('business_service_subcategories')
-            .select(`
-              business_id,
-              service_subcategories!inner (
-                id,
-                service_subcategory_type
-              )
-            `)
-            .eq('subcategory_id', subcategoryId)
-            .eq('is_active', true);
-
-          if (subcatError) {
-            console.error('Error fetching business subcategories:', subcatError);
-            setLoading(false);
-            return;
-          }
-
-          businessIds = businessSubcategories?.map(bs => bs.business_id) || [];
-        } else if (searchQuery) {
-          // If search query is provided, search by business name
-          const { data: searchResults, error: searchError } = await supabase
-            .from('business_profiles')
-            .select('id')
-            .ilike('business_name', `%${searchQuery}%`)
-            .eq('is_active', true)
-            .limit(100);
-
-          if (searchError) {
-            console.error('Error searching businesses:', searchError);
-            setLoading(false);
-            return;
-          }
-
-          businessIds = searchResults?.map(b => b.id) || [];
+          params.append('subcategoryId', subcategoryId);
+        }
+        if (searchQuery) {
+          params.append('searchQuery', searchQuery);
         }
 
-        if (businessIds.length === 0) {
+        // Call API endpoint to fetch businesses
+        const response = await fetch(`/api/businesses/search?${params.toString()}`);
+        
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error('Error fetching businesses:', errorData);
           setBusinesses([]);
           setLoading(false);
           return;
         }
 
-        // Fetch business details with locations
-        const { data: businessesData, error: businessesError } = await supabase
-          .from('business_profiles')
-          .select(`
-            id,
-            business_name,
-            description,
-            logo_url,
-            image_url,
-            rating,
-            review_count,
-            business_locations (
-              id,
-              location_name,
-              address_line1,
-              city,
-              state,
-              postal_code,
-              latitude,
-              longitude
-            ),
-            business_service_subcategories (
-              id,
-              subcategory_id,
-              service_subcategories (
-                id,
-                service_subcategory_type
-              )
-            )
-          `)
-          .in('id', businessIds)
-          .eq('is_active', true);
+        const { businesses: businessesData, services: servicesData } = await response.json();
 
-        if (businessesError) {
-          console.error('Error fetching businesses:', businessesError);
-        } else if (businessesData) {
+        // Set businesses data (API already includes locations)
+        if (businessesData && Array.isArray(businessesData)) {
           setBusinesses(businessesData as Business[]);
           
           // Set map center to first business location or default
@@ -209,33 +149,21 @@ export default function BusinessResults() {
               setMapCenter({ lat: loc.latitude, lng: loc.longitude });
             }
           }
+        } else {
+          setBusinesses([]);
         }
 
-        // Fetch services for this subcategory (only if subcategory is provided)
-        if (subcategoryId) {
-          const { data: servicesData, error: servicesError } = await supabase
-            .from('services')
-            .select(`
-              id,
-              name,
-              subcategory_id,
-              service_subcategories (
-                id,
-                service_subcategory_type
-              )
-            `)
-            .eq('subcategory_id', subcategoryId)
-            .eq('is_active', true)
-            .order('name');
-
-          if (servicesError) {
-            console.error('Error fetching services:', servicesError);
-          } else if (servicesData) {
-            const servicesList = servicesData as Service[];
-            setServices(servicesList);
-            // Select all services by default
-            if (servicesList.length > 0) {
-              setSelectedServices(new Set(servicesList.map(s => s.id)));
+        // Handle services data
+        if (subcategoryId && servicesData && Array.isArray(servicesData)) {
+          const servicesList = servicesData as Service[];
+          setServices(servicesList);
+          // Select all services by default
+          if (servicesList.length > 0) {
+            const serviceIds = servicesList
+              .filter(s => s && s.id)
+              .map(s => s.id);
+            if (serviceIds.length > 0) {
+              setSelectedServices(new Set(serviceIds));
             }
           }
         } else {
@@ -245,6 +173,7 @@ export default function BusinessResults() {
         }
       } catch (error) {
         console.error('Error fetching data:', error);
+        setBusinesses([]);
       } finally {
         setLoading(false);
       }
@@ -258,7 +187,7 @@ export default function BusinessResults() {
 
   useEffect(() => {
     const fetchBusinessServices = async () => {
-      if (!subcategoryId || services.length === 0) return;
+      if (!subcategoryId || !services || !Array.isArray(services) || services.length === 0) return;
 
       try {
         // Get all business_services for the selected services
@@ -314,7 +243,14 @@ export default function BusinessResults() {
   }, [businesses, selectedServices, businessServicesMap]);
 
   const selectAllServices = () => {
-    setSelectedServices(new Set(services.map(s => s.id)));
+    if (services && Array.isArray(services) && services.length > 0) {
+      const serviceIds = services
+        .filter(s => s && s.id)
+        .map(s => s.id);
+      if (serviceIds.length > 0) {
+        setSelectedServices(new Set(serviceIds));
+      }
+    }
   };
 
   const deselectAllServices = () => {
@@ -383,7 +319,7 @@ export default function BusinessResults() {
                   size="sm"
                   onClick={() => setViewMode("combo")}
                 >
-                  <Map className="w-4 h-4 mr-2" />
+                  <MapIcon className="w-4 h-4 mr-2" />
                   Map
                 </Button>
               </div>
@@ -413,7 +349,7 @@ export default function BusinessResults() {
             )}>
               <div className="p-4 space-y-4">
                 {/* Service Filter */}
-                {services.length > 0 && (
+                {services && Array.isArray(services) && services.length > 0 && (
                   <Card>
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between mb-3">
@@ -438,31 +374,33 @@ export default function BusinessResults() {
                         </div>
                       </div>
                       <div className="space-y-2 max-h-64 overflow-y-auto">
-                        {services.map((service) => (
-                          <div key={service.id} className="flex items-center space-x-2">
-                            <Checkbox
-                              id={`service-${service.id}`}
-                              checked={selectedServices.has(service.id)}
-                              onCheckedChange={(checked) => {
-                                if (checked) {
-                                  setSelectedServices(prev => new Set([...prev, service.id]));
-                                } else {
-                                  setSelectedServices(prev => {
-                                    const newSet = new Set(prev);
-                                    newSet.delete(service.id);
-                                    return newSet;
-                                  });
-                                }
-                              }}
-                            />
-                            <Label
-                              htmlFor={`service-${service.id}`}
-                              className="text-sm cursor-pointer flex-1"
-                            >
-                              {service.name}
-                            </Label>
-                          </div>
-                        ))}
+                        {services && Array.isArray(services) && services
+                          .filter(service => service && service.id && service.name)
+                          .map((service) => (
+                            <div key={service.id} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`service-${service.id}`}
+                                checked={selectedServices.has(service.id)}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setSelectedServices(prev => new Set([...Array.from(prev), service.id]));
+                                  } else {
+                                    setSelectedServices(prev => {
+                                      const newSet = new Set(prev);
+                                      newSet.delete(service.id);
+                                      return newSet;
+                                    });
+                                  }
+                                }}
+                              />
+                              <Label
+                                htmlFor={`service-${service.id}`}
+                                className="text-sm cursor-pointer flex-1"
+                              >
+                                {service.name}
+                              </Label>
+                            </div>
+                          ))}
                       </div>
                     </CardContent>
                   </Card>
