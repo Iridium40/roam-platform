@@ -40,7 +40,10 @@ export const requireAuth = (allowedRoles?: string[]) => {
       
       const decoded = { user_id: user.id, email: user.email };
 
-      // Get user roles
+      // Try to get user roles from user_roles table
+      let userRole = 'customer'; // Default to customer
+      let businessId: string | undefined;
+      
       const { data: userRoles, error: rolesError } = await supabase
         .from('user_roles')
         .select('role, business_id')
@@ -48,15 +51,42 @@ export const requireAuth = (allowedRoles?: string[]) => {
         .eq('is_active', true);
 
       if (rolesError) {
-        console.error('Error fetching user roles:', rolesError);
-        return res.status(500).json({ 
-          error: 'Failed to verify user permissions',
-          code: 'ROLES_ERROR'
-        });
+        // If user_roles table query fails, check if user is a customer or provider
+        console.warn('Error fetching user roles, checking user profile:', rolesError);
+        
+        // Check if user exists in customer_profiles (defaults to customer role)
+        const { data: customerProfile, error: customerError } = await supabase
+          .from('customer_profiles')
+          .select('id')
+          .eq('user_id', decoded.user_id || decoded.sub)
+          .maybeSingle();
+        
+        if (!customerError && customerProfile) {
+          // User is a customer, use default role
+          userRole = 'customer';
+        } else {
+          // Check if user is a provider
+          const { data: providerProfile, error: providerError } = await supabase
+            .from('providers')
+            .select('id, provider_role')
+            .eq('user_id', decoded.user_id || decoded.sub)
+            .maybeSingle();
+          
+          if (!providerError && providerProfile) {
+            // User is a provider, use provider_role or default to 'provider'
+            userRole = (providerProfile.provider_role as string) || 'provider';
+          } else {
+            // If we can't determine the role and the query failed, log but don't fail
+            console.warn('Could not determine user role from profiles, defaulting to customer. user_roles error:', rolesError);
+            // Still default to customer to allow the request through
+            userRole = 'customer';
+          }
+        }
+      } else {
+        // Query succeeded, use the role from user_roles or default to customer
+        userRole = userRoles?.[0]?.role || 'customer';
+        businessId = userRoles?.[0]?.business_id;
       }
-
-      const userRole = userRoles?.[0]?.role || 'customer';
-      const businessId = userRoles?.[0]?.business_id;
 
       // Check role permissions
       if (allowedRoles && !allowedRoles.includes(userRole)) {

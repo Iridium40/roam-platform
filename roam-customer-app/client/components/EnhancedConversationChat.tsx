@@ -118,9 +118,32 @@ export default function EnhancedConversationChat({
   currentUser
 }: EnhancedConversationChatProps) {
   const { customer } = useAuth();
+  const [accessToken, setAccessToken] = useState<string | null>(null);
   
-  // Get access token from localStorage
-  const accessToken = typeof window !== 'undefined' ? localStorage.getItem('roam_access_token') : null;
+  // Get Supabase session token
+  useEffect(() => {
+    const getSessionToken = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.access_token) {
+          setAccessToken(session.access_token);
+        } else {
+          // Fallback to localStorage if session not available
+          const storedToken = localStorage.getItem('roam_access_token');
+          setAccessToken(storedToken);
+        }
+      } catch (error) {
+        console.error('Error getting session token:', error);
+        // Fallback to localStorage
+        const storedToken = localStorage.getItem('roam_access_token');
+        setAccessToken(storedToken);
+      }
+    };
+    
+    if (isOpen) {
+      getSessionToken();
+    }
+  }, [isOpen]);
   
   const bookingConversationsClient = useMemo(() => 
     createBookingConversationsClient({ accessToken: accessToken || undefined }), 

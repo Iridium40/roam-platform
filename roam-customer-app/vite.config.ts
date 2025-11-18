@@ -21,15 +21,40 @@ export default defineConfig({
     alias: {
       "@": path.resolve(__dirname, "./client"),
       "@shared": path.resolve(__dirname, "./shared"),
+      // Stub out Twilio and Node.js modules for browser - they're only used server-side
+      "twilio": path.resolve(__dirname, "./client/utils/twilio-stub.ts"),
+      "agent-base": path.resolve(__dirname, "./client/utils/node-stub.ts"),
+      "https-proxy-agent": path.resolve(__dirname, "./client/utils/node-stub.ts"),
+      "http-proxy-agent": path.resolve(__dirname, "./client/utils/node-stub.ts"),
+      "socks-proxy-agent": path.resolve(__dirname, "./client/utils/node-stub.ts"),
     },
   },
   optimizeDeps: {
     include: ['date-fns'],
+    exclude: ['twilio', '@twilio/conversations'],
   },
   build: {
     outDir: "dist/spa",
     commonjsOptions: {
       include: [/date-fns/],
+    },
+    rollupOptions: {
+      external: (id) => {
+        // Exclude Twilio and Node.js-specific modules from browser bundle
+        if (
+          id === 'twilio' ||
+          id.startsWith('twilio/') ||
+          id.startsWith('@twilio/') ||
+          id === 'agent-base' ||
+          id === 'https-proxy-agent' ||
+          id === 'http-proxy-agent' ||
+          id === 'socks-proxy-agent' ||
+          id.startsWith('node:')
+        ) {
+          return true;
+        }
+        return false;
+      },
     },
   },
 });

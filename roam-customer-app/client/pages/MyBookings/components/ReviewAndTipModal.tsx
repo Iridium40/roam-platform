@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Star, DollarSign, MessageCircle, X, CheckCircle, Loader2 } from "lucide-react";
+import { Star, DollarSign, MessageCircle, X, CheckCircle, Loader2, AlertCircle } from "lucide-react";
 import type { BookingWithDetails, ReviewFormData, TipFormData } from "@/types/index";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
@@ -19,8 +19,9 @@ interface ReviewAndTipModalProps {
   initialStep?: 'review' | 'tip';
 }
 
-// Initialize Stripe
-const stripePromise = loadStripe(import.meta.env.VITE_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
+// Initialize Stripe only if publishable key is available
+const stripePublishableKey = import.meta.env.VITE_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+const stripePromise = stripePublishableKey ? loadStripe(stripePublishableKey) : null;
 
 const ReviewAndTipModal: React.FC<ReviewAndTipModalProps> = ({
   isOpen,
@@ -610,25 +611,32 @@ const ReviewAndTipModal: React.FC<ReviewAndTipModalProps> = ({
                 </p>
               </div>
 
-              <Elements 
-                stripe={stripePromise} 
-                options={{ 
-                  clientSecret,
-                  appearance: {
-                    theme: 'stripe',
-                    variables: {
-                      colorPrimary: '#3B82F6',
+              {stripePromise ? (
+                <Elements 
+                  stripe={stripePromise} 
+                  options={{ 
+                    clientSecret,
+                    appearance: {
+                      theme: 'stripe',
+                      variables: {
+                        colorPrimary: '#3B82F6',
+                      }
                     }
-                  }
-                }}
-              >
-                <TipCheckoutForm
-                  tipAmount={tipData.tip_amount}
-                  providerName={booking?.providers?.first_name || 'Provider'}
-                  onSuccess={handleTipCheckoutSuccess}
-                  onError={handleTipCheckoutError}
-                />
-              </Elements>
+                  }}
+                >
+                  <TipCheckoutForm
+                    tipAmount={tipData.tip_amount}
+                    providerName={booking?.providers?.first_name || 'Provider'}
+                    onSuccess={handleTipCheckoutSuccess}
+                    onError={handleTipCheckoutError}
+                  />
+                </Elements>
+              ) : (
+                <div className="p-4 text-center text-red-600">
+                  <AlertCircle className="w-6 h-6 mx-auto mb-2" />
+                  <p>Stripe is not configured. Please contact support.</p>
+                </div>
+              )}
 
               <div className="flex gap-3">
                 <Button
