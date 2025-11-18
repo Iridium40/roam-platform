@@ -4,7 +4,11 @@ import path from "path";
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react({
+      jsxRuntime: 'automatic',
+    }),
+  ],
   server: {
     port: 5174,
     strictPort: true,
@@ -28,15 +32,17 @@ export default defineConfig({
       "http-proxy-agent": path.resolve(__dirname, "./client/utils/node-stub.ts"),
       "socks-proxy-agent": path.resolve(__dirname, "./client/utils/node-stub.ts"),
     },
+    dedupe: ['react', 'react-dom'],
   },
   optimizeDeps: {
-    include: ['date-fns'],
+    include: ['react', 'react-dom', 'react/jsx-runtime', 'date-fns'],
     exclude: ['twilio', '@twilio/conversations'],
   },
   build: {
     outDir: "dist/spa",
     commonjsOptions: {
-      include: [/date-fns/],
+      include: [/date-fns/, /node_modules/],
+      transformMixedEsModules: true,
     },
     rollupOptions: {
       external: (id) => {
