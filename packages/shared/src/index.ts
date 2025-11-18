@@ -93,9 +93,11 @@ export type {
 export * from './services/conversations';
 export * from './services/booking-conversations-client';
 
-// API handlers (server-side only, but exported for convenience)
-export type * from './api/twilio-conversations-api';
-export { default as twilioConversationsHandler } from './api/twilio-conversations-handler';
+// ⚠️ API handlers are SERVER-SIDE ONLY - DO NOT export from main index
+// Import directly in API routes: import handler from '@roam/shared/dist/api/twilio-conversations-handler'
+// export type * from './api/twilio-conversations-api';  // REMOVED - causes twilio import
+// export { default as twilioConversationsHandler } from './api/twilio-conversations-handler';  // REMOVED - causes twilio import
+
 export * from './services/stripe-service';
 export * from './services/business-service-subcategories';
 

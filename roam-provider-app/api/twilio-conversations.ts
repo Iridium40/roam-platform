@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { twilioConversationsHandler } from "@roam/shared";
+// Import server-side handler directly (not from main @roam/shared index)
+import twilioConversationsHandler from "@roam/shared/dist/api/twilio-conversations-handler.js";
 
 /**
  * Unified Twilio Conversations API Handler for Provider App

@@ -119,8 +119,10 @@ await client.sendMessage(conversationId, message, userId, userType);
 
 ```typescript
 // roam-provider-app/api/twilio-conversations.ts
+// roam-customer-app/api/twilio-conversations.ts
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { twilioConversationsHandler } from "@roam/shared";
+// Import directly from dist - NOT from main index
+import twilioConversationsHandler from "@roam/shared/dist/api/twilio-conversations-handler.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   return twilioConversationsHandler(req, res);
@@ -168,9 +170,10 @@ The build process automatically:
 ## Related Files
 
 ### Modified
-1. ✅ `packages/shared/src/index.ts` - Removed server-side exports
+1. ✅ `packages/shared/src/index.ts` - Removed ALL server-side exports
 2. ✅ `packages/shared/src/api/twilio-conversations-handler.ts` - Direct imports
-3. ✅ `roam-provider-app/api/twilio-conversations.ts` - Uses shared handler
+3. ✅ `roam-customer-app/api/twilio-conversations.ts` - Uses shared handler via dist import
+4. ✅ `roam-provider-app/api/twilio-conversations.ts` - Uses shared handler via dist import
 
 ### Client-Side Components (No changes needed)
 - `roam-customer-app/client/components/EnhancedConversationChat.tsx`
