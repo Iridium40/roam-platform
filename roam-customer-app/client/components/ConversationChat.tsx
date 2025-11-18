@@ -23,8 +23,46 @@ import {
 import { useConversations } from '@roam/shared';
 import type { ConversationMessage as DBConversationMessage, Conversation } from '@roam/shared';
 import { useAuth } from '@/contexts/AuthContext';
-import { formatDistanceToNow } from 'date-fns';
 import { logger } from '@/utils/logger';
+
+// Simple date formatting function to avoid date-fns bundling issues
+const formatDistanceToNow = (date: Date | string | number, options?: { addSuffix?: boolean }): string => {
+  const dateObj = new Date(date);
+  const now = new Date();
+  const seconds = Math.floor((now.getTime() - dateObj.getTime()) / 1000);
+  
+  if (seconds < 60) {
+    return options?.addSuffix ? 'just now' : 'less than a minute';
+  }
+  
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) {
+    const text = `${minutes} minute${minutes > 1 ? 's' : ''}`;
+    return options?.addSuffix ? `${text} ago` : text;
+  }
+  
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) {
+    const text = `${hours} hour${hours > 1 ? 's' : ''}`;
+    return options?.addSuffix ? `${text} ago` : text;
+  }
+  
+  const days = Math.floor(hours / 24);
+  if (days < 30) {
+    const text = `${days} day${days > 1 ? 's' : ''}`;
+    return options?.addSuffix ? `${text} ago` : text;
+  }
+  
+  const months = Math.floor(days / 30);
+  if (months < 12) {
+    const text = `${months} month${months > 1 ? 's' : ''}`;
+    return options?.addSuffix ? `${text} ago` : text;
+  }
+  
+  const years = Math.floor(months / 12);
+  const text = `${years} year${years > 1 ? 's' : ''}`;
+  return options?.addSuffix ? `${text} ago` : text;
+};
 
 interface ConversationChatProps {
   isOpen: boolean;

@@ -28,26 +28,43 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { logger } from '@/utils/logger';
 
-// Import date-fns with error handling
-import { formatDistanceToNow as formatDistanceToNowOriginal } from 'date-fns';
-
-// Wrapper function to handle potential import issues
+// Simple date formatting function to avoid date-fns bundling issues
 const formatDistanceToNow = (date: Date | string | number, options?: { addSuffix?: boolean }): string => {
-  try {
-    return formatDistanceToNowOriginal(new Date(date), options || { addSuffix: true });
-  } catch (error) {
-    console.error('Error formatting date:', error);
-    // Fallback to simple time string
-    const dateObj = new Date(date);
-    const seconds = Math.floor((new Date().getTime() - dateObj.getTime()) / 1000);
-    if (seconds < 60) return 'just now';
-    const minutes = Math.floor(seconds / 60);
-    if (minutes < 60) return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
-    const days = Math.floor(hours / 24);
-    return `${days} day${days > 1 ? 's' : ''} ago`;
+  const dateObj = new Date(date);
+  const now = new Date();
+  const seconds = Math.floor((now.getTime() - dateObj.getTime()) / 1000);
+  
+  if (seconds < 60) {
+    return options?.addSuffix ? 'just now' : 'less than a minute';
   }
+  
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) {
+    const text = `${minutes} minute${minutes > 1 ? 's' : ''}`;
+    return options?.addSuffix ? `${text} ago` : text;
+  }
+  
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) {
+    const text = `${hours} hour${hours > 1 ? 's' : ''}`;
+    return options?.addSuffix ? `${text} ago` : text;
+  }
+  
+  const days = Math.floor(hours / 24);
+  if (days < 30) {
+    const text = `${days} day${days > 1 ? 's' : ''}`;
+    return options?.addSuffix ? `${text} ago` : text;
+  }
+  
+  const months = Math.floor(days / 30);
+  if (months < 12) {
+    const text = `${months} month${months > 1 ? 's' : ''}`;
+    return options?.addSuffix ? `${text} ago` : text;
+  }
+  
+  const years = Math.floor(months / 12);
+  const text = `${years} year${years > 1 ? 's' : ''}`;
+  return options?.addSuffix ? `${text} ago` : text;
 };
 
 // Import the new booking conversations service from shared
