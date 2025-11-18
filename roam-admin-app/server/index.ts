@@ -44,6 +44,7 @@ import {
   handleAnnouncementPublication, 
   handleActiveAnnouncements 
 } from "./routes/announcements.js";
+import handleGeneratePhase2Token from "./routes/test/generate-phase2-token.js";
 
 export function createServer() {
   const app = express();
@@ -76,15 +77,7 @@ export function createServer() {
   app.post("/api/validate-phase2-token", handleValidatePhase2Token);
   
   // Test routes
-  app.post("/api/test/generate-phase2-token", async (req, res) => {
-    try {
-      const handler = await import("./routes/test/generate-phase2-token.js");
-      return handler.default(req, res);
-    } catch (error) {
-      console.error("Error loading test token generator:", error);
-      return res.status(500).json({ error: "Failed to load token generator" });
-    }
-  });
+  app.post("/api/test/generate-phase2-token", handleGeneratePhase2Token);
   
   // Business management routes
   app.get("/api/businesses", handleBusinesses);
