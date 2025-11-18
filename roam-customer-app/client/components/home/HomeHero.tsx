@@ -272,7 +272,6 @@ export function HomeHero({
                     <SelectItem value="morning">Morning</SelectItem>
                     <SelectItem value="afternoon">Afternoon</SelectItem>
                     <SelectItem value="evening">Evening</SelectItem>
-                    <SelectItem value="today">Today</SelectItem>
                     <SelectItem value="tomorrow">Tomorrow</SelectItem>
                     <SelectItem value="this-week">This Week</SelectItem>
                   </SelectContent>

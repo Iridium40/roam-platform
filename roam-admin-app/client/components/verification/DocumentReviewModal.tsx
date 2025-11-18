@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -27,7 +27,6 @@ import {
   Phone,
   Calendar,
   FileText,
-  MapPin,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -73,10 +72,10 @@ interface DocumentReviewModalProps {
   onClose: () => void;
   selectedBusiness: BusinessVerification | null;
   businessDocuments: BusinessDocument[];
-  reviewNotes: string;
-  onReviewNotesChange: (notes: string) => void;
-  onDocumentAction: (documentId: string, action: string) => void;
-  onBusinessApproval: () => void;
+  reviewNotes?: string;
+  onReviewNotesChange?: (notes: string) => void;
+  onDocumentAction?: (documentId: string, action: string) => void;
+  onBusinessApproval?: () => void;
   formatDate: (date: string) => string;
 }
 
@@ -119,7 +118,7 @@ export function DocumentReviewModal({
             Business Verification Review
           </DialogTitle>
           <DialogDescription>
-            Review and verify business documents and information
+            Review business documents and information (Read Only)
           </DialogDescription>
         </DialogHeader>
 
@@ -251,40 +250,6 @@ export function DocumentReviewModal({
                           <Eye className="w-4 h-4 mr-1" />
                           View
                         </Button>
-                        {doc.verification_status !== "verified" && (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => onDocumentAction(doc.id, "verify")}
-                              className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                            >
-                              <CheckCircle className="w-4 h-4 mr-1" />
-                              {doc.verification_status === "rejected" ? "Re-verify" : "Verify"}
-                            </Button>
-                            {doc.verification_status !== "rejected" &&
-                              doc.verification_status !== "under_review" && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => onDocumentAction(doc.id, "review")}
-                                  className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                >
-                                  <AlertTriangle className="w-4 h-4 mr-1" />
-                                  Review
-                                </Button>
-                              )}
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => onDocumentAction(doc.id, "reject")}
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                            >
-                              <XCircle className="w-4 h-4 mr-1" />
-                              Reject
-                            </Button>
-                          </>
-                        )}
                       </div>
                     </div>
                   ))
@@ -297,46 +262,13 @@ export function DocumentReviewModal({
               </div>
             </ROAMCardContent>
           </ROAMCard>
-
-          {/* Review Notes Section */}
-          <ROAMCard>
-            <ROAMCardHeader>
-              <ROAMCardTitle>Review Notes</ROAMCardTitle>
-            </ROAMCardHeader>
-            <ROAMCardContent>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="review-notes">Internal Notes</Label>
-                  <Textarea
-                    id="review-notes"
-                    placeholder="Add internal notes about this verification..."
-                    value={reviewNotes}
-                    onChange={(e) => onReviewNotesChange(e.target.value)}
-                    rows={4}
-                    className="mt-1"
-                  />
-                </div>
-              </div>
-            </ROAMCardContent>
-          </ROAMCard>
         </div>
 
-        {/* Modal Actions */}
-        <div className="flex items-center justify-between pt-6 border-t">
+        {/* Modal Actions - Only Close button for read-only */}
+        <div className="flex items-center justify-end pt-6 border-t">
           <Button variant="outline" onClick={onClose}>
             Close
           </Button>
-          <div className="flex gap-3">
-            {canApproveBusiness && (
-              <Button
-                onClick={onBusinessApproval}
-                className="bg-green-600 hover:bg-green-700"
-              >
-                <CheckCircle className="w-4 h-4 mr-2" />
-                Approve Business
-              </Button>
-            )}
-          </div>
         </div>
       </DialogContent>
     </Dialog>
