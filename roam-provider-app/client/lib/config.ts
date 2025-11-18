@@ -1,5 +1,5 @@
 // Centralized configuration management using shared environment config
-import { env } from '@roam/shared/dist/config/environment';
+import { env } from '@roam/shared';
 
 // Re-export the shared configuration for backward compatibility
 export const config = {

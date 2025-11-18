@@ -393,6 +393,21 @@ export default function EnhancedConversationChat({
                   .slice(0, 2)
                   .toUpperCase();
 
+                // Extract role from message attributes (set by TwilioConversationsService.sendMessage)
+                let displayRole = isCustomer ? 'Customer' : 'Provider';
+                if (message.attributes) {
+                  try {
+                    const attrs = typeof message.attributes === 'string' 
+                      ? JSON.parse(message.attributes) 
+                      : message.attributes;
+                    const role = attrs.role || attrs.userType || message.author_type;
+                    // Capitalize the role for display
+                    displayRole = role.charAt(0).toUpperCase() + role.slice(1);
+                  } catch (e) {
+                    // Use default displayRole if parsing fails
+                  }
+                }
+
                 return (
                   <div
                     key={message.id}
@@ -414,12 +429,10 @@ export default function EnhancedConversationChat({
                         }`}
                       >
                         <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
-                        <div className="flex items-center justify-between mt-1 text-[11px] opacity-80">
-                          {!isCustomer && author?.userType && (
-                            <span className="uppercase tracking-wide">
-                              {author.userType === 'provider' ? 'Provider' : author.userType}
-                            </span>
-                          )}
+                        <div className="flex items-center justify-between mt-1 text-[11px] opacity-80 gap-2">
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0.5">
+                            {displayRole}
+                          </Badge>
                           <span>{formatDistanceToNow(new Date(message.created_at), { addSuffix: true })}</span>
                         </div>
                       </div>

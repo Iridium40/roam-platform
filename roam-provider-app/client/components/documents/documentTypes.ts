@@ -1,4 +1,4 @@
-import type { BusinessDocumentType } from "@roam/shared/dist/types/database/enums";
+import type { BusinessDocumentType } from "@roam/shared";
 
 export interface UploadedDocument {
   id: string;

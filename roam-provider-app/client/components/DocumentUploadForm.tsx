@@ -19,7 +19,7 @@ import {
   Info,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import type { BusinessDocumentType } from "@roam/shared/dist/types/database/enums";
+import type { BusinessDocumentType } from "@roam/shared";
 
 interface UploadedDocument {
   id: string;

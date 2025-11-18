@@ -26,7 +26,7 @@ import {
   createBookingConversationsClient,
   type BookingConversationParticipant,
   type BookingConversationParticipantData,
-} from '@roam/shared/dist/services/booking-conversations-client.js';
+} from '@roam/shared';
 import { formatDistanceToNow } from 'date-fns';
 
 interface ConversationChatProps {

@@ -209,14 +209,21 @@ export class TwilioConversationsService {
   ): Promise<{ messageSid: string }> {
     // Get user details for the message
     let userDetails: { first_name?: string; last_name?: string } | null = null;
+    let actualRole: string = userType; // Default to provided userType
     
-    if (userType === 'provider') {
+    // For provider-side users, fetch the actual provider_role from the database
+    if (userType === 'provider' || userType === 'owner' || userType === 'dispatcher') {
       const { data } = await this.supabase
         .from('providers')
-        .select('first_name, last_name')
+        .select('first_name, last_name, provider_role')
         .eq('user_id', userId)
         .single();
-      userDetails = data;
+      
+      if (data) {
+        userDetails = data;
+        // Use the actual provider_role from database (provider, owner, or dispatcher)
+        actualRole = data.provider_role || userType;
+      }
     } else if (userType === 'customer') {
       const { data } = await this.supabase
         .from('customer_profiles')
@@ -224,19 +231,21 @@ export class TwilioConversationsService {
         .eq('user_id', userId)
         .single();
       userDetails = data;
+      actualRole = 'customer'; // Always 'customer' for customer profiles
     }
 
-    const identity = `${userType}-${userId}`;
+    const identity = `${actualRole}-${userId}`;
     const authorName = userDetails 
       ? `${userDetails.first_name || ''} ${userDetails.last_name || ''}`.trim()
       : identity;
 
-    // Send message to Twilio
+    // Send message to Twilio with actual role from database
     const messageResult = await this.messageService.sendMessage(conversationSid, {
       body: message,
       attributes: {
         userId,
-        userType,
+        userType: actualRole, // Store the actual role from database
+        role: actualRole, // Also include as 'role' for clarity
         authorName,
         timestamp: new Date().toISOString(),
       },

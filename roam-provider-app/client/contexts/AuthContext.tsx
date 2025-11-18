@@ -7,7 +7,7 @@ console.log('🔥 AuthContext.tsx file is being loaded...');
 console.log('🔍 AuthContext - Supabase URL:', import.meta.env.VITE_PUBLIC_SUPABASE_URL);
 console.log('🔍 AuthContext - Supabase Key:', import.meta.env.VITE_PUBLIC_SUPABASE_ANON_KEY ? '✅ Present' : '❌ Missing');
 
-import type { AuthCustomer } from "@roam/shared/dist/types/auth";
+import type { AuthCustomer } from "@roam/shared";
 
 interface AuthContextType {
   customer: AuthCustomer | null;

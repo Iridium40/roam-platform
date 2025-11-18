@@ -1,5 +1,5 @@
 import { useAuth } from '@/contexts/auth/AuthProvider';
-import { useConversations as useSharedConversations } from '@roam/shared/dist/hooks/useConversations';
+import { useConversations as useSharedConversations } from '@roam/shared';
 
 export const useConversations = () => {
   const { user, customer, userType } = useAuth();

@@ -320,10 +320,25 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
       participantInfo = getParticipantInfo(fakeParticipant);
     }
     
+    // Extract role from message attributes (stored by TwilioConversationsService)
+    let messageRole = message.author_type || 'participant';
+    if (message.attributes) {
+      try {
+        const attrs = typeof message.attributes === 'string' 
+          ? JSON.parse(message.attributes) 
+          : message.attributes;
+        // Use 'role' or 'userType' from attributes (both are set in sendMessage)
+        messageRole = attrs.role || attrs.userType || message.author_type || 'participant';
+      } catch (e) {
+        // If parsing fails, use author_type as fallback
+        messageRole = message.author_type || 'participant';
+      }
+    }
+    
     return {
       isCurrentUser,
       name: participantInfo.name,
-      role: message.author_type || 'participant',
+      role: messageRole, // Use the role from message attributes
       initials: participantInfo.initials
     };
   };

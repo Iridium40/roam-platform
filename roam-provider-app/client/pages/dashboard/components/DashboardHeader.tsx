@@ -20,8 +20,8 @@ import {
   Crown,
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth/AuthProvider";
-import type { Provider } from "@roam/shared/dist/types/database/tables/user";
-import type { BusinessProfile } from "@roam/shared/dist/types/database/tables/business";
+import type { Provider } from "@roam/shared";
+import type { BusinessProfile } from "@roam/shared";
 
 interface DashboardHeaderProps {
   provider: Provider | null;

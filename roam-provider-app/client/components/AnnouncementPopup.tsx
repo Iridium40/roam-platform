@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import type { AnnouncementsTable } from "@roam/shared/dist/types/database/tables/notification";
+import type { AnnouncementsTable } from "@roam/shared";
 
 type Announcement = AnnouncementsTable["Row"];
 
