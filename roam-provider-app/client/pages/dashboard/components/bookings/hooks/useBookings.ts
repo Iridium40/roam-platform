@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api/endpoints";
@@ -326,8 +326,20 @@ export function useBookings(providerData: any, business: any) {
     };
   }, [bookings]);
 
+  // Track in-flight requests to prevent duplicates
+  const updatingStatuses = useRef<Set<string>>(new Set());
+
   // Update booking status
   const updateBookingStatus = async (bookingId: string, newStatus: string) => {
+    // Prevent duplicate requests for the same booking
+    const requestKey = `${bookingId}-${newStatus}`;
+    if (updatingStatuses.current.has(requestKey)) {
+      console.log('Request already in progress, skipping duplicate:', requestKey);
+      return;
+    }
+
+    updatingStatuses.current.add(requestKey);
+
     try {
       console.log('Frontend: Updating booking status', {
         bookingId,
@@ -367,36 +379,18 @@ export function useBookings(providerData: any, business: any) {
     } catch (error: any) {
       console.error("Error updating booking status:", error);
       
-      // Fallback to direct Supabase call if API fails
-      try {
-        const { error: supabaseError } = await (supabase as any)
-          .from("bookings")
-          .update({ booking_status: newStatus })
-          .eq("id", bookingId);
-
-        if (supabaseError) {
-          throw supabaseError;
-        }
-
-        // Update local state
-        setBookings(prev => prev.map(booking => 
-          booking.id === bookingId 
-            ? { ...booking, booking_status: newStatus }
-            : booking
-        ));
-
-        toast({
-          title: "Success",
-          description: "Booking status updated successfully.",
-        });
-      } catch (fallbackError) {
-        console.error("Fallback error updating booking status:", fallbackError);
-        toast({
-          title: "Error",
-          description: "Failed to update booking status. Please try again.",
-          variant: "destructive",
-        });
-      }
+      // Don't use fallback - let the error propagate so user knows it failed
+      toast({
+        title: "Error",
+        description: error?.response?.data?.details || error?.message || "Failed to update booking status. Please try again.",
+        variant: "destructive",
+      });
+      throw error; // Re-throw to prevent fallback
+    } finally {
+      // Remove from in-flight set after a delay to allow for any retries
+      setTimeout(() => {
+        updatingStatuses.current.delete(requestKey);
+      }, 2000);
     }
   };
 

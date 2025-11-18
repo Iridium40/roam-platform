@@ -1,9 +1,32 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
-import { sendSMS } from '../../lib/notifications/sms-service.js';
-import { notifyProvidersBookingCancelled } from '../../lib/notifications/notify-providers-booking-cancelled.js';
-import { notifyProvidersBookingRescheduled } from '../../lib/notifications/notify-providers-booking-rescheduled.js';
+
+// Safely import notification functions - these may fail in some environments
+let sendSMS: any = null;
+let notifyProvidersBookingCancelled: any = null;
+let notifyProvidersBookingRescheduled: any = null;
+
+try {
+  const smsModule = require('../../lib/notifications/sms-service.js');
+  sendSMS = smsModule.sendSMS;
+} catch (e) {
+  console.warn('⚠️ Could not load SMS service module:', e);
+}
+
+try {
+  const cancelledModule = require('../../lib/notifications/notify-providers-booking-cancelled.js');
+  notifyProvidersBookingCancelled = cancelledModule.notifyProvidersBookingCancelled;
+} catch (e) {
+  console.warn('⚠️ Could not load booking cancelled notification module:', e);
+}
+
+try {
+  const rescheduledModule = require('../../lib/notifications/notify-providers-booking-rescheduled.js');
+  notifyProvidersBookingRescheduled = rescheduledModule.notifyProvidersBookingRescheduled;
+} catch (e) {
+  console.warn('⚠️ Could not load booking rescheduled notification module:', e);
+}
 
 // Initialize Resend
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -308,13 +331,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // The booking record itself maintains the current status
 
     // Send notifications based on status change (non-blocking)
+    // Don't await - let it run in background
     if (notifyCustomer || notifyProvider) {
-      console.log('📧 Sending notifications for status:', newStatus);
-      try {
-        await sendStatusNotifications(booking, newStatus, { notifyCustomer, notifyProvider });
-      } catch (notificationError) {
-        console.error('⚠️ Notification error (non-fatal):', notificationError);
-      }
+      console.log('📧 Queueing notifications for status:', newStatus);
+      // Fire and forget - don't block the response
+      sendStatusNotifications(booking, newStatus, { notifyCustomer, notifyProvider })
+        .catch((notificationError) => {
+          console.error('⚠️ Notification error (non-fatal):', notificationError);
+        });
     }
 
     console.log('🎉 Status update completed successfully');
@@ -449,7 +473,7 @@ async function sendStatusNotifications(
       };
     }
     // Notify providers when booking is cancelled (owners/dispatchers + assigned provider)
-    if (newStatus === 'cancelled' && options.notifyProvider && business) {
+    if (newStatus === 'cancelled' && options.notifyProvider && business && notifyProvidersBookingCancelled) {
       try {
         await notifyProvidersBookingCancelled({
           booking: {
@@ -479,7 +503,7 @@ async function sendStatusNotifications(
 
     // Notify providers when booking is rescheduled (owners/dispatchers + assigned provider)
     // Check if this is a reschedule by looking for reschedule fields
-    if (options.notifyProvider && business && (
+    if (options.notifyProvider && business && notifyProvidersBookingRescheduled && (
       booking.rescheduled_at || 
       booking.reschedule_reason || 
       (booking.original_booking_date && booking.original_booking_date !== booking.booking_date) ||
@@ -709,7 +733,7 @@ async function sendStatusNotifications(
     }
 
     // Send SMS if enabled and configured
-    if (notificationType && userId && smsEnabled && smsConfigured && targetPhone) {
+    if (notificationType && userId && smsEnabled && smsConfigured && targetPhone && sendSMS) {
       let smsBody: string | null = null;
 
       switch (notificationType) {
