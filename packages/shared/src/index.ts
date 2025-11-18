@@ -58,9 +58,11 @@ export type {
 export * from './services/notification-api';
 export * from './services/notification-service';
 export * from './services/twilio-conversations';
+export * from './services/twilio'; // New unified Twilio Conversations services
 export * from './services/conversations';
 export * from './services/booking-conversations-client';
 export * from './api/twilio-conversations-api';
+export { default as twilioConversationsHandler } from './api/twilio-conversations-handler';
 export * from './services/stripe-service';
 export * from './services/business-service-subcategories';
 
