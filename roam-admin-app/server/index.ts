@@ -75,6 +75,17 @@ export function createServer() {
   app.post("/api/send-contact-reply", handleSendContactReply);
   app.post("/api/validate-phase2-token", handleValidatePhase2Token);
   
+  // Test routes
+  app.post("/api/test/generate-phase2-token", async (req, res) => {
+    try {
+      const handler = await import("./routes/test/generate-phase2-token.js");
+      return handler.default(req, res);
+    } catch (error) {
+      console.error("Error loading test token generator:", error);
+      return res.status(500).json({ error: "Failed to load token generator" });
+    }
+  });
+  
   // Business management routes
   app.get("/api/businesses", handleBusinesses);
   app.put("/api/businesses", handleBusinesses);

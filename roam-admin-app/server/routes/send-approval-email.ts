@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { TokenService } from "../services/tokenService.js";
+import { supabase } from "../lib/supabase.js";
 
 interface ApprovalEmailRequest {
   businessName: string;
@@ -63,15 +64,41 @@ export async function handleSendApprovalEmail(req: Request, res: Response) {
       });
     }
 
+    // Get business owner's user_id from providers table
+    console.log("=== FETCHING BUSINESS OWNER USER ID ===");
+    let ownerUserId: string = businessId; // Fallback to businessId if owner not found
+    
+    try {
+      const { data: ownerProvider, error: ownerError } = await supabase
+        .from("providers")
+        .select("user_id")
+        .eq("business_id", businessId)
+        .eq("provider_role", "owner")
+        .single();
+
+      if (!ownerError && ownerProvider?.user_id) {
+        ownerUserId = ownerProvider.user_id;
+        console.log("Found business owner user_id:", ownerUserId);
+      } else {
+        console.warn("Business owner not found in providers table, using businessId as fallback:", ownerError);
+        // If no owner found, we'll use businessId as the userId (this is acceptable for token generation)
+      }
+    } catch (error) {
+      console.error("Error fetching business owner:", error);
+      // Continue with businessId fallback
+    }
+
     // Generate Phase 2 secure onboarding link
     console.log("=== GENERATING PHASE 2 TOKEN ===");
     let phase2Link: string;
     let expirationDate: string;
     try {
-      phase2Link = TokenService.generatePhase2URL(businessId, userId || businessId);
+      // Use owner's user_id for token generation, not admin's userId
+      phase2Link = TokenService.generatePhase2URL(businessId, ownerUserId);
       expirationDate = TokenService.getTokenExpirationDate();
       console.log("Generated Phase 2 link:", phase2Link);
       console.log("Token expiration date:", expirationDate);
+      console.log("Token generated with businessId:", businessId, "and userId:", ownerUserId);
     } catch (error) {
       console.error("Failed to generate Phase 2 token:", error);
       console.error("Token generation error stack:", error instanceof Error ? error.stack : "No stack");
