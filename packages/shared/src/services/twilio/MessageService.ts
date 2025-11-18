@@ -2,9 +2,7 @@ import twilio from "twilio";
 import type { 
   TwilioConfig, 
   MessageData, 
-  TwilioResponse, 
-  ConversationMessage,
-  DeliveryStatus 
+  TwilioResponse
 } from "./types";
 
 export class MessageService {

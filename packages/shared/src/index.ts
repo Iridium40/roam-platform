@@ -8,7 +8,7 @@ export * from './contexts/UnifiedAuthContext';
 
 // Types (type-only exports)
 export type * from './types/database';
-export type * from './types/twilio';
+// Note: Twilio types are now exported from ./services/twilio to avoid conflicts
 export type * from './types/booking-conversations';
 export * from './branding/assets';
 // Unified Service Types (explicit exports to avoid conflicts)
@@ -57,8 +57,45 @@ export type {
 // Services
 export * from './services/notification-api';
 export * from './services/notification-service';
-export * from './services/twilio-conversations';
-export * from './services/twilio'; // New unified Twilio Conversations services
+// Export only non-conflicting types from old twilio-conversations
+export type {
+  ConversationMetadata,
+  DatabaseConversationParticipant,
+  ConversationServiceWithDB,
+} from './services/twilio-conversations';
+// Export Twilio services directly from the index to avoid path resolution issues
+export {
+  ConversationService,
+  ParticipantService,
+  MessageService,
+  TwilioConversationsService,
+  createTwilioConversationsService,
+  verifyTwilioConfig,
+  verifySupabaseConfig,
+  verifyCompleteSetup,
+  testTwilioConnection,
+  testServiceInitialization,
+  printSetupStatus,
+} from './services/twilio/index';
+export type {
+  TwilioConfig,
+  CreateConversationData,
+  ConversationData,
+  ParticipantData,
+  MessageData,
+  WebhookData,
+  TwilioAction,
+  TwilioResponse,
+  ConversationParticipant,
+  ConversationMessage,
+  ConversationDetails,
+  TwilioError,
+  WebhookEventType,
+  ParticipantRole,
+  DeliveryStatus,
+  ConversationState,
+  EnvironmentConfig,
+} from './services/twilio/types';
 export * from './services/conversations';
 export * from './services/booking-conversations-client';
 export * from './api/twilio-conversations-api';

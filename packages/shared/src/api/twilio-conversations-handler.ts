@@ -1,9 +1,9 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { createTwilioConversationsService } from "../services/twilio";
-import { ConversationService } from "../services/twilio/ConversationService";
-import { ParticipantService } from "../services/twilio/ParticipantService";
-import { MessageService } from "../services/twilio/MessageService";
-import type { TwilioConfig, TwilioAction } from "../services/twilio/types";
+import { createTwilioConversationsService } from "../services/twilio/index.js";
+import { ConversationService } from "../services/twilio/ConversationService.js";
+import { ParticipantService } from "../services/twilio/ParticipantService.js";
+import { MessageService } from "../services/twilio/MessageService.js";
+import type { TwilioConfig, TwilioAction } from "../services/twilio/types.js";
 
 /**
  * Unified Twilio Conversations API Handler

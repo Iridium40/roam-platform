@@ -3,7 +3,6 @@ import type {
   TwilioConfig, 
   CreateConversationData, 
   TwilioResponse, 
-  ConversationDetails,
   ConversationState 
 } from "./types";
 

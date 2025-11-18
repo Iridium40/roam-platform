@@ -2,7 +2,7 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { ConversationService } from './ConversationService';
 import { ParticipantService } from './ParticipantService';
 import { MessageService } from './MessageService';
-import type { TwilioConfig, TwilioResponse, ParticipantData, MessageData } from './types';
+import type { TwilioConfig } from './types';
 
 /**
  * Unified Twilio Conversations Service with Supabase Integration
@@ -205,7 +205,7 @@ export class TwilioConversationsService {
     message: string,
     userId: string,
     userType: 'customer' | 'provider' | 'owner' | 'dispatcher',
-    bookingId?: string
+    _bookingId?: string
   ): Promise<{ messageSid: string }> {
     // Get user details for the message
     let userDetails: { first_name?: string; last_name?: string } | null = null;

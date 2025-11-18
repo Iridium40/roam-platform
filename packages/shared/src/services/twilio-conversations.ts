@@ -4,7 +4,7 @@ import type {
   TwilioConfig, 
   MessageData, 
   ParticipantData
-} from '../types/twilio';
+} from './twilio/types';
 
 // Database types matching the schema
 export interface ConversationMetadata {

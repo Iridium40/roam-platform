@@ -36,7 +36,7 @@ import {
   type BookingConversationParticipant,
   type BookingConversationParticipantData,
   type ConversationMessageWithAuthor,
-} from '@roam/shared/dist/services/booking-conversations-client.js';
+} from '@roam/shared';
 
 interface BookingSummary {
   id: string;
