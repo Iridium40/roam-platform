@@ -84,10 +84,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             business_description
           ),
           stripe_connect_accounts!inner (
-            stripe_account_id,
-            status,
+            account_id,
             charges_enabled,
-            payouts_enabled
+            payouts_enabled,
+            details_submitted
           )
         `)
         .in("stripe_product_id", productIds)
@@ -146,10 +146,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           description: businessInfo.business_profiles.business_description,
         } : null,
         connectAccount: businessInfo ? {
-          id: businessInfo.stripe_connect_accounts.stripe_account_id,
-          status: businessInfo.stripe_connect_accounts.status,
+          id: businessInfo.stripe_connect_accounts.account_id,
           chargesEnabled: businessInfo.stripe_connect_accounts.charges_enabled,
           payoutsEnabled: businessInfo.stripe_connect_accounts.payouts_enabled,
+          detailsSubmitted: businessInfo.stripe_connect_accounts.details_submitted,
+          // Derive status from boolean fields since there's no status column
+          status: businessInfo.stripe_connect_accounts.charges_enabled && businessInfo.stripe_connect_accounts.payouts_enabled 
+            ? "active" 
+            : businessInfo.stripe_connect_accounts.details_submitted 
+              ? "pending" 
+              : "incomplete",
         } : null,
       };
     });

@@ -276,10 +276,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .single();
 
     if (existingAccount) {
+      // Derive status from boolean fields since there's no status column
+      const accountStatus = existingAccount.charges_enabled && existingAccount.payouts_enabled 
+        ? "active" 
+        : existingAccount.details_submitted 
+          ? "pending" 
+          : "incomplete";
+      
       return res.status(409).json({
         error: "Stripe Connect account already exists for this business",
-        accountId: existingAccount.stripe_account_id,
-        status: existingAccount.status,
+        accountId: existingAccount.account_id, // Use account_id (not stripe_account_id) per schema
+        status: accountStatus,
       });
     }
 
@@ -396,14 +403,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .insert({
         user_id: ownerUserId,
         business_id: businessId,
-        stripe_account_id: account.id,
-        status: account.charges_enabled ? "active" : "pending",
+        account_id: account.id, // Use account_id (not stripe_account_id) per schema
+        account_type: account.type || null,
         business_type: businessType,
-        country,
+        country: country || account.country || null,
+        default_currency: account.default_currency || null,
         charges_enabled: account.charges_enabled,
         payouts_enabled: account.payouts_enabled,
         details_submitted: account.details_submitted,
-        requirements: account.requirements,
+        capabilities: account.capabilities || null,
+        requirements: account.requirements || null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       });
