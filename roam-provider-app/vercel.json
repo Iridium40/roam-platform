@@ -110,6 +110,10 @@
       "destination": "/api/stripe/create-connect-account.ts"
     },
     {
+      "source": "/api/contact",
+      "destination": "/api/contact.ts"
+    },
+    {
       "source": "/api/stripe/check-connect-account-status",
       "destination": "/api/stripe/check-connect-account-status.ts"
     },
