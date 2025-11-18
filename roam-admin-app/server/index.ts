@@ -44,7 +44,6 @@ import {
   handleAnnouncementPublication, 
   handleActiveAnnouncements 
 } from "./routes/announcements.js";
-import handleGeneratePhase2Token from "./routes/test/generate-phase2-token.js";
 
 export function createServer() {
   const app = express();
@@ -76,8 +75,17 @@ export function createServer() {
   app.post("/api/send-contact-reply", handleSendContactReply);
   app.post("/api/validate-phase2-token", handleValidatePhase2Token);
   
-  // Test routes
-  app.post("/api/test/generate-phase2-token", handleGeneratePhase2Token);
+  // Test routes - disabled in production build to avoid Vite resolution issues
+  // Uncomment and use dynamic import for local development if needed
+  // app.post("/api/test/generate-phase2-token", async (req, res) => {
+  //   try {
+  //     const handler = await import("./routes/test/generate-phase2-token.js");
+  //     return handler.default(req, res);
+  //   } catch (error) {
+  //     console.error("Test route not available:", error);
+  //     return res.status(503).json({ error: "Test route not available in this environment" });
+  //   }
+  // });
   
   // Business management routes
   app.get("/api/businesses", handleBusinesses);
