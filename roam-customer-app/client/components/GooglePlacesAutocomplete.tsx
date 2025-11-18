@@ -33,6 +33,8 @@ const GooglePlacesAutocomplete: React.FC<GooglePlacesAutocompleteProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [isGoogleMapsLoaded, setIsGoogleMapsLoaded] = useState(false);
   const [billingError, setBillingError] = useState(false);
+  const [internalValue, setInternalValue] = useState(value);
+  const isPlaceSelectedRef = useRef(false);
 
   // Google Maps API key
   const GOOGLE_MAPS_API_KEY =
@@ -203,6 +205,8 @@ const GooglePlacesAutocomplete: React.FC<GooglePlacesAutocompleteProps> = ({
         logger.debug("Place selected:", place);
 
         if (place && place.formatted_address) {
+          isPlaceSelectedRef.current = true;
+          setInternalValue(place.formatted_address);
           onChange(place.formatted_address, place);
         }
       });
@@ -297,8 +301,29 @@ const GooglePlacesAutocomplete: React.FC<GooglePlacesAutocompleteProps> = ({
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
-    onChange(newValue);
+    setInternalValue(newValue);
+    
+    // Only call onChange if Google Places is not available or if user is manually typing
+    // When Google Places is active, we let it handle the input and only notify parent on place selection
+    if (!isGoogleMapsLoaded || billingError || !autocompleteRef.current) {
+      // Fallback: call onChange for manual entry when Google Places isn't available
+      onChange(newValue);
+    }
+    // Otherwise, let Google Places handle it and only notify parent when place is selected
   };
+
+  // Initialize internal value on mount
+  useEffect(() => {
+    setInternalValue(value);
+  }, []);
+
+  // Sync internal value with prop value when it changes externally (but not when place is selected)
+  useEffect(() => {
+    if (value !== internalValue && !isPlaceSelectedRef.current) {
+      setInternalValue(value);
+    }
+    isPlaceSelectedRef.current = false;
+  }, [value, internalValue]);
 
   const handleInputFocus = () => {
     // Re-initialize autocomplete if needed
@@ -313,7 +338,7 @@ const GooglePlacesAutocomplete: React.FC<GooglePlacesAutocompleteProps> = ({
         <MapPin className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           ref={inputRef}
-          value={value}
+          value={internalValue}
           onChange={handleInputChange}
           onFocus={handleInputFocus}
           placeholder={placeholder}

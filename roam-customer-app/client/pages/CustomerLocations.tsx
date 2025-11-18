@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,10 +7,21 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { MapPin, Plus, Edit, Trash2, Home, Building, MapPinned, ArrowLeft } from 'lucide-react';
+import { MapPin, Plus, Edit, Trash2, Home, Building, MapPinned, ArrowLeft, Hotel } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
+import GooglePlacesAutocomplete from '@/components/GooglePlacesAutocomplete';
+
+// Declare global Google Maps types
+declare global {
+  interface Window {
+    google?: typeof google;
+  }
+}
+
+// Database enum: Home, Condo, Hotel, Other, Null
+type LocationType = 'Home' | 'Condo' | 'Hotel' | 'Other' | null;
 
 interface CustomerLocation {
   id: string;
@@ -20,9 +31,11 @@ interface CustomerLocation {
   city: string;
   state: string;
   zip_code: string;
+  latitude: number | null;
+  longitude: number | null;
   is_primary: boolean;
   is_active: boolean;
-  location_type: 'home' | 'work' | 'other';
+  location_type: LocationType;
   access_instructions: string | null;
 }
 
@@ -41,8 +54,10 @@ export default function CustomerLocations() {
     city: '',
     state: '',
     zip_code: '',
+    latitude: null as number | null,
+    longitude: null as number | null,
     is_primary: false,
-    location_type: 'home' as 'home' | 'work' | 'other',
+    location_type: 'Home' as LocationType,
     access_instructions: '',
   });
 
@@ -79,6 +94,80 @@ export default function CustomerLocations() {
     }
   };
 
+  // Parse Google Places result and populate form fields (when place is selected)
+  // Memoized to prevent re-renders that cause focus loss
+  const handlePlaceSelect = useCallback((address: string, place?: google.maps.places.PlaceResult) => {
+    // If no place data, just update the address (user is typing)
+    if (!place || !place.address_components || place.address_components.length === 0) {
+      setFormData(prev => ({ ...prev, street_address: address }));
+      return;
+    }
+
+    // Extract address components
+    const addressComponents = place.address_components || [];
+    let streetNumber = '';
+    let route = '';
+    let city = '';
+    let state = '';
+    let zipCode = '';
+    let unitNumber = '';
+
+    addressComponents.forEach((component) => {
+      const types = component.types;
+      
+      if (types.includes('street_number')) {
+        streetNumber = component.long_name;
+      } else if (types.includes('route')) {
+        route = component.long_name;
+      } else if (types.includes('locality') || types.includes('sublocality')) {
+        city = component.long_name;
+      } else if (types.includes('administrative_area_level_1')) {
+        state = component.short_name; // Use short name for state (e.g., "FL")
+      } else if (types.includes('postal_code')) {
+        zipCode = component.long_name;
+      } else if (types.includes('subpremise')) {
+        unitNumber = component.long_name; // Apartment/unit number
+      }
+    });
+
+    // Build street address
+    const streetAddress = [streetNumber, route].filter(Boolean).join(' ').trim();
+
+    // Get coordinates
+    const lat = place.geometry?.location?.lat() || null;
+    const lng = place.geometry?.location?.lng() || null;
+
+    // Update form data with parsed address components
+    setFormData(prev => {
+      const updated = {
+        ...prev,
+        street_address: streetAddress || address,
+        city: city || prev.city,
+        state: state || prev.state,
+        zip_code: zipCode || prev.zip_code,
+        latitude: lat,
+        longitude: lng,
+      };
+
+      // Only update unit_number if we found one from Google Places
+      if (unitNumber) {
+        updated.unit_number = unitNumber;
+      }
+
+      // Auto-suggest location name if empty
+      if (!prev.location_name) {
+        const premise = addressComponents.find(c => 
+          c.types.includes('premise') || c.types.includes('subpremise')
+        );
+        if (premise) {
+          updated.location_name = premise.long_name;
+        }
+      }
+
+      return updated;
+    });
+  }, []);
+
   const handleAddLocation = async () => {
     if (!customer) return;
 
@@ -93,12 +182,35 @@ export default function CustomerLocations() {
     }
 
     try {
+      const insertData: any = {
+        customer_id: customer.user_id,
+        location_name: formData.location_name || formData.location_type || 'Home',
+        street_address: formData.street_address,
+        city: formData.city,
+        state: formData.state,
+        zip_code: formData.zip_code,
+        is_primary: formData.is_primary,
+        location_type: formData.location_type || 'Home',
+        is_active: true,
+      };
+
+      // Add optional fields only if they have values
+      if (formData.unit_number) {
+        insertData.unit_number = formData.unit_number;
+      }
+      if (formData.latitude !== null) {
+        insertData.latitude = formData.latitude;
+      }
+      if (formData.longitude !== null) {
+        insertData.longitude = formData.longitude;
+      }
+      if (formData.access_instructions) {
+        insertData.access_instructions = formData.access_instructions;
+      }
+
       const { error } = await supabase
         .from('customer_locations')
-        .insert({
-          customer_id: customer.user_id,
-          ...formData,
-        });
+        .insert(insertData);
 
       if (error) throw error;
 
@@ -110,11 +222,11 @@ export default function CustomerLocations() {
       setIsAddDialogOpen(false);
       resetForm();
       loadLocations();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error adding location:', error);
       toast({
         title: 'Error',
-        description: 'Failed to add location',
+        description: error.message || 'Failed to add location',
         variant: 'destructive',
       });
     }
@@ -134,9 +246,25 @@ export default function CustomerLocations() {
     }
 
     try {
+      const updateData: any = {
+        location_name: formData.location_name || formData.location_type || 'Home',
+        street_address: formData.street_address,
+        city: formData.city,
+        state: formData.state,
+        zip_code: formData.zip_code,
+        is_primary: formData.is_primary,
+        location_type: formData.location_type || 'Home',
+      };
+
+      // Add optional fields
+      updateData.unit_number = formData.unit_number || null;
+      updateData.latitude = formData.latitude;
+      updateData.longitude = formData.longitude;
+      updateData.access_instructions = formData.access_instructions || null;
+
       const { error } = await supabase
         .from('customer_locations')
-        .update(formData)
+        .update(updateData)
         .eq('id', editingLocation.id);
 
       if (error) throw error;
@@ -150,11 +278,11 @@ export default function CustomerLocations() {
       setEditingLocation(null);
       resetForm();
       loadLocations();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating location:', error);
       toast({
         title: 'Error',
-        description: 'Failed to update location',
+        description: error.message || 'Failed to update location',
         variant: 'destructive',
       });
     }
@@ -230,8 +358,10 @@ export default function CustomerLocations() {
       city: location.city,
       state: location.state,
       zip_code: location.zip_code,
+      latitude: location.latitude,
+      longitude: location.longitude,
       is_primary: location.is_primary,
-      location_type: location.location_type,
+      location_type: location.location_type || 'Home',
       access_instructions: location.access_instructions || '',
     });
     setIsEditDialogOpen(true);
@@ -245,136 +375,27 @@ export default function CustomerLocations() {
       city: '',
       state: '',
       zip_code: '',
+      latitude: null,
+      longitude: null,
       is_primary: false,
-      location_type: 'home',
+      location_type: 'Home',
       access_instructions: '',
     });
   };
 
-  const getLocationIcon = (type: string) => {
+  const getLocationIcon = (type: LocationType) => {
     switch (type) {
-      case 'home':
+      case 'Home':
         return <Home className="w-5 h-5 text-roam-blue" />;
-      case 'work':
+      case 'Condo':
         return <Building className="w-5 h-5 text-roam-blue" />;
+      case 'Hotel':
+        return <Hotel className="w-5 h-5 text-roam-blue" />;
       default:
         return <MapPinned className="w-5 h-5 text-roam-blue" />;
     }
   };
 
-  const LocationForm = ({ onSubmit, submitLabel }: { onSubmit: () => void; submitLabel: string }) => (
-    <div className="space-y-4">
-      <div>
-        <Label htmlFor="location_name">Location Name</Label>
-        <Input
-          id="location_name"
-          placeholder="e.g., Home, Office, Mom's House"
-          value={formData.location_name}
-          onChange={(e) => setFormData({ ...formData, location_name: e.target.value })}
-        />
-      </div>
-
-      <div>
-        <Label htmlFor="location_type">Location Type</Label>
-        <Select
-          value={formData.location_type}
-          onValueChange={(value: 'home' | 'work' | 'other') => setFormData({ ...formData, location_type: value })}
-        >
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="home">Home</SelectItem>
-            <SelectItem value="work">Work</SelectItem>
-            <SelectItem value="other">Other</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div>
-        <Label htmlFor="street_address">Street Address *</Label>
-        <Input
-          id="street_address"
-          placeholder="123 Main Street"
-          value={formData.street_address}
-          onChange={(e) => setFormData({ ...formData, street_address: e.target.value })}
-          required
-        />
-      </div>
-
-      <div>
-        <Label htmlFor="unit_number">Unit/Apt Number</Label>
-        <Input
-          id="unit_number"
-          placeholder="Apt 2B"
-          value={formData.unit_number}
-          onChange={(e) => setFormData({ ...formData, unit_number: e.target.value })}
-        />
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="city">City *</Label>
-          <Input
-            id="city"
-            placeholder="Miami"
-            value={formData.city}
-            onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-            required
-          />
-        </div>
-        <div>
-          <Label htmlFor="state">State *</Label>
-          <Input
-            id="state"
-            placeholder="FL"
-            value={formData.state}
-            onChange={(e) => setFormData({ ...formData, state: e.target.value.toUpperCase() })}
-            maxLength={2}
-            required
-          />
-        </div>
-      </div>
-
-      <div>
-        <Label htmlFor="zip_code">ZIP Code *</Label>
-        <Input
-          id="zip_code"
-          placeholder="33101"
-          value={formData.zip_code}
-          onChange={(e) => setFormData({ ...formData, zip_code: e.target.value })}
-          required
-        />
-      </div>
-
-      <div>
-        <Label htmlFor="access_instructions">Access Instructions</Label>
-        <Input
-          id="access_instructions"
-          placeholder="Gate code, parking instructions, etc."
-          value={formData.access_instructions}
-          onChange={(e) => setFormData({ ...formData, access_instructions: e.target.value })}
-        />
-      </div>
-
-      <div className="flex items-center space-x-2">
-        <input
-          type="checkbox"
-          id="is_primary"
-          checked={formData.is_primary}
-          onChange={(e) => setFormData({ ...formData, is_primary: e.target.checked })}
-          className="rounded border-gray-300"
-        />
-        <Label htmlFor="is_primary" className="cursor-pointer">
-          Set as primary location
-        </Label>
-      </div>
-
-      <DialogFooter>
-        <Button onClick={onSubmit}>{submitLabel}</Button>
-      </DialogFooter>
-    </div>
-  );
 
   if (loading) {
     return (
@@ -422,7 +443,116 @@ export default function CustomerLocations() {
               <DialogHeader>
                 <DialogTitle>Add New Location</DialogTitle>
               </DialogHeader>
-              <LocationForm onSubmit={handleAddLocation} submitLabel="Add Location" />
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="add_location_name">Location Name</Label>
+                  <Input
+                    id="add_location_name"
+                    placeholder="e.g., Home, Office, Mom's House"
+                    value={formData.location_name}
+                    onChange={(e) => setFormData({ ...formData, location_name: e.target.value })}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="add_location_type">Location Type</Label>
+                  <Select
+                    value={formData.location_type || 'Home'}
+                    onValueChange={(value: LocationType) => setFormData({ ...formData, location_type: value as LocationType })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Home">Home</SelectItem>
+                      <SelectItem value="Condo">Condo</SelectItem>
+                      <SelectItem value="Hotel">Hotel</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="add_street_address">Street Address *</Label>
+                  <GooglePlacesAutocomplete
+                    value={formData.street_address}
+                    onChange={handlePlaceSelect}
+                    placeholder="123 Main Street"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="add_unit_number">Unit/Apt Number</Label>
+                  <Input
+                    id="add_unit_number"
+                    placeholder="Apt 2B"
+                    value={formData.unit_number}
+                    onChange={(e) => setFormData({ ...formData, unit_number: e.target.value })}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="add_city">City *</Label>
+                    <Input
+                      id="add_city"
+                      placeholder="Miami"
+                      value={formData.city}
+                      onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="add_state">State *</Label>
+                    <Input
+                      id="add_state"
+                      placeholder="FL"
+                      value={formData.state}
+                      onChange={(e) => setFormData({ ...formData, state: e.target.value.toUpperCase() })}
+                      maxLength={2}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="add_zip_code">ZIP Code *</Label>
+                  <Input
+                    id="add_zip_code"
+                    placeholder="33101"
+                    value={formData.zip_code}
+                    onChange={(e) => setFormData({ ...formData, zip_code: e.target.value })}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="add_access_instructions">Access Instructions</Label>
+                  <Input
+                    id="add_access_instructions"
+                    placeholder="Gate code, parking instructions, etc."
+                    value={formData.access_instructions}
+                    onChange={(e) => setFormData({ ...formData, access_instructions: e.target.value })}
+                  />
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="add_is_primary"
+                    checked={formData.is_primary}
+                    onChange={(e) => setFormData({ ...formData, is_primary: e.target.checked })}
+                    className="rounded border-gray-300"
+                  />
+                  <Label htmlFor="add_is_primary" className="cursor-pointer">
+                    Set as primary location
+                  </Label>
+                </div>
+
+                <DialogFooter>
+                  <Button onClick={handleAddLocation}>Add Location</Button>
+                </DialogFooter>
+              </div>
             </DialogContent>
           </Dialog>
         </div>
@@ -521,7 +651,116 @@ export default function CustomerLocations() {
             <DialogHeader>
               <DialogTitle>Edit Location</DialogTitle>
             </DialogHeader>
-            <LocationForm onSubmit={handleEditLocation} submitLabel="Save Changes" />
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="edit_location_name">Location Name</Label>
+                <Input
+                  id="edit_location_name"
+                  placeholder="e.g., Home, Office, Mom's House"
+                  value={formData.location_name}
+                  onChange={(e) => setFormData({ ...formData, location_name: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="edit_location_type">Location Type</Label>
+                <Select
+                  value={formData.location_type || 'Home'}
+                  onValueChange={(value: LocationType) => setFormData({ ...formData, location_type: value as LocationType })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Home">Home</SelectItem>
+                    <SelectItem value="Condo">Condo</SelectItem>
+                    <SelectItem value="Hotel">Hotel</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="edit_street_address">Street Address *</Label>
+                <GooglePlacesAutocomplete
+                  value={formData.street_address}
+                  onChange={handlePlaceSelect}
+                  placeholder="123 Main Street"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="edit_unit_number">Unit/Apt Number</Label>
+                <Input
+                  id="edit_unit_number"
+                  placeholder="Apt 2B"
+                  value={formData.unit_number}
+                  onChange={(e) => setFormData({ ...formData, unit_number: e.target.value })}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="edit_city">City *</Label>
+                  <Input
+                    id="edit_city"
+                    placeholder="Miami"
+                    value={formData.city}
+                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit_state">State *</Label>
+                  <Input
+                    id="edit_state"
+                    placeholder="FL"
+                    value={formData.state}
+                    onChange={(e) => setFormData({ ...formData, state: e.target.value.toUpperCase() })}
+                    maxLength={2}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="edit_zip_code">ZIP Code *</Label>
+                <Input
+                  id="edit_zip_code"
+                  placeholder="33101"
+                  value={formData.zip_code}
+                  onChange={(e) => setFormData({ ...formData, zip_code: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="edit_access_instructions">Access Instructions</Label>
+                <Input
+                  id="edit_access_instructions"
+                  placeholder="Gate code, parking instructions, etc."
+                  value={formData.access_instructions}
+                  onChange={(e) => setFormData({ ...formData, access_instructions: e.target.value })}
+                />
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="edit_is_primary"
+                  checked={formData.is_primary}
+                  onChange={(e) => setFormData({ ...formData, is_primary: e.target.checked })}
+                  className="rounded border-gray-300"
+                />
+                <Label htmlFor="edit_is_primary" className="cursor-pointer">
+                  Set as primary location
+                </Label>
+              </div>
+
+              <DialogFooter>
+                <Button onClick={handleEditLocation}>Save Changes</Button>
+              </DialogFooter>
+            </div>
           </DialogContent>
         </Dialog>
       </div>

@@ -293,9 +293,224 @@ async function handleTipPayment(session: Stripe.Checkout.Session) {
 }
 
 async function handleBookingPayment(session: Stripe.Checkout.Session) {
-  // Handle regular booking payments (existing logic)
-  console.log('📅 Processing booking payment:', session.id);
-  // Add existing booking payment logic here if needed
+  console.log('📅 Processing booking payment from checkout session:', session.id);
+  
+  // Extract payment intent from session
+  const paymentIntentId = typeof session.payment_intent === 'string' 
+    ? session.payment_intent 
+    : session.payment_intent?.id;
+
+  if (!paymentIntentId) {
+    console.error('❌ No payment intent found in checkout session');
+    throw new Error('Payment intent not found in checkout session');
+  }
+
+  console.log('💳 Payment Intent ID from session:', paymentIntentId);
+
+  // Retrieve the payment intent to get full details
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+    apiVersion: '2023-10-16',
+  });
+
+  const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId, {
+    expand: ['customer']
+  });
+
+  console.log('✅ Payment Intent retrieved:', paymentIntent.id);
+  console.log('💳 Payment Intent metadata:', paymentIntent.metadata);
+
+  // Check if booking was created from checkout session metadata
+  // Checkout sessions store booking data in metadata, but we need to find the booking
+  // by looking for a booking with matching customer_id and service_id
+  const customerId = session.metadata?.customer_id;
+  const serviceId = session.metadata?.service_id;
+
+  if (!customerId || !serviceId) {
+    console.error('❌ Missing customer_id or service_id in checkout session metadata');
+    console.error('Available metadata:', JSON.stringify(session.metadata, null, 2));
+    throw new Error('Missing required metadata in checkout session');
+  }
+
+  // Find the booking that matches this checkout session
+  // The booking should have been created with pending_payment status
+  const { data: booking, error: bookingError } = await supabase
+    .from('bookings')
+    .select(`
+      id,
+      customer_id,
+      business_id,
+      provider_id,
+      total_amount,
+      booking_date,
+      start_time,
+      booking_reference,
+      booking_status,
+      payment_status,
+      special_instructions,
+      services (
+        name
+      ),
+      customer_profiles (
+        id,
+        first_name,
+        last_name,
+        email,
+        phone
+      ),
+      business_profiles (
+        id,
+        name,
+        business_address
+      )
+    `)
+    .eq('customer_id', customerId)
+    .eq('service_id', serviceId)
+    .eq('booking_status', 'pending_payment')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single();
+
+  if (bookingError || !booking) {
+    console.error('❌ Error finding booking:', bookingError);
+    console.error('Searched for customer_id:', customerId, 'service_id:', serviceId);
+    throw bookingError || new Error('Booking not found');
+  }
+
+  console.log('📦 Found booking:', {
+    id: booking.id,
+    booking_reference: booking.booking_reference,
+    customer_id: booking.customer_id,
+    total_amount: booking.total_amount
+  });
+
+  // Process the payment using the same logic as handlePaymentIntentSucceeded
+  // Update booking status to confirmed
+  const { error: updateError } = await supabase
+    .from('bookings')
+    .update({
+      booking_status: 'confirmed',
+      payment_status: 'completed',
+      stripe_payment_intent_id: paymentIntent.id,
+      confirmed_at: new Date().toISOString(),
+    })
+    .eq('id', booking.id);
+
+  if (updateError) {
+    console.error('❌ Error updating booking:', updateError);
+    throw updateError;
+  }
+
+  console.log(`✅ Booking ${booking.id} status updated to confirmed`);
+
+  // Notify providers about the new booking (non-blocking)
+  try {
+    const notifyFn = await getNotifyProvidersNewBooking();
+    if (notifyFn) {
+      const service = Array.isArray(booking.services) ? booking.services[0] : booking.services;
+      const customer = Array.isArray(booking.customer_profiles) ? booking.customer_profiles[0] : booking.customer_profiles;
+      const business = Array.isArray(booking.business_profiles) ? booking.business_profiles[0] : booking.business_profiles;
+
+      if (service && customer && business) {
+        await notifyFn({
+          booking: {
+            id: booking.id,
+            business_id: booking.business_id,
+            provider_id: booking.provider_id,
+            booking_date: booking.booking_date,
+            start_time: booking.start_time,
+            total_amount: booking.total_amount,
+            special_instructions: booking.special_instructions,
+          },
+          service: {
+            name: service.name,
+          },
+          customer: {
+            first_name: customer.first_name || '',
+            last_name: customer.last_name || '',
+            email: customer.email,
+            phone: customer.phone,
+          },
+          business: {
+            name: business.name,
+            business_address: business.business_address,
+          },
+        });
+        console.log('✅ Provider notifications sent successfully');
+      }
+    }
+  } catch (notificationError) {
+    console.error('⚠️ Error sending provider notifications (non-fatal):', notificationError);
+  }
+
+  // Record in financial_transactions
+  const totalAmount = paymentIntent.amount / 100;
+  console.log(`💵 Recording financial transaction: $${totalAmount} for booking ${booking.id}`);
+  
+  const financialTransactionData: any = {
+    booking_id: booking.id,
+    amount: totalAmount,
+    currency: paymentIntent.currency.toUpperCase(),
+    stripe_transaction_id: paymentIntent.id,
+    payment_method: 'card',
+    description: 'Service booking payment received',
+    transaction_type: 'booking_payment',
+    status: 'completed',
+    processed_at: new Date().toISOString(),
+    metadata: {
+      charge_id: paymentIntent.latest_charge,
+      customer_id: paymentIntent.customer,
+      payment_method_types: paymentIntent.payment_method_types,
+      booking_reference: booking.booking_reference || null,
+      booking_customer_id: booking.customer_id || null
+    }
+  };
+
+  if (booking.customer_id) {
+    financialTransactionData.customer_id = booking.customer_id;
+  }
+
+  const { data: financialTransaction, error: financialError } = await supabase
+    .from('financial_transactions')
+    .insert(financialTransactionData)
+    .select()
+    .single();
+
+  if (financialError) {
+    console.error('❌ Error recording financial transaction:', financialError);
+    if (financialError.code !== '23505') { // Ignore duplicates
+      throw financialError;
+    }
+  } else {
+    console.log('✅ Financial transaction recorded:', financialTransaction?.id);
+  }
+
+  // Record payment splits
+  const platformFee = totalAmount * 0.12;
+  const providerAmount = totalAmount - platformFee;
+
+  await supabase.from('payment_transactions').insert({
+    booking_id: booking.id,
+    transaction_type: 'platform_fee',
+    amount: platformFee,
+    destination_account: 'roam_platform',
+    stripe_payment_intent_id: paymentIntent.id,
+    stripe_charge_id: paymentIntent.latest_charge as string,
+    status: 'completed',
+    processed_at: new Date().toISOString()
+  });
+
+  await supabase.from('payment_transactions').insert({
+    booking_id: booking.id,
+    transaction_type: 'provider_payout',
+    amount: providerAmount,
+    destination_account: 'provider_connected',
+    stripe_payment_intent_id: paymentIntent.id,
+    stripe_charge_id: paymentIntent.latest_charge as string,
+    status: 'pending',
+    processed_at: null
+  });
+
+  console.log(`✅ All financial transactions recorded for booking ${booking.id}`);
 }
 
 async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent) {
