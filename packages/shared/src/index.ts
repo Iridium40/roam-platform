@@ -63,20 +63,12 @@ export type {
   DatabaseConversationParticipant,
   ConversationServiceWithDB,
 } from './services/twilio-conversations';
-// Export Twilio services directly from the index to avoid path resolution issues
-export {
-  ConversationService,
-  ParticipantService,
-  MessageService,
-  TwilioConversationsService,
-  createTwilioConversationsService,
-  verifyTwilioConfig,
-  verifySupabaseConfig,
-  verifyCompleteSetup,
-  testTwilioConnection,
-  testServiceInitialization,
-  printSetupStatus,
-} from './services/twilio/index';
+
+// ⚠️ SERVER-SIDE ONLY: Twilio service classes (contain Node.js dependencies)
+// DO NOT export these from main index - they should only be imported in API routes
+// Available at: @roam/shared/dist/services/twilio/* for server-side use
+
+// Export Twilio TYPES only (safe for client-side)
 export type {
   TwilioConfig,
   CreateConversationData,
@@ -96,9 +88,13 @@ export type {
   ConversationState,
   EnvironmentConfig,
 } from './services/twilio/types';
+
+// Client-safe exports
 export * from './services/conversations';
 export * from './services/booking-conversations-client';
-export * from './api/twilio-conversations-api';
+
+// API handlers (server-side only, but exported for convenience)
+export type * from './api/twilio-conversations-api';
 export { default as twilioConversationsHandler } from './api/twilio-conversations-handler';
 export * from './services/stripe-service';
 export * from './services/business-service-subcategories';

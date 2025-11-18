@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { createTwilioConversationsService } from "../services/twilio/index.js";
+// Import server-side Twilio services directly (these contain Node.js dependencies)
+import { createTwilioConversationsService } from "../services/twilio/TwilioConversationsService.js";
 import { ConversationService } from "../services/twilio/ConversationService.js";
 import { ParticipantService } from "../services/twilio/ParticipantService.js";
 import { MessageService } from "../services/twilio/MessageService.js";
