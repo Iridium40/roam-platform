@@ -19,6 +19,7 @@ import { stripePromise } from '../lib/stripe-client';
 import { CheckoutForm } from '../components/CheckoutForm';
 import { getDeliveryTypeLabel, getDeliveryTypeIcon } from '@/utils/deliveryTypeHelpers';
 import { CustomerAuthModal } from '@/components/CustomerAuthModal';
+import GooglePlacesAutocomplete from '@/components/GooglePlacesAutocomplete';
 
 type BookingStep = 'datetime' | 'business' | 'provider' | 'delivery-location' | 'summary' | 'checkout';
 
@@ -904,6 +905,73 @@ export default function BookService() {
         variant: "destructive",
       });
     }
+  };
+
+  // Handle Google Places address selection
+  const handlePlaceSelect = (address: string, place?: any) => {
+    // If no place data, just update the address (user is typing manually)
+    if (!place || !place.address_components || place.address_components.length === 0) {
+      setNewCustomerLocation(prev => ({ ...prev, street_address: address }));
+      return;
+    }
+
+    // Extract address components
+    const addressComponents = place.address_components || [];
+    let streetNumber = '';
+    let route = '';
+    let city = '';
+    let state = '';
+    let zipCode = '';
+    let unitNumber = '';
+
+    addressComponents.forEach((component) => {
+      const types = component.types;
+      
+      if (types.includes('street_number')) {
+        streetNumber = component.long_name;
+      } else if (types.includes('route')) {
+        route = component.long_name;
+      } else if (types.includes('locality') || types.includes('sublocality')) {
+        city = component.long_name;
+      } else if (types.includes('administrative_area_level_1')) {
+        state = component.short_name; // Use short name for state (e.g., "FL")
+      } else if (types.includes('postal_code')) {
+        zipCode = component.long_name;
+      } else if (types.includes('subpremise')) {
+        unitNumber = component.long_name; // Apartment/unit number
+      }
+    });
+
+    // Build street address
+    const streetAddress = [streetNumber, route].filter(Boolean).join(' ').trim();
+
+    // Update newCustomerLocation with parsed address components
+    setNewCustomerLocation(prev => {
+      const updated = {
+        ...prev,
+        street_address: streetAddress || address,
+        city: city || prev.city,
+        state: state || prev.state,
+        zip_code: zipCode || prev.zip_code,
+      };
+
+      // Only update unit_number if we found one from Google Places
+      if (unitNumber) {
+        updated.unit_number = unitNumber;
+      }
+
+      // Auto-suggest location name if empty
+      if (!prev.location_name) {
+        const premise = addressComponents.find(c => 
+          c.types.includes('premise') || c.types.includes('subpremise')
+        );
+        if (premise) {
+          updated.location_name = premise.long_name;
+        }
+      }
+
+      return updated;
+    });
   };
 
   // Save new customer location
@@ -2102,13 +2170,10 @@ export default function BookService() {
                                 </div>
                                 <div>
                                   <label className="block text-sm font-medium mb-2">Street Address *</label>
-                                  <input
-                                    type="text"
-                                    className="w-full px-3 py-2 border rounded-md"
-                                    placeholder="123 Main Street"
+                                  <GooglePlacesAutocomplete
                                     value={newCustomerLocation.street_address}
-                                    onChange={(e) => setNewCustomerLocation({ ...newCustomerLocation, street_address: e.target.value })}
-                                    required
+                                    onChange={handlePlaceSelect}
+                                    placeholder="123 Main Street"
                                   />
                                 </div>
                                 <div>
