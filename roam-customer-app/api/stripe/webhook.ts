@@ -145,19 +145,67 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       
       case 'payment_intent.succeeded':
         try {
-          await handlePaymentIntentSucceeded(event.data.object as Stripe.PaymentIntent);
+          console.log('🎯 Processing payment_intent.succeeded event');
+          const paymentIntent = event.data.object as Stripe.PaymentIntent;
+          console.log('💳 Payment Intent ID:', paymentIntent.id);
+          console.log('💳 Payment Intent metadata:', JSON.stringify(paymentIntent.metadata, null, 2));
+          console.log('💳 Payment Intent amount:', paymentIntent.amount);
+          console.log('💳 Payment Intent status:', paymentIntent.status);
+          
+          await handlePaymentIntentSucceeded(paymentIntent);
           processed = true;
+          console.log('✅ payment_intent.succeeded processed successfully');
         } catch (err: any) {
           console.error(`❌ Error handling payment_intent.succeeded:`, err);
+          console.error('Error stack:', err.stack);
           throw err; // Re-throw to be caught by outer catch
         }
         break;
 
       case 'charge.updated':
       case 'charge.succeeded':
-      case 'charge.failed':
         // These events don't require processing for our use case
-        console.log(`ℹ️ Event ${event.type} received but not processed (not needed for transaction recording)`);
+        // However, if payment_intent.succeeded wasn't received, we can try to process from charge
+        console.log(`ℹ️ Event ${event.type} received`);
+        
+        // Try to extract payment intent ID from charge and process if needed
+        const charge = event.data.object as Stripe.Charge;
+        if (charge.payment_intent && typeof charge.payment_intent === 'string') {
+          console.log(`🔍 Charge has payment_intent: ${charge.payment_intent}`);
+          
+          // Check if we've already processed this payment intent
+          const { data: existingTransaction } = await supabase
+            .from('financial_transactions')
+            .select('id')
+            .eq('stripe_transaction_id', charge.payment_intent)
+            .limit(1)
+            .single();
+          
+          if (!existingTransaction && charge.status === 'succeeded') {
+            console.log(`⚠️ No financial transaction found for payment_intent ${charge.payment_intent} - attempting to process from charge event`);
+            
+            // Try to retrieve and process the payment intent
+            try {
+              const paymentIntent = await stripe.paymentIntents.retrieve(charge.payment_intent);
+              if (paymentIntent.status === 'succeeded') {
+                console.log(`🔄 Processing payment_intent.succeeded from charge event fallback`);
+                await handlePaymentIntentSucceeded(paymentIntent);
+                console.log(`✅ Successfully processed payment intent from charge event`);
+              }
+            } catch (fallbackError: any) {
+              console.error(`❌ Error processing payment intent from charge event:`, fallbackError);
+              // Don't throw - charge.updated is not critical for transaction recording
+            }
+          } else if (existingTransaction) {
+            console.log(`✅ Financial transaction already exists for payment_intent ${charge.payment_intent}`);
+          }
+        }
+        
+        processed = true;
+        break;
+      
+      case 'charge.failed':
+        console.log(`ℹ️ Event ${event.type} received - charge failed, no processing needed`);
         processed = true;
         break;
 
@@ -525,15 +573,42 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
       return;
     }
 
-    const bookingId = paymentIntent.metadata.bookingId;
+    let bookingId = paymentIntent.metadata.bookingId;
+    
+    // If bookingId is missing, try to find booking by customer_id and service_id
+    if (!bookingId) {
+      console.warn('⚠️ No booking ID in payment intent metadata - attempting to find booking by customer_id and service_id');
+      const customerId = paymentIntent.metadata.customerId;
+      const serviceId = paymentIntent.metadata.serviceId;
+      
+      if (customerId && serviceId) {
+        console.log(`🔍 Searching for booking with customer_id: ${customerId}, service_id: ${serviceId}`);
+        const { data: booking, error: bookingSearchError } = await supabase
+          .from('bookings')
+          .select('id, booking_status, payment_status')
+          .eq('customer_id', customerId)
+          .eq('service_id', serviceId)
+          .in('booking_status', ['pending_payment', 'confirmed'])
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+        
+        if (booking && !bookingSearchError) {
+          bookingId = booking.id;
+          console.log(`✅ Found booking by customer_id and service_id: ${bookingId}`);
+        } else {
+          console.error('❌ Could not find booking by customer_id and service_id:', bookingSearchError);
+        }
+      }
+    }
     
     if (!bookingId) {
-      console.error('❌ No booking ID in payment intent metadata');
+      console.error('❌ No booking ID found in payment intent metadata or database');
       console.error('Available metadata:', JSON.stringify(paymentIntent.metadata, null, 2));
       console.error('Payment Intent ID:', paymentIntent.id);
       console.error('Payment Intent Amount:', paymentIntent.amount);
       console.error('Payment Intent Status:', paymentIntent.status);
-      return;
+      throw new Error(`Cannot process payment: No booking ID found for payment intent ${paymentIntent.id}`);
     }
 
     console.log(`📋 Confirming booking: ${bookingId}`);

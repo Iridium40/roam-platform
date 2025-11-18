@@ -7,7 +7,7 @@ import {
 } from '@stripe/react-stripe-js';
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
-import { Loader2, CreditCard, DollarSign } from 'lucide-react';
+import { Loader2, CreditCard } from 'lucide-react';
 import { useToast } from '../hooks/use-toast';
 
 interface CheckoutFormProps {
@@ -199,10 +199,7 @@ export function CheckoutForm({ bookingDetails, onSuccess, onError }: CheckoutFor
                   Processing Payment...
                 </>
               ) : (
-                <>
-                  <DollarSign className="mr-2 h-4 w-4" />
-                  Pay ${total.toFixed(2)}
-                </>
+                `Pay $${total.toFixed(2)}`
               )}
             </Button>
           </form>

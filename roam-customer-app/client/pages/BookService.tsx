@@ -2558,32 +2558,34 @@ export default function BookService() {
             )}
 
             {/* Navigation Buttons */}
-            <div className="flex justify-between mt-8">
-              <Button
-                variant="outline"
-                onClick={handleBack}
-                disabled={currentStep === 'datetime'}
-              >
-                Back
-              </Button>
-              <div className="flex gap-4">
-                {currentStep === 'summary' ? (
-                  <Button
-                    onClick={handleCheckout}
-                    className="bg-roam-blue hover:bg-roam-blue/90"
-                  >
-                    Proceed to Checkout
-                  </Button>
-                ) : (
-                  <Button
-                    onClick={handleNext}
-                    className="bg-roam-blue hover:bg-roam-blue/90"
-                  >
-                    Continue
-                  </Button>
-                )}
+            {currentStep !== 'checkout' && (
+              <div className="flex justify-between mt-8">
+                <Button
+                  variant="outline"
+                  onClick={handleBack}
+                  disabled={currentStep === 'datetime'}
+                >
+                  Back
+                </Button>
+                <div className="flex gap-4">
+                  {currentStep === 'summary' ? (
+                    <Button
+                      onClick={handleCheckout}
+                      className="bg-roam-blue hover:bg-roam-blue/90"
+                    >
+                      Proceed to Checkout
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={handleNext}
+                      className="bg-roam-blue hover:bg-roam-blue/90"
+                    >
+                      Continue
+                    </Button>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </div>

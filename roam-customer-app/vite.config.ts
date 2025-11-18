@@ -23,7 +23,13 @@ export default defineConfig({
       "@shared": path.resolve(__dirname, "./shared"),
     },
   },
+  optimizeDeps: {
+    include: ['date-fns'],
+  },
   build: {
     outDir: "dist/spa",
+    commonjsOptions: {
+      include: [/date-fns/],
+    },
   },
 });

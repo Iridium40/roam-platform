@@ -13,9 +13,11 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { useState } from "react";
+import { useState, lazy, Suspense } from "react";
 import type { BookingWithDetails } from "@/types/index";
-import EnhancedConversationChat from "@/components/EnhancedConversationChat";
+
+// Lazy load EnhancedConversationChat to avoid date-fns import issues on page load
+const EnhancedConversationChat = lazy(() => import("@/components/EnhancedConversationChat"));
 
 // Import modular components and hooks
 import {
@@ -327,12 +329,23 @@ export default function MyBookings() {
       />
 
       {/* Messaging Modal */}
-      <EnhancedConversationChat
-        isOpen={showMessageModal}
-        onClose={() => setShowMessageModal(false)}
-        booking={selectedBookingForMessage}
-        currentUser={currentUser}
-      />
+      {showMessageModal && (
+        <Suspense fallback={
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-8">
+              <Loader2 className="w-8 h-8 animate-spin text-roam-blue mx-auto mb-4" />
+              <p>Loading chat...</p>
+            </div>
+          </div>
+        }>
+          <EnhancedConversationChat
+            isOpen={showMessageModal}
+            onClose={() => setShowMessageModal(false)}
+            booking={selectedBookingForMessage}
+            currentUser={currentUser}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }
