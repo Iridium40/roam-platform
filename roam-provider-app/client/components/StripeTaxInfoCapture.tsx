@@ -85,6 +85,7 @@ export default function StripeTaxInfoCapture({
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hasExistingTaxInfo, setHasExistingTaxInfo] = useState(false);
 
   // Load existing tax info via API (uses service_role to bypass RLS)
   useEffect(() => {
@@ -105,12 +106,14 @@ export default function StripeTaxInfoCapture({
         const { tax_info: taxData } = await res.json();
 
         if (taxData) {
+          setHasExistingTaxInfo(true);
           setTaxInfo({
             businessType: taxData.business_entity_type || 'llc',
             companyName: taxData.legal_business_name || '',
             contactName: taxData.tax_contact_name || '',
             contactEmail: taxData.tax_contact_email || '',
-            taxId: taxData.tax_id || '',
+            // Tax ID is not returned for security reasons - user must re-enter it
+            taxId: '',
             taxIdType: taxData.tax_id_type || 'EIN',
             address: {
               line1: taxData.tax_address_line1 || '',
@@ -374,7 +377,17 @@ export default function StripeTaxInfoCapture({
                 onChange={(e) => updateTaxInfo('taxId', e.target.value)}
                 placeholder={taxInfo.taxIdType === 'ein' ? 'XX-XXXXXXX' : 'XXX-XX-XXXX'}
                 required
+                className={hasExistingTaxInfo && !taxInfo.taxId.trim() ? 'border-red-500' : ''}
               />
+              {hasExistingTaxInfo && !taxInfo.taxId.trim() && (
+                <Alert className="mt-2">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription className="text-sm">
+                    For security reasons, the Tax ID is not stored in a retrievable format. 
+                    Please re-enter your Tax ID to save any changes.
+                  </AlertDescription>
+                </Alert>
+              )}
             </div>
           </div>
 
@@ -547,8 +560,8 @@ export default function StripeTaxInfoCapture({
         )}
         <Button
           onClick={handleSave}
-          disabled={saving}
-          className="bg-blue-600 hover:bg-blue-700"
+          disabled={saving || !taxInfo.taxId.trim()}
+          className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {saving ? (
             <>
