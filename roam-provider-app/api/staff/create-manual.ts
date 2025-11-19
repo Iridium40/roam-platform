@@ -128,7 +128,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (userExists) {
       // Check if they're already part of this business
-      const { data: existingProvider } = await supabase
+      const { data: existingProvider } = await supabaseClient
         .from('providers')
         .select('id, first_name, last_name')
         .eq('user_id', userExists.id)

@@ -11,6 +11,7 @@ type ConversationUserProfile = {
   last_name?: string | null;
   email?: string | null;
   image_url?: string | null;
+  provider_role?: string | null;
 };
 
 export interface ConversationSummaryBooking {
@@ -455,7 +456,8 @@ export class TwilioConversationsService {
    */
   async getConversationsForUser(
     userId: string,
-    userType: 'customer' | 'provider' | 'owner' | 'dispatcher'
+    userType: 'customer' | 'provider' | 'owner' | 'dispatcher',
+    businessId?: string
   ): Promise<ConversationSummary[]> {
     const { data: participantData, error } = await this.supabase
       .from('conversation_participants')
@@ -477,7 +479,9 @@ export class TwilioConversationsService {
             booking_date,
             booking_status,
             business_id,
-            service_name,
+            services (
+              name
+            ),
             customer_profiles (
               id,
               first_name,
@@ -490,7 +494,9 @@ export class TwilioConversationsService {
               user_id,
               first_name,
               last_name,
-              email
+              email,
+              provider_role,
+              image_url
             )
           )
         )
@@ -512,14 +518,19 @@ export class TwilioConversationsService {
       .map((item: any) => item.conversation_metadata)
       .filter((meta: any) => Boolean(meta));
 
-    const conversationIds = metadataList
+    const filteredMetadata = metadataList.filter((meta: any) => {
+      if (!businessId) return true;
+      return meta?.bookings?.business_id === businessId;
+    });
+
+    const conversationIds = filteredMetadata
       .map((meta: any) => meta.id)
       .filter((id: string | null) => Boolean(id));
 
     const unreadCounts = await this.getUnreadCountsMap(conversationIds, userId);
 
     const summaries = await Promise.all(
-      metadataList.map(async (meta: any) => {
+      filteredMetadata.map(async (meta: any) => {
         const latestMessage =
           meta.last_message_at ? await this.fetchLatestMessageSnapshot(meta.twilio_conversation_sid) : null;
 
@@ -553,7 +564,7 @@ export class TwilioConversationsService {
       booking_date: record.booking_date,
       booking_status: record.booking_status,
       business_id: record.business_id,
-      service_name: record.service_name || null,
+      service_name: record.service_name || record.services?.name || null,
       customer_profiles: record.customer_profiles || null,
       providers: record.providers || null,
     };

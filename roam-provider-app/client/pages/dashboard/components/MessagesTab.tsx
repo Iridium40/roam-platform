@@ -60,12 +60,13 @@ export default function MessagesTab({ providerData, business }: MessagesTabProps
 
   // Props currently unused but reserved for future enhancements
   void providerData;
-  void business;
+
+  const providerRole = user?.provider_role || "provider";
+  const canSeeAllConversations = providerRole === "owner" || providerRole === "dispatcher";
 
   useEffect(() => {
     loadConversations();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.user_id]);
+  }, [user?.user_id, providerRole, business?.id]);
 
   const loadConversations = async () => {
     if (!user?.user_id) return;
@@ -77,7 +78,8 @@ export default function MessagesTab({ providerData, business }: MessagesTabProps
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userId: user.user_id,
-          userType: user.provider_role || "provider",
+          userType: providerRole,
+          businessId: canSeeAllConversations ? business?.id : undefined,
         }),
       });
 

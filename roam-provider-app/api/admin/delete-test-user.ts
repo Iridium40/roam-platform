@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { createClient } from "@supabase/supabase-js";
+import type { User } from "@supabase/supabase-js";
 
 // Initialize Supabase client with service role key for admin operations
 const supabaseUrl = process.env.VITE_PUBLIC_SUPABASE_URL!;
@@ -31,7 +32,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.log(`Admin: Deleting test user with email: ${email}`);
 
     // First, find the user by email
-    const { data: users, error: userError } =
+    const { data: usersResponse, error: userError } =
       await supabase.auth.admin.listUsers();
 
     if (userError) {
@@ -39,7 +40,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({ error: "Failed to fetch users" });
     }
 
-    const user = users.users.find((u) => u.email === email);
+    const userList: User[] = usersResponse?.users ?? [];
+    const user = userList.find((u) => u.email === email);
 
     if (!user) {
       return res.status(404).json({ error: "User not found" });

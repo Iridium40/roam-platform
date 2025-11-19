@@ -6,7 +6,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const { userId, userType } = req.body ?? {};
+  const { userId, userType, businessId } = req.body ?? {};
 
   if (!userId || !userType) {
     return res.status(400).json({ error: "userId and userType are required" });
@@ -18,7 +18,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const conversations = await conversationsService.getConversationsForUser(userId, userType);
+    const conversations = await conversationsService.getConversationsForUser(
+      userId,
+      userType,
+      businessId
+    );
     return res.status(200).json({
       success: true,
       conversations,
