@@ -134,6 +134,10 @@
       "destination": "/api/stripe/payout-schedule.ts"
     },
     {
+      "source": "/api/stripe/dashboard-link",
+      "destination": "/api/stripe/dashboard-link.ts"
+    },
+    {
       "source": "/api/storage/upload-image",
       "destination": "/api/storage/upload-image.ts"
     },
