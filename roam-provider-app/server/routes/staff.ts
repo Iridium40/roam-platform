@@ -641,12 +641,26 @@ export const createStaffManually = async (req: Request, res: Response) => {
     }
 
     console.log(`Staff member ${firstName} ${lastName} created successfully`);
+    console.log(`📧 Email sending check - authUserExists: ${authUserExists}, email: ${email}`);
+    console.log(`📧 RESEND_API_KEY configured: ${!!process.env.RESEND_API_KEY}`);
+    console.log(`📧 RESEND_API_KEY starts with: ${process.env.RESEND_API_KEY?.substring(0, 10) || 'NOT SET'}`);
 
     // Send welcome email with login credentials (only for newly created users)
     let emailSent = false;
+    let emailErrorDetails: any = null;
+    
     if (!authUserExists) {
       try {
         console.log('📧 Sending welcome email with credentials...');
+        console.log('📧 Email details:', {
+          to: email,
+          firstName,
+          lastName,
+          businessName: business.business_name,
+          role,
+          loginUrl: req.headers.origin || process.env.FRONTEND_URL || 'http://localhost:5177/provider-login'
+        });
+        
         emailSent = await EmailService.sendStaffWelcomeEmail(
           email,
           firstName,
@@ -657,13 +671,18 @@ export const createStaffManually = async (req: Request, res: Response) => {
           req.headers.origin || process.env.FRONTEND_URL || 'http://localhost:5177/provider-login'
         );
         
+        console.log(`📧 Email service returned: ${emailSent}`);
+        
         if (emailSent) {
           console.log('✅ Welcome email sent successfully');
         } else {
-          console.warn('⚠️ Welcome email may not have been delivered');
+          console.warn('⚠️ Welcome email may not have been delivered - EmailService returned false');
         }
       } catch (emailError) {
+        emailErrorDetails = emailError;
         console.error('⚠️ Error sending welcome email (non-fatal):', emailError);
+        console.error('⚠️ Email error details:', emailError instanceof Error ? emailError.message : String(emailError));
+        console.error('⚠️ Email error stack:', emailError instanceof Error ? emailError.stack : 'No stack trace');
         // Continue anyway - staff was created successfully
       }
     } else {
@@ -684,8 +703,11 @@ export const createStaffManually = async (req: Request, res: Response) => {
           `,
           text: `Welcome to ${business.business_name}! You've been added as a ${role}. Login at ${req.headers.origin || process.env.FRONTEND_URL || 'http://localhost:5177'}/provider-login with your existing credentials.`
         });
+        console.log(`📧 Email service returned: ${emailSent}`);
       } catch (emailError) {
+        emailErrorDetails = emailError;
         console.error('⚠️ Error sending welcome email (non-fatal):', emailError);
+        console.error('⚠️ Email error details:', emailError instanceof Error ? emailError.message : String(emailError));
       }
     }
 
@@ -702,6 +724,7 @@ export const createStaffManually = async (req: Request, res: Response) => {
       },
       emailSent: emailSent,
       existingUser: authUserExists,
+      emailError: emailErrorDetails ? (emailErrorDetails instanceof Error ? emailErrorDetails.message : String(emailErrorDetails)) : null,
     });
 
   } catch (error) {
