@@ -2,19 +2,6 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api/endpoints";
 import { useAuth } from "@/contexts/auth/AuthProvider";
-import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "@roam/shared";
-
-let supabaseClientPromise: Promise<SupabaseClient<Database>> | null = null;
-
-const getSupabaseClient = async () => {
-  if (!supabaseClientPromise) {
-    supabaseClientPromise = import("@/lib/supabase").then(
-      (mod) => mod.supabase as SupabaseClient<Database>
-    );
-  }
-  return supabaseClientPromise;
-};
 
 interface BookingStats {
   totalBookings: number;
@@ -30,7 +17,7 @@ interface BookingStats {
 
 export function useBookings(providerData: any, business: any) {
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { provider } = useAuth();
   
   // State management
   const [bookings, setBookings] = useState<any[]>([]);
@@ -59,7 +46,7 @@ export function useBookings(providerData: any, business: any) {
 
     setLoading(true);
     try {
-      // Use API endpoint instead of direct Supabase call
+      // Use API endpoint - no fallback to avoid circular dependency issues
       const response = await api.bookings.getBookings({
         business_id: business.id,
         limit: 1000 // Load all bookings for now
@@ -73,76 +60,13 @@ export function useBookings(providerData: any, business: any) {
       }
     } catch (error: any) {
       console.error("Error loading bookings:", error);
-      
-      // Fallback to direct Supabase call if API fails
-      try {
-        const supabase = await getSupabaseClient();
-        const { data, error: supabaseError } = await supabase
-          .from("bookings")
-          .select(`
-            *,
-            customer_profiles (
-              id,
-              first_name,
-              last_name,
-              email,
-              phone,
-              image_url
-            ),
-            customer_locations (
-              id,
-              location_name,
-              street_address,
-              unit_number,
-              city,
-              state,
-              zip_code,
-              latitude,
-              longitude,
-              is_primary,
-              is_active,
-              access_instructions,
-              location_type
-            ),
-            business_locations (
-              id,
-              location_name,
-              address_line1,
-              address_line2,
-              city,
-              state,
-              postal_code
-            ),
-            services (
-              id,
-              name,
-              description,
-              duration_minutes,
-              min_price
-            ),
-            providers (
-              id,
-              first_name,
-              last_name
-            )
-          `)
-          .eq("business_id", business.id)
-          .order("booking_date", { ascending: false })
-          .order("start_time", { ascending: false });
-
-        if (supabaseError) {
-          throw supabaseError;
-        }
-
-        setBookings(data || []);
-      } catch (fallbackError) {
-        console.error("Fallback error loading bookings:", fallbackError);
-        toast({
-          title: "Error",
-          description: "Failed to load bookings. Please try again.",
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "Error",
+        description: error?.response?.data?.error || error?.message || "Failed to load bookings. Please try again.",
+        variant: "destructive",
+      });
+      // Set empty array on error to prevent UI from breaking
+      setBookings([]);
     } finally {
       setLoading(false);
     }
@@ -354,10 +278,11 @@ export function useBookings(providerData: any, business: any) {
     updatingStatuses.current.add(requestKey);
 
     try {
+      const userId = provider?.provider?.user_id || provider?.provider?.id || 'provider';
       console.log('Frontend: Updating booking status', {
         bookingId,
         newStatus,
-        updatedBy: user?.id || 'provider',
+        updatedBy: userId,
         reason: `Status updated to ${newStatus}`
       });
       
@@ -365,14 +290,14 @@ export function useBookings(providerData: any, business: any) {
       const response = await api.bookings.updateStatus({
         bookingId,
         status: newStatus,
-        updatedBy: user?.id || 'provider',
+        updatedBy: userId,
         reason: `Status updated to ${newStatus}`
       });
       
       console.log('Frontend: API response', response);
 
       // Check if the response indicates success (handle both response.data.success and response.success)
-      const isSuccess = response?.data?.success || response?.success;
+      const isSuccess = (response?.data as any)?.success || (response as any)?.success;
       
       if (isSuccess) {
         // Update local state
