@@ -1,12 +1,14 @@
-import React, { useState } from "react";
+import React, { useState, lazy, Suspense } from "react";
 
 // Import modular components
 import BookingStatsSection from "./bookings/BookingStatsSection";
 import BookingFiltersSection from "./bookings/BookingFiltersSection";
 import BookingListSection from "./bookings/BookingListSection";
 import BookingDetailModal from "./bookings/BookingDetailModal";
-import WeekCalendarView from "./bookings/WeekCalendarView";
-import MonthCalendarView from "./bookings/MonthCalendarView";
+
+// Lazy load calendar views to avoid initialization issues
+const WeekCalendarView = lazy(() => import("./bookings/WeekCalendarView"));
+const MonthCalendarView = lazy(() => import("./bookings/MonthCalendarView"));
 
 // Import custom hook
 import { useBookings } from "./bookings/hooks/useBookings";
@@ -159,21 +161,25 @@ export function BookingsTab({ providerData, business }: BookingsTabProps) {
         formatDisplayTime={formatDisplayTime}
       />
       ) : viewType === "week" ? (
-        <WeekCalendarView
-          bookings={[...presentBookings, ...futureBookings, ...pastBookings]}
-          currentDate={currentDate}
-          onDateChange={setCurrentDate}
-          onViewDetails={setSelectedBooking}
-          formatDisplayTime={formatDisplayTime}
-        />
+        <Suspense fallback={<div className="h-96 bg-gray-100 rounded-lg animate-pulse" />}>
+          <WeekCalendarView
+            bookings={[...presentBookings, ...futureBookings, ...pastBookings]}
+            currentDate={currentDate}
+            onDateChange={setCurrentDate}
+            onViewDetails={setSelectedBooking}
+            formatDisplayTime={formatDisplayTime}
+          />
+        </Suspense>
       ) : (
-        <MonthCalendarView
-          bookings={[...presentBookings, ...futureBookings, ...pastBookings]}
-          currentDate={currentDate}
-          onDateChange={setCurrentDate}
-          onViewDetails={setSelectedBooking}
-          formatDisplayTime={formatDisplayTime}
-        />
+        <Suspense fallback={<div className="h-96 bg-gray-100 rounded-lg animate-pulse" />}>
+          <MonthCalendarView
+            bookings={[...presentBookings, ...futureBookings, ...pastBookings]}
+            currentDate={currentDate}
+            onDateChange={setCurrentDate}
+            onViewDetails={setSelectedBooking}
+            formatDisplayTime={formatDisplayTime}
+          />
+        </Suspense>
       )}
 
       {/* Booking Detail Modal */}
