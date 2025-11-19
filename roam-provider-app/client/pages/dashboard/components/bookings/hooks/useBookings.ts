@@ -1,8 +1,20 @@
 import { useState, useMemo, useEffect, useRef } from "react";
-import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api/endpoints";
 import { useAuth } from "@/contexts/auth/AuthProvider";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@roam/shared";
+
+let supabaseClientPromise: Promise<SupabaseClient<Database>> | null = null;
+
+const getSupabaseClient = async () => {
+  if (!supabaseClientPromise) {
+    supabaseClientPromise = import("@/lib/supabase").then(
+      (mod) => mod.supabase as SupabaseClient<Database>
+    );
+  }
+  return supabaseClientPromise;
+};
 
 interface BookingStats {
   totalBookings: number;
@@ -64,6 +76,7 @@ export function useBookings(providerData: any, business: any) {
       
       // Fallback to direct Supabase call if API fails
       try {
+        const supabase = await getSupabaseClient();
         const { data, error: supabaseError } = await supabase
           .from("bookings")
           .select(`
