@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Separator } from '@/components/ui/separator';
 import {
   Dialog,
   DialogContent,
@@ -16,9 +15,6 @@ import {
   Send,
   MessageCircle,
   Users,
-  Clock,
-  User,
-  X
 } from 'lucide-react';
 import { useConversations, ConversationMessage, Conversation } from '@/hooks/useConversations';
 import { useAuth } from '@/contexts/auth/AuthProvider';
@@ -84,10 +80,9 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
     sending,
     sendMessage,
     loadMessages,
-    createConversation,
+    loadParticipants,
     getUserIdentity,
-    getUserType,
-    setActiveConversation,
+    setCurrentConversation,
   } = useConversations();
 
   const [newMessage, setNewMessage] = useState('');
@@ -111,15 +106,15 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
       userType: currentUserType
     });
 
-    if (isOpen && booking && !activeConversationSid) {
+    if (isOpen && booking && !activeConversationSid && bookingConversationsClient) {
       console.log('🎯 Triggering initializeBookingConversation...');
       initializeBookingConversation();
     } else if (isOpen && conversationSid) {
       console.log('Setting conversation SID from prop:', conversationSid);
       setActiveConversationSid(conversationSid);
-      setActiveConversation(conversationSid);
+      setCurrentConversation(conversationSid);
     }
-  }, [isOpen, booking, conversationSid]);
+  }, [isOpen, booking, conversationSid, bookingConversationsClient, setCurrentConversation]);
 
   // Load messages when conversation changes
   useEffect(() => {
@@ -180,12 +175,13 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
       currentUserData: currentUser
     });
 
-    if (!booking || !currentUser) {
+    if (!booking || !currentUser || !bookingConversationsClient) {
       console.log('❌ Missing required data:', { 
         booking: !!booking, 
         user: !!currentUser,
         bookingId: booking?.id,
-        userId: currentUser?.id
+        userId: currentUser?.id,
+        hasClient: !!bookingConversationsClient,
       });
       return;
     }
@@ -211,6 +207,7 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
         });
       }
 
+    try {
       const result = await bookingConversationsClient.getOrCreateConversationForBooking(
         {
           bookingId: booking.id,
@@ -225,74 +222,12 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
       );
 
       setActiveConversationSid(result.conversationId);
-      setActiveConversation(result.conversationId);
+      setCurrentConversation(result.conversationId);
       setEnrichedParticipants(result.participants || []);
-
-    // Add current user (enhanced logic for provider side)
-    let currentUserName = `${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim();
-    let currentUserId = currentUser.id;
-    
-    // For provider side: use the logged-in user's provider data
-    // This handles cases where owner/dispatcher chats instead of assigned provider
-    if (userType === 'provider' && user) {
-      currentUserName = `${user.first_name || ''} ${user.last_name || ''}`.trim();
-      currentUserId = user.id;
-    }
-    
-    bookingParticipants.push({
-      identity: userIdentity,
-      role: userType,
-      name: currentUserName,
-      userId: currentUserId,
-      userType: userType
-    });
-    
-    // Add the other participant (customer or provider) with consistent identity format
-    if (userType === 'provider' && booking.customer_profiles) {
-      // Current user is provider, add customer
-      const customerName = `${booking.customer_profiles.first_name} ${booking.customer_profiles.last_name}`.trim();
-      bookingParticipants.push({
-        identity: `customer-${booking.customer_profiles.id}`,
-        role: 'customer',
-        name: customerName,
-        userId: booking.customer_profiles.id,
-        userType: 'customer'
-      });
-    } else if (userType === 'customer' && booking.providers) {
-      // Current user is customer, add assigned provider from booking
-      const providerName = `${booking.providers.first_name} ${booking.providers.last_name}`.trim();
-      bookingParticipants.push({
-        identity: `provider-${booking.providers.user_id}`,
-        role: 'provider', 
-        name: providerName,
-        userId: booking.providers.user_id,
-        userType: 'provider'
-      });
-    }
-
-    // TEST COMMENT - DEBUGGING PARTICIPANT ISSUES
-    console.log('👥 Enhanced participants logic:');
-    console.log('  - Current user type:', userType);
-    console.log('  - Current user ID:', currentUser?.id);
-    console.log('  - Booking assigned provider ID:', booking.providers?.user_id);
-    console.log('  - Current user is assigned provider:', currentUser?.id === booking.providers?.user_id);
-    console.log('  - Booking object:', booking);
-    console.log('  - booking.customer_profiles:', booking.customer_profiles);
-    console.log('  - booking.providers:', booking.providers);
-
-    console.log('👥 Booking participants:', bookingParticipants);
-
-    try {
-      console.log('📞 Calling createConversation...');
-      const convSid = await createConversation(booking.id, bookingParticipants);
-      console.log('✅ Conversation SID returned:', convSid);
-      if (convSid) {
-        console.log('🎯 Setting active conversation SID:', convSid);
-        setActiveConversationSid(convSid);
-        setActiveConversation(convSid);
-      } else {
-        console.error('❌ Failed to get conversation SID - returned null/undefined');
-      }
+      await Promise.all([
+        loadMessages(result.conversationId),
+        loadParticipants(result.conversationId),
+      ]);
     } catch (error) {
       console.error('💥 Error initializing conversation:', error);
     }

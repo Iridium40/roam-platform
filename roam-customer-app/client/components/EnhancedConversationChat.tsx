@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Separator } from '@/components/ui/separator';
 import {
   Dialog,
   DialogContent,
@@ -16,8 +15,6 @@ import {
   Send,
   MessageCircle,
   Users,
-  Clock,
-  User,
   X,
   Loader2,
   AlertCircle,
@@ -185,24 +182,39 @@ export default function EnhancedConversationChat({
     };
   }, [booking, currentUser?.first_name, currentUser?.id, customer?.first_name, customer?.id]);
 
+  const loadMessages = useCallback(async (convId?: string) => {
+    const targetConversationId = convId || conversationId;
+    if (!targetConversationId || !bookingConversationsClient) return;
+
+    try {
+      const fetchedMessages = await bookingConversationsClient.getMessages(targetConversationId);
+      setMessages(fetchedMessages);
+    } catch (err) {
+      console.error('Error loading messages:', err);
+    }
+  }, [bookingConversationsClient, conversationId]);
+
   const initializeConversation = useCallback(async () => {
+    if (!booking || !bookingData) {
+      setError('Booking details are missing. Please close and retry.');
+      setConversationStatus('error');
+      return;
+    }
+
+    if (!bookingConversationsClient) {
+      // Wait for client to initialize (will re-run when dependency changes)
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
       setConversationStatus('loading');
 
-      if (!booking || !bookingData) {
-        setError('Booking details are missing. Please close and retry.');
-        setConversationStatus('error');
-        return;
-      }
-
-      // Check if messaging is available
-      // Get or create conversation for this booking
-      const participants: BookingConversationParticipantData[] = [];
+      const participantData: BookingConversationParticipantData[] = [];
 
       if (booking.customer_profiles) {
-        participants.push({
+        participantData.push({
           userId: booking.customer_profiles.id,
           userType: 'customer',
           userName: `${booking.customer_profiles.first_name ?? ''} ${booking.customer_profiles.last_name ?? ''}`.trim(),
@@ -211,7 +223,7 @@ export default function EnhancedConversationChat({
       }
 
       if (booking.providers) {
-        participants.push({
+        participantData.push({
           userId: booking.providers.user_id,
           userType: 'provider',
           userName: `${booking.providers.first_name ?? ''} ${booking.providers.last_name ?? ''}`.trim(),
@@ -221,7 +233,7 @@ export default function EnhancedConversationChat({
 
       const result = await bookingConversationsClient.getOrCreateConversationForBooking(
         bookingData,
-        participants,
+        participantData,
       );
 
       if (result.error) {
@@ -232,10 +244,9 @@ export default function EnhancedConversationChat({
 
       setConversationId(result.conversationId);
       setParticipants(result.participants || []);
-      
-      // Load existing messages
+
       await loadMessages(result.conversationId);
-      
+
       setConversationStatus('ready');
     } catch (err) {
       console.error('Error initializing conversation:', err);
@@ -244,22 +255,10 @@ export default function EnhancedConversationChat({
     } finally {
       setLoading(false);
     }
-  }, [booking, bookingData]);
-
-  const loadMessages = useCallback(async (convId?: string) => {
-    const targetConversationId = convId || conversationId;
-    if (!targetConversationId) return;
-
-    try {
-      const fetchedMessages = await bookingConversationsClient.getMessages(targetConversationId);
-      setMessages(fetchedMessages);
-    } catch (err) {
-      console.error('Error loading messages:', err);
-    }
-  }, [conversationId]);
+  }, [booking, bookingData, bookingConversationsClient, loadMessages]);
 
   const sendMessage = useCallback(async () => {
-    if (!newMessage.trim() || !conversationId || !customer || !bookingData) return;
+    if (!newMessage.trim() || !conversationId || !customer || !bookingData || !bookingConversationsClient) return;
 
     try {
       setSending(true);
@@ -284,7 +283,7 @@ export default function EnhancedConversationChat({
     } finally {
       setSending(false);
     }
-  }, [newMessage, conversationId, customer, bookingData, loadMessages]);
+  }, [newMessage, conversationId, customer, bookingData, bookingConversationsClient, loadMessages]);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });

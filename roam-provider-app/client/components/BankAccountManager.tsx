@@ -38,7 +38,7 @@ export default function BankAccountManager({ userId, businessId }: BankAccountMa
       if (response.ok) {
         const data = await response.json();
         setStripeAccount(data.account);
-        setStripeAccountStatus(data.status);
+        setStripeAccountStatus(data.account?.status || 'unknown');
       } else {
         console.log('No Stripe Connect account found');
         setStripeAccount(null);

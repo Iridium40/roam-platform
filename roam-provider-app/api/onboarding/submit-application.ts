@@ -247,29 +247,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .order("created_at", { ascending: false })
       .limit(1);
     
-    // Handle case where no verification session exists yet (use maybeSingle or check array)
-    const verificationSession = verificationSessionData && Array.isArray(verificationSessionData) 
-      ? verificationSessionData[0] 
-      : verificationSessionData;
+    // Normalize Supabase result - it always returns an array, so get first item or null
+    const verificationSession = Array.isArray(verificationSessionData) && verificationSessionData.length > 0
+      ? verificationSessionData[0]
+      : null;
+    
+    const verificationStatus = verificationSession?.status || null;
     
     console.log("Stripe Identity verification session:", {
       found: !!verificationSession,
-      status: verificationSession?.status,
+      status: verificationStatus,
       error: verificationError?.message
     });
     
     // Allow submission if:
     // 1. identity_verified is true (verification completed), OR
     // 2. There's a verification session with status "processing" or "verified" (in progress/pending)
-    const hasVerificationStarted = verificationSession && 
-      (verificationSession.status === 'processing' || verificationSession.status === 'verified');
+    const hasVerificationStarted = verificationSession && verificationStatus && 
+      (verificationStatus === 'processing' || verificationStatus === 'verified');
     
     const canSubmit = businessProfile.identity_verified || hasVerificationStarted;
     
     if (!canSubmit) {
       console.error("Identity verification not started or failed:", {
         identity_verified: businessProfile.identity_verified,
-        verificationStatus: verificationSession?.status,
+        verificationStatus: verificationStatus,
         hasSession: !!verificationSession,
         verificationError: verificationError?.message
       });
@@ -277,14 +279,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({
         error: "Identity verification required",
         details: "Please complete Stripe Identity verification before submitting your application.",
-        currentStatus: verificationSession?.status || 'not_started',
+        currentStatus: verificationStatus || 'not_started',
         nextStep: "Complete identity verification in the onboarding flow"
       });
     }
 
     console.log("Identity verification check passed:", {
       identity_verified: businessProfile.identity_verified,
-      verificationStatus: verificationSession?.status,
+      verificationStatus: verificationStatus,
       verifiedAt: businessProfile.identity_verified_at
     });
 

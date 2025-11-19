@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
-import { createTwilioConversationsWithDBFromEnv } from '@roam/shared';
+import { createTwilioConversationsService } from '@roam/shared/dist/services/twilio/TwilioConversationsService.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS headers
@@ -12,7 +12,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     // Test Twilio service availability
-    const twilioService = createTwilioConversationsWithDBFromEnv();
+    const twilioService = createTwilioConversationsService();
     const isAvailable = !!twilioService;
     
     if (!isAvailable) {
