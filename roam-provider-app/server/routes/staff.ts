@@ -642,10 +642,57 @@ export const createStaffManually = async (req: Request, res: Response) => {
 
     console.log(`Staff member ${firstName} ${lastName} created successfully`);
 
+    // Send welcome email with login credentials (only for newly created users)
+    let emailSent = false;
+    if (!authUserExists) {
+      try {
+        console.log('📧 Sending welcome email with credentials...');
+        emailSent = await EmailService.sendStaffWelcomeEmail(
+          email,
+          firstName,
+          lastName,
+          business.business_name,
+          role,
+          temporaryPassword,
+          req.headers.origin || process.env.FRONTEND_URL || 'http://localhost:5177/provider-login'
+        );
+        
+        if (emailSent) {
+          console.log('✅ Welcome email sent successfully');
+        } else {
+          console.warn('⚠️ Welcome email may not have been delivered');
+        }
+      } catch (emailError) {
+        console.error('⚠️ Error sending welcome email (non-fatal):', emailError);
+        // Continue anyway - staff was created successfully
+      }
+    } else {
+      // User already exists - send welcome email without password
+      try {
+        console.log('📧 Sending welcome email to existing user...');
+        emailSent = await EmailService.sendEmail({
+          to: email,
+          subject: `Welcome to ${business.business_name} on ROAM! 🎉`,
+          html: `
+            <h1>Welcome to ${business.business_name}!</h1>
+            <p>Hi ${firstName},</p>
+            <p>You've been added as a ${role} at <strong>${business.business_name}</strong> on the ROAM platform.</p>
+            <p>Since you already have a ROAM account, you can login immediately at:</p>
+            <p><a href="${req.headers.origin || process.env.FRONTEND_URL || 'http://localhost:5177'}/provider-login" style="background-color: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Login to ROAM Provider Portal →</a></p>
+            <p>Use your existing email and password to access your new role at ${business.business_name}.</p>
+            <p>Best regards,<br>The ROAM Team</p>
+          `,
+          text: `Welcome to ${business.business_name}! You've been added as a ${role}. Login at ${req.headers.origin || process.env.FRONTEND_URL || 'http://localhost:5177'}/provider-login with your existing credentials.`
+        });
+      } catch (emailError) {
+        console.error('⚠️ Error sending welcome email (non-fatal):', emailError);
+      }
+    }
+
     return res.status(200).json({
       success: true,
       message: 'Staff member created successfully',
-      temporaryPassword: temporaryPassword, // Return temp password so owner can share it
+      temporaryPassword: authUserExists ? null : temporaryPassword, // Only return if new user
       provider: {
         id: provider.id,
         firstName: firstName,
@@ -653,6 +700,8 @@ export const createStaffManually = async (req: Request, res: Response) => {
         email: email,
         role: role,
       },
+      emailSent: emailSent,
+      existingUser: authUserExists,
     });
 
   } catch (error) {

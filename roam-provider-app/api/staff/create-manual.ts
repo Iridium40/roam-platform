@@ -4,9 +4,20 @@ import type { User as SupabaseUser } from '@supabase/supabase-js';
 import crypto from 'crypto';
 import { EmailService } from '../../server/services/emailService';
 
+const supabaseUrl = process.env.VITE_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!supabaseUrl || !supabaseServiceKey) {
+  console.error('❌ Missing Supabase configuration:', {
+    hasUrl: !!supabaseUrl,
+    hasServiceKey: !!supabaseServiceKey,
+    urlSource: process.env.VITE_PUBLIC_SUPABASE_URL ? 'VITE_PUBLIC' : process.env.SUPABASE_URL ? 'SUPABASE_URL' : 'none'
+  });
+}
+
 const supabase = createClient(
-  process.env.VITE_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  supabaseUrl!,
+  supabaseServiceKey!
 );
 
 interface ManualStaffCreateRequest {
@@ -45,6 +56,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
+    // Validate Supabase configuration
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error('❌ Supabase not configured properly');
+      return res.status(500).json({ 
+        error: 'Server configuration error',
+        details: 'Supabase credentials are not properly configured'
+      });
+    }
+
     const {
       businessId,
       firstName,
@@ -189,6 +209,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const temporaryPassword = generateTemporaryPassword();
     
     console.log('🔐 Creating new auth user...');
+    console.log('📧 Email:', email);
+    console.log('🔑 Service role key configured:', !!process.env.SUPABASE_SERVICE_ROLE_KEY);
+    console.log('🔑 Service role key starts with:', process.env.SUPABASE_SERVICE_ROLE_KEY?.substring(0, 10));
+    
     const { data: newUser, error: authError } = await supabase.auth.admin.createUser({
       email: email,
       password: temporaryPassword,
@@ -201,11 +225,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     });
 
-    if (authError || !newUser.user) {
+    if (authError) {
       console.error('❌ Error creating auth user:', authError);
+      console.error('❌ Auth error details:', JSON.stringify(authError, null, 2));
       return res.status(500).json({ 
         error: 'Failed to create user account',
-        details: authError?.message || 'Unknown error'
+        details: authError.message || authError.toString() || 'Unknown error',
+        code: authError.status || authError.code
+      });
+    }
+
+    if (!newUser || !newUser.user) {
+      console.error('❌ No user returned from createUser');
+      console.error('❌ Response data:', JSON.stringify(newUser, null, 2));
+      return res.status(500).json({ 
+        error: 'Failed to create user account',
+        details: 'User creation succeeded but no user data was returned'
       });
     }
 

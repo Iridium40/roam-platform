@@ -731,17 +731,56 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
         }),
       });
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || result.details || 'Failed to create staff member');
+      let result;
+      try {
+        result = await response.json();
+      } catch (jsonError) {
+        // If response is not JSON, get text instead
+        const text = await response.text();
+        console.error('❌ Non-JSON response:', text);
+        throw new Error(`Server error: ${response.status} ${response.statusText}. ${text.substring(0, 200)}`);
       }
 
-      toast({
-        title: "Staff Member Created",
-        description: `${manualStaffData.firstName} ${manualStaffData.lastName} has been added. Temporary password: ${result.temporaryPassword}`,
-        duration: 10000, // Show for 10 seconds so they can copy the password
-      });
+      if (!response.ok) {
+        const errorMessage = result.error || result.details || `Failed to create staff member (${response.status})`;
+        const errorDetails = result.code ? `Error code: ${result.code}. ` : '';
+        console.error('❌ API Error:', {
+          status: response.status,
+          error: result.error,
+          details: result.details,
+          code: result.code,
+          fullResponse: result
+        });
+        throw new Error(`${errorDetails}${errorMessage}`);
+      }
+
+      // Show success message
+      if (result.emailSent) {
+        toast({
+          title: "Staff Member Created",
+          description: `${manualStaffData.firstName} ${manualStaffData.lastName} has been added. A welcome email with login credentials has been sent to ${manualStaffData.email}.`,
+          duration: 8000,
+        });
+      } else if (result.temporaryPassword) {
+        // Fallback: show password if email wasn't sent
+        toast({
+          title: "Staff Member Created",
+          description: `${manualStaffData.firstName} ${manualStaffData.lastName} has been added. Temporary password: ${result.temporaryPassword}`,
+          duration: 10000, // Show for 10 seconds so they can copy the password
+        });
+      } else if (result.existingUser) {
+        toast({
+          title: "Staff Member Added",
+          description: `${manualStaffData.firstName} ${manualStaffData.lastName} already has an account and has been added to your business.`,
+          duration: 6000,
+        });
+      } else {
+        toast({
+          title: "Staff Member Created",
+          description: `${manualStaffData.firstName} ${manualStaffData.lastName} has been added successfully.`,
+          duration: 6000,
+        });
+      }
 
       // Reset form
       setManualStaffData({
