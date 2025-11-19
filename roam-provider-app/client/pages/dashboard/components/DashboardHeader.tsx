@@ -73,7 +73,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
   };
 
   return (
-    <header className="bg-white border-b border-gray-200 px-4 py-3">
+    <header className="bg-white border-b border-gray-200 px-4 py-3 relative z-50">
       <div className="flex items-center justify-between">
         {/* Mobile menu button */}
         <Button
@@ -81,6 +81,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
           size="sm"
           className="md:hidden"
           onClick={onMobileMenuToggle}
+          aria-label="Toggle mobile menu"
         >
           <Menu className="w-5 h-5" />
         </Button>

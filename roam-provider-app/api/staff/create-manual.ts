@@ -2,7 +2,7 @@ import { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import crypto from 'crypto';
-import { EmailService } from '../_lib/emailService';
+import { EmailService } from '../../server/services/emailService';
 
 // Get Supabase configuration
 const supabaseUrl = process.env.VITE_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;

@@ -82,6 +82,15 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
   isMobileOpen,
   onMobileClose,
 }) => {
+  // Handle tab change and close mobile menu
+  const handleTabChange = (tab: string) => {
+    onTabChange(tab);
+    // Close mobile menu when a tab is selected
+    if (window.innerWidth < 768) {
+      onMobileClose();
+    }
+  };
+
   // Debug: Log navigation items
   console.log('Navigation items:', navigationItems.map(item => ({ id: item.id, label: item.label })));
   console.log('Active tab:', activeTab);
@@ -90,16 +99,17 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
       {/* Mobile overlay */}
       {isMobileOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+          className="fixed inset-0 bg-black bg-opacity-50 z-[45] md:hidden"
           onClick={onMobileClose}
+          aria-hidden="true"
         />
       )}
 
       {/* Sidebar */}
       <aside
         className={`
-          fixed md:static inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200
-          transform transition-transform duration-200 ease-in-out
+          fixed md:static inset-y-0 left-0 z-[60] w-64 bg-white border-r border-gray-200
+          transform transition-transform duration-300 ease-in-out
           ${isMobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
         `}
         style={{ minHeight: '100vh' }}
@@ -134,7 +144,7 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
                     ${isActive ? "bg-primary text-primary-foreground" : "hover:bg-gray-100"}
                     ${item.id === 'staff' ? 'border-2 border-red-500' : ''}
                   `}
-                  onClick={() => onTabChange(item.id)}
+                  onClick={() => handleTabChange(item.id)}
                 >
                   <div className="flex items-center space-x-3">
                     <Icon className="w-5 h-5" />
