@@ -115,6 +115,12 @@ export default function BusinessProfileSetup({
 
   const loadExistingData = async () => {
     try {
+      // Validate businessId is available
+      if (!businessId) {
+        console.error('businessId is not available, cannot load business profile');
+        return;
+      }
+      
       // First, try to get business data from sessionStorage (from token validation)
       const phase2Session = sessionStorage.getItem('phase2_session');
       let fallbackData: any = null;
@@ -137,8 +143,10 @@ export default function BusinessProfileSetup({
       }
       
       // Try the onboarding-specific endpoint first, fallback to regular endpoint
+      console.log(`Loading business profile for businessId: ${businessId}`);
       let response = await fetch(`/api/onboarding/business-profile/${businessId}`);
       if (!response.ok) {
+        console.log(`Onboarding endpoint failed (${response.status}), trying regular endpoint`);
         // Fallback to regular business profile endpoint
         response = await fetch(`/api/business/profile/${businessId}`);
       }
@@ -418,27 +426,39 @@ export default function BusinessProfileSetup({
         await uploadImage("cover");
       }
 
-      // Ensure we have required fields - should be populated from Phase 1
-      if (!formData.businessName || !formData.businessName.trim()) {
-        throw new Error("Business name is required. Please ensure Phase 1 data is loaded.");
+      // Prepare update payload - only include fields that have values
+      // Business name and description should already exist from Phase 1, but we'll include them if available
+      const updatePayload: any = {};
+      
+      if (formData.businessName && formData.businessName.trim()) {
+        updatePayload.businessName = formData.businessName.trim();
       }
-
-      if (!formData.detailedDescription || !formData.detailedDescription.trim()) {
-        throw new Error("Business description is required. Please ensure Phase 1 data is loaded.");
+      
+      if (formData.detailedDescription && formData.detailedDescription.trim()) {
+        updatePayload.detailedDescription = formData.detailedDescription.trim();
+      }
+      
+      if (formData.websiteUrl && formData.websiteUrl.trim()) {
+        updatePayload.websiteUrl = formData.websiteUrl.trim();
+      }
+      
+      if (formData.socialMediaLinks && Object.keys(formData.socialMediaLinks).length > 0) {
+        updatePayload.socialMediaLinks = formData.socialMediaLinks;
+      }
+      
+      if (formData.logoUrl) {
+        updatePayload.logoUrl = formData.logoUrl;
+      }
+      
+      if (formData.coverImageUrl) {
+        updatePayload.coverImageUrl = formData.coverImageUrl;
       }
 
       // Save business profile data using proper endpoint
       const response = await fetch(`/api/business/profile/${businessId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          businessName: formData.businessName.trim(),
-          detailedDescription: formData.detailedDescription.trim(),
-          websiteUrl: formData.websiteUrl?.trim() || "",
-          socialMediaLinks: formData.socialMediaLinks || {},
-          logoUrl: formData.logoUrl || undefined,
-          coverImageUrl: formData.coverImageUrl || undefined,
-        }),
+        body: JSON.stringify(updatePayload),
       });
 
       if (!response.ok) {

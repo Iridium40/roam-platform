@@ -144,8 +144,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         contact_email
       } = body;
 
-      // Validate required fields (businessName is only required if provided)
-      if (businessName !== undefined && (typeof businessName !== 'string' || !businessName.trim())) {
+      // Validate required fields (businessName is only required if provided and not empty)
+      // Allow undefined/null/empty string - we'll only update if a value is provided
+      if (businessName !== undefined && businessName !== null && businessName !== '' && (typeof businessName !== 'string' || !businessName.trim())) {
         return res.status(400).json({ error: 'businessName must be a non-empty string' });
       }
 
@@ -157,14 +158,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
       }
 
-      const { data: existingBusiness } = await supabase
+      const { data: existingBusiness, error: fetchError } = await supabase
         .from('business_profiles')
-        .select('id')
+        .select('id, business_name')
         .eq('id', businessId)
         .single();
 
-      if (!existingBusiness) {
+      if (fetchError || !existingBusiness) {
+        console.error('Error fetching existing business:', fetchError);
         return res.status(404).json({ error: 'Business profile not found' });
+      }
+
+      // If businessName is provided but empty, and it doesn't exist in DB, that's an error
+      // But if businessName is empty/undefined and it exists in DB, that's fine - we're just updating other fields
+      if (businessName !== undefined && businessName !== null && businessName !== '') {
+        if (typeof businessName !== 'string' || !businessName.trim()) {
+          return res.status(400).json({ error: 'businessName must be a non-empty string' });
+        }
+      } else if (!existingBusiness.business_name) {
+        // Business name is required if it doesn't exist in the database
+        return res.status(400).json({ error: 'businessName is required' });
       }
 
       // Prepare update data, only including defined values
@@ -172,7 +185,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const allowedFields = ['business_name', 'business_description', 'website_url', 'social_media', 'logo_url', 'cover_image_url', 'contact_email'];
       const updateData: Record<string, any> = {};
 
-      if (businessName !== undefined) {
+      if (businessName !== undefined && businessName !== null && businessName !== '' && typeof businessName === 'string') {
         updateData.business_name = businessName.trim();
       }
       if (detailedDescription !== undefined) {
