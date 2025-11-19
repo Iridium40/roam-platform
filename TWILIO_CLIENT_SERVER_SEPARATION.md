@@ -121,8 +121,8 @@ await client.sendMessage(conversationId, message, userId, userType);
 // roam-provider-app/api/twilio-conversations.ts
 // roam-customer-app/api/twilio-conversations.ts
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-// Import directly from dist - NOT from main index
-import twilioConversationsHandler from "@roam/shared/dist/api/twilio-conversations-handler.js";
+// Import using relative path (Vercel serverless compatibility)
+import twilioConversationsHandler from "../../packages/shared/dist/api/twilio-conversations-handler.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   return twilioConversationsHandler(req, res);

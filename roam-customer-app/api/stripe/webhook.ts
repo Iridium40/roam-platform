@@ -62,6 +62,10 @@ export const config = {
 };
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // Declare at function scope to be accessible in catch block
+  let event: Stripe.Event | undefined;
+  let webhookEventId: string | null = null;
+
   try {
     console.log('🔔 Webhook received:', req.method);
     
@@ -83,7 +87,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     console.log('🔐 Verifying webhook signature...');
-    let event: Stripe.Event;
 
     try {
       // Get raw body as buffer for signature verification
@@ -97,8 +100,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: `Webhook signature verification failed: ${err.message}` });
     }
 
+    // At this point event is guaranteed to be defined
+    if (!event) {
+      return res.status(400).json({ error: 'Event verification failed' });
+    }
+
   // Record webhook event in database for audit trail
-  let webhookEventId: string | null = null;
   try {
     const { data: webhookEvent, error: webhookError } = await supabase
       .from('stripe_tax_webhook_events')

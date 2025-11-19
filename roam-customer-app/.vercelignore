@@ -4,9 +4,12 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Build outputs (Vercel will build these)
+# Build outputs (Vercel will build these) - but keep shared package
 dist/
 build/
+
+# IMPORTANT: Don't ignore packages directory - needed for @roam/shared
+!../packages/
 
 # Development files
 .env.local

@@ -1,10 +1,12 @@
-import React from "react";
+import React, { useState } from "react";
 
 // Import modular components
 import BookingStatsSection from "./bookings/BookingStatsSection";
 import BookingFiltersSection from "./bookings/BookingFiltersSection";
 import BookingListSection from "./bookings/BookingListSection";
 import BookingDetailModal from "./bookings/BookingDetailModal";
+import WeekCalendarView from "./bookings/WeekCalendarView";
+import MonthCalendarView from "./bookings/MonthCalendarView";
 
 // Import custom hook
 import { useBookings } from "./bookings/hooks/useBookings";
@@ -15,6 +17,9 @@ interface BookingsTabProps {
 }
 
 export function BookingsTab({ providerData, business }: BookingsTabProps) {
+  const [viewType, setViewType] = useState<"list" | "week" | "month">("list");
+  const [currentDate, setCurrentDate] = useState(new Date());
+
   const {
     // Data
     bookings,
@@ -88,32 +93,88 @@ export function BookingsTab({ providerData, business }: BookingsTabProps) {
         pastBookings={pastBookings}
       />
 
-      {/* Filters */}
-      <BookingFiltersSection
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        selectedStatusFilter={selectedStatusFilter}
-        setSelectedStatusFilter={setSelectedStatusFilter}
-      />
+      {/* Filters and View Toggle */}
+      <div className="space-y-4">
+        <BookingFiltersSection
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          selectedStatusFilter={selectedStatusFilter}
+          setSelectedStatusFilter={setSelectedStatusFilter}
+        />
+        
+        {/* View Toggle */}
+        <div className="flex items-center justify-end gap-2">
+          <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+            <button
+              onClick={() => setViewType("list")}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                viewType === "list"
+                  ? "bg-white text-gray-900 shadow-sm"
+                  : "text-gray-600 hover:text-gray-900"
+              }`}
+            >
+              List
+            </button>
+            <button
+              onClick={() => setViewType("week")}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                viewType === "week"
+                  ? "bg-white text-gray-900 shadow-sm"
+                  : "text-gray-600 hover:text-gray-900"
+              }`}
+            >
+              Week
+            </button>
+            <button
+              onClick={() => setViewType("month")}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                viewType === "month"
+                  ? "bg-white text-gray-900 shadow-sm"
+                  : "text-gray-600 hover:text-gray-900"
+              }`}
+            >
+              Month
+            </button>
+          </div>
+        </div>
+      </div>
 
-      {/* Booking Lists with Tabs */}
-      <BookingListSection
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        presentBookings={presentBookings}
-        futureBookings={futureBookings}
-        pastBookings={pastBookings}
-        paginatedData={paginatedData}
-        presentPage={presentPage}
-        setPresentPage={setPresentPage}
-        futurePage={futurePage}
-        setFuturePage={setFuturePage}
-        pastPage={pastPage}
-        setPastPage={setPastPage}
-        onViewDetails={setSelectedBooking}
-        onUpdateStatus={updateBookingStatus}
-        formatDisplayTime={formatDisplayTime}
-      />
+      {/* Booking Views */}
+      {viewType === "list" ? (
+        <BookingListSection
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          presentBookings={presentBookings}
+          futureBookings={futureBookings}
+          pastBookings={pastBookings}
+          paginatedData={paginatedData}
+          presentPage={presentPage}
+          setPresentPage={setPresentPage}
+          futurePage={futurePage}
+          setFuturePage={setFuturePage}
+          pastPage={pastPage}
+          setPastPage={setPastPage}
+          onViewDetails={setSelectedBooking}
+          onUpdateStatus={updateBookingStatus}
+          formatDisplayTime={formatDisplayTime}
+        />
+      ) : viewType === "week" ? (
+        <WeekCalendarView
+          bookings={[...presentBookings, ...futureBookings, ...pastBookings]}
+          currentDate={currentDate}
+          onDateChange={setCurrentDate}
+          onViewDetails={setSelectedBooking}
+          formatDisplayTime={formatDisplayTime}
+        />
+      ) : (
+        <MonthCalendarView
+          bookings={[...presentBookings, ...futureBookings, ...pastBookings]}
+          currentDate={currentDate}
+          onDateChange={setCurrentDate}
+          onViewDetails={setSelectedBooking}
+          formatDisplayTime={formatDisplayTime}
+        />
+      )}
 
       {/* Booking Detail Modal */}
       <BookingDetailModal
