@@ -4,21 +4,24 @@ import type { User as SupabaseUser } from '@supabase/supabase-js';
 import crypto from 'crypto';
 import { EmailService } from '../_lib/emailService';
 
+// Get Supabase configuration
 const supabaseUrl = process.env.VITE_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-if (!supabaseUrl || !supabaseServiceKey) {
-  console.error('❌ Missing Supabase configuration:', {
-    hasUrl: !!supabaseUrl,
-    hasServiceKey: !!supabaseServiceKey,
-    urlSource: process.env.VITE_PUBLIC_SUPABASE_URL ? 'VITE_PUBLIC' : process.env.SUPABASE_URL ? 'SUPABASE_URL' : 'none'
-  });
-}
+// Initialize Supabase client - will be created in handler if config is valid
+let supabase: ReturnType<typeof createClient> | null = null;
 
-const supabase = createClient(
-  supabaseUrl!,
-  supabaseServiceKey!
-);
+function getSupabaseClient() {
+  if (!supabaseUrl || !supabaseServiceKey) {
+    throw new Error('Supabase configuration is missing. Check environment variables.');
+  }
+  
+  if (!supabase) {
+    supabase = createClient(supabaseUrl, supabaseServiceKey);
+  }
+  
+  return supabase;
+}
 
 interface ManualStaffCreateRequest {
   businessId: string;
@@ -56,12 +59,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    // Validate Supabase configuration
-    if (!supabaseUrl || !supabaseServiceKey) {
-      console.error('❌ Supabase not configured properly');
+    // Validate Supabase configuration and get client
+    let supabaseClient;
+    try {
+      supabaseClient = getSupabaseClient();
+    } catch (configError) {
+      console.error('❌ Supabase configuration error:', configError);
       return res.status(500).json({ 
         error: 'Server configuration error',
-        details: 'Supabase credentials are not properly configured'
+        details: configError instanceof Error ? configError.message : 'Supabase credentials are not properly configured'
       });
     }
 
@@ -97,7 +103,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Get business information
-    const { data: business, error: businessError } = await supabase
+    const { data: business, error: businessError } = await supabaseClient
       .from('business_profiles')
       .select('business_name')
       .eq('id', businessId)
@@ -109,7 +115,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Check if user already exists with this email
-    const { data: existingUsers, error: listError } = await supabase.auth.admin.listUsers();
+    const { data: existingUsers, error: listError } = await supabaseClient.auth.admin.listUsers();
     
     if (listError) {
       console.error('❌ Error listing users:', listError);
@@ -139,7 +145,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // User exists but not in this business - add them as provider
       console.log('ℹ️ User exists, adding to business as provider');
       
-      const { data: newProvider, error: providerError } = await supabase
+      const { data: newProvider, error: providerError } = await supabaseClient
         .from('providers')
         .insert({
           user_id: userExists.id,
@@ -213,8 +219,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.log('🔑 Service role key configured:', !!process.env.SUPABASE_SERVICE_ROLE_KEY);
     console.log('🔑 Service role key starts with:', process.env.SUPABASE_SERVICE_ROLE_KEY?.substring(0, 10));
     
-    const { data: newUser, error: authError } = await supabase.auth.admin.createUser({
-      email: email,
+    const { data: newUser, error: authError } = await supabaseClient.auth.admin.createUser({
+      email: email.toLowerCase().trim(), // Normalize email
       password: temporaryPassword,
       email_confirm: true, // Auto-confirm email
       user_metadata: {
@@ -222,6 +228,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         last_name: lastName,
         phone: phone,
         role: 'provider',
+        must_change_password: true, // Flag to force password change on first login
+        temporary_password: true, // Mark as temporary password
       }
     });
 
@@ -248,13 +256,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Create provider record
     console.log('📝 Creating provider record...');
-    const { data: newProvider, error: providerError } = await supabase
+    const { data: newProvider, error: providerError } = await supabaseClient
       .from('providers')
       .insert({
         user_id: newUser.user.id,
         first_name: firstName,
         last_name: lastName,
-        email: email,
+        email: email.toLowerCase().trim(), // Normalize email
         phone: phone || '',
         provider_role: role,
         location_id: locationId || null,
@@ -268,10 +276,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (providerError) {
       console.error('❌ Error creating provider record:', providerError);
+      console.error('❌ Provider error details:', JSON.stringify(providerError, null, 2));
       
       // Cleanup: delete the auth user we just created
       try {
-        await supabase.auth.admin.deleteUser(newUser.user.id);
+        await supabaseClient.auth.admin.deleteUser(newUser.user.id);
         console.log('🗑️ Cleaned up auth user after provider creation failure');
       } catch (cleanupError) {
         console.error('⚠️ Failed to cleanup auth user:', cleanupError);
@@ -279,7 +288,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       
       return res.status(500).json({ 
         error: 'Failed to create provider record',
-        details: providerError.message
+        details: providerError.message || providerError.toString(),
+        code: providerError.code,
+        hint: providerError.hint
       });
     }
 

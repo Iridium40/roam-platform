@@ -26,6 +26,7 @@ import ProviderPortal from "./pages/ProviderPortal";
 import ProviderLogin from "./pages/ProviderLogin";
 import ProviderSignup from "./pages/ProviderSignup";
 import ProviderDashboard from "./pages/ProviderDashboard";
+import ChangePassword from "./pages/ChangePassword";
 import ProviderOnboardingFlow from "./pages/onboarding/ProviderOnboardingFlow";
 import ProviderOnboardingPhase1 from "./pages/onboarding/ProviderOnboardingPhase1";
 import LandingPage from "./pages/LandingPage";
@@ -77,6 +78,7 @@ const App = () => (
             {/* Provider Authentication - Separate Login & Signup */}
             <Route path="/provider-login" element={<ProviderLogin />} />
             <Route path="/provider-signup" element={<ProviderSignup />} />
+            <Route path="/change-password" element={<ChangePassword />} />
             {/* Legacy /login route - redirect to provider-login */}
             <Route path="/login" element={<Navigate to="/provider-login" replace />} />
 

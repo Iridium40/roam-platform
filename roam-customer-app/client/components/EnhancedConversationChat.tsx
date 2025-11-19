@@ -309,6 +309,15 @@ export default function EnhancedConversationChat({
     }
   }, [isOpen, conversationId, loadMessages]);
 
+  const participantMap = useMemo(() => {
+    const map = new Map<string, BookingConversationParticipant>();
+    for (const participant of participants) {
+      const key = `${participant.userType}-${participant.userId}`;
+      map.set(key, participant);
+    }
+    return map;
+  }, [participants]);
+
   const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -363,15 +372,6 @@ export default function EnhancedConversationChat({
       </Dialog>
     );
   }
-
-  const participantMap = useMemo(() => {
-    const map = new Map<string, BookingConversationParticipant>();
-    for (const participant of participants) {
-      const key = `${participant.userType}-${participant.userId}`;
-      map.set(key, participant);
-    }
-    return map;
-  }, [participants]);
 
   const resolveAuthor = (message: ConversationMessageWithAuthor) => {
     const identity = `${message.author_type}-${message.author_id}`;

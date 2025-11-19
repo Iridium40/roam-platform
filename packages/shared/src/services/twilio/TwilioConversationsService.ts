@@ -207,19 +207,46 @@ export class TwilioConversationsService {
         }
       }
 
-      // Add participant to Twilio
-      const participantResult = await this.participantService.addParticipant(conversationSid, {
-        identity,
-        attributes: {
-          role: participant.userType,
-          name: participant.userName || `${participant.userType}-${participant.userId}`,
-          userId: participant.userId,
-          userType: participant.userType,
-        },
-      });
+      let twilioParticipantSid = existingParticipant?.twilio_participant_sid || null;
 
-      if (!participantResult.success || !participantResult.data) {
-        console.error(`Failed to add participant ${identity}:`, participantResult.error);
+      if (!twilioParticipantSid) {
+        // Add participant to Twilio
+        const participantResult = await this.participantService.addParticipant(conversationSid, {
+          identity,
+          attributes: {
+            role: participant.userType,
+            name: participant.userName || `${participant.userType}-${participant.userId}`,
+            userId: participant.userId,
+            userType: participant.userType,
+          },
+        });
+
+        if (!participantResult.success || !participantResult.data) {
+          const errorMessage = participantResult.error || 'Unknown error adding participant';
+
+          // Ignore duplicate participant errors (Twilio 50433)
+          if (errorMessage.toLowerCase().includes('participant already exists')) {
+            const existingInTwilio = await this.participantService.getParticipantByIdentity(
+              conversationSid,
+              identity
+            );
+            if (existingInTwilio.success && existingInTwilio.data) {
+              twilioParticipantSid = existingInTwilio.data.sid;
+            } else {
+              console.warn(`Participant ${identity} already exists in Twilio but could not fetch details. Skipping.`);
+              continue;
+            }
+          } else {
+            console.error(`Failed to add participant ${identity}:`, errorMessage);
+            continue;
+          }
+        } else {
+          twilioParticipantSid = participantResult.data.sid;
+        }
+      }
+
+      if (!twilioParticipantSid) {
+        console.warn(`Unable to resolve Twilio participant SID for ${identity}. Skipping Supabase upsert.`);
         continue;
       }
 
@@ -230,7 +257,7 @@ export class TwilioConversationsService {
           conversation_id: conversationMetadataId,
           user_id: participant.userId,
           user_type: participant.userType,
-          twilio_participant_sid: participantResult.data.sid,
+          twilio_participant_sid: twilioParticipantSid,
           is_active: true,
           joined_at: new Date().toISOString(),
         }, {

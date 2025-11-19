@@ -30,12 +30,14 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./client/*"],
-      "@shared/*": ["./shared/*"]
+      "@shared/*": ["./shared/*"],
+      "@roam/shared/dist/*": ["../packages/shared/dist/*"]
     }
   },
   "include": [
     "client/**/*",
     "server/**/*",
+    "api/**/*",
     "shared/**/*",
     "vite.config.ts",
     "vite.config.server.ts"

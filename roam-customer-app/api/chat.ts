@@ -323,8 +323,13 @@ Be friendly, professional, and helpful. Answer questions accurately based on thi
 
     // Convert messages to Anthropic format
     const conversation = messages.map((msg) => ({
-      role: msg.role === "assistant" ? "assistant" : "user" as const,
-      content: msg.content,
+      role: (msg.role === "assistant" ? "assistant" : "user") as "assistant" | "user",
+      content: [
+        {
+          type: "text" as const,
+          text: msg.content,
+        },
+      ],
     }));
 
     // Use Anthropic SDK directly

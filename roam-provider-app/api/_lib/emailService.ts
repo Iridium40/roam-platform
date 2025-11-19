@@ -167,8 +167,8 @@ export class EmailService {
         <h3 style="margin-top: 0;">Your Login Credentials</h3>
         <p style="margin-bottom: 8px;"><strong>Email:</strong> ${to}</p>
         <p style="margin-bottom: 8px;"><strong>Temporary Password:</strong> <code style="background-color: #fff; padding: 4px 8px; border-radius: 4px; font-family: monospace; font-size: 16px; color: #dc2626;">${temporaryPassword}</code></p>
-        <p style="margin-top: 16px; font-size: 14px; color: #6b7280;">
-          <strong>Important:</strong> Please change your password after your first login for security.
+        <p style="margin-top: 16px; font-size: 14px; color: #dc2626; font-weight: 600;">
+          <strong>⚠️ Important:</strong> This is a temporary password. You <strong>must</strong> change it when you first log in for security.
         </p>
       </div>
 
@@ -176,7 +176,7 @@ export class EmailService {
       <ol style="line-height: 1.8;">
         <li>Click the login button below or visit <a href="${loginUrl}" style="color: ${this.brandColor};">${loginUrl}</a></li>
         <li>Enter your email and the temporary password above</li>
-        <li>You'll be prompted to change your password</li>
+        <li><strong>You will be required to set a new password</strong> - this is mandatory for security</li>
         <li>Complete your profile setup</li>
         <li>Start managing your bookings and schedule!</li>
       </ol>

@@ -67,6 +67,13 @@ export default function ProviderLogin() {
         throw new Error("No provider account found for this email. Please sign up as a provider.");
       }
 
+      // Check if user needs to change password (temporary password)
+      if (authData.user.user_metadata?.must_change_password || authData.user.user_metadata?.temporary_password) {
+        // Redirect to password change page
+        navigate("/change-password");
+        return;
+      }
+
       // Success - redirect to provider dashboard
       navigate("/provider-dashboard");
     } catch (error) {
