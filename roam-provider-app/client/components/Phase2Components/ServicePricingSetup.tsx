@@ -739,7 +739,7 @@ export default function ServicePricingSetup({
                 </>
               ) : (
                 <>
-                  Continue to Final Review
+                  Continue to Banking & Payouts
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </>
               )}

@@ -490,7 +490,7 @@ export default function BankingPayoutSetup({
                 </>
               ) : (
                 <>
-                  Continue to Service Pricing
+                  Complete Setup
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </>
               )}

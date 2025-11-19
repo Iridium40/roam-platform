@@ -251,7 +251,7 @@ export default function BusinessHoursSetup({
                 </>
               ) : (
                 <>
-                  Continue to Banking & Payouts
+                  Continue to Services & Pricing
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </>
               )}

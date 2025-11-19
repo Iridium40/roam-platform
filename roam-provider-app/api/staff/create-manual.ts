@@ -34,6 +34,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Content-Type', 'application/json');
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
@@ -285,10 +286,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   } catch (error) {
     console.error('❌ Error creating manual staff member:', error);
-    return res.status(500).json({ 
-      error: 'Internal server error',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    });
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    
+    console.error('❌ Error stack:', errorStack);
+    
+    // Ensure we always return JSON, even for unexpected errors
+    try {
+      return res.status(500).json({ 
+        error: 'Internal server error',
+        details: errorMessage,
+        ...(process.env.NODE_ENV === 'development' && { stack: errorStack })
+      });
+    } catch (jsonError) {
+      // If JSON response fails, log and return plain text as fallback
+      console.error('❌ Failed to send JSON error response:', jsonError);
+      res.status(500).send(`Internal server error: ${errorMessage}`);
+    }
   }
 }
 
