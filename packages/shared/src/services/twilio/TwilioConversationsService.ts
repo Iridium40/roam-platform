@@ -4,6 +4,45 @@ import { ParticipantService } from './ParticipantService.js';
 import { MessageService } from './MessageService.js';
 import type { TwilioConfig } from './types.js';
 
+type ConversationUserProfile = {
+  id?: string;
+  user_id?: string;
+  first_name?: string | null;
+  last_name?: string | null;
+  email?: string | null;
+  image_url?: string | null;
+};
+
+export interface ConversationSummaryBooking {
+  id: string;
+  booking_date?: string | null;
+  booking_status?: string | null;
+  business_id?: string | null;
+  service_name?: string | null;
+  customer_profiles?: ConversationUserProfile | null;
+  providers?: ConversationUserProfile | null;
+}
+
+export interface ConversationSummary {
+  metadataId: string;
+  bookingId: string;
+  twilioConversationSid: string;
+  conversationType: 'booking_chat' | 'support_chat' | 'general';
+  participantCount: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt?: string;
+  lastMessageAt: string | null;
+  unreadCount: number;
+  lastMessage?: {
+    body: string | null;
+    author: string | null;
+    authorName?: string | null;
+    timestamp: string | null;
+  } | null;
+  booking?: ConversationSummaryBooking;
+}
+
 /**
  * Unified Twilio Conversations Service with Supabase Integration
  * 
@@ -25,6 +64,10 @@ export class TwilioConversationsService {
     this.participantService = new ParticipantService(twilioConfig);
     this.messageService = new MessageService(twilioConfig);
     this.supabase = createClient(supabaseUrl, supabaseKey);
+  }
+
+  getSupabaseClient(): SupabaseClient {
+    return this.supabase;
   }
 
   /**
@@ -367,7 +410,7 @@ export class TwilioConversationsService {
   }
 
   /**
-   * Get unread message count for a user
+   * Get unread message count for a user within a conversation
    */
   async getUnreadCount(conversationMetadataId: string, userId: string): Promise<number> {
     const { count } = await this.supabase
@@ -381,34 +424,46 @@ export class TwilioConversationsService {
   }
 
   /**
-   * Get conversations for a user
+   * Get enriched conversation summaries for a user
    */
   async getConversationsForUser(
     userId: string,
     userType: 'customer' | 'provider' | 'owner' | 'dispatcher'
-  ): Promise<any[]> {
-    const { data: participantData } = await this.supabase
+  ): Promise<ConversationSummary[]> {
+    const { data: participantData, error } = await this.supabase
       .from('conversation_participants')
       .select(`
         conversation_id,
+        last_read_at,
         conversation_metadata (
           id,
           booking_id,
           twilio_conversation_sid,
           created_at,
+          updated_at,
           last_message_at,
           participant_count,
           is_active,
           conversation_type,
           bookings (
             id,
-            service_id,
             booking_date,
             booking_status,
             business_id,
-            providers (
+            service_name,
+            customer_profiles (
+              id,
               first_name,
-              last_name
+              last_name,
+              email,
+              image_url
+            ),
+            providers (
+              id,
+              user_id,
+              first_name,
+              last_name,
+              email
             )
           )
         )
@@ -417,21 +472,127 @@ export class TwilioConversationsService {
       .eq('user_type', userType)
       .eq('is_active', true);
 
-    if (!participantData) return [];
+    if (error) {
+      console.error('Error loading conversations for user:', error);
+      throw error;
+    }
 
-    return participantData
-      .filter((item: any) => item.conversation_metadata)
-      .map((item: any) => ({
-        id: item.conversation_metadata.id,
-        booking_id: item.conversation_metadata.booking_id,
-        twilio_conversation_sid: item.conversation_metadata.twilio_conversation_sid,
-        created_at: item.conversation_metadata.created_at,
-        last_message_at: item.conversation_metadata.last_message_at,
-        participant_count: item.conversation_metadata.participant_count,
-        is_active: item.conversation_metadata.is_active,
-        conversation_type: item.conversation_metadata.conversation_type,
-        booking: item.conversation_metadata.bookings,
-      }));
+    if (!participantData?.length) {
+      return [];
+    }
+
+    const metadataList = participantData
+      .map((item: any) => item.conversation_metadata)
+      .filter((meta: any) => Boolean(meta));
+
+    const conversationIds = metadataList
+      .map((meta: any) => meta.id)
+      .filter((id: string | null) => Boolean(id));
+
+    const unreadCounts = await this.getUnreadCountsMap(conversationIds, userId);
+
+    const summaries = await Promise.all(
+      metadataList.map(async (meta: any) => {
+        const latestMessage =
+          meta.last_message_at ? await this.fetchLatestMessageSnapshot(meta.twilio_conversation_sid) : null;
+
+        return {
+          metadataId: meta.id,
+          bookingId: meta.booking_id,
+          twilioConversationSid: meta.twilio_conversation_sid,
+          conversationType: meta.conversation_type,
+          participantCount: meta.participant_count,
+          isActive: meta.is_active,
+          createdAt: meta.created_at,
+          updatedAt: meta.updated_at,
+          lastMessageAt: meta.last_message_at,
+          unreadCount: unreadCounts[meta.id] || 0,
+          lastMessage: latestMessage,
+          booking: meta.bookings ? this.mapBooking(meta.bookings) : undefined,
+        } as ConversationSummary;
+      })
+    );
+
+    return summaries.sort((a, b) => {
+      const aTime = a.lastMessageAt || a.createdAt;
+      const bTime = b.lastMessageAt || b.createdAt;
+      return new Date(bTime).getTime() - new Date(aTime).getTime();
+    });
+  }
+
+  private mapBooking(record: any): ConversationSummaryBooking {
+    return {
+      id: record.id,
+      booking_date: record.booking_date,
+      booking_status: record.booking_status,
+      business_id: record.business_id,
+      service_name: record.service_name || null,
+      customer_profiles: record.customer_profiles || null,
+      providers: record.providers || null,
+    };
+  }
+
+  private async getUnreadCountsMap(conversationIds: string[], userId: string) {
+    const counts: Record<string, number> = {};
+
+    if (!conversationIds.length) {
+      return counts;
+    }
+
+    const { data, error } = await this.supabase
+      .from('message_notifications')
+      .select('conversation_id')
+      .eq('user_id', userId)
+      .eq('is_read', false)
+      .in('conversation_id', conversationIds);
+
+    if (error) {
+      console.error('Error fetching unread counts:', error);
+      return counts;
+    }
+
+    data?.forEach((row) => {
+      counts[row.conversation_id] = (counts[row.conversation_id] || 0) + 1;
+    });
+
+    return counts;
+  }
+
+  private async fetchLatestMessageSnapshot(conversationSid: string) {
+    try {
+      const result = await this.messageService.listMessages(conversationSid, 1);
+      if (!result.success || !result.data?.length) {
+        return null;
+      }
+
+      const message = result.data[0];
+      let attributes: any = {};
+      if (message.attributes) {
+        try {
+          attributes =
+            typeof message.attributes === 'string'
+              ? JSON.parse(message.attributes)
+              : message.attributes;
+        } catch {
+          attributes = {};
+        }
+      }
+
+      const timestamp =
+        message.dateCreated instanceof Date
+          ? message.dateCreated.toISOString()
+          : message.dateCreated || null;
+
+      return {
+        body: message.body,
+        author: message.author,
+        authorName: attributes?.authorName || null,
+        timestamp,
+      };
+    } catch (error) {
+      console.error('Failed to fetch latest message snapshot:', error);
+      return null;
+    }
   }
 }
 

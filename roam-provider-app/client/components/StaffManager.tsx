@@ -731,24 +731,27 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
         }),
       });
 
+      // Read response as text first, then parse as JSON
+      // This allows us to handle both JSON and non-JSON responses
+      const responseText = await response.text();
+      
       let result;
       try {
-        result = await response.json();
+        result = JSON.parse(responseText);
       } catch (jsonError) {
-        // If response is not JSON, get text instead
-        const text = await response.text();
-        console.error('❌ Non-JSON response:', text);
-        throw new Error(`Server error: ${response.status} ${response.statusText}. ${text.substring(0, 200)}`);
+        // If response is not JSON, use the text as error message
+        console.error('❌ Non-JSON response:', responseText);
+        throw new Error(`Server error: ${response.status} ${response.statusText}. ${responseText.substring(0, 200)}`);
       }
 
       if (!response.ok) {
-        const errorMessage = result.error || result.details || `Failed to create staff member (${response.status})`;
-        const errorDetails = result.code ? `Error code: ${result.code}. ` : '';
+        const errorMessage = result?.error || result?.details || `Failed to create staff member (${response.status})`;
+        const errorDetails = result?.code ? `Error code: ${result.code}. ` : '';
         console.error('❌ API Error:', {
           status: response.status,
-          error: result.error,
-          details: result.details,
-          code: result.code,
+          error: result?.error,
+          details: result?.details,
+          code: result?.code,
           fullResponse: result
         });
         throw new Error(`${errorDetails}${errorMessage}`);
