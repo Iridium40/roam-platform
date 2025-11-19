@@ -41,8 +41,8 @@ export default function MonthCalendarView({
     // Sort bookings within each day by time
     Object.keys(grouped).forEach((dateKey) => {
       grouped[dateKey].sort((a, b) => {
-        const timeA = a.booking_time || "00:00";
-        const timeB = b.booking_time || "00:00";
+        const timeA = a.start_time || a.booking_time || "00:00";
+        const timeB = b.start_time || b.booking_time || "00:00";
         return timeA.localeCompare(timeB);
       });
     });
@@ -69,14 +69,84 @@ export default function MonthCalendarView({
       case "completed":
         return "bg-green-100 text-green-800 border-green-300";
       case "cancelled":
-      case "declined":
         return "bg-red-100 text-red-800 border-red-300";
+      case "declined":
+        return "bg-orange-100 text-orange-800 border-orange-300";
       default:
         return "bg-gray-100 text-gray-800 border-gray-300";
     }
   };
 
+  const getStatusIndicatorColor = (status: string) => {
+    switch (status) {
+      case "pending":
+        return "bg-yellow-500";
+      case "confirmed":
+        return "bg-blue-500";
+      case "in_progress":
+        return "bg-purple-500";
+      case "completed":
+        return "bg-green-500";
+      case "cancelled":
+        return "bg-red-500";
+      case "declined":
+        return "bg-orange-500";
+      default:
+        return "bg-gray-500";
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case "pending":
+        return "Pending";
+      case "confirmed":
+        return "Confirmed";
+      case "in_progress":
+        return "In Progress";
+      case "completed":
+        return "Completed";
+      case "cancelled":
+        return "Cancelled";
+      case "declined":
+        return "Declined";
+      default:
+        return "Unknown";
+    }
+  };
+
+  const getStatusBorderColor = (status: string) => {
+    switch (status) {
+      case "pending":
+        return "#eab308"; // yellow-500
+      case "confirmed":
+        return "#3b82f6"; // blue-500
+      case "in_progress":
+        return "#a855f7"; // purple-500
+      case "completed":
+        return "#22c55e"; // green-500
+      case "cancelled":
+        return "#ef4444"; // red-500
+      case "declined":
+        return "#f97316"; // orange-500
+      default:
+        return "#6b7280"; // gray-500
+    }
+  };
+
   const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+  // Get unique statuses for legend
+  const uniqueStatuses = useMemo(() => {
+    const statusSet = new Set<string>();
+    bookings.forEach((booking) => {
+      const status = booking.booking_status || booking.status;
+      if (status) {
+        statusSet.add(status);
+      }
+    });
+    return Array.from(statusSet).sort();
+  }, [bookings]);
 
   return (
     <div className="space-y-4">
@@ -109,6 +179,23 @@ export default function MonthCalendarView({
           {format(currentDate, "MMMM yyyy")}
         </h3>
       </div>
+
+      {/* Status Legend */}
+      {uniqueStatuses.length > 0 && (
+        <Card className="p-3">
+          <div className="flex flex-wrap items-center gap-4">
+            <span className="text-sm font-medium text-gray-700">Status:</span>
+            {uniqueStatuses.map((status) => (
+              <div key={status} className="flex items-center gap-2">
+                <div
+                  className={`w-3 h-3 rounded-full ${getStatusIndicatorColor(status)}`}
+                />
+                <span className="text-xs text-gray-600">{getStatusLabel(status)}</span>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {/* Calendar Grid */}
       <div className="border rounded-lg overflow-hidden">
@@ -160,17 +247,29 @@ export default function MonthCalendarView({
                       className="w-full text-left"
                     >
                       <Card
-                        className={`p-1.5 text-xs hover:shadow-md transition-shadow ${getStatusColor(
-                          booking.status
+                        className={`p-1.5 text-xs hover:shadow-md transition-shadow border-l-2 ${getStatusColor(
+                          booking.booking_status || booking.status || "default"
                         )}`}
+                        style={{
+                          borderLeftColor: getStatusBorderColor(booking.booking_status || booking.status || "default")
+                        }}
                       >
-                        <div className="font-medium truncate">
-                          {formatDisplayTime(booking.booking_time || "")}
-                        </div>
-                        <div className="truncate text-[10px] mt-0.5">
-                          {booking.customer_profiles
-                            ? `${booking.customer_profiles.first_name} ${booking.customer_profiles.last_name}`
-                            : "Customer"}
+                        <div className="flex items-start gap-1.5">
+                          <div
+                            className={`w-1.5 h-1.5 rounded-full mt-1 flex-shrink-0 ${getStatusIndicatorColor(
+                              booking.booking_status || booking.status || "default"
+                            )}`}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium truncate">
+                              {formatDisplayTime(booking.booking_time || booking.start_time || "")}
+                            </div>
+                            <div className="truncate text-[10px] mt-0.5">
+                              {booking.customer_profiles
+                                ? `${booking.customer_profiles.first_name} ${booking.customer_profiles.last_name}`
+                                : "Customer"}
+                            </div>
+                          </div>
                         </div>
                       </Card>
                     </button>

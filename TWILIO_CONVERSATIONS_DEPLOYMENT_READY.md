@@ -81,7 +81,7 @@ import {
 // roam-customer-app/api/twilio-conversations.ts
 // roam-provider-app/api/twilio-conversations.ts
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import twilioConversationsHandler from "../../packages/shared/dist/api/twilio-conversations-handler.js";
+import twilioConversationsHandler from "@roam/shared/dist/api/twilio-conversations-handler.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   return twilioConversationsHandler(req, res);
@@ -102,8 +102,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
 ### 3. ✅ Vercel Package Resolution
 **Error**: `Cannot find package '@roam/shared'`  
-**Fix**: Changed to relative path imports in API routes  
-**Files**: `roam-customer-app/api/twilio-conversations.ts`, `roam-provider-app/api/twilio-conversations.ts`
+**Fix**: Install from workspace root and import the handler directly from `@roam/shared/dist/api/twilio-conversations-handler.js`  
+**Files**: `roam-customer-app/api/twilio-conversations.ts`, `roam-provider-app/api/twilio-conversations.ts`, `roam-*/vercel.json`
 
 ### 4. ✅ Role Display
 **Issue**: Generic userType instead of actual database role  

@@ -38,14 +38,13 @@ The following build errors have been fixed:
 
 ### 3. API Route Imports
 
-Both customer and provider apps now use **relative paths** to import the shared handler:
+Both customer and provider apps now import the shared handler directly from the published `@roam/shared` workspace package:
 
 ```typescript
 // roam-customer-app/api/twilio-conversations.ts
 // roam-provider-app/api/twilio-conversations.ts
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-// Note: TypeScript resolves without .js, but runtime needs .js extension
-import twilioConversationsHandler from "../../packages/shared/dist/api/twilio-conversations-handler";
+import twilioConversationsHandler from "@roam/shared/dist/api/twilio-conversations-handler.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   return twilioConversationsHandler(req, res);
@@ -53,9 +52,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 ```
 
 **Key Points**:
-- Uses relative path `../../packages/shared/dist/...` instead of `@roam/shared/dist/...`
-- TypeScript resolves without `.js` extension
-- Runtime adds `.js` extension automatically for Node.js ESM
+- Import comes from the `@roam/shared` workspace package so Vercel bundles dependencies automatically
+- `.js` extension is required for Node.js ESM resolution
+- Handler lives in `packages/shared/dist/api/twilio-conversations-handler.js` (server-only)
 
 ### 4. Stripe Webhook Fix
 
@@ -194,13 +193,16 @@ vercel --prod
 "installCommand": "cd .. && npm install && cd roam-customer-app"
 ```
 
-### Issue: "Cannot find module '../../packages/shared/dist/api/twilio-conversations-handler'"
+### Issue: "Cannot find module '@roam/shared/dist/api/twilio-conversations-handler.js'"
 
-**Solution**: Ensure the shared package builds before the app builds:
-```json
-// In package.json
-"build": "cd ../packages/shared && npm run build && cd ../../roam-customer-app && npm run build:client"
-```
+**Solution**:
+1. Ensure `@roam/shared` is listed in each app's `dependencies` (`"@roam/shared": "file:../packages/shared"`).
+2. Confirm the shared package builds before each app build:
+   ```json
+   // In package.json
+   "build": "cd ../packages/shared && npm run build && cd ../../roam-customer-app && npm run build:client"
+   ```
+3. Verify the handler exists: `packages/shared/dist/api/twilio-conversations-handler.js`.
 
 ### Issue: "twilio" module resolution in browser
 
@@ -236,8 +238,8 @@ vercel --prod
 
 1. `roam-customer-app/vercel.json` - Added `installCommand`
 2. `roam-provider-app/vercel.json` - Added `installCommand`
-3. `roam-customer-app/api/twilio-conversations.ts` - Relative import path
-4. `roam-provider-app/api/twilio-conversations.ts` - Relative import path
+3. `roam-customer-app/api/twilio-conversations.ts` - Imports handler from `@roam/shared` package
+4. `roam-provider-app/api/twilio-conversations.ts` - Imports handler from `@roam/shared` package
 5. `roam-customer-app/api/stripe/webhook.ts` - Fixed variable scope
 6. `packages/shared/src/index.ts` - Removed server-side exports
 7. `packages/shared/src/services/twilio/*.ts` - Added `.js` extensions

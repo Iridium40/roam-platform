@@ -13,6 +13,13 @@ import { FavoriteButton } from "@/components/FavoriteButton";
 // Lazy load ShareModal
 const ShareModal = lazy(() => import("@/components/ShareModal"));
 
+interface BusinessHours {
+  [day: string]: {
+    open: string;
+    close: string;
+  };
+}
+
 interface Business {
   id: string;
   business_name: string;
@@ -22,6 +29,7 @@ interface Business {
   cover_image_url?: string;
   rating: number;
   review_count: number;
+  business_hours?: BusinessHours;
 }
 
 interface Service {
@@ -47,6 +55,16 @@ interface Provider {
   rating?: number;
   review_count?: number;
 }
+
+// Helper function to format time from 24-hour to 12-hour format
+const formatTime = (time: string): string => {
+  if (!time) return '';
+  const [hours, minutes] = time.split(':');
+  const hour = parseInt(hours, 10);
+  const ampm = hour >= 12 ? 'PM' : 'AM';
+  const displayHour = hour % 12 || 12;
+  return `${displayHour}:${minutes} ${ampm}`;
+};
 
 export default function BusinessProfile() {
   const { businessId } = useParams();
@@ -94,7 +112,8 @@ export default function BusinessProfile() {
             image_url,
             logo_url,
             cover_image_url,
-            verification_status
+            verification_status,
+            business_hours
           `)
           .eq('id', businessId)
           .single();
@@ -110,6 +129,7 @@ export default function BusinessProfile() {
           cover_image_url: businessData.cover_image_url,
           rating: 4.5, // Mock data
           review_count: 25, // Mock data
+          business_hours: businessData.business_hours || undefined,
         });
 
         // Load services for this business with business-specific pricing and duration
@@ -415,6 +435,37 @@ export default function BusinessProfile() {
                       </ul>
                     </div>
                   </div>
+                  
+                  {/* Business Hours */}
+                  {business.business_hours && Object.keys(business.business_hours).length > 0 && (
+                    <div className="mt-8">
+                      <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                        <Clock className="w-5 h-5" />
+                        Business Hours
+                      </h3>
+                      <div className="bg-gray-50 rounded-lg p-6">
+                        <div className="space-y-2">
+                          {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((day) => {
+                            const hours = business.business_hours?.[day];
+                            return (
+                              <div key={day} className="flex justify-between items-center py-2 border-b border-gray-200 last:border-b-0">
+                                <span className="font-medium text-gray-700">{day}</span>
+                                <span className="text-gray-600">
+                                  {hours ? (
+                                    <span>
+                                      {formatTime(hours.open)} - {formatTime(hours.close)}
+                                    </span>
+                                  ) : (
+                                    <span className="text-gray-400">Closed</span>
+                                  )}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 

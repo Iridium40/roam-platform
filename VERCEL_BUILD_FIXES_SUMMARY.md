@@ -66,21 +66,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
 **Problem**: Vercel's serverless environment doesn't properly resolve npm workspace package aliases like `@roam/shared` when building individual apps in a monorepo.
 
-**Solution**: Changed to relative path imports in API routes.
+**Solution**: Import handler directly from the `@roam/shared` workspace package (server-only entry point).
 
 **Files Changed**:
 - `roam-customer-app/api/twilio-conversations.ts`
 - `roam-provider-app/api/twilio-conversations.ts`
 
-**Before** (❌ Doesn't work in Vercel):
+**Before** (❌ Causes runtime module not found errors):
 ```typescript
-import twilioConversationsHandler from "@roam/shared/dist/api/twilio-conversations-handler";
+import twilioConversationsHandler from "../../packages/shared/dist/api/twilio-conversations-handler";
 ```
 
 **After** (✅ Works in Vercel):
 ```typescript
-// Note: TypeScript resolves without .js, but runtime needs .js extension
-import twilioConversationsHandler from "../../packages/shared/dist/api/twilio-conversations-handler";
+import twilioConversationsHandler from "@roam/shared/dist/api/twilio-conversations-handler.js";
 ```
 
 ### ✅ Fix 3: Vercel Build Configuration
