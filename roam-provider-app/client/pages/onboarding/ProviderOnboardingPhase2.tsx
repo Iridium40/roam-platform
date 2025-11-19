@@ -166,12 +166,19 @@ export default function ProviderOnboardingPhase2() {
       ...prev,
       phase2Step: "complete",
     }));
-
-    // Redirect to provider dashboard
-    setTimeout(() => {
-      navigate("/provider-dashboard");
-    }, 2000);
   };
+
+  // Handle redirect when setup is complete
+  useEffect(() => {
+    if (onboardingState.phase2Step === "complete") {
+      // Redirect to provider login page after 2 seconds
+      const redirectTimer = setTimeout(() => {
+        navigate("/provider-login");
+      }, 2000);
+
+      return () => clearTimeout(redirectTimer);
+    }
+  }, [onboardingState.phase2Step, navigate]);
 
   const getCurrentStepIndex = () => {
     const currentSteps = getPhase2Steps(onboardingState.businessData?.business_type);

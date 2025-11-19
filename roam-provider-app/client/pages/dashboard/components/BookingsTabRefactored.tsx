@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, lazy, Suspense } from "react";
 
 // Import modular components
 import BookingStatsSection from "./bookings/BookingStatsSection";
@@ -9,6 +9,23 @@ import BookingDetailModal from "./bookings/BookingDetailModal";
 // Import custom hook
 import { useBookings } from "./bookings/hooks/useBookings";
 
+// Lazy load calendar views - created outside component to avoid re-initialization
+const WeekCalendarViewLazy = lazy(() => 
+  import("./bookings/WeekCalendarView").catch((err) => {
+    console.error("Failed to load WeekCalendarView:", err);
+    // Return a fallback component
+    return { default: () => <div className="p-4 text-red-600">Failed to load week calendar view</div> };
+  })
+);
+
+const MonthCalendarViewLazy = lazy(() => 
+  import("./bookings/MonthCalendarView").catch((err) => {
+    console.error("Failed to load MonthCalendarView:", err);
+    // Return a fallback component
+    return { default: () => <div className="p-4 text-red-600">Failed to load month calendar view</div> };
+  })
+);
+
 interface BookingsTabProps {
   providerData: any;
   business: any;
@@ -17,36 +34,6 @@ interface BookingsTabProps {
 export function BookingsTab({ providerData, business }: BookingsTabProps) {
   const [viewType, setViewType] = useState<"list" | "week" | "month">("list");
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [WeekView, setWeekView] = useState<React.ComponentType<any> | null>(null);
-  const [MonthView, setMonthView] = useState<React.ComponentType<any> | null>(null);
-  const [loadingCalendar, setLoadingCalendar] = useState(false);
-
-  // Dynamically load calendar views to avoid initialization issues
-  useEffect(() => {
-    if (viewType === "week" && !WeekView) {
-      setLoadingCalendar(true);
-      import("./bookings/WeekCalendarView")
-        .then((module) => {
-          setWeekView(() => module.default);
-          setLoadingCalendar(false);
-        })
-        .catch((err) => {
-          console.error("Failed to load WeekCalendarView:", err);
-          setLoadingCalendar(false);
-        });
-    } else if (viewType === "month" && !MonthView) {
-      setLoadingCalendar(true);
-      import("./bookings/MonthCalendarView")
-        .then((module) => {
-          setMonthView(() => module.default);
-          setLoadingCalendar(false);
-        })
-        .catch((err) => {
-          console.error("Failed to load MonthCalendarView:", err);
-          setLoadingCalendar(false);
-        });
-    }
-  }, [viewType, WeekView, MonthView]);
 
   const {
     // Data
@@ -187,29 +174,25 @@ export function BookingsTab({ providerData, business }: BookingsTabProps) {
         formatDisplayTime={formatDisplayTime}
       />
       ) : viewType === "week" ? (
-        loadingCalendar || !WeekView ? (
-          <div className="h-96 bg-gray-100 rounded-lg animate-pulse" />
-        ) : (
-          <WeekView
+        <Suspense fallback={<div className="h-96 bg-gray-100 rounded-lg animate-pulse" />}>
+          <WeekCalendarViewLazy
             bookings={[...presentBookings, ...futureBookings, ...pastBookings]}
             currentDate={currentDate}
             onDateChange={setCurrentDate}
             onViewDetails={setSelectedBooking}
             formatDisplayTime={formatDisplayTime}
           />
-        )
+        </Suspense>
       ) : (
-        loadingCalendar || !MonthView ? (
-          <div className="h-96 bg-gray-100 rounded-lg animate-pulse" />
-        ) : (
-          <MonthView
+        <Suspense fallback={<div className="h-96 bg-gray-100 rounded-lg animate-pulse" />}>
+          <MonthCalendarViewLazy
             bookings={[...presentBookings, ...futureBookings, ...pastBookings]}
             currentDate={currentDate}
             onDateChange={setCurrentDate}
             onViewDetails={setSelectedBooking}
             formatDisplayTime={formatDisplayTime}
           />
-        )
+        </Suspense>
       )}
 
       {/* Booking Detail Modal */}
