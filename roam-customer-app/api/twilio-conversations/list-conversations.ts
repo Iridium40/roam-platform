@@ -1,10 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { createTwilioConversationsService } from "@roam/shared/dist/services/twilio/TwilioConversationsService.js";
 
-/**
- * Stub endpoint for listing conversations visible to the authenticated customer.
- * TODO: Implement conversation listing backed by conversation_metadata, conversation_participants, and message_notifications.
- */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
@@ -20,10 +16,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(500).json({ error: "Conversations service not configured" });
   }
 
-  // Placeholder response until implementation is complete
-  return res.status(501).json({
-    error: "Not implemented",
-    message: "Conversation listing will be implemented using Supabase conversation tables.",
-  });
+  try {
+    const conversations = await conversationsService.getConversationsForUser(userId, userType);
+    return res.status(200).json({
+      success: true,
+      conversations,
+    });
+  } catch (error) {
+    console.error("Error loading customer conversations:", error);
+    return res.status(500).json({
+      error: "Failed to load conversations",
+      message: error instanceof Error ? error.message : "Unknown error",
+    });
+  }
 }
 
