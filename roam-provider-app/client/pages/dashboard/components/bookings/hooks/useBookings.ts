@@ -380,11 +380,11 @@ export function useBookings(providerData: any, business: any) {
       console.error("Error updating booking status:", error);
       
       // Don't use fallback - let the error propagate so user knows it failed
-      toast({
-        title: "Error",
+        toast({
+          title: "Error",
         description: error?.response?.data?.details || error?.message || "Failed to update booking status. Please try again.",
-        variant: "destructive",
-      });
+          variant: "destructive",
+        });
       throw error; // Re-throw to prevent fallback
     } finally {
       // Remove from in-flight set after a delay to allow for any retries

@@ -276,10 +276,10 @@ export default function StripeIdentityVerification({
           
           // Otherwise, retry if we haven't exceeded max attempts
           if (attempts < maxAttempts) {
-            attempts++;
-            // Retry after a delay - use longer delay for first few attempts
-            const delay = attempts <= 3 ? 5000 : 10000;
-            setTimeout(poll, delay);
+          attempts++;
+          // Retry after a delay - use longer delay for first few attempts
+          const delay = attempts <= 3 ? 5000 : 10000;
+          setTimeout(poll, delay);
           } else {
             setError(
               "Verification is taking longer than expected. Please contact support.",

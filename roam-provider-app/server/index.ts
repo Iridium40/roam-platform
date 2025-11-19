@@ -914,7 +914,7 @@ export function createServer() {
             code: updateError.code
           });
         }
-
+        
         if (!booking) {
           console.error('❌ No booking returned after update:', { bookingId });
           return res.status(404).json({ 
@@ -927,17 +927,17 @@ export function createServer() {
 
         // Create status update record (optional - don't fail if table doesn't exist)
         try {
-          const { error: historyError } = await supabase
-            .from('booking_status_history')
-            .insert({
-              booking_id: bookingId,
-              status: newStatus,
-              changed_by: updatedBy,
-              reason: reason,
-              changed_at: new Date().toISOString()
-            });
+        const { error: historyError } = await supabase
+          .from('booking_status_history')
+          .insert({
+            booking_id: bookingId,
+            status: newStatus,
+            changed_by: updatedBy,
+            reason: reason,
+            changed_at: new Date().toISOString()
+          });
 
-          if (historyError) {
+        if (historyError) {
             console.warn('⚠️ Status history table may not exist or insert failed (non-fatal):', historyError.message);
             // Don't fail the request - status history is optional
           }

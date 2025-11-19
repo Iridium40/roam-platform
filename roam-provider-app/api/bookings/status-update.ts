@@ -337,7 +337,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Fire and forget - don't block the response
       sendStatusNotifications(booking, newStatus, { notifyCustomer, notifyProvider })
         .catch((notificationError) => {
-          console.error('⚠️ Notification error (non-fatal):', notificationError);
+        console.error('⚠️ Notification error (non-fatal):', notificationError);
         });
     }
 

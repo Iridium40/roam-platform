@@ -424,13 +424,13 @@ export default function ProviderOnboardingPhase1() {
         } catch (readError) {
           console.error("Error reading response:", readError);
           // If we can't read the response, fall back to status code-based messages
-          if (response.status === 400) {
+        if (response.status === 400) {
             errorMessage = "Please check your information and try again. If the issue persists, contact support.";
-          } else if (response.status === 404) {
+        } else if (response.status === 404) {
             errorMessage = "Business profile not found. Please complete the business information step first.";
-          } else if (response.status >= 500) {
+        } else if (response.status >= 500) {
             errorMessage = "Server error occurred. Please try again later.";
-          } else {
+        } else {
             errorMessage = `Application submission failed (${response.status}). Please check your information and try again.`;
           }
         }

@@ -95,13 +95,13 @@ export function BookingsTab({ providerData, business }: BookingsTabProps) {
 
       {/* Filters and View Toggle */}
       <div className="space-y-4">
-        <BookingFiltersSection
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          selectedStatusFilter={selectedStatusFilter}
-          setSelectedStatusFilter={setSelectedStatusFilter}
-        />
-        
+      <BookingFiltersSection
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        selectedStatusFilter={selectedStatusFilter}
+        setSelectedStatusFilter={setSelectedStatusFilter}
+      />
+
         {/* View Toggle */}
         <div className="flex items-center justify-end gap-2">
           <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
@@ -141,23 +141,23 @@ export function BookingsTab({ providerData, business }: BookingsTabProps) {
 
       {/* Booking Views */}
       {viewType === "list" ? (
-        <BookingListSection
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          presentBookings={presentBookings}
-          futureBookings={futureBookings}
-          pastBookings={pastBookings}
-          paginatedData={paginatedData}
-          presentPage={presentPage}
-          setPresentPage={setPresentPage}
-          futurePage={futurePage}
-          setFuturePage={setFuturePage}
-          pastPage={pastPage}
-          setPastPage={setPastPage}
-          onViewDetails={setSelectedBooking}
-          onUpdateStatus={updateBookingStatus}
-          formatDisplayTime={formatDisplayTime}
-        />
+      <BookingListSection
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        presentBookings={presentBookings}
+        futureBookings={futureBookings}
+        pastBookings={pastBookings}
+        paginatedData={paginatedData}
+        presentPage={presentPage}
+        setPresentPage={setPresentPage}
+        futurePage={futurePage}
+        setFuturePage={setFuturePage}
+        pastPage={pastPage}
+        setPastPage={setPastPage}
+        onViewDetails={setSelectedBooking}
+        onUpdateStatus={updateBookingStatus}
+        formatDisplayTime={formatDisplayTime}
+      />
       ) : viewType === "week" ? (
         <WeekCalendarView
           bookings={[...presentBookings, ...futureBookings, ...pastBookings]}

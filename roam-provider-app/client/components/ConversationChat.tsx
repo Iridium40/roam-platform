@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,12 +16,12 @@ import {
   MessageCircle,
   Users,
 } from 'lucide-react';
-import { useConversations, ConversationMessage, Conversation } from '@/hooks/useConversations';
 import { useAuth } from '@/contexts/auth/AuthProvider';
 import {
   createBookingConversationsClient,
   type BookingConversationParticipant,
   type BookingConversationParticipantData,
+  type ConversationMessageWithAuthor,
 } from '@roam/shared';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -69,26 +69,82 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
   
   // Get the current user data (either provider or customer)
   const currentUser = user || customer;
-  
-  // Use the main conversations hook for all users to avoid conditional hook issues
-  const {
-    conversations,
-    currentConversation,
-    messages,
-    participants,
-    loading,
-    sending,
-    sendMessage,
-    loadMessages,
-    loadParticipants,
-    getUserIdentity,
-    setCurrentConversation,
-  } = useConversations();
+  const currentUserId =
+    (user as any)?.user_id ??
+    (user as any)?.id ??
+    (customer as any)?.id ??
+    '';
 
+  const getUserIdentity = useCallback(() => {
+    if (!currentUserId) return null;
+    return `${currentUserType}-${currentUserId}`;
+  }, [currentUserId, currentUserType]);
+
+  const buildParticipantPayload = useCallback((): BookingConversationParticipantData[] => {
+    if (!booking) return [];
+    const payload: BookingConversationParticipantData[] = [];
+
+    if (booking.customer_profiles?.id) {
+      payload.push({
+        userId: booking.customer_profiles.id,
+        userType: 'customer',
+        userName: `${booking.customer_profiles.first_name ?? ''} ${booking.customer_profiles.last_name ?? ''}`.trim(),
+        email: booking.customer_profiles.email ?? null,
+      });
+    } else if (booking.customer_id) {
+      payload.push({
+        userId: booking.customer_id,
+        userType: 'customer',
+        userName: booking.customer_name || 'Customer',
+      });
+    }
+
+    if (booking.providers?.user_id) {
+      payload.push({
+        userId: booking.providers.user_id,
+        userType: 'provider',
+        userName: `${booking.providers.first_name ?? ''} ${booking.providers.last_name ?? ''}`.trim(),
+      });
+    } else if ((booking as any)?.provider_id) {
+      payload.push({
+        userId: (booking as any).provider_id,
+        userType: 'provider',
+        userName: booking.provider_name || 'Provider',
+      });
+    }
+
+    return payload;
+  }, [booking]);
+  
+  const [messages, setMessages] = useState<ConversationMessageWithAuthor[]>([]);
+  const [participants, setParticipants] = useState<BookingConversationParticipant[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState('');
   const [activeConversationSid, setActiveConversationSid] = useState<string | null>(conversationSid || null);
-  const [enrichedParticipants, setEnrichedParticipants] = useState<BookingConversationParticipant[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const loadMessages = useCallback(
+    async (conversationId: string) => {
+      if (!conversationId || !bookingConversationsClient) return;
+      try {
+        const fetched = await bookingConversationsClient.getMessages(conversationId);
+        setMessages(fetched);
+      } catch (err) {
+        console.error('Error loading messages:', err);
+      }
+    },
+    [bookingConversationsClient]
+  );
+
+  useEffect(() => {
+    if (!booking) return;
+    const baseParticipants = buildParticipantPayload().map((participant) => ({
+      ...participant,
+    })) as BookingConversationParticipant[];
+    setParticipants(baseParticipants);
+  }, [booking, buildParticipantPayload]);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -97,30 +153,20 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
 
   // Initialize conversation when modal opens
   useEffect(() => {
-    console.log('ConversationChat useEffect triggered:', {
-      isOpen,
-      booking: booking?.id,
-      conversationSid,
-      activeConversationSid,
-      user: currentUser?.id,
-      userType: currentUserType
-    });
+    if (!isOpen) return;
 
-    if (isOpen && booking && !activeConversationSid && bookingConversationsClient) {
-      console.log('🎯 Triggering initializeBookingConversation...');
-      initializeBookingConversation();
-    } else if (isOpen && conversationSid) {
-      console.log('Setting conversation SID from prop:', conversationSid);
+    if (booking) {
+      initializeConversation();
+    } else if (conversationSid) {
       setActiveConversationSid(conversationSid);
-      setCurrentConversation(conversationSid);
+      loadMessages(conversationSid);
     }
-  }, [isOpen, booking, conversationSid, bookingConversationsClient, setCurrentConversation]);
+  }, [isOpen, booking, conversationSid, initializeConversation, loadMessages]);
 
   // Load messages when conversation changes
   useEffect(() => {
     if (activeConversationSid) {
       loadMessages(activeConversationSid);
-      // Participants are loaded separately via the useConversations hook
     }
   }, [activeConversationSid, loadMessages]);
 
@@ -128,127 +174,89 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
   useEffect(() => {
     if (!isOpen || !activeConversationSid) return;
 
-    console.log('🔄 Starting optimized message polling for conversation:', activeConversationSid);
-    
-    const pollInterval = setInterval(async () => {
-      console.log('🔄 Checking for new messages...');
-      
-      // Get current message count before loading
-      const currentMessageCount = messages.length;
-      
-      try {
-        // Load new messages
-        const response = await fetch('/api/twilio-conversations', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'get-messages',
-            conversationSid: activeConversationSid
-          })
-        });
-        
-        const result = await response.json();
-        if (result.success && result.messages) {
-          // Only update if there are actually new messages
-          if (result.messages.length > currentMessageCount) {
-            console.log('🔄 New messages found, updating chat');
-            await loadMessages(activeConversationSid);
-          }
-        }
-      } catch (error) {
-        console.error('Message polling error:', error);
-      }
-    }, 8000); // Reduced frequency: Poll every 8 seconds instead of 3
+    const pollInterval = setInterval(() => {
+      loadMessages(activeConversationSid);
+    }, 8000);
 
     return () => {
-      console.log('🔄 Stopping message polling');
       clearInterval(pollInterval);
     };
-  }, [isOpen, activeConversationSid, messages.length]);
+  }, [isOpen, activeConversationSid, loadMessages]);
 
-  const initializeBookingConversation = async () => {
-    console.log('🚀 initializeBookingConversation called with:', {
-      booking: booking?.id,
-      user: currentUser?.id,
-      userType: currentUserType,
-      bookingData: booking,
-      currentUserData: currentUser
-    });
-
-    if (!booking || !currentUser || !bookingConversationsClient) {
-      console.log('❌ Missing required data:', { 
-        booking: !!booking, 
-        user: !!currentUser,
-        bookingId: booking?.id,
-        userId: currentUser?.id,
-        hasClient: !!bookingConversationsClient,
-      });
+  const initializeConversation = useCallback(async () => {
+    if (!booking || !bookingConversationsClient) {
       return;
     }
 
-      console.log('📋 Initializing booking conversation for:', booking.id);
+    setLoading(true);
+    setError(null);
 
-      const participants: BookingConversationParticipantData[] = [];
-
-      if (booking.customer_profiles?.id) {
-        participants.push({
-          userId: booking.customer_profiles.id,
-          userType: 'customer',
-          userName: `${booking.customer_profiles.first_name ?? ''} ${booking.customer_profiles.last_name ?? ''}`.trim(),
-          email: booking.customer_profiles.email || null,
-        });
-      }
-
-      if (booking.providers?.user_id) {
-        participants.push({
-          userId: booking.providers.user_id,
-          userType: 'provider',
-          userName: `${booking.providers.first_name ?? ''} ${booking.providers.last_name ?? ''}`.trim(),
-        });
-      }
+    const participantPayload = buildParticipantPayload();
 
     try {
       const result = await bookingConversationsClient.getOrCreateConversationForBooking(
         {
           bookingId: booking.id,
-          customerId: booking.customer_profiles?.id,
-          providerId: booking.providers?.user_id,
+          customerId: booking.customer_profiles?.id || booking.customer_id,
+          providerId: booking.providers?.user_id || (booking as any)?.provider_id,
           businessId: booking.business_id,
           serviceName: booking.service_name,
-          customerName: `${booking.customer_profiles?.first_name ?? ''} ${booking.customer_profiles?.last_name ?? ''}`.trim(),
-          providerName: `${booking.providers?.first_name ?? ''} ${booking.providers?.last_name ?? ''}`.trim(),
+          customerName: booking.customer_profiles
+            ? `${booking.customer_profiles.first_name ?? ''} ${booking.customer_profiles.last_name ?? ''}`.trim()
+            : booking.customer_name || 'Customer',
+          providerName: booking.providers
+            ? `${booking.providers.first_name ?? ''} ${booking.providers.last_name ?? ''}`.trim()
+            : booking.provider_name || 'Provider',
         },
-        participants,
+        participantPayload,
       );
 
       setActiveConversationSid(result.conversationId);
-      setCurrentConversation(result.conversationId);
-      setEnrichedParticipants(result.participants || []);
-      await Promise.all([
-        loadMessages(result.conversationId),
-        loadParticipants(result.conversationId),
-      ]);
+      const normalizedParticipants =
+        result.participants && result.participants.length
+          ? result.participants.map((participant) => ({
+              ...participant,
+              userId: (participant as any).userId ?? (participant as any).user_id,
+              userType: (participant as any).userType ?? (participant as any).user_type,
+              userName:
+                (participant as any).userName ??
+                (participant as any).user_name ??
+                (participant as any).identity ??
+                undefined,
+            }))
+          : participantPayload.map((participant) => ({
+              ...participant,
+            }));
+
+      setParticipants(normalizedParticipants as BookingConversationParticipant[]);
+      await loadMessages(result.conversationId);
     } catch (error) {
-      console.error('💥 Error initializing conversation:', error);
+      console.error('Error initializing conversation:', error);
+      setError(error instanceof Error ? error.message : 'Failed to load conversation');
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [booking, bookingConversationsClient, buildParticipantPayload, loadMessages]);
 
   const handleSendMessage = async () => {
-    if (!newMessage.trim() || !activeConversationSid || sending) return;
+    if (!newMessage.trim() || !activeConversationSid || !bookingConversationsClient || !currentUserId) return;
 
     try {
-      await sendMessage(activeConversationSid, newMessage.trim());
+      setSending(true);
+      await bookingConversationsClient.sendMessage(
+        activeConversationSid,
+        newMessage.trim(),
+        currentUserId,
+        (currentUserType as 'customer' | 'provider' | 'owner' | 'dispatcher'),
+        booking?.id
+      );
       setNewMessage('');
-      
-      // Immediately reload messages after sending
       await loadMessages(activeConversationSid);
-      
-      // Also reload after a short delay to catch any delayed messages
-      setTimeout(() => {
-        loadMessages(activeConversationSid);
-      }, 1000);
     } catch (error) {
       console.error('Error sending message:', error);
+      setError(error instanceof Error ? error.message : 'Failed to send message');
+    } finally {
+      setSending(false);
     }
   };
 
@@ -259,7 +267,8 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
     }
   };
 
-  const formatMessageTime = (dateString: string) => {
+  const formatMessageTime = (dateString?: string | null) => {
+    if (!dateString) return '';
     try {
       return formatDistanceToNow(new Date(dateString), { addSuffix: true });
     } catch {
@@ -267,116 +276,78 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
     }
   };
 
-  const getMessageAuthorInfo = (message: ConversationMessage) => {
-    const userIdentity = getUserIdentity();
-    const attributes = message.attributes || {};
-    
-    // Enhanced identity matching - check if message author is same user type as current user
-    const isCurrentUserType = (
-      (userType === 'customer' && message.author.startsWith('customer-')) ||
-      (userType === 'provider' && message.author.startsWith('provider-'))
-    );
-    
-    // For now, assume same user type messages are from current user
-    const isCurrentUser = isCurrentUserType;
-    
-    // SMART APPROACH: Find the actual participant from the participants list
-    const actualParticipant = participants.find(p => p.identity === message.author);
-    
-    let participantInfo;
-    if (actualParticipant) {
-      // Use the actual participant data
-      participantInfo = getParticipantInfo(actualParticipant);
-    } else {
-      // Fallback: create a fake participant object if not found
-      const fakeParticipant = {
-        identity: message.author,
-        attributes: attributes
-      };
-      participantInfo = getParticipantInfo(fakeParticipant);
-    }
-    
-    return {
-      isCurrentUser,
-      name: participantInfo.name,
-      role: attributes.userRole || 'participant',
-      initials: participantInfo.initials
-    };
-  };
-
-  const getParticipantInfo = (participant: any) => {
-    const userIdentity = getUserIdentity();
-    
-    // Enhanced identity matching - check if participant is same user type as current user
-    const isCurrentUserType = (
-      (userType === 'customer' && participant.identity.startsWith('customer-')) ||
-      (userType === 'provider' && participant.identity.startsWith('provider-'))
-    );
-    const isCurrentUser = isCurrentUserType;
-    
-    // Enhanced name resolution logic
-    let displayName = participant.attributes?.name || participant.identity;
-    
-    // Try to get actual names from booking data
-    if (participant.identity.startsWith('customer-')) {
-      if (userType === 'customer' && currentUser) {
-        // Current customer viewing - use their name
-        displayName = `${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim();
-      } else if (userType === 'provider' && booking?.customer_profiles) {
-        // Provider viewing customer - use customer profile name
-        displayName = `${booking.customer_profiles.first_name} ${booking.customer_profiles.last_name}`.trim();
-      }
-    } else if (participant.identity.startsWith('provider-')) {
-      if (userType === 'provider' && user) {
-        // Current provider viewing - use their name
-        displayName = `${user.first_name || ''} ${user.last_name || ''}`.trim();
-      } else if (userType === 'customer' && booking?.providers) {
-        // Customer viewing provider - use provider profile name
-        displayName = `${booking.providers.first_name} ${booking.providers.last_name}`.trim();
-      }
-    }
-    
-    // Fallback to clean version of identity if no good name found
-    if (!displayName || displayName === participant.identity) {
-      displayName = participant.identity.replace(/^(customer-|provider-)/, '').replace(/[_-]/g, ' ') || 'User';
-    }
-    
-    return {
-      isCurrentUser,
-      name: displayName,
-      role: participant.attributes?.role || participant.userType || 'participant',
-      imageUrl: participant.attributes?.imageUrl,
-      initials: displayName
-        .split(' ')
-        .map(n => n[0])
-        .join('')
-        .toUpperCase()
-        .substring(0, 2)
-    };
-  };
-
   const participantMap = useMemo(() => {
     const map = new Map<string, BookingConversationParticipant>();
-    [...enrichedParticipants, ...participants.map((p) => ({
-      userId: p.user_id,
-      userType: (p.user_type as any) || 'unknown',
-      userName: p.attributes?.senderName || p.identity,
-      email: p.attributes?.email,
-      avatarUrl: p.attributes?.avatarUrl,
-    }))].forEach((participant) => {
+    participants.forEach((participant) => {
       if (!participant.userId || !participant.userType) return;
-      const key = `${participant.userType}-${participant.userId}`;
-      if (!map.has(key)) {
-        map.set(key, participant as BookingConversationParticipant);
-      }
+      map.set(`${participant.userType}-${participant.userId}`, participant);
     });
     return map;
-  }, [enrichedParticipants, participants]);
+  }, [participants]);
 
-  const resolveMessageAuthor = (message: ConversationMessage) => {
-    const key = `${message.author_type}-${message.author_id}`;
-    return participantMap.get(key) || null;
-  };
+  const formatParticipantName = useCallback(
+    (participant: BookingConversationParticipant) => {
+      if (participant.userName) return participant.userName;
+      if (participant.userType === 'customer') {
+        return booking?.customer_name || 'Customer';
+      }
+      if (participant.userType === 'provider') {
+        return booking?.provider_name || 'Provider';
+      }
+      return participant.userType || 'Participant';
+    },
+    [booking]
+  );
+
+  const resolveMessageAuthor = useCallback(
+    (message: ConversationMessageWithAuthor) => {
+      const attrsRaw = message.attributes;
+      let attrs: Record<string, any> = {};
+      if (attrsRaw) {
+        try {
+          attrs = typeof attrsRaw === 'string' ? JSON.parse(attrsRaw) : attrsRaw;
+        } catch {
+          attrs = {};
+        }
+      }
+
+      const key =
+        attrs.userId && attrs.userType
+          ? `${attrs.userType}-${attrs.userId}`
+          : undefined;
+      const participant = key ? participantMap.get(key) : undefined;
+
+      const displayName =
+        attrs.authorName ||
+        participant?.userName ||
+        message.authorName ||
+        message.author ||
+        'Participant';
+
+      const rawRole = attrs.role || attrs.userType || participant?.userType || 'participant';
+      const roleLabel =
+        typeof rawRole === 'string'
+          ? rawRole.charAt(0).toUpperCase() + rawRole.slice(1)
+          : 'Participant';
+
+      const isCurrentUser = attrs.userId ? attrs.userId === currentUserId : false;
+
+      const initials = displayName
+        .split(' ')
+        .map((part) => part[0])
+        .join('')
+        .slice(0, 2)
+        .toUpperCase();
+
+      return {
+        displayName,
+        roleLabel,
+        isCurrentUser,
+        initials,
+      };
+    },
+    [participantMap, currentUserId]
+  );
 
 
   return (
@@ -401,21 +372,29 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
             <CardContent className="pt-0">
               <div className="flex flex-wrap gap-2">
                 {participants.map((participant) => {
-                  const info = getParticipantInfo(participant);
+                  const name = formatParticipantName(participant);
+                  const initials = name
+                    .split(' ')
+                    .map((part) => part[0])
+                    .join('')
+                    .slice(0, 2)
+                    .toUpperCase();
+                  const identityKey = `${participant.userType}-${participant.userId}`;
+                  const isCurrentUser = getUserIdentity() === identityKey;
+
                   return (
                     <Badge
-                      key={participant.sid}
-                      variant={info.isCurrentUser ? "default" : "secondary"}
+                      key={identityKey}
+                      variant={isCurrentUser ? "default" : "secondary"}
                       className="flex items-center gap-1"
                     >
                       <Avatar className="h-4 w-4">
-                        <AvatarImage src={info.imageUrl} />
                         <AvatarFallback className="text-xs">
-                          {info.initials}
+                          {initials}
                         </AvatarFallback>
                       </Avatar>
-                      {info.name}
-                      {info.isCurrentUser && " (You)"}
+                      {name}
+                      {isCurrentUser && " (You)"}
                     </Badge>
                   );
                 })}
@@ -438,14 +417,11 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
                   ) : (
                     messages.map((message) => {
                       const author = resolveMessageAuthor(message);
-                      const isCurrentUser = author?.userId === currentUser?.id;
-                      const displayName = author?.userName || message.author_name || 'Participant';
-                      const initials = displayName
-                        .split(' ')
-                        .map((part) => part[0])
-                        .join('')
-                        .slice(0, 2)
-                        .toUpperCase();
+                      const isCurrentUser = author?.isCurrentUser ?? false;
+                      const displayName = author?.displayName ?? 'Participant';
+                      const initials = author?.initials ?? 'U';
+                      const roleLabel = author?.roleLabel;
+                      const timestamp = message.timestamp || (message as any).created_at;
 
                       return (
                         <div
@@ -455,7 +431,6 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
                           <div className={`flex items-end gap-3 ${isCurrentUser ? 'flex-row-reverse' : 'flex-row'}`}>
                             <div className="flex flex-col items-center">
                               <Avatar className="h-8 w-8 border">
-                                <AvatarImage src={author?.avatarUrl || undefined} alt={displayName} />
                                 <AvatarFallback>{initials}</AvatarFallback>
                               </Avatar>
                               <span className="mt-1 text-[11px] text-muted-foreground/80 max-w-[140px] text-center truncate">
@@ -467,14 +442,16 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
                                 isCurrentUser ? 'bg-roam-blue text-white' : 'bg-white border shadow-sm'
                               }`}
                             >
-                              <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
+                              <p className="text-sm whitespace-pre-wrap break-words">
+                                {message.content || message.author_name || ''}
+                              </p>
                               <div className="flex items-center justify-between mt-1 text-[11px] opacity-80">
-                                {!isCurrentUser && author?.userType && (
+                                {!isCurrentUser && roleLabel && (
                                   <span className="uppercase tracking-wide">
-                                    {author.userType === 'provider' ? 'Provider' : author.userType}
+                                    {roleLabel}
                                   </span>
                                 )}
-                                <span>{formatDistanceToNow(new Date(message.created_at), { addSuffix: true })}</span>
+                                <span>{formatMessageTime(timestamp)}</span>
                               </div>
                             </div>
                           </div>

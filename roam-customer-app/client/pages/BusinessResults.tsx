@@ -204,10 +204,10 @@ export default function BusinessResults() {
 
         // Handle services data
         if (subcategoryId && servicesData && Array.isArray(servicesData)) {
-          const servicesList = servicesData as Service[];
-          setServices(servicesList);
-          // Select all services by default
-          if (servicesList.length > 0) {
+            const servicesList = servicesData as Service[];
+            setServices(servicesList);
+            // Select all services by default
+            if (servicesList.length > 0) {
             const serviceIds = servicesList
               .filter(s => s && s.id)
               .map(s => s.id);
@@ -293,14 +293,14 @@ export default function BusinessResults() {
     // Filter by selected services
     if (selectedServices.size > 0) {
       filtered = filtered.filter(business => {
-        const businessServiceIds = businessServicesMap.get(business.id);
-        if (!businessServiceIds) return false;
-        
-        // Check if business offers any of the selected services
-        return Array.from(selectedServices).some(serviceId => 
-          businessServiceIds.has(serviceId)
-        );
-      });
+      const businessServiceIds = businessServicesMap.get(business.id);
+      if (!businessServiceIds) return false;
+      
+      // Check if business offers any of the selected services
+      return Array.from(selectedServices).some(serviceId => 
+        businessServiceIds.has(serviceId)
+      );
+    });
     }
 
     // Filter by delivery type
@@ -733,31 +733,31 @@ export default function BusinessResults() {
                           {services && Array.isArray(services) && services
                             .filter(service => service && service.id && service.name)
                             .map((service) => (
-                              <div key={service.id} className="flex items-center space-x-2">
-                                <Checkbox
-                                  id={`service-${service.id}`}
-                                  checked={selectedServices.has(service.id)}
-                                  onCheckedChange={(checked) => {
-                                    if (checked) {
+                          <div key={service.id} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`service-${service.id}`}
+                              checked={selectedServices.has(service.id)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
                                       setSelectedServices(prev => new Set([...Array.from(prev), service.id]));
-                                    } else {
-                                      setSelectedServices(prev => {
-                                        const newSet = new Set(prev);
-                                        newSet.delete(service.id);
-                                        return newSet;
-                                      });
-                                    }
-                                  }}
-                                />
-                                <Label
-                                  htmlFor={`service-${service.id}`}
-                                  className="text-sm cursor-pointer flex-1"
-                                >
-                                  {service.name}
-                                </Label>
-                              </div>
-                            ))}
-                        </div>
+                                } else {
+                                  setSelectedServices(prev => {
+                                    const newSet = new Set(prev);
+                                    newSet.delete(service.id);
+                                    return newSet;
+                                  });
+                                }
+                              }}
+                            />
+                            <Label
+                              htmlFor={`service-${service.id}`}
+                              className="text-sm cursor-pointer flex-1"
+                            >
+                              {service.name}
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
                       )}
                     </CardContent>
                   </Card>
@@ -772,61 +772,61 @@ export default function BusinessResults() {
                   </div>
                 ) : (
                   filteredBusinesses.map((business) => (
-                      <Card
-                        key={business.id}
-                        className={cn(
+                    <Card
+                      key={business.id}
+                      className={cn(
                           "cursor-pointer transition-all hover:shadow-lg",
                           selectedBusiness?.id === business.id
                             ? 'ring-2 ring-roam-blue border-roam-blue bg-blue-50/50'
                             : 'hover:shadow-md'
-                        )}
-                        onClick={() => {
+                      )}
+                      onClick={() => {
                           // Select business and navigate to business profile (services tab)
                           // User will choose a specific service from there
-                          setSelectedBusiness(business);
+                        setSelectedBusiness(business);
                           navigate(`/business/${business.id}?tab=services`);
-                        }}
-                      >
+                      }}
+                    >
                         <CardContent className="p-3 sm:p-4">
                           <div className="flex items-start space-x-3 sm:space-x-4">
-                            {/* Business Image/Logo */}
+                          {/* Business Image/Logo */}
                             <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm overflow-hidden">
-                              {business.logo_url || business.image_url ? (
-                                <img
-                                  src={business.logo_url || business.image_url || ""}
-                                  alt={business.business_name}
+                            {business.logo_url || business.image_url ? (
+                              <img
+                                src={business.logo_url || business.image_url || ""}
+                                alt={business.business_name}
                                   className="w-full h-full object-cover rounded-xl"
                                   onError={(e) => {
                                     const target = e.target as HTMLImageElement;
                                     target.style.display = 'none';
                                   }}
-                                />
-                              ) : (
+                              />
+                            ) : (
                                 <Building className="w-8 h-8 sm:w-10 sm:h-10 text-gray-400" />
-                              )}
-                            </div>
+                            )}
+                          </div>
 
                             <div className="flex-1 min-w-0">
                               {/* Business Header with More Info Button */}
                               <div className="flex items-start justify-between mb-2">
-                                <div className="flex-1 min-w-0">
+                          <div className="flex-1 min-w-0">
                                   <h3 className="font-semibold text-base sm:text-lg mb-1 truncate">
-                                    {business.business_name}
-                                  </h3>
+                              {business.business_name}
+                            </h3>
                                   <div className="flex items-center space-x-3 sm:space-x-4 text-xs sm:text-sm text-gray-600">
-                                    <div className="flex items-center">
+                              <div className="flex items-center">
                                       <Star className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-500 mr-1 fill-yellow-500" />
                                       <span className="font-medium">{business.rating.toFixed(1)}</span>
                                       <span className="ml-1">({business.review_count || 0} reviews)</span>
-                                    </div>
-                                    {business.business_locations?.[0] && (
+                            </div>
+                            {business.business_locations?.[0] && (
                                       <div className="flex items-center">
                                         <MapPin className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
-                                        <span className="truncate">
-                                          {(business.business_locations[0] as BusinessLocation).city}, {(business.business_locations[0] as BusinessLocation).state}
-                                        </span>
-                                      </div>
-                                    )}
+                                <span className="truncate">
+                                  {(business.business_locations[0] as BusinessLocation).city}, {(business.business_locations[0] as BusinessLocation).state}
+                                </span>
+                              </div>
+                            )}
                                   </div>
                                 </div>
 
@@ -851,22 +851,22 @@ export default function BusinessResults() {
                               </div>
 
                               {/* Business Description */}
-                              {business.description && (
+                            {business.description && (
                                 <p className="text-xs sm:text-sm text-gray-600 mb-2 leading-relaxed line-clamp-2">
-                                  {business.description}
-                                </p>
-                              )}
+                                {business.description}
+                              </p>
+                            )}
 
                               {/* Service Categories */}
                               <div className="flex flex-wrap gap-1 mb-2">
-                                {business.business_service_subcategories?.slice(0, 3).map((bss) => (
+                              {business.business_service_subcategories?.slice(0, 3).map((bss) => (
                                   <Badge key={bss.id} variant="secondary" className="text-xs px-1.5 py-0.5">
-                                    {bss.service_subcategories?.service_subcategory_type 
-                                      ? formatSubcategoryName(bss.service_subcategories.service_subcategory_type)
-                                      : 'Service'}
-                                  </Badge>
-                                ))}
-                              </div>
+                                  {bss.service_subcategories?.service_subcategory_type 
+                                    ? formatSubcategoryName(bss.service_subcategories.service_subcategory_type)
+                                    : 'Service'}
+                                </Badge>
+                              ))}
+                            </div>
 
                               {/* Selection Indicator */}
                               {selectedBusiness?.id === business.id && (
@@ -879,10 +879,10 @@ export default function BusinessResults() {
                                   </div>
                                 </div>
                               )}
-                            </div>
                           </div>
-                        </CardContent>
-                      </Card>
+                        </div>
+                      </CardContent>
+                    </Card>
                   ))
                 )}
               </div>
