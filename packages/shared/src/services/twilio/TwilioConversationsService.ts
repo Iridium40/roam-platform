@@ -1,8 +1,8 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { ConversationService } from './ConversationService';
-import { ParticipantService } from './ParticipantService';
-import { MessageService } from './MessageService';
-import type { TwilioConfig } from './types';
+import { ConversationService } from './ConversationService.js';
+import { ParticipantService } from './ParticipantService.js';
+import { MessageService } from './MessageService.js';
+import type { TwilioConfig } from './types.js';
 
 /**
  * Unified Twilio Conversations Service with Supabase Integration

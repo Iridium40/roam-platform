@@ -1,8 +1,8 @@
 // Export all Twilio Conversations services and types
-export { ConversationService } from './ConversationService';
-export { ParticipantService } from './ParticipantService';
-export { MessageService } from './MessageService';
-export { TwilioConversationsService, createTwilioConversationsService } from './TwilioConversationsService';
+export { ConversationService } from './ConversationService.js';
+export { ParticipantService } from './ParticipantService.js';
+export { MessageService } from './MessageService.js';
+export { TwilioConversationsService, createTwilioConversationsService } from './TwilioConversationsService.js';
 
 // Export verification utilities
 export {
@@ -12,7 +12,7 @@ export {
   testTwilioConnection,
   testServiceInitialization,
   printSetupStatus,
-} from './verify-setup';
+} from './verify-setup.js';
 
 export type {
   TwilioConfig,
@@ -32,5 +32,5 @@ export type {
   DeliveryStatus,
   ConversationState,
   EnvironmentConfig,
-} from './types';
+} from './types.js';
 

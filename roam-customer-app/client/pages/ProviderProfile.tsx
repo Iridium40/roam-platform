@@ -269,7 +269,18 @@ export default function ProviderProfile() {
                     : service.description.substring(0, descriptionLength) + '...';
 
                   return (
-                    <Card key={service.id} className="hover:shadow-md transition-shadow flex flex-col overflow-hidden">
+                    <Card key={service.id} className="hover:shadow-md transition-shadow flex flex-col overflow-hidden relative">
+                      {/* Favorite Button - Top Right Corner */}
+                      <div className="absolute top-2 right-2 z-10">
+                        <FavoriteButton
+                          type="service"
+                          itemId={service.id}
+                          size="sm"
+                          variant="ghost"
+                          showText={false}
+                        />
+                      </div>
+                      
                       {/* Hero Banner Image */}
                       <div className="w-full h-48 bg-gray-200 relative overflow-hidden">
                         {service.image_url ? (

@@ -305,15 +305,24 @@ export default function BusinessProfile() {
                   <h1 className="text-3xl font-bold text-foreground">
                     {business.business_name}
                   </h1>
-                  <Button
-                    onClick={() => setShareModalOpen(true)}
-                    variant="outline"
-                    size="sm"
-                    className="gap-2"
-                  >
-                    <Share2 className="w-4 h-4" />
-                    Share
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <FavoriteButton
+                      type="business"
+                      itemId={business.id}
+                      size="sm"
+                      variant="outline"
+                      showText={false}
+                    />
+                    <Button
+                      onClick={() => setShareModalOpen(true)}
+                      variant="outline"
+                      size="sm"
+                      className="gap-2"
+                    >
+                      <Share2 className="w-4 h-4" />
+                      Share
+                    </Button>
+                  </div>
                 </div>
                 <p className="text-foreground/60 mb-4">
                   {business.description}
@@ -423,7 +432,18 @@ export default function BusinessProfile() {
                           : service.description.substring(0, descriptionLength) + '...';
 
                         return (
-                          <Card key={service.id} className="hover:shadow-md transition-shadow flex flex-col overflow-hidden">
+                          <Card key={service.id} className="hover:shadow-md transition-shadow flex flex-col overflow-hidden relative">
+                            {/* Favorite Button - Top Right Corner */}
+                            <div className="absolute top-2 right-2 z-10">
+                              <FavoriteButton
+                                type="service"
+                                itemId={service.id}
+                                size="sm"
+                                variant="ghost"
+                                showText={false}
+                              />
+                            </div>
+                            
                             {/* Hero Banner Image */}
                             <div className="w-full h-48 bg-gray-200 relative overflow-hidden">
                               {service.image_url ? (
