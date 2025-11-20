@@ -88,6 +88,7 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
     if (!booking) return [];
     const payload: BookingConversationParticipantData[] = [];
 
+    // Always add customer
     if (booking.customer_profiles?.id) {
       payload.push({
         userId: booking.customer_profiles.id,
@@ -103,22 +104,54 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
       });
     }
 
-    if (booking.providers?.user_id) {
-      payload.push({
-        userId: booking.providers.user_id,
-        userType: 'provider',
-        userName: `${booking.providers.first_name ?? ''} ${booking.providers.last_name ?? ''}`.trim(),
-      });
-    } else if ((booking as any)?.provider_id) {
-      payload.push({
-        userId: (booking as any).provider_id,
-        userType: 'provider',
-        userName: booking.provider_name || 'Provider',
-      });
+    // Always add the current provider user (if available)
+    if (currentUserId && currentUserType === 'provider') {
+      // Check if current user is already in payload to avoid duplicates
+      const isAlreadyIncluded = payload.some(
+        (p) => p.userId === currentUserId && p.userType === 'provider'
+      );
+      
+      if (!isAlreadyIncluded) {
+        payload.push({
+          userId: currentUserId,
+          userType: 'provider',
+          userName: provider
+            ? `${provider.first_name ?? ''} ${provider.last_name ?? ''}`.trim() || 'Provider'
+            : 'Provider',
+          email: provider?.email ?? null,
+        });
+      }
+    }
+
+    // Also add assigned provider from booking if different from current user
+    if (booking.providers?.user_id && booking.providers.user_id !== currentUserId) {
+      const isAlreadyIncluded = payload.some(
+        (p) => p.userId === booking.providers.user_id && p.userType === 'provider'
+      );
+      
+      if (!isAlreadyIncluded) {
+        payload.push({
+          userId: booking.providers.user_id,
+          userType: 'provider',
+          userName: `${booking.providers.first_name ?? ''} ${booking.providers.last_name ?? ''}`.trim(),
+        });
+      }
+    } else if ((booking as any)?.provider_id && (booking as any).provider_id !== currentUserId) {
+      const isAlreadyIncluded = payload.some(
+        (p) => p.userId === (booking as any).provider_id && p.userType === 'provider'
+      );
+      
+      if (!isAlreadyIncluded) {
+        payload.push({
+          userId: (booking as any).provider_id,
+          userType: 'provider',
+          userName: booking.provider_name || 'Provider',
+        });
+      }
     }
 
     return payload;
-  }, [booking]);
+  }, [booking, currentUserId, currentUserType, provider]);
   
   const [messages, setMessages] = useState<ConversationMessageWithAuthor[]>([]);
   const [participants, setParticipants] = useState<BookingConversationParticipant[]>([]);
