@@ -84,13 +84,21 @@ export class TwilioConversationsService {
     }>,
     conversationType: 'booking_chat' | 'support_chat' | 'general' = 'booking_chat'
   ): Promise<{ conversationSid: string; conversationMetadataId: string; isNew: boolean }> {
+    console.log('🔍 getOrCreateConversationForBooking called:', { bookingId, participantCount: participants.length });
+    
     // Check if conversation already exists for this booking
-    const { data: existingMetadata } = await this.supabase
+    const { data: existingMetadata, error: queryError } = await this.supabase
       .from('conversation_metadata')
       .select('id, twilio_conversation_sid, is_active')
       .eq('booking_id', bookingId)
       .eq('is_active', true)
       .single();
+
+    console.log('📊 Existing conversation query result:', { 
+      found: !!existingMetadata, 
+      conversationSid: existingMetadata?.twilio_conversation_sid,
+      error: queryError?.message 
+    });
 
     let conversationSid: string;
     let conversationMetadataId: string;
@@ -100,11 +108,13 @@ export class TwilioConversationsService {
       // Use existing conversation
       conversationSid = existingMetadata.twilio_conversation_sid;
       conversationMetadataId = existingMetadata.id;
+      console.log('♻️ Reusing existing conversation:', conversationSid);
       
       // Verify conversation still exists in Twilio
       const verifyResult = await this.conversationService.getConversation(conversationSid);
       if (!verifyResult.success) {
         // Conversation was deleted in Twilio, create a new one
+        console.log('⚠️ Conversation deleted in Twilio, creating new one');
         isNew = true;
         const result = await this._createNewConversation(bookingId, participants, conversationType);
         conversationSid = result.conversationSid;
@@ -112,6 +122,7 @@ export class TwilioConversationsService {
       }
     } else {
       // Create new conversation
+      console.log('🆕 Creating new conversation for booking:', bookingId);
       isNew = true;
       const result = await this._createNewConversation(bookingId, participants, conversationType);
       conversationSid = result.conversationSid;
