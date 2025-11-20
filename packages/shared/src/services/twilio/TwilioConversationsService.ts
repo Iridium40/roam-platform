@@ -392,14 +392,23 @@ export class TwilioConversationsService {
    * Get messages for a conversation
    */
   async getMessages(conversationSid: string, limit: number = 50): Promise<any[]> {
+    console.log('📥 Fetching messages for conversation:', { conversationSid, limit });
+    
     const result = await this.messageService.listMessages(conversationSid, limit);
     
+    console.log('📥 Message fetch result:', { 
+      success: result.success, 
+      messageCount: result.data?.length || 0,
+      error: result.error 
+    });
+    
     if (!result.success || !result.data) {
+      console.error('❌ Failed to fetch messages:', result.error);
       throw new Error(result.error || 'Failed to fetch messages');
     }
 
     // Parse attributes for each message
-    return result.data.map((msg: any) => ({
+    const messages = result.data.map((msg: any) => ({
       id: msg.sid,
       content: msg.body,
       author: msg.author,
@@ -407,6 +416,9 @@ export class TwilioConversationsService {
       timestamp: msg.dateCreated?.toISOString() || new Date().toISOString(),
       attributes: msg.attributes ? JSON.parse(msg.attributes) : {},
     }));
+    
+    console.log('✅ Parsed messages:', messages.length);
+    return messages;
   }
 
   /**

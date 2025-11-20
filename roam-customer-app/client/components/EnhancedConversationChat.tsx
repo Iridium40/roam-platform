@@ -184,13 +184,25 @@ export default function EnhancedConversationChat({
 
   const loadMessages = useCallback(async (convId?: string) => {
     const targetConversationId = convId || conversationId;
-    if (!targetConversationId || !bookingConversationsClient) return;
+    console.log('🔄 loadMessages called:', { 
+      convId, 
+      conversationId, 
+      targetConversationId, 
+      hasClient: !!bookingConversationsClient 
+    });
+    
+    if (!targetConversationId || !bookingConversationsClient) {
+      console.warn('⚠️ Cannot load messages - missing conversationId or client');
+      return;
+    }
 
     try {
+      console.log('📞 Calling getMessages API...');
       const fetchedMessages = await bookingConversationsClient.getMessages(targetConversationId);
+      console.log('✅ Messages fetched:', fetchedMessages.length, 'messages');
       setMessages(fetchedMessages);
     } catch (err) {
-      console.error('Error loading messages:', err);
+      console.error('❌ Error loading messages:', err);
     }
   }, [bookingConversationsClient, conversationId]);
 

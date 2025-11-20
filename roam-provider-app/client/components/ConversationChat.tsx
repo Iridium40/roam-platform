@@ -164,12 +164,20 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
 
   const loadMessages = useCallback(
     async (conversationId: string) => {
-      if (!conversationId || !bookingConversationsClient) return;
+      console.log('🔄 loadMessages called:', { conversationId, hasClient: !!bookingConversationsClient });
+      
+      if (!conversationId || !bookingConversationsClient) {
+        console.warn('⚠️ Cannot load messages - missing conversationId or client');
+        return;
+      }
+      
       try {
+        console.log('📞 Calling getMessages API...');
         const fetched = await bookingConversationsClient.getMessages(conversationId);
+        console.log('✅ Messages fetched:', fetched.length, 'messages');
         setMessages(fetched);
       } catch (err) {
-        console.error('Error loading messages:', err);
+        console.error('❌ Error loading messages:', err);
       }
     },
     [bookingConversationsClient]
