@@ -487,6 +487,8 @@ export class TwilioConversationsService {
     userType: 'customer' | 'provider' | 'owner' | 'dispatcher',
     businessId?: string
   ): Promise<ConversationSummary[]> {
+    console.log('🔍 getConversationsForUser called:', { userId, userType, businessId });
+    
     const { data: participantData, error } = await this.supabase
       .from('conversation_participants')
       .select(`
@@ -533,12 +535,18 @@ export class TwilioConversationsService {
       .eq('user_type', userType)
       .eq('is_active', true);
 
+    console.log('📊 Query result:', { 
+      foundParticipants: participantData?.length || 0, 
+      error: error?.message 
+    });
+
     if (error) {
-      console.error('Error loading conversations for user:', error);
+      console.error('❌ Error loading conversations for user:', error);
       throw error;
     }
 
     if (!participantData?.length) {
+      console.log('⚠️ No participants found for this user');
       return [];
     }
 
