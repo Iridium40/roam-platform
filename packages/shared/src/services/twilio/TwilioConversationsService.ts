@@ -309,11 +309,14 @@ export class TwilioConversationsService {
         actualRole = data.provider_role || userType;
       }
     } else if (userType === 'customer') {
+      // Try both user_id and id columns (customer_profiles uses 'id' as primary key)
       const { data } = await this.supabase
         .from('customer_profiles')
         .select('first_name, last_name')
-        .eq('user_id', userId)
+        .or(`user_id.eq.${userId},id.eq.${userId}`)
         .single();
+      
+      console.log('📝 Customer profile lookup:', { userId, found: !!data, data });
       userDetails = data;
       actualRole = 'customer'; // Always 'customer' for customer profiles
     }
