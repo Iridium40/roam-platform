@@ -490,7 +490,7 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
                       const displayName = author?.displayName ?? 'Participant';
                       const initials = author?.initials ?? 'U';
                       const roleLabel = author?.roleLabel;
-                      const timestamp = message.timestamp || (message as any).created_at;
+                      const timestamp = message.timestamp;
 
                       return (
                         <div
