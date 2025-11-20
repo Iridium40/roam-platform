@@ -252,7 +252,14 @@ export class TwilioConversationsService {
       }
 
       // Store participant in Supabase
-      await this.supabase
+      console.log(`💾 Storing participant in Supabase:`, {
+        conversation_id: conversationMetadataId,
+        user_id: participant.userId,
+        user_type: participant.userType,
+        twilio_participant_sid: twilioParticipantSid,
+      });
+
+      const { error: upsertError } = await this.supabase
         .from('conversation_participants')
         .upsert({
           conversation_id: conversationMetadataId,
@@ -264,6 +271,12 @@ export class TwilioConversationsService {
         }, {
           onConflict: 'conversation_id,user_id,user_type',
         });
+
+      if (upsertError) {
+        console.error(`❌ Error storing participant in Supabase:`, upsertError);
+      } else {
+        console.log(`✅ Participant stored successfully`);
+      }
     }
   }
 
