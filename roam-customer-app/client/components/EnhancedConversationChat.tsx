@@ -290,10 +290,11 @@ export default function EnhancedConversationChat({
   }, []);
 
   useEffect(() => {
-    if (isOpen && booking?.id) {
+    // Only initialize if modal is open, we have a booking, and no conversation is active yet
+    if (isOpen && booking?.id && !conversationId && !loading) {
       initializeConversation();
     }
-  }, [isOpen, booking?.id, initializeConversation]);
+  }, [isOpen, booking?.id, conversationId, loading, initializeConversation]);
 
   useEffect(() => {
     scrollToBottom();
