@@ -490,10 +490,12 @@ export default function EnhancedConversationChat({
                         }`}
                       >
                         <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
-                        <div className="flex items-center justify-between mt-1 text-[11px] opacity-80 gap-2">
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0.5">
-                            {displayRole}
-                          </Badge>
+                        <div className="flex items-center justify-between mt-1 text-[11px] opacity-80">
+                          {!isCustomer && displayRole && (
+                            <span className="uppercase tracking-wide">
+                              {displayRole}
+                            </span>
+                          )}
                           <span>{formatDistanceToNow(new Date(message.created_at), { addSuffix: true })}</span>
                         </div>
                       </div>
