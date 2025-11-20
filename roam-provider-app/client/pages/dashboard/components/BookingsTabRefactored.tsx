@@ -4,12 +4,11 @@ import React, { useState, lazy, Suspense } from "react";
 import BookingStatsSection from "./bookings/BookingStatsSection";
 import BookingFiltersSection from "./bookings/BookingFiltersSection";
 import BookingListSection from "./bookings/BookingListSection";
-import BookingDetailModal from "./bookings/BookingDetailModal";
 
 // Import custom hook
 import { useBookings } from "./bookings/hooks/useBookings";
 
-// Lazy load calendar views - created outside component to avoid re-initialization
+// Lazy load calendar views and modal - created outside component to avoid re-initialization
 const WeekCalendarViewLazy = lazy(() => 
   import("./bookings/WeekCalendarView").catch((err) => {
     console.error("Failed to load WeekCalendarView:", err);
@@ -23,6 +22,14 @@ const MonthCalendarViewLazy = lazy(() =>
     console.error("Failed to load MonthCalendarView:", err);
     // Return a fallback component
     return { default: () => <div className="p-4 text-red-600">Failed to load month calendar view</div> };
+  })
+);
+
+// Lazy load modal to avoid circular dependency with supabase
+const BookingDetailModalLazy = lazy(() =>
+  import("./bookings/BookingDetailModal").catch((err) => {
+    console.error("Failed to load BookingDetailModal:", err);
+    return { default: () => null };
   })
 );
 
@@ -196,12 +203,14 @@ export function BookingsTab({ providerData, business }: BookingsTabProps) {
       )}
 
       {/* Booking Detail Modal */}
-      <BookingDetailModal
-        selectedBooking={selectedBooking}
-        setSelectedBooking={setSelectedBooking}
-        formatDisplayTime={formatDisplayTime}
-        onBookingUpdate={loadBookings}
-      />
+      <Suspense fallback={null}>
+        <BookingDetailModalLazy
+          selectedBooking={selectedBooking}
+          setSelectedBooking={setSelectedBooking}
+          formatDisplayTime={formatDisplayTime}
+          onBookingUpdate={loadBookings}
+        />
+      </Suspense>
     </div>
   );
 }
