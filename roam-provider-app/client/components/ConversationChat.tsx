@@ -151,38 +151,7 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Initialize conversation when modal opens
-  useEffect(() => {
-    if (!isOpen) return;
-
-    if (booking) {
-      initializeConversation();
-    } else if (conversationSid) {
-      setActiveConversationSid(conversationSid);
-      loadMessages(conversationSid);
-    }
-  }, [isOpen, booking, conversationSid, initializeConversation, loadMessages]);
-
-  // Load messages when conversation changes
-  useEffect(() => {
-    if (activeConversationSid) {
-      loadMessages(activeConversationSid);
-    }
-  }, [activeConversationSid, loadMessages]);
-
-  // Smart polling for real-time updates with scroll preservation
-  useEffect(() => {
-    if (!isOpen || !activeConversationSid) return;
-
-    const pollInterval = setInterval(() => {
-      loadMessages(activeConversationSid);
-    }, 8000);
-
-    return () => {
-      clearInterval(pollInterval);
-    };
-  }, [isOpen, activeConversationSid, loadMessages]);
-
+  // Define initializeConversation BEFORE the useEffects that use it
   const initializeConversation = useCallback(async () => {
     if (!booking || !bookingConversationsClient) {
       return;
@@ -237,6 +206,38 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
       setLoading(false);
     }
   }, [booking, bookingConversationsClient, buildParticipantPayload, loadMessages]);
+
+  // Initialize conversation when modal opens
+  useEffect(() => {
+    if (!isOpen) return;
+
+    if (booking) {
+      initializeConversation();
+    } else if (conversationSid) {
+      setActiveConversationSid(conversationSid);
+      loadMessages(conversationSid);
+    }
+  }, [isOpen, booking, conversationSid, initializeConversation, loadMessages]);
+
+  // Load messages when conversation changes
+  useEffect(() => {
+    if (activeConversationSid) {
+      loadMessages(activeConversationSid);
+    }
+  }, [activeConversationSid, loadMessages]);
+
+  // Smart polling for real-time updates with scroll preservation
+  useEffect(() => {
+    if (!isOpen || !activeConversationSid) return;
+
+    const pollInterval = setInterval(() => {
+      loadMessages(activeConversationSid);
+    }, 8000);
+
+    return () => {
+      clearInterval(pollInterval);
+    };
+  }, [isOpen, activeConversationSid, loadMessages]);
 
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !activeConversationSid || !bookingConversationsClient || !currentUserId) return;

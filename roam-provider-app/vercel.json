@@ -1,4 +1,5 @@
 {
+  "version": 2,
   "buildCommand": "npm run build",
   "outputDirectory": "dist/spa",
   "installCommand": "cd .. && npm install && cd roam-provider-app",
