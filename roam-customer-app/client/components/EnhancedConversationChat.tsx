@@ -508,7 +508,7 @@ export default function EnhancedConversationChat({
                               {displayRole}
                             </span>
                           )}
-                          <span>{formatDistanceToNow(new Date(message.created_at), { addSuffix: true })}</span>
+                          <span>{formatDistanceToNow(new Date(message.timestamp), { addSuffix: true })}</span>
                         </div>
                       </div>
                     </div>
