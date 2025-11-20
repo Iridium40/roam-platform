@@ -54,7 +54,7 @@ interface ConversationChatProps {
 }
 
 const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: ConversationChatProps) => {
-  const { user, customer, userType } = useAuth();
+  const { provider: providerAuth, customer: customerAuth, userType } = useAuth();
   
   // Get access token from localStorage
   const accessToken = typeof window !== 'undefined' ? localStorage.getItem('roam_access_token') : null;
@@ -65,14 +65,18 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
   );
   
   // Determine user type safely
-  const currentUserType = userType || (user ? 'provider' : 'customer');
+  const currentUserType = userType || (providerAuth ? 'provider' : 'customer');
+  
+  // Get the actual provider or customer object
+  const provider = providerAuth?.provider;
+  const customer = customerAuth?.customer;
   
   // Get the current user data (either provider or customer)
-  const currentUser = user || customer;
+  const currentUser = provider || customer;
   const currentUserId =
-    (user as any)?.user_id ??
-    (user as any)?.id ??
-    (customer as any)?.id ??
+    provider?.user_id ??
+    provider?.id ??
+    customer?.id ??
     '';
 
   const getUserIdentity = useCallback(() => {
