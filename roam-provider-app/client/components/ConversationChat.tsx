@@ -153,7 +153,13 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
 
   // Define initializeConversation BEFORE the useEffects that use it
   const initializeConversation = useCallback(async () => {
+    console.log('🔄 Initializing conversation...', { 
+      hasBooking: !!booking, 
+      hasClient: !!bookingConversationsClient 
+    });
+
     if (!booking || !bookingConversationsClient) {
+      console.warn('⚠️ Cannot initialize - missing booking or client');
       return;
     }
 
@@ -161,6 +167,7 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
     setError(null);
 
     const participantPayload = buildParticipantPayload();
+    console.log('👥 Participant payload:', participantPayload);
 
     try {
       const result = await bookingConversationsClient.getOrCreateConversationForBooking(
@@ -180,6 +187,7 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
         participantPayload,
       );
 
+      console.log('✅ Conversation initialized:', result);
       setActiveConversationSid(result.conversationId);
       const normalizedParticipants =
         result.participants && result.participants.length
@@ -240,10 +248,23 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
   }, [isOpen, activeConversationSid, loadMessages]);
 
   const handleSendMessage = async () => {
-    if (!newMessage.trim() || !activeConversationSid || !bookingConversationsClient || !currentUserId) return;
+    console.log('🚀 Send message clicked', {
+      hasMessage: !!newMessage.trim(),
+      activeConversationSid,
+      hasClient: !!bookingConversationsClient,
+      currentUserId,
+      currentUserType,
+    });
+
+    if (!newMessage.trim() || !activeConversationSid || !bookingConversationsClient || !currentUserId) {
+      console.warn('❌ Send blocked - missing required data');
+      return;
+    }
 
     try {
       setSending(true);
+      console.log('📤 Sending message...', { conversationSid: activeConversationSid });
+      
       await bookingConversationsClient.sendMessage(
         activeConversationSid,
         newMessage.trim(),
@@ -251,10 +272,12 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
         (currentUserType as 'customer' | 'provider' | 'owner' | 'dispatcher'),
         booking?.id
       );
+      
+      console.log('✅ Message sent successfully');
       setNewMessage('');
       await loadMessages(activeConversationSid);
     } catch (error) {
-      console.error('Error sending message:', error);
+      console.error('❌ Error sending message:', error);
       setError(error instanceof Error ? error.message : 'Failed to send message');
     } finally {
       setSending(false);
