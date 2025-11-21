@@ -496,7 +496,7 @@ export default function EnhancedConversationChat({
         )}
 
         {/* Messages Area */}
-        <ScrollArea className="flex-1 min-h-0 p-4 border rounded-lg bg-gray-50">
+        <ScrollArea className="h-[400px] p-4 border rounded-lg bg-gray-50">
           <div className="space-y-4">
             {messages.length === 0 ? (
               <div className="text-center py-8">
@@ -527,23 +527,10 @@ export default function EnhancedConversationChat({
                     const attrs = typeof message.attributes === 'string' 
                       ? JSON.parse(message.attributes) 
                       : message.attributes;
-                    
-                    console.log('🏷️ Message attributes for role display:', {
-                      messageId: message.id,
-                      author_type: message.author_type,
-                      isCustomer,
-                      attrs,
-                      attrsRole: attrs.role,
-                      attrsUserType: attrs.userType,
-                    });
-                    
                     const role = attrs.role || attrs.userType || message.author_type;
                     // Capitalize the role for display
                     displayRole = role.charAt(0).toUpperCase() + role.slice(1);
-                    
-                    console.log('🏷️ Final displayRole:', displayRole);
                   } catch (e) {
-                    console.error('❌ Failed to parse message attributes for role:', e);
                     // Use default displayRole if parsing fails
                   }
                 }

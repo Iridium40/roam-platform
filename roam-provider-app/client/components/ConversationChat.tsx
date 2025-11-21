@@ -501,7 +501,7 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
               <CardTitle className="text-sm">Messages</CardTitle>
             </CardHeader>
             <CardContent className="flex-1 flex flex-col min-h-0 pt-0">
-              <ScrollArea className="flex-1">
+              <ScrollArea className="h-[400px]">
                 <div className="space-y-4 p-4">
                   {loading ? (
                     <div className="text-center text-gray-500">Loading messages...</div>
