@@ -26,6 +26,45 @@ import {
 } from '@roam/shared';
 import { formatDistanceToNow } from 'date-fns';
 
+// Format time as 12-hour with am/pm (e.g., "10:30am")
+const formatMessageTime = (date: Date | string | number): string => {
+  const dateObj = new Date(date);
+  let hours = dateObj.getHours();
+  const minutes = dateObj.getMinutes();
+  const ampm = hours >= 12 ? 'pm' : 'am';
+  hours = hours % 12;
+  hours = hours ? hours : 12; // 0 should be 12
+  const minutesStr = minutes < 10 ? '0' + minutes : minutes;
+  return `${hours}:${minutesStr}${ampm}`;
+};
+
+// Format date as MM/DD/YY or "Today"
+const formatMessageDate = (date: Date | string | number): string => {
+  const dateObj = new Date(date);
+  const today = new Date();
+  
+  // Check if it's today
+  if (
+    dateObj.getDate() === today.getDate() &&
+    dateObj.getMonth() === today.getMonth() &&
+    dateObj.getFullYear() === today.getFullYear()
+  ) {
+    return 'Today';
+  }
+  
+  // Format as MM/DD/YY
+  const month = dateObj.getMonth() + 1;
+  const day = dateObj.getDate();
+  const year = dateObj.getFullYear().toString().slice(-2);
+  return `${month}/${day}/${year}`;
+};
+
+// Get date string for grouping (YYYY-MM-DD)
+const getDateKey = (date: Date | string | number): string => {
+  const dateObj = new Date(date);
+  return dateObj.toISOString().split('T')[0];
+};
+
 interface ConversationChatProps {
   isOpen: boolean;
   onClose: () => void;
@@ -518,59 +557,78 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
                   ) : messages.length === 0 ? (
                     <div className="text-center text-gray-500">No messages yet. Start the conversation!</div>
                   ) : (
-                    messages.map((message) => {
-                      const author = resolveMessageAuthor(message);
-                      const displayName = author?.displayName ?? 'Participant';
-                      const initials = author?.initials ?? 'U';
-                      const roleLabel = author?.roleLabel;
-                      const avatarUrl = author?.avatarUrl;
-                      const timestamp = message.timestamp;
+                    (() => {
+                      // Group messages by date
+                      let lastDateKey: string | null = null;
                       
-                      // Check if message is from a provider-side user (owner, dispatcher, provider)
-                      // All provider-side messages go on the right (blue), customer messages on the left (white)
-                      const isProviderSide = message.author_type === 'owner' || 
-                                            message.author_type === 'dispatcher' || 
-                                            message.author_type === 'provider';
-                      const isCustomer = message.author_type === 'customer';
+                      return messages.map((message, index) => {
+                        const author = resolveMessageAuthor(message);
+                        const displayName = author?.displayName ?? 'Participant';
+                        const initials = author?.initials ?? 'U';
+                        const roleLabel = author?.roleLabel;
+                        const avatarUrl = author?.avatarUrl;
+                        const timestamp = message.timestamp;
+                        
+                        // Check if message is from a provider-side user (owner, dispatcher, provider)
+                        // All provider-side messages go on the right (blue), customer messages on the left (white)
+                        const isProviderSide = message.author_type === 'owner' || 
+                                              message.author_type === 'dispatcher' || 
+                                              message.author_type === 'provider';
+                        const isCustomer = message.author_type === 'customer';
 
-                      return (
-                        <div
-                          key={message.id}
-                          className={`flex ${isProviderSide ? 'justify-end' : 'justify-start'} mb-4`}
-                        >
-                          <div className={`flex items-end gap-3 ${isProviderSide ? 'flex-row-reverse' : 'flex-row'}`}>
-                            <div className="flex flex-col items-center">
-                              <Avatar className="h-8 w-8 border">
-                                <AvatarImage src={avatarUrl || undefined} alt={displayName} />
-                                <AvatarFallback>{initials}</AvatarFallback>
-                              </Avatar>
-                              <span className="mt-1 text-[11px] text-muted-foreground/80 max-w-[140px] text-center truncate">
-                                {displayName}
-                              </span>
-                            </div>
-                            <div
-                              className={`max-w-[70%] rounded-lg px-4 py-2 ${
-                                isProviderSide ? 'bg-roam-blue text-white' : 'bg-white border shadow-sm'
-                              }`}
-                            >
-                              <p className="text-sm whitespace-pre-wrap break-words">
-                                {message.content || message.author_name || ''}
-                              </p>
-                              <div className="flex items-center justify-between mt-1 text-[11px] opacity-80">
-                                {!isProviderSide && roleLabel && (
-                                  <span className="uppercase tracking-wide">
-                                    {roleLabel}
+                        // Check if we need to show a date separator
+                        const currentDateKey = getDateKey(timestamp);
+                        const showDateSeparator = currentDateKey !== lastDateKey;
+                        lastDateKey = currentDateKey;
+
+                        return (
+                          <div key={message.id}>
+                            {/* Date Separator */}
+                            {showDateSeparator && (
+                              <div className="flex items-center justify-center my-4">
+                                <div className="bg-gray-200 text-gray-600 text-xs font-medium px-3 py-1 rounded-full">
+                                  {formatMessageDate(timestamp)}
+                                </div>
+                              </div>
+                            )}
+                            
+                            {/* Message */}
+                            <div className={`flex ${isProviderSide ? 'justify-end' : 'justify-start'} mb-3`}>
+                              <div className={`flex items-end gap-3 ${isProviderSide ? 'flex-row-reverse' : 'flex-row'}`}>
+                                <div className="flex flex-col items-center">
+                                  <Avatar className="h-8 w-8 border">
+                                    <AvatarImage src={avatarUrl || undefined} alt={displayName} />
+                                    <AvatarFallback>{initials}</AvatarFallback>
+                                  </Avatar>
+                                  <span className="mt-1 text-[11px] text-muted-foreground/80 max-w-[140px] text-center truncate">
+                                    {displayName}
                                   </span>
-                                )}
-                                <span className={`${isProviderSide ? 'text-white/80' : ''}`}>
-                                  {formatMessageTime(timestamp)}
-                                </span>
+                                </div>
+                                <div
+                                  className={`max-w-[70%] rounded-lg px-4 py-2 ${
+                                    isProviderSide ? 'bg-roam-blue text-white' : 'bg-white border shadow-sm'
+                                  }`}
+                                >
+                                  <p className="text-sm whitespace-pre-wrap break-words">
+                                    {message.content || message.author_name || ''}
+                                  </p>
+                                  <div className="flex items-center justify-between mt-1 text-[11px] opacity-80">
+                                    {!isProviderSide && roleLabel && (
+                                      <span className="uppercase tracking-wide mr-2">
+                                        {roleLabel}
+                                      </span>
+                                    )}
+                                    <span className={isProviderSide ? 'text-white/80' : 'text-gray-500'}>
+                                      {formatMessageTime(timestamp)}
+                                    </span>
+                                  </div>
+                                </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      );
-                    })
+                        );
+                      });
+                    })()
                   )}
                   <div ref={messagesEndRef} />
                 </div>
