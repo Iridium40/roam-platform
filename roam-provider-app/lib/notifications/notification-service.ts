@@ -1,6 +1,24 @@
 import { createClient } from '@supabase/supabase-js';
 import { sendEmail } from './email-service';
-import { sendSMS } from './sms-service.js';
+
+// Import SMS service - use optional import pattern for Vercel compatibility
+let sendSMSFunction: ((params: { to: string; body: string }) => Promise<any>) | null = null;
+
+// Lazy load SMS service to avoid module loading errors
+async function loadSendSMS() {
+  if (sendSMSFunction) {
+    return sendSMSFunction;
+  }
+  
+  try {
+    const smsModule = await import('./sms-service');
+    sendSMSFunction = smsModule.sendSMS;
+    return sendSMSFunction;
+  } catch (e) {
+    console.warn('⚠️ Could not load SMS service module:', e);
+    return null;
+  }
+}
 
 // Initialize Supabase client with service role key for server-side operations
 const getSupabaseServiceClient = () => {
@@ -221,6 +239,12 @@ export class NotificationService {
       }
 
       const body = this.replaceVariables(template.sms_body, variables);
+
+      const sendSMS = await loadSendSMS();
+      if (!sendSMS) {
+        console.warn('⚠️ SMS service not available, skipping SMS notification');
+        return;
+      }
 
       const result = await sendSMS({
         to: phone,
