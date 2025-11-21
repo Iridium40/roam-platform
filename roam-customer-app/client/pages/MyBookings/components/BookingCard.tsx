@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,6 +29,8 @@ import {
   Map,
   CreditCard,
 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/lib/supabase";
 import type { BookingWithDetails } from "@/types/index";
 import { formatBookingDate, isWithin24Hours, getDeliveryTypeLabel, getDeliveryTypeIcon } from "../utils/bookingCalculations";
 import ReviewAndTipModal from "./ReviewAndTipModal";
@@ -59,6 +62,65 @@ export const BookingCard: React.FC<BookingCardProps> = ({
 }) => {
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [showTipModal, setShowTipModal] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const { customer } = useAuth();
+
+  // Fetch unread message count for this booking
+  useEffect(() => {
+    if (!booking?.id || !customer?.id) {
+      setUnreadCount(0);
+      return;
+    }
+
+    const fetchUnreadCount = async () => {
+      try {
+        // Get conversation metadata for this booking
+        const { data: conversation, error: convError } = await supabase
+          .from('conversation_metadata')
+          .select('id')
+          .eq('booking_id', booking.id)
+          .eq('is_active', true)
+          .maybeSingle<{ id: string }>();
+
+        if (convError || !conversation?.id) {
+          setUnreadCount(0);
+          return;
+        }
+
+        // Get unread message count
+        const { count, error: countError } = await supabase
+          .from('message_notifications')
+          .select('*', { count: 'exact', head: true })
+          .eq('conversation_id', conversation.id)
+          .eq('user_id', customer.id)
+          .eq('is_read', false);
+
+        if (countError) {
+          console.error('Error fetching unread count:', countError);
+          setUnreadCount(0);
+          return;
+        }
+
+        setUnreadCount(count || 0);
+      } catch (error) {
+        console.error('Error fetching unread count:', error);
+        setUnreadCount(0);
+      }
+    };
+
+    fetchUnreadCount();
+
+    // Poll for updates every 30 seconds
+    const interval = setInterval(fetchUnreadCount, 30000);
+
+    return () => clearInterval(interval);
+  }, [booking?.id, customer?.id]);
+
+  // Reset unread count when message button is clicked
+  const handleMessageClick = () => {
+    setUnreadCount(0);
+    onMessage(booking);
+  };
 
   const DeliveryIcon = getDeliveryIcon(booking.deliveryType);
   const deliveryLabel = getDeliveryTypeLabel(booking.deliveryType);
@@ -322,12 +384,20 @@ export const BookingCard: React.FC<BookingCardProps> = ({
               })() && (
                 <Button
                   size="sm"
-                  className="bg-roam-blue hover:bg-roam-blue/90 text-white font-medium"
-                  onClick={() => onMessage(booking)}
+                  className="bg-roam-blue hover:bg-roam-blue/90 text-white font-medium relative"
+                  onClick={handleMessageClick}
                   title={booking.providers ? `Message ${booking.providers.first_name} ${booking.providers.last_name} about this booking` : "Message about this booking"}
                 >
                   <MessageCircle className="w-4 h-4 mr-2" />
                   Message
+                  {unreadCount > 0 && (
+                    <Badge
+                      variant="destructive"
+                      className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs font-bold rounded-full"
+                    >
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </Badge>
+                  )}
                 </Button>
               )}
             </div>
@@ -499,11 +569,19 @@ export const BookingCard: React.FC<BookingCardProps> = ({
               {isPastBooking && booking.providers ? (
                 <Button
                   size="sm"
-                  className="bg-roam-blue hover:bg-roam-blue/90 text-white font-medium"
-                  onClick={() => onMessage(booking)}
+                  className="bg-roam-blue hover:bg-roam-blue/90 text-white font-medium relative"
+                  onClick={handleMessageClick}
                   title={`Message ${booking.providers.first_name} ${booking.providers.last_name} about this booking`}
                 >
                   <MessageCircle className="w-4 h-4" />
+                  {unreadCount > 0 && (
+                    <Badge
+                      variant="destructive"
+                      className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs font-bold rounded-full"
+                    >
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </Badge>
+                  )}
                 </Button>
               ) : null}
             </div>
@@ -578,11 +656,19 @@ export const BookingCard: React.FC<BookingCardProps> = ({
               {!isPastBooking && (booking.booking_status === "confirmed" || booking.booking_status === "pending") && booking.providers && (
                 <Button
                   size="sm"
-                  className="bg-roam-blue hover:bg-roam-blue/90 text-white font-medium"
-                  onClick={() => onMessage(booking)}
+                  className="bg-roam-blue hover:bg-roam-blue/90 text-white font-medium relative"
+                  onClick={handleMessageClick}
                   title={`Message ${booking.providers.first_name} ${booking.providers.last_name} about this booking`}
                 >
                   <MessageCircle className="w-4 h-4" />
+                  {unreadCount > 0 && (
+                    <Badge
+                      variant="destructive"
+                      className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs font-bold rounded-full"
+                    >
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </Badge>
+                  )}
                 </Button>
               )}
             </div>
