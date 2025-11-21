@@ -25,6 +25,8 @@ import {
   MapPin,
   Users,
   Hash,
+  Phone,
+  Mail,
   UserCheck,
   User,
 } from "lucide-react";
