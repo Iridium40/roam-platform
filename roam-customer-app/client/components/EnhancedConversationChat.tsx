@@ -411,6 +411,7 @@ export default function EnhancedConversationChat({
             userType: (message.author_type || 'customer') as 'customer' | 'provider' | 'owner' | 'dispatcher',
             userName: attrs.authorName,
             email: attrs.email || null,
+            avatarUrl: attrs.imageUrl || null,
           };
         }
       } catch (e) {
@@ -425,12 +426,20 @@ export default function EnhancedConversationChat({
       return participant;
     }
     
-    // Last resort: return a basic author object
+    // Last resort: return a basic author object with avatar from booking data
+    let avatarUrl = null;
+    if (message.author_type === 'customer') {
+      avatarUrl = customer?.image_url || null;
+    } else if (booking?.providers?.image_url) {
+      avatarUrl = booking.providers.image_url;
+    }
+    
     return {
       userId: message.author_id || '',
       userType: (message.author_type || 'customer') as 'customer' | 'provider' | 'owner' | 'dispatcher',
       userName: message.author_type === 'customer' ? 'Customer' : 'Provider',
       email: null,
+      avatarUrl,
     };
   };
 

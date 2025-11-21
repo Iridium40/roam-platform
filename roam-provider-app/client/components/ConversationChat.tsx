@@ -423,11 +423,20 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
         .slice(0, 2)
         .toUpperCase();
 
+      // Get avatar URL from attributes or booking data
+      let avatarUrl = attrs.imageUrl || null;
+      if (!avatarUrl && attrs.userType === 'customer' && booking?.customer_profiles?.image_url) {
+        avatarUrl = booking.customer_profiles.image_url;
+      } else if (!avatarUrl && isCurrentUser && provider?.image_url) {
+        avatarUrl = provider.image_url;
+      }
+
       return {
         displayName,
         roleLabel,
         isCurrentUser,
         initials,
+        avatarUrl,
       };
     },
     [participantMap, currentUserId]
@@ -505,6 +514,7 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
                       const displayName = author?.displayName ?? 'Participant';
                       const initials = author?.initials ?? 'U';
                       const roleLabel = author?.roleLabel;
+                      const avatarUrl = author?.avatarUrl;
                       const timestamp = message.timestamp;
 
                       return (
@@ -515,6 +525,7 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
                           <div className={`flex items-end gap-3 ${isCurrentUser ? 'flex-row-reverse' : 'flex-row'}`}>
                             <div className="flex flex-col items-center">
                               <Avatar className="h-8 w-8 border">
+                                <AvatarImage src={avatarUrl || undefined} alt={displayName} />
                                 <AvatarFallback>{initials}</AvatarFallback>
                               </Avatar>
                               <span className="mt-1 text-[11px] text-muted-foreground/80 max-w-[140px] text-center truncate">

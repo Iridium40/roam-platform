@@ -315,7 +315,7 @@ export class TwilioConversationsService {
     if (userType === 'provider' || userType === 'owner' || userType === 'dispatcher') {
       const { data } = await this.supabase
         .from('providers')
-        .select('first_name, last_name, provider_role')
+        .select('first_name, last_name, provider_role, image_url')
         .eq('user_id', userId)
         .single();
       
@@ -328,7 +328,7 @@ export class TwilioConversationsService {
       // Try both user_id and id columns (customer_profiles uses 'id' as primary key)
       const { data } = await this.supabase
         .from('customer_profiles')
-        .select('first_name, last_name')
+        .select('first_name, last_name, image_url')
         .or(`user_id.eq.${userId},id.eq.${userId}`)
         .single();
       
@@ -341,6 +341,7 @@ export class TwilioConversationsService {
     const authorName = userDetails 
       ? `${userDetails.first_name || ''} ${userDetails.last_name || ''}`.trim()
       : identity;
+    const imageUrl = (userDetails as any)?.image_url || null;
 
     // Send message to Twilio with actual role from database
     const messageResult = await this.messageService.sendMessage(conversationSid, {
@@ -350,6 +351,7 @@ export class TwilioConversationsService {
         userType: actualRole, // Store the actual role from database
         role: actualRole, // Also include as 'role' for clarity
         authorName,
+        imageUrl,
         timestamp: new Date().toISOString(),
       },
     }, identity);
