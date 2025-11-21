@@ -201,31 +201,21 @@ export class TwilioConversationsService {
       console.log('🔍 Processing participant:', { userId: participant.userId, userType: participant.userType, userName: participant.userName });
       const identity = `${participant.userType}-${participant.userId}`;
 
-      // Check if participant already exists in database
-      const { data: existingParticipant } = await this.supabase
-        .from('conversation_participants')
-        .select('id, twilio_participant_sid')
-        .eq('conversation_id', conversationMetadataId)
-        .eq('user_id', participant.userId)
-        .eq('user_type', participant.userType)
-        .eq('is_active', true)
-        .single();
+      // First, check if participant already exists in Twilio
+      const existingInTwilioCheck = await this.participantService.getParticipantByIdentity(
+        conversationSid,
+        identity
+      );
 
-      if (existingParticipant) {
-        // Verify participant exists in Twilio
-        const verifyResult = await this.participantService.getParticipantByIdentity(
-          conversationSid,
-          identity
-        );
-        if (verifyResult.success) {
-          continue; // Participant already exists
-        }
-      }
+      let twilioParticipantSid: string | null = null;
 
-      let twilioParticipantSid = existingParticipant?.twilio_participant_sid || null;
-
-      if (!twilioParticipantSid) {
+      if (existingInTwilioCheck.success && existingInTwilioCheck.data) {
+        // Participant already exists in Twilio
+        twilioParticipantSid = existingInTwilioCheck.data.sid;
+        console.log(`✅ Participant ${identity} already exists in Twilio with SID: ${twilioParticipantSid}`);
+      } else {
         // Add participant to Twilio
+        console.log(`➕ Adding participant ${identity} to Twilio...`);
         const participantResult = await this.participantService.addParticipant(conversationSid, {
           identity,
           attributes: {
@@ -239,24 +229,26 @@ export class TwilioConversationsService {
         if (!participantResult.success || !participantResult.data) {
           const errorMessage = participantResult.error || 'Unknown error adding participant';
 
-          // Ignore duplicate participant errors (Twilio 50433)
+          // This shouldn't happen since we checked above, but handle it anyway
           if (errorMessage.toLowerCase().includes('participant already exists')) {
-            const existingInTwilio = await this.participantService.getParticipantByIdentity(
+            console.warn(`⚠️ Participant ${identity} already exists (race condition), fetching SID...`);
+            const retryFetch = await this.participantService.getParticipantByIdentity(
               conversationSid,
               identity
             );
-            if (existingInTwilio.success && existingInTwilio.data) {
-              twilioParticipantSid = existingInTwilio.data.sid;
+            if (retryFetch.success && retryFetch.data) {
+              twilioParticipantSid = retryFetch.data.sid;
             } else {
-              console.warn(`Participant ${identity} already exists in Twilio but could not fetch details. Skipping.`);
+              console.error(`❌ Could not fetch participant ${identity} after duplicate error. Skipping.`);
               continue;
             }
           } else {
-            console.error(`Failed to add participant ${identity}:`, errorMessage);
+            console.error(`❌ Failed to add participant ${identity}:`, errorMessage);
             continue;
           }
         } else {
           twilioParticipantSid = participantResult.data.sid;
+          console.log(`✅ Added participant ${identity} to Twilio with SID: ${twilioParticipantSid}`);
         }
       }
 
