@@ -225,15 +225,19 @@ export default function EnhancedConversationChat({
 
       const participantData: BookingConversationParticipantData[] = [];
 
-      if (booking.customer_profiles) {
+      // Add customer participant - use the authenticated user's ID from customer context
+      if (customer?.user_id) {
         participantData.push({
-          userId: booking.customer_profiles.id,
+          userId: customer.user_id,
           userType: 'customer',
-          userName: `${booking.customer_profiles.first_name ?? ''} ${booking.customer_profiles.last_name ?? ''}`.trim(),
-          email: booking.customer_profiles.email ?? null,
+          userName: `${customer.first_name ?? ''} ${customer.last_name ?? ''}`.trim() || 'Customer',
+          email: customer.email ?? null,
         });
+      } else {
+        console.error('❌ Customer user_id not found in auth context:', customer);
       }
 
+      // Add provider participant
       if (booking.providers) {
         participantData.push({
           userId: booking.providers.user_id,
