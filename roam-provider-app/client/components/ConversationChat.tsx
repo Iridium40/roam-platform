@@ -510,19 +510,25 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
                   ) : (
                     messages.map((message) => {
                       const author = resolveMessageAuthor(message);
-                      const isCurrentUser = author?.isCurrentUser ?? false;
                       const displayName = author?.displayName ?? 'Participant';
                       const initials = author?.initials ?? 'U';
                       const roleLabel = author?.roleLabel;
                       const avatarUrl = author?.avatarUrl;
                       const timestamp = message.timestamp;
+                      
+                      // Check if message is from a provider-side user (owner, dispatcher, provider)
+                      // All provider-side messages go on the right (blue), customer messages on the left (white)
+                      const isProviderSide = message.author_type === 'owner' || 
+                                            message.author_type === 'dispatcher' || 
+                                            message.author_type === 'provider';
+                      const isCustomer = message.author_type === 'customer';
 
                       return (
                         <div
                           key={message.id}
-                          className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'} mb-4`}
+                          className={`flex ${isProviderSide ? 'justify-end' : 'justify-start'} mb-4`}
                         >
-                          <div className={`flex items-end gap-3 ${isCurrentUser ? 'flex-row-reverse' : 'flex-row'}`}>
+                          <div className={`flex items-end gap-3 ${isProviderSide ? 'flex-row-reverse' : 'flex-row'}`}>
                             <div className="flex flex-col items-center">
                               <Avatar className="h-8 w-8 border">
                                 <AvatarImage src={avatarUrl || undefined} alt={displayName} />
@@ -534,19 +540,21 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
                             </div>
                             <div
                               className={`max-w-[70%] rounded-lg px-4 py-2 ${
-                                isCurrentUser ? 'bg-roam-blue text-white' : 'bg-white border shadow-sm'
+                                isProviderSide ? 'bg-roam-blue text-white' : 'bg-white border shadow-sm'
                               }`}
                             >
                               <p className="text-sm whitespace-pre-wrap break-words">
                                 {message.content || message.author_name || ''}
                               </p>
                               <div className="flex items-center justify-between mt-1 text-[11px] opacity-80">
-                                {!isCurrentUser && roleLabel && (
+                                {!isProviderSide && roleLabel && (
                                   <span className="uppercase tracking-wide">
                                     {roleLabel}
                                   </span>
                                 )}
-                                <span>{formatMessageTime(timestamp)}</span>
+                                <span className={`${isProviderSide ? 'text-white/80' : ''}`}>
+                                  {formatMessageTime(timestamp)}
+                                </span>
                               </div>
                             </div>
                           </div>
