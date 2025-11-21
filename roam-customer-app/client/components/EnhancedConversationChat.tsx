@@ -282,10 +282,11 @@ export default function EnhancedConversationChat({
     try {
       setSending(true);
       
+      // Use customer.user_id (auth user ID) to match the participant identity
       await bookingConversationsClient.sendMessage(
         conversationId,
         newMessage.trim(),
-        customer.id,
+        customer.user_id,
         'customer',
         bookingData.bookingId,
       );
@@ -397,15 +398,40 @@ export default function EnhancedConversationChat({
   }
 
   const resolveAuthor = (message: ConversationMessageWithAuthor) => {
+    // First, try to get author info from message attributes (most reliable)
+    if (message.attributes) {
+      try {
+        const attrs = typeof message.attributes === 'string' 
+          ? JSON.parse(message.attributes) 
+          : message.attributes;
+        
+        if (attrs.authorName) {
+          return {
+            userId: message.author_id || '',
+            userType: (message.author_type || 'customer') as 'customer' | 'provider' | 'owner' | 'dispatcher',
+            userName: attrs.authorName,
+            email: attrs.email || null,
+          };
+        }
+      } catch (e) {
+        console.warn('Failed to parse message attributes:', e);
+      }
+    }
+    
+    // Fallback: try participant map
     const identity = `${message.author_type}-${message.author_id}`;
-    console.log(`🔍 Resolving author for message:`, { 
-      author_type: message.author_type, 
-      author_id: message.author_id, 
-      identity,
-      found: participantMap.has(identity),
-      participant: participantMap.get(identity)
-    });
-    return participantMap.get(identity) || null;
+    const participant = participantMap.get(identity);
+    if (participant) {
+      return participant;
+    }
+    
+    // Last resort: return a basic author object
+    return {
+      userId: message.author_id || '',
+      userType: (message.author_type || 'customer') as 'customer' | 'provider' | 'owner' | 'dispatcher',
+      userName: message.author_type === 'customer' ? 'Customer' : 'Provider',
+      email: null,
+    };
   };
 
   if (!booking || !bookingData) {
