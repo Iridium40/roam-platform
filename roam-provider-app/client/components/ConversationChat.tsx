@@ -395,20 +395,20 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
         }
       }
 
-      // Try to build participant key from parsed author fields first, then from attributes
-      const authorType = (message as any).author_type || attrs.userType;
-      const authorId = (message as any).author_id || attrs.userId;
-      const key = authorType && authorId ? `${authorType}-${authorId}` : undefined;
+      const key =
+        attrs.userId && attrs.userType
+          ? `${attrs.userType}-${attrs.userId}`
+          : undefined;
       const participant = key ? participantMap.get(key) : undefined;
 
-      // Priority: message attributes > participant map > message fields > fallback
       const displayName =
         attrs.authorName ||
         participant?.userName ||
         message.authorName ||
-        (authorType === 'customer' ? 'Customer' : authorType === 'provider' ? 'Provider' : 'User');
+        message.author ||
+        'Participant';
 
-      const rawRole = attrs.role || attrs.userType || authorType || participant?.userType || 'participant';
+      const rawRole = attrs.role || attrs.userType || participant?.userType || 'participant';
       const roleLabel =
         typeof rawRole === 'string'
           ? rawRole.charAt(0).toUpperCase() + rawRole.slice(1)
