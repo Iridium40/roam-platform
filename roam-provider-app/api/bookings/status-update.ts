@@ -1,6 +1,33 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
-import { notificationService } from '../../lib/notifications/notification-service';
+
+// Safely import notification service - handle import errors gracefully
+let notificationService: any = null;
+let notificationServicePromise: Promise<any> | null = null;
+
+// Lazy load notification service to avoid module loading errors
+async function getNotificationService() {
+  if (notificationService) {
+    return notificationService;
+  }
+  
+  if (notificationServicePromise) {
+    return notificationServicePromise;
+  }
+  
+  notificationServicePromise = (async () => {
+    try {
+      const notificationModule = await import('../../lib/notifications/notification-service');
+      notificationService = notificationModule.notificationService || notificationModule.default;
+      return notificationService;
+    } catch (e) {
+      console.warn('⚠️ Could not load notification service module:', e);
+      return null;
+    }
+  })();
+  
+  return notificationServicePromise;
+}
 
 // Safely import notification functions - these may fail in some environments
 let sendSMS: any = null;
@@ -175,11 +202,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.error('❌ Status update error (catch block):', {
       error,
       message: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined
+      stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : undefined,
+      body: req.body
     });
     return res.status(500).json({ 
       error: 'Internal server error',
-      details: error instanceof Error ? error.message : String(error)
+      details: error instanceof Error ? error.message : String(error),
+      code: (error as any)?.code
     });
   }
 }
@@ -262,7 +292,9 @@ async function sendStatusNotifications(
     // Notify customer when booking is confirmed/accepted
     if ((newStatus === 'confirmed' || newStatus === 'accepted') && options.notifyCustomer && customer?.user_id) {
       try {
-        await notificationService.send({
+        const service = await getNotificationService();
+        if (service) {
+          await service.send({
           userId: customer.user_id,
           notificationType: 'customer_booking_accepted',
           templateVariables: {
@@ -279,8 +311,9 @@ async function sendStatusNotifications(
             booking_id: booking.id,
             event_type: 'booking_accepted',
           },
-        });
-        console.log('✅ customer_booking_accepted notification sent via NotificationService');
+          });
+          console.log('✅ customer_booking_accepted notification sent via NotificationService');
+        }
       } catch (error) {
         console.error('⚠️ Failed to send customer_booking_accepted notification:', error);
       }
@@ -289,7 +322,9 @@ async function sendStatusNotifications(
     // Notify customer when booking is completed
     if (newStatus === 'completed' && options.notifyCustomer && customer?.user_id) {
       try {
-        await notificationService.send({
+        const service = await getNotificationService();
+        if (service) {
+          await service.send({
           userId: customer.user_id,
           notificationType: 'customer_booking_completed',
           templateVariables: {
@@ -307,8 +342,9 @@ async function sendStatusNotifications(
             booking_id: booking.id,
             event_type: 'booking_completed',
           },
-        });
-        console.log('✅ customer_booking_completed notification sent via NotificationService');
+          });
+          console.log('✅ customer_booking_completed notification sent via NotificationService');
+        }
       } catch (error) {
         console.error('⚠️ Failed to send customer_booking_completed notification:', error);
       }
