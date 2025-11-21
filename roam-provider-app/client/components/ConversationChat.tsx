@@ -244,6 +244,34 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
     [bookingConversationsClient]
   );
 
+  // Mark all messages in a conversation as read
+  const markConversationAsRead = useCallback(async (convId: string) => {
+    if (!convId || !currentUserId) return;
+    
+    try {
+      console.log('📖 Marking messages as read:', { conversationId: convId, userId: currentUserId });
+      const response = await fetch('/api/mark-messages-read', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          conversationId: convId,
+          userId: currentUserId,
+        }),
+      });
+
+      if (!response.ok) {
+        console.error('Failed to mark messages as read:', await response.text());
+      } else {
+        console.log('✅ Messages marked as read');
+      }
+    } catch (error) {
+      console.error('Error marking messages as read:', error);
+      // Don't throw - this is a non-critical operation
+    }
+  }, [currentUserId]);
+
   useEffect(() => {
     if (!booking) return;
     const baseParticipants = buildParticipantPayload().map((participant) => ({
@@ -314,8 +342,8 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
       setParticipants(normalizedParticipants as BookingConversationParticipant[]);
       await loadMessages(result.conversationId);
       
-      // TODO: Mark messages as read when conversation is opened
-      // This will be implemented once the message_notifications table types are fixed
+      // Mark all messages in this conversation as read for the current user
+      await markConversationAsRead(result.conversationId);
     } catch (error) {
       console.error('Error initializing conversation:', error);
       setError(error instanceof Error ? error.message : 'Failed to load conversation');
@@ -333,8 +361,10 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
     } else if (conversationSid) {
       setActiveConversationSid(conversationSid);
       loadMessages(conversationSid);
+      // Mark messages as read when opening via conversationSid
+      markConversationAsRead(conversationSid);
     }
-  }, [isOpen, booking, conversationSid, initializeConversation, loadMessages]);
+  }, [isOpen, booking, conversationSid, initializeConversation, loadMessages, markConversationAsRead]);
 
   // Load messages when conversation changes
   useEffect(() => {

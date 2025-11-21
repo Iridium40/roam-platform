@@ -207,6 +207,34 @@ export default function EnhancedConversationChat({
     }
   }, [bookingConversationsClient, conversationId]);
 
+  // Mark all messages in a conversation as read
+  const markConversationAsRead = useCallback(async (convId: string) => {
+    if (!convId || !customer?.user_id) return;
+    
+    try {
+      console.log('📖 Marking messages as read:', { conversationId: convId, userId: customer.user_id });
+      const response = await fetch('/api/mark-messages-read', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          conversationId: convId,
+          userId: customer.user_id,
+        }),
+      });
+
+      if (!response.ok) {
+        console.error('Failed to mark messages as read:', await response.text());
+      } else {
+        console.log('✅ Messages marked as read');
+      }
+    } catch (error) {
+      console.error('Error marking messages as read:', error);
+      // Don't throw - this is a non-critical operation
+    }
+  }, [customer?.user_id]);
+
   const initializeConversation = useCallback(async () => {
     if (!booking || !bookingData) {
       setError('Booking details are missing. Please close and retry.');
@@ -265,6 +293,9 @@ export default function EnhancedConversationChat({
       setParticipants(result.participants || []);
 
       await loadMessages(result.conversationId);
+
+      // Mark all messages in this conversation as read for the current user
+      await markConversationAsRead(result.conversationId);
 
       setConversationStatus('ready');
     } catch (err) {
