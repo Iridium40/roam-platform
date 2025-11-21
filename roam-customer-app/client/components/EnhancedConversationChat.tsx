@@ -602,12 +602,7 @@ export default function EnhancedConversationChat({
                             }`}
                           >
                             <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
-                            <div className="flex items-center justify-between mt-1 text-[11px] opacity-80">
-                              {!isCurrentUser && displayRole && (
-                                <span className="uppercase tracking-wide mr-2">
-                                  {displayRole}
-                                </span>
-                              )}
+                            <div className="flex items-center justify-end mt-1 text-[11px] opacity-80">
                               <span className={isCurrentUser ? 'text-white/80' : 'text-gray-500'}>
                                 {formatMessageTime(message.timestamp)}
                               </span>

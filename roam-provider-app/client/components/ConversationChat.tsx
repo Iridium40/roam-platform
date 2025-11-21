@@ -642,12 +642,7 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
                                   <p className="text-sm whitespace-pre-wrap break-words">
                                     {message.content || message.author_name || ''}
                                   </p>
-                                  <div className="flex items-center justify-between mt-1 text-[11px] opacity-80">
-                                    {!isProviderSide && roleLabel && (
-                                      <span className="uppercase tracking-wide mr-2">
-                                        {roleLabel}
-                                      </span>
-                                    )}
+                                  <div className="flex items-center justify-end mt-1 text-[11px] opacity-80">
                                     <span className={isProviderSide ? 'text-white/80' : 'text-gray-500'}>
                                       {formatMessageTime(timestamp)}
                                     </span>
