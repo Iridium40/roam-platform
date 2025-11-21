@@ -242,6 +242,7 @@ export const useBookingsData = (currentUser: any) => {
             *,
             providers!left (
               id,
+              user_id,
               first_name,
               last_name,
               email,

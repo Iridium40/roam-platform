@@ -92,6 +92,7 @@ interface BookingSummary {
     first_name: string;
     last_name: string;
     email?: string;
+    image_url?: string;
   };
   customer_name?: string;
   provider_name?: string;
