@@ -50,8 +50,8 @@ export default function DashboardTab({
         .select(`
           *,
           services:service_id(*),
-          customer_profiles:customer_id(*),
-          providers:provider_id(*)
+          customer_profiles:customer_id(id, user_id, first_name, last_name, email, phone, image_url),
+          providers:provider_id(id, user_id, first_name, last_name, email, image_url)
         `)
         .eq('business_id', businessId)
         .order('created_at', { ascending: false });
