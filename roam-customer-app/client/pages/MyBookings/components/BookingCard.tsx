@@ -67,7 +67,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({
 
   // Fetch unread message count for this booking
   useEffect(() => {
-    if (!booking?.id || !customer?.id) {
+    if (!booking?.id || !customer?.user_id) {
       setUnreadCount(0);
       return;
     }
@@ -87,12 +87,12 @@ export const BookingCard: React.FC<BookingCardProps> = ({
           return;
         }
 
-        // Get unread message count
+        // Get unread message count - use user_id to match auth.users
         const { count, error: countError } = await supabase
           .from('message_notifications')
           .select('*', { count: 'exact', head: true })
           .eq('conversation_id', conversation.id)
-          .eq('user_id', customer.id)
+          .eq('user_id', customer.user_id)
           .eq('is_read', false);
 
         if (countError) {
@@ -110,12 +110,11 @@ export const BookingCard: React.FC<BookingCardProps> = ({
 
     fetchUnreadCount();
 
-    // TODO: Re-enable polling once RLS policies are fixed
     // Poll for updates every 30 seconds
-    // const interval = setInterval(fetchUnreadCount, 30000);
+    const interval = setInterval(fetchUnreadCount, 30000);
 
-    // return () => clearInterval(interval);
-  }, [booking?.id, customer?.id]);
+    return () => clearInterval(interval);
+  }, [booking?.id, customer?.user_id]);
 
   // Reset unread count when message button is clicked
   const handleMessageClick = () => {

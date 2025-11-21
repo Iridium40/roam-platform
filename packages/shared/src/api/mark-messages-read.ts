@@ -21,34 +21,46 @@ export async function markMessagesAsRead(req: VercelRequest, res: VercelResponse
 
     // Get environment variables
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.VITE_PUBLIC_SUPABASE_URL;
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.VITE_PUBLIC_SUPABASE_ANON_KEY;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-    if (!supabaseUrl || !supabaseKey) {
-      console.error('Missing Supabase environment variables');
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error('Missing Supabase environment variables', {
+        hasUrl: !!supabaseUrl,
+        hasServiceKey: !!supabaseServiceKey
+      });
       return res.status(500).json({ 
         error: 'Server configuration error',
         details: 'Missing Supabase credentials'
       });
     }
 
-    // Create Supabase client (using anon key since RLS is disabled on message_notifications)
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    // Create Supabase client with service role key to bypass RLS
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Update all unread message notifications for this user in this conversation
-    const { error } = await supabase
+    console.log('📖 Marking messages as read:', { conversationId, userId });
+    
+    const { data, error } = await supabase
       .from('message_notifications')
-      .update({ is_read: true })
+      .update({ is_read: true, read_at: new Date().toISOString() })
       .eq('conversation_id', conversationId)
       .eq('user_id', userId)
-      .eq('is_read', false);
+      .eq('is_read', false)
+      .select();
 
     if (error) {
-      console.error('Error marking messages as read:', error);
+      console.error('❌ Error marking messages as read:', error);
       return res.status(500).json({ 
         error: 'Failed to mark messages as read',
         details: error.message 
       });
     }
+
+    console.log('✅ Messages marked as read:', { 
+      count: data?.length || 0,
+      conversationId,
+      userId 
+    });
 
     return res.status(200).json({ 
       success: true,

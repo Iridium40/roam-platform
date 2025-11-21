@@ -60,7 +60,7 @@ const ConversationsList = ({ isOpen, onClose }: ConversationsListProps) => {
   const [searchTerm, setSearchTerm] = useState("");
 
   const loadConversations = useCallback(async () => {
-    if (!customer?.id) return;
+    if (!customer?.user_id) return;
     setLoading(true);
 
     try {
@@ -68,7 +68,7 @@ const ConversationsList = ({ isOpen, onClose }: ConversationsListProps) => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId: customer.id,
+          userId: customer.user_id,
           userType: "customer",
         }),
       });
@@ -89,7 +89,7 @@ const ConversationsList = ({ isOpen, onClose }: ConversationsListProps) => {
     } finally {
       setLoading(false);
     }
-  }, [customer?.id, toast]);
+  }, [customer?.user_id, toast]);
 
   useEffect(() => {
     if (isOpen) {
