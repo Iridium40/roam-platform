@@ -239,13 +239,15 @@ export default function EnhancedConversationChat({
       }
 
       // Add provider participant
-      if (booking.providers) {
+      if (booking.providers?.user_id) {
         participantData.push({
           userId: booking.providers.user_id,
           userType: 'provider',
           userName: `${booking.providers.first_name ?? ''} ${booking.providers.last_name ?? ''}`.trim(),
           email: booking.providers.email ?? null,
         });
+      } else {
+        console.error('❌ Provider user_id not found in booking.providers:', booking.providers);
       }
 
       const result = await bookingConversationsClient.getOrCreateConversationForBooking(
