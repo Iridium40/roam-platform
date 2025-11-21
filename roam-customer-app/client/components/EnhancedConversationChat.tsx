@@ -472,9 +472,6 @@ export default function EnhancedConversationChat({
             <MessageCircle className="w-5 h-5 text-roam-blue" />
             Conversation - {bookingData.serviceName}
           </DialogTitle>
-          <div className="text-sm text-gray-600">
-            With {bookingData.providerName} • Booking #{booking.id.slice(-6)}
-          </div>
         </DialogHeader>
 
         {/* Error Banner */}
