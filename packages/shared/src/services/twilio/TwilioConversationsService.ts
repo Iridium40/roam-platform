@@ -424,14 +424,23 @@ export class TwilioConversationsService {
     }
 
     // Parse attributes for each message
-    const messages = result.data.map((msg: any) => ({
-      id: msg.sid,
-      content: msg.body,
-      author: msg.author,
-      authorName: msg.attributes ? JSON.parse(msg.attributes).authorName : msg.author,
-      timestamp: msg.dateCreated?.toISOString() || new Date().toISOString(),
-      attributes: msg.attributes ? JSON.parse(msg.attributes) : {},
-    }));
+    const messages = result.data.map((msg: any) => {
+      // Parse the author identity (format: "userType-userId")
+      const authorParts = msg.author?.split('-') || [];
+      const author_type = authorParts[0] || undefined;
+      const author_id = authorParts.slice(1).join('-') || undefined; // Handle UUIDs with dashes
+      
+      return {
+        id: msg.sid,
+        content: msg.body,
+        author: msg.author,
+        author_type,
+        author_id,
+        authorName: msg.attributes ? JSON.parse(msg.attributes).authorName : msg.author,
+        timestamp: msg.dateCreated?.toISOString() || new Date().toISOString(),
+        attributes: msg.attributes ? JSON.parse(msg.attributes) : {},
+      };
+    });
     
     console.log('✅ Parsed messages:', messages.length);
     return messages;
