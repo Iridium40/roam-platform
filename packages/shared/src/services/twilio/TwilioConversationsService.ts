@@ -262,6 +262,20 @@ export class TwilioConversationsService {
         continue;
       }
 
+      // Check if participant already exists in Supabase
+      const { data: existingInSupabase } = await this.supabase
+        .from('conversation_participants')
+        .select('id')
+        .eq('conversation_id', conversationMetadataId)
+        .eq('user_id', participant.userId)
+        .eq('user_type', participant.userType)
+        .single();
+
+      if (existingInSupabase) {
+        console.log(`✅ Participant already exists in Supabase, skipping insert`);
+        continue;
+      }
+
       // Store participant in Supabase
       console.log(`💾 Storing participant in Supabase:`, {
         conversation_id: conversationMetadataId,
@@ -270,21 +284,19 @@ export class TwilioConversationsService {
         twilio_participant_sid: twilioParticipantSid,
       });
 
-      const { error: upsertError } = await this.supabase
+      const { error: insertError } = await this.supabase
         .from('conversation_participants')
-        .upsert({
+        .insert({
           conversation_id: conversationMetadataId,
           user_id: participant.userId,
           user_type: participant.userType,
           twilio_participant_sid: twilioParticipantSid,
           is_active: true,
           joined_at: new Date().toISOString(),
-        }, {
-          onConflict: 'conversation_id,user_id,user_type',
         });
 
-      if (upsertError) {
-        console.error(`❌ Error storing participant in Supabase:`, upsertError);
+      if (insertError) {
+        console.error(`❌ Error storing participant in Supabase:`, insertError);
       } else {
         console.log(`✅ Participant stored successfully`);
       }
