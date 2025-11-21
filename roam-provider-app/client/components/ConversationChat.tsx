@@ -17,6 +17,7 @@ import {
   Users,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/auth/AuthProvider';
+import { supabase } from '@/lib/supabase';
 import {
   createBookingConversationsClient,
   type BookingConversationParticipant,
@@ -252,13 +253,16 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
 
       setParticipants(normalizedParticipants as BookingConversationParticipant[]);
       await loadMessages(result.conversationId);
+      
+      // TODO: Mark messages as read when conversation is opened
+      // This will be implemented once the message_notifications table types are fixed
     } catch (error) {
       console.error('Error initializing conversation:', error);
       setError(error instanceof Error ? error.message : 'Failed to load conversation');
     } finally {
       setLoading(false);
     }
-  }, [booking, bookingConversationsClient, buildParticipantPayload, loadMessages]);
+  }, [booking, bookingConversationsClient, buildParticipantPayload, loadMessages, currentUserId]);
 
   // Initialize conversation when modal opens
   useEffect(() => {

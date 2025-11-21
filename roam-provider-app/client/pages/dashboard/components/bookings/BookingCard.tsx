@@ -1,9 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import BookingStatusIndicator from "@/components/BookingStatusIndicator";
 import ConversationChat from "@/components/ConversationChat";
+import { useProviderAuth } from "@/contexts/auth/ProviderAuthContext";
+import { supabase } from "@/lib/supabase";
 import {
   Calendar,
   Clock,
@@ -37,6 +39,66 @@ export default function BookingCard({
   showActions = true,
 }: BookingCardProps) {
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const { provider } = useProviderAuth();
+
+  // Fetch unread message count for this booking
+  useEffect(() => {
+    if (!booking?.id || !provider?.user_id) {
+      setUnreadCount(0);
+      return;
+    }
+
+    const fetchUnreadCount = async () => {
+      try {
+        // Get conversation metadata for this booking
+        const { data: conversation, error: convError } = await supabase
+          .from('conversation_metadata')
+          .select('id')
+          .eq('booking_id', booking.id)
+          .eq('is_active', true)
+          .maybeSingle<{ id: string }>();
+
+        if (convError || !conversation?.id) {
+          setUnreadCount(0);
+          return;
+        }
+
+        // Get unread message count
+        const { count, error: countError } = await supabase
+          .from('message_notifications')
+          .select('*', { count: 'exact', head: true })
+          .eq('conversation_id', conversation.id)
+          .eq('user_id', provider.user_id)
+          .eq('is_read', false);
+
+        if (countError) {
+          console.error('Error fetching unread count:', countError);
+          setUnreadCount(0);
+          return;
+        }
+
+        setUnreadCount(count || 0);
+      } catch (error) {
+        console.error('Error fetching unread count:', error);
+        setUnreadCount(0);
+      }
+    };
+
+    fetchUnreadCount();
+
+    // Poll for updates every 30 seconds
+    const interval = setInterval(fetchUnreadCount, 30000);
+
+    return () => clearInterval(interval);
+  }, [booking?.id, provider?.user_id]);
+
+  // Reset unread count when chat is opened
+  useEffect(() => {
+    if (isChatOpen) {
+      setUnreadCount(0);
+    }
+  }, [isChatOpen]);
   const getStatusActions = (status: string) => {
     // Check if booking is scheduled for today or in the past
     const isBookingDateTodayOrPast = () => {
@@ -340,9 +402,17 @@ export default function BookingCard({
             <Button
               onClick={() => setIsChatOpen(true)}
               size="sm"
-              className="bg-blue-600 hover:bg-blue-700 text-white p-2 h-8 w-8 rounded-lg"
+              className="bg-blue-600 hover:bg-blue-700 text-white p-2 h-8 w-8 rounded-lg relative"
             >
               <MessageCircle className="w-4 h-4" />
+              {unreadCount > 0 && (
+                <Badge
+                  variant="destructive"
+                  className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs font-bold rounded-full"
+                >
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </Badge>
+              )}
             </Button>
           </div>
         </div>
