@@ -500,6 +500,8 @@ export default function EnhancedConversationChat({
             ) : (
               messages.map((message) => {
                 const author = resolveAuthor(message);
+                // Check if this message was sent by the current logged-in customer
+                const isCurrentUser = message.author_type === 'customer' && message.author_id === customer?.user_id;
                 const isCustomer = message.author_type === 'customer';
                 const displayName = author?.userName || (isCustomer ? bookingData.customerName : bookingData.providerName);
                 const initials = displayName
@@ -527,9 +529,9 @@ export default function EnhancedConversationChat({
                 return (
                   <div
                     key={message.id}
-                    className={`flex ${isCustomer ? 'justify-end' : 'justify-start'}`}
+                    className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'}`}
                   >
-                    <div className={`flex items-end gap-3 ${isCustomer ? 'flex-row-reverse' : 'flex-row'}`}>
+                    <div className={`flex items-end gap-3 ${isCurrentUser ? 'flex-row-reverse' : 'flex-row'}`}>
                       <div className="flex flex-col items-center">
                         <Avatar className="h-8 w-8 border">
                           <AvatarImage src={author?.avatarUrl || undefined} alt={displayName || undefined} />
@@ -541,12 +543,12 @@ export default function EnhancedConversationChat({
                       </div>
                       <div
                         className={`max-w-[70%] rounded-lg px-4 py-2 ${
-                          isCustomer ? 'bg-roam-blue text-white' : 'bg-white border shadow-sm'
+                          isCurrentUser ? 'bg-roam-blue text-white' : 'bg-white border shadow-sm'
                         }`}
                       >
                         <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
                         <div className="flex items-center justify-between mt-1 text-[11px] opacity-80">
-                          {!isCustomer && displayRole && (
+                          {!isCurrentUser && displayRole && (
                             <span className="uppercase tracking-wide">
                               {displayRole}
                             </span>
