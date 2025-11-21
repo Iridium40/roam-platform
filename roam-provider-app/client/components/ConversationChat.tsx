@@ -40,6 +40,7 @@ interface ConversationChatProps {
     customer_id?: string;
     customer_profiles?: {
       id: string;
+      user_id?: string;
       first_name: string;
       last_name: string;
       email?: string;
@@ -89,8 +90,17 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
     if (!booking) return [];
     const payload: BookingConversationParticipantData[] = [];
 
-    // Always add customer
-    if (booking.customer_profiles?.id) {
+    // Always add customer using their user_id from customer_profiles
+    if (booking.customer_profiles?.user_id) {
+      payload.push({
+        userId: booking.customer_profiles.user_id,
+        userType: 'customer',
+        userName: `${booking.customer_profiles.first_name ?? ''} ${booking.customer_profiles.last_name ?? ''}`.trim(),
+        email: booking.customer_profiles.email ?? null,
+      });
+    } else if (booking.customer_profiles?.id) {
+      // Fallback: if user_id is not available, log error
+      console.error('❌ customer_profiles.user_id not found, using id as fallback (will cause FK error)');
       payload.push({
         userId: booking.customer_profiles.id,
         userType: 'customer',
@@ -105,20 +115,21 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
       });
     }
 
-    // Always add the current provider user (if available)
-    if (currentUserId && currentUserType === 'provider') {
+    // Always add the current logged-in provider user with their actual role
+    if (currentUserId && provider) {
+      // Use the provider's actual role (owner, dispatcher, or provider)
+      const actualRole = provider.provider_role || 'provider';
+      
       // Check if current user is already in payload to avoid duplicates
       const isAlreadyIncluded = payload.some(
-        (p) => p.userId === currentUserId && p.userType === 'provider'
+        (p) => p.userId === currentUserId
       );
       
       if (!isAlreadyIncluded) {
         payload.push({
           userId: currentUserId,
-          userType: 'provider',
-          userName: provider
-            ? `${provider.first_name ?? ''} ${provider.last_name ?? ''}`.trim() || 'Provider'
-            : 'Provider',
+          userType: actualRole as 'owner' | 'dispatcher' | 'provider',
+          userName: `${provider.first_name ?? ''} ${provider.last_name ?? ''}`.trim() || 'Provider',
           email: provider?.email ?? null,
         });
       }
