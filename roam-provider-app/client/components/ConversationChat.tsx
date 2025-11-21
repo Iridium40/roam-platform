@@ -24,7 +24,6 @@ import {
   type BookingConversationParticipantData,
   type ConversationMessageWithAuthor,
 } from '@roam/shared';
-import { formatDistanceToNow } from 'date-fns';
 
 // Format time as 12-hour with am/pm (e.g., "10:30am")
 const formatMessageTime = (date: Date | string | number): string => {
@@ -427,15 +426,6 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
-    }
-  };
-
-  const formatMessageTime = (dateString?: string | null) => {
-    if (!dateString) return '';
-    try {
-      return formatDistanceToNow(new Date(dateString), { addSuffix: true });
-    } catch {
-      return 'Just now';
     }
   };
 
