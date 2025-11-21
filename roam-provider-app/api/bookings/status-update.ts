@@ -1,32 +1,182 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
+import { Resend } from 'resend';
 
-// Safely import notification service - handle import errors gracefully
-let notificationService: any = null;
-let notificationServicePromise: Promise<any> | null = null;
+// Initialize Resend for email sending
+const resend = new Resend(process.env.RESEND_API_KEY);
 
-// Lazy load notification service to avoid module loading errors
-async function getNotificationService() {
-  if (notificationService) {
-    return notificationService;
-  }
-  
-  if (notificationServicePromise) {
-    return notificationServicePromise;
-  }
-  
-  notificationServicePromise = (async () => {
-    try {
-      const notificationModule = await import('../../lib/notifications/notification-service');
-      notificationService = notificationModule.notificationService || notificationModule.default;
-      return notificationService;
-    } catch (e) {
-      console.warn('⚠️ Could not load notification service module:', e);
-      return null;
+// Inline notification service for Vercel compatibility
+async function sendNotificationViaService(
+  userId: string,
+  notificationType: string,
+  templateVariables: Record<string, any>,
+  metadata?: Record<string, any>
+) {
+  try {
+    const supabaseUrl = process.env.VITE_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error('❌ Missing Supabase credentials for notification service');
+      return;
     }
-  })();
-  
-  return notificationServicePromise;
+
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // 1. Get user settings (includes notification preferences)
+    const { data: settings } = await supabase
+      .from('user_settings')
+      .select('*')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    // 2. Check master toggles
+    const emailEnabled = settings?.email_notifications ?? true;
+    const smsEnabled = settings?.sms_notifications ?? false;
+
+    // 3. Check granular preferences
+    const emailPrefKey = `${notificationType}_email`;
+    const smsPrefKey = `${notificationType}_sms`;
+    
+    const emailAllowed = emailEnabled && (settings?.[emailPrefKey] ?? true);
+    const smsAllowed = smsEnabled && (settings?.[smsPrefKey] ?? false);
+
+    // 4. Check quiet hours
+    if (settings?.quiet_hours_enabled) {
+      const now = new Date();
+      const currentTime = now.toTimeString().slice(0, 5); // HH:MM
+      const start = settings.quiet_hours_start;
+      const end = settings.quiet_hours_end;
+
+      if (start && end) {
+        const isQuietTime = start > end
+          ? (currentTime >= start || currentTime <= end)
+          : (currentTime >= start && currentTime <= end);
+
+        if (isQuietTime) {
+          console.log('⏰ Skipping notification - quiet hours active');
+          return;
+        }
+      }
+    }
+
+    // 5. Get notification template from database
+    const { data: template } = await supabase
+      .from('notification_templates')
+      .select('*')
+      .eq('template_key', notificationType)
+      .eq('is_active', true)
+      .single();
+
+    if (!template) {
+      console.error(`❌ Template not found: ${notificationType}`);
+      return;
+    }
+
+    // 6. Get recipient contact info (prioritize custom notification email/phone)
+    let recipientEmail = settings?.notification_email;
+    let recipientPhone = settings?.notification_phone;
+
+    if (!recipientEmail || !recipientPhone) {
+      // Fallback to profile data
+      const { data: customerProfile } = await supabase
+        .from('customer_profiles')
+        .select('email, phone')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (customerProfile) {
+        recipientEmail = recipientEmail || customerProfile.email;
+        recipientPhone = recipientPhone || customerProfile.phone;
+      }
+
+      // Try provider profile if customer not found
+      if (!recipientEmail || !recipientPhone) {
+        const { data: providerProfile } = await supabase
+          .from('providers')
+          .select('email, phone')
+          .eq('user_id', userId)
+          .maybeSingle();
+
+        if (providerProfile) {
+          recipientEmail = recipientEmail || providerProfile.email;
+          recipientPhone = recipientPhone || providerProfile.phone;
+        }
+      }
+    }
+
+    // 7. Send email if enabled and recipient exists
+    if (emailAllowed && recipientEmail && template.email_body_html) {
+      try {
+        // Replace template variables
+        let subject = template.email_subject || '';
+        let htmlBody = template.email_body_html || '';
+        let textBody = template.email_body_text || '';
+
+        for (const [key, value] of Object.entries(templateVariables)) {
+          const regex = new RegExp(`{{${key}}}`, 'g');
+          subject = subject.replace(regex, String(value ?? ''));
+          htmlBody = htmlBody.replace(regex, String(value ?? ''));
+          textBody = textBody.replace(regex, String(value ?? ''));
+        }
+
+        const { data: emailData, error: emailError } = await resend.emails.send({
+          from: 'ROAM Support <support@roamyourbestlife.com>',
+          to: [recipientEmail],
+          subject,
+          html: htmlBody,
+          text: textBody,
+        });
+
+        if (emailError) {
+          throw emailError;
+        }
+
+        // Log success
+        await supabase.from('notification_logs').insert({
+          user_id: userId,
+          recipient_email: recipientEmail,
+          notification_type: notificationType,
+          channel: 'email',
+          status: 'sent',
+          resend_id: emailData?.id,
+          subject,
+          body: textBody,
+          sent_at: new Date().toISOString(),
+          metadata,
+        });
+
+        console.log(`✅ Email sent: ${notificationType} to ${recipientEmail}`);
+      } catch (emailError) {
+        console.error('❌ Email send failed:', emailError);
+        
+        // Log failure
+        await supabase.from('notification_logs').insert({
+          user_id: userId,
+          recipient_email: recipientEmail,
+          notification_type: notificationType,
+          channel: 'email',
+          status: 'failed',
+          error_message: emailError instanceof Error ? emailError.message : String(emailError),
+          metadata,
+        });
+      }
+    } else {
+      console.log(`ℹ️ Email skipped for ${notificationType}:`, {
+        emailAllowed,
+        hasRecipient: !!recipientEmail,
+        hasTemplate: !!template.email_body_html,
+      });
+    }
+
+    // 8. SMS sending would go here (similar pattern)
+    if (smsAllowed && recipientPhone && template.sms_body) {
+      console.log(`📱 SMS notifications not yet implemented for ${notificationType}`);
+    }
+
+  } catch (error) {
+    console.error('❌ Notification service error:', error);
+  }
 }
 
 // Safely import notification functions - these may fail in some environments
@@ -287,67 +437,51 @@ async function sendStatusNotifications(
       hour12: true,
     }) : 'Time TBD';
 
-    // Send notifications using the NotificationService (checks granular preferences & uses DB templates)
+    // Send notifications using inline notification service (Vercel-compatible)
     
     // Notify customer when booking is confirmed/accepted
     if ((newStatus === 'confirmed' || newStatus === 'accepted') && options.notifyCustomer && customer?.user_id) {
-      try {
-        const service = await getNotificationService();
-        if (service) {
-          await service.send({
-          userId: customer.user_id,
-          notificationType: 'customer_booking_accepted',
-          templateVariables: {
-            customer_name: customerName,
-            service_name: serviceName,
-            provider_name: provider ? `${provider.first_name} ${provider.last_name}` : 'Provider',
-            booking_date: bookingDate,
-            booking_time: bookingTime,
-            booking_location: locationAddress || 'Location TBD',
-            total_amount: totalAmountFormatted,
-            booking_id: booking.id,
-          },
-          metadata: {
-            booking_id: booking.id,
-            event_type: 'booking_accepted',
-          },
-          });
-          console.log('✅ customer_booking_accepted notification sent via NotificationService');
+      await sendNotificationViaService(
+        customer.user_id,
+        'customer_booking_accepted',
+        {
+          customer_name: customerName,
+          service_name: serviceName,
+          provider_name: provider ? `${provider.first_name} ${provider.last_name}` : 'Provider',
+          booking_date: bookingDate,
+          booking_time: bookingTime,
+          booking_location: locationAddress || 'Location TBD',
+          total_amount: totalAmountFormatted,
+          booking_id: booking.id,
+        },
+        {
+          booking_id: booking.id,
+          event_type: 'booking_accepted',
         }
-      } catch (error) {
-        console.error('⚠️ Failed to send customer_booking_accepted notification:', error);
-      }
+      );
     }
     
     // Notify customer when booking is completed
     if (newStatus === 'completed' && options.notifyCustomer && customer?.user_id) {
-      try {
-        const service = await getNotificationService();
-        if (service) {
-          await service.send({
-          userId: customer.user_id,
-          notificationType: 'customer_booking_completed',
-          templateVariables: {
-            customer_name: customerName,
-            service_name: serviceName,
-            provider_name: provider ? `${provider.first_name} ${provider.last_name}` : 'Provider',
-            provider_id: provider?.id || '',
-            booking_id: booking.id,
-            booking_date: bookingDate,
-            booking_time: bookingTime,
-            booking_location: locationAddress || 'Location TBD',
-            total_amount: totalAmountFormatted,
-          },
-          metadata: {
-            booking_id: booking.id,
-            event_type: 'booking_completed',
-          },
-          });
-          console.log('✅ customer_booking_completed notification sent via NotificationService');
+      await sendNotificationViaService(
+        customer.user_id,
+        'customer_booking_completed',
+        {
+          customer_name: customerName,
+          service_name: serviceName,
+          provider_name: provider ? `${provider.first_name} ${provider.last_name}` : 'Provider',
+          provider_id: provider?.id || '',
+          booking_id: booking.id,
+          booking_date: bookingDate,
+          booking_time: bookingTime,
+          booking_location: locationAddress || 'Location TBD',
+          total_amount: totalAmountFormatted,
+        },
+        {
+          booking_id: booking.id,
+          event_type: 'booking_completed',
         }
-      } catch (error) {
-        console.error('⚠️ Failed to send customer_booking_completed notification:', error);
-      }
+      );
     }
     // Notify providers when booking is cancelled (owners/dispatchers + assigned provider)
     if (newStatus === 'cancelled' && options.notifyProvider && business && notifyProvidersBookingCancelled) {

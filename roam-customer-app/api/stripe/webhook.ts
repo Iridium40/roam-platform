@@ -414,7 +414,7 @@ async function handleBookingPayment(session: Stripe.Checkout.Session) {
       ),
       business_profiles (
         id,
-        name,
+        business_name,
         business_address
       )
     `)
@@ -486,7 +486,7 @@ async function handleBookingPayment(session: Stripe.Checkout.Session) {
             phone: customer.phone,
           },
           business: {
-            name: business.name,
+            name: business.business_name,
             business_address: business.business_address,
           },
         });
@@ -649,7 +649,7 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
         ),
         business_profiles (
           id,
-          name,
+          business_name,
           business_address
         )
       `)
