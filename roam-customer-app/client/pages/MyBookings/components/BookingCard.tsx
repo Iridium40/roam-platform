@@ -110,10 +110,11 @@ export const BookingCard: React.FC<BookingCardProps> = ({
 
     fetchUnreadCount();
 
+    // TODO: Re-enable polling once RLS policies are fixed
     // Poll for updates every 30 seconds
-    const interval = setInterval(fetchUnreadCount, 30000);
+    // const interval = setInterval(fetchUnreadCount, 30000);
 
-    return () => clearInterval(interval);
+    // return () => clearInterval(interval);
   }, [booking?.id, customer?.id]);
 
   // Reset unread count when message button is clicked
