@@ -104,24 +104,22 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
     [accessToken]
   );
   
-  // Determine user type safely
-  const currentUserType = userType || (providerAuth ? 'provider' : 'customer');
-  
   // Get the actual provider or customer object
   const provider = providerAuth?.provider;
   const customer = customerAuth?.customer;
   
-  // Get the current user data (either provider or customer)
+  // In provider app, use the provider's actual role (owner, dispatcher, or provider)
+  // Provider role takes precedence over any userType detection
+  const currentUserType = provider?.provider_role || userType || 'provider';
+  
+  // Get the current user data (should always be provider in provider app)
   const currentUser = provider || customer;
-  const currentUserId =
-    provider?.user_id ??
-    provider?.id ??
-    customer?.id ??
-    '';
+  const currentUserId = provider?.user_id || provider?.id || customer?.id || '';
 
   // Debug logging for user identity
   console.log('🔍 ConversationChat User Identity Debug:', {
     currentUserType,
+    provider_role: provider?.provider_role,
     provider_user_id: provider?.user_id,
     provider_id: provider?.id,
     customer_id: customer?.id,

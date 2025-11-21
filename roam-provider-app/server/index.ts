@@ -734,6 +734,7 @@ export function createServer() {
             *,
             customer_profiles (
               id,
+              user_id,
               first_name,
               last_name,
               email,
@@ -773,6 +774,7 @@ export function createServer() {
             ),
             providers (
               id,
+              user_id,
               first_name,
               last_name
             )
