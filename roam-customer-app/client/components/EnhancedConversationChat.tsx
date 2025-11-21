@@ -26,43 +26,43 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { logger } from '@/utils/logger';
 
-// Simple date formatting function to avoid date-fns bundling issues
-const formatDistanceToNow = (date: Date | string | number, options?: { addSuffix?: boolean }): string => {
+// Format time as 12-hour with am/pm (e.g., "10:30am")
+const formatMessageTime = (date: Date | string | number): string => {
   const dateObj = new Date(date);
-  const now = new Date();
-  const seconds = Math.floor((now.getTime() - dateObj.getTime()) / 1000);
+  let hours = dateObj.getHours();
+  const minutes = dateObj.getMinutes();
+  const ampm = hours >= 12 ? 'pm' : 'am';
+  hours = hours % 12;
+  hours = hours ? hours : 12; // 0 should be 12
+  const minutesStr = minutes < 10 ? '0' + minutes : minutes;
+  return `${hours}:${minutesStr}${ampm}`;
+};
+
+// Format date as MM/DD/YY or "Today"
+const formatMessageDate = (date: Date | string | number): string => {
+  const dateObj = new Date(date);
+  const today = new Date();
   
-  if (seconds < 60) {
-    return options?.addSuffix ? 'just now' : 'less than a minute';
+  // Check if it's today
+  if (
+    dateObj.getDate() === today.getDate() &&
+    dateObj.getMonth() === today.getMonth() &&
+    dateObj.getFullYear() === today.getFullYear()
+  ) {
+    return 'Today';
   }
   
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) {
-    const text = `${minutes} minute${minutes > 1 ? 's' : ''}`;
-    return options?.addSuffix ? `${text} ago` : text;
-  }
-  
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) {
-    const text = `${hours} hour${hours > 1 ? 's' : ''}`;
-    return options?.addSuffix ? `${text} ago` : text;
-  }
-  
-  const days = Math.floor(hours / 24);
-  if (days < 30) {
-    const text = `${days} day${days > 1 ? 's' : ''}`;
-    return options?.addSuffix ? `${text} ago` : text;
-  }
-  
-  const months = Math.floor(days / 30);
-  if (months < 12) {
-    const text = `${months} month${months > 1 ? 's' : ''}`;
-    return options?.addSuffix ? `${text} ago` : text;
-  }
-  
-  const years = Math.floor(months / 12);
-  const text = `${years} year${years > 1 ? 's' : ''}`;
-  return options?.addSuffix ? `${text} ago` : text;
+  // Format as MM/DD/YY
+  const month = dateObj.getMonth() + 1;
+  const day = dateObj.getDate();
+  const year = dateObj.getFullYear().toString().slice(-2);
+  return `${month}/${day}/${year}`;
+};
+
+// Get date string for grouping (YYYY-MM-DD)
+const getDateKey = (date: Date | string | number): string => {
+  const dateObj = new Date(date);
+  return dateObj.toISOString().split('T')[0];
 };
 
 // Import the new booking conversations service from shared
@@ -504,68 +504,89 @@ export default function EnhancedConversationChat({
                 </p>
               </div>
             ) : (
-              messages.map((message) => {
-                const author = resolveAuthor(message);
-                // Check if this message was sent by the current logged-in customer
-                const isCurrentUser = message.author_type === 'customer' && message.author_id === customer?.user_id;
-                const isCustomer = message.author_type === 'customer';
-                const displayName = author?.userName || (isCustomer ? bookingData.customerName : bookingData.providerName);
-                const initials = displayName
-                  ?.split(' ')
-                  .map((part) => part[0])
-                  .join('')
-                  .slice(0, 2)
-                  .toUpperCase();
+              (() => {
+                // Group messages by date
+                let lastDateKey: string | null = null;
+                
+                return messages.map((message, index) => {
+                  const author = resolveAuthor(message);
+                  // Check if this message was sent by the current logged-in customer
+                  const isCurrentUser = message.author_type === 'customer' && message.author_id === customer?.user_id;
+                  const isCustomer = message.author_type === 'customer';
+                  const displayName = author?.userName || (isCustomer ? bookingData.customerName : bookingData.providerName);
+                  const initials = displayName
+                    ?.split(' ')
+                    .map((part) => part[0])
+                    .join('')
+                    .slice(0, 2)
+                    .toUpperCase();
 
-                // Extract role from message attributes (set by TwilioConversationsService.sendMessage)
-                let displayRole = isCustomer ? 'Customer' : 'Provider';
-                if (message.attributes) {
-                  try {
-                    const attrs = typeof message.attributes === 'string' 
-                      ? JSON.parse(message.attributes) 
-                      : message.attributes;
-                    const role = attrs.role || attrs.userType || message.author_type;
-                    // Capitalize the role for display
-                    displayRole = role.charAt(0).toUpperCase() + role.slice(1);
-                  } catch (e) {
-                    // Use default displayRole if parsing fails
+                  // Extract role from message attributes (set by TwilioConversationsService.sendMessage)
+                  let displayRole = isCustomer ? 'Customer' : 'Provider';
+                  if (message.attributes) {
+                    try {
+                      const attrs = typeof message.attributes === 'string' 
+                        ? JSON.parse(message.attributes) 
+                        : message.attributes;
+                      const role = attrs.role || attrs.userType || message.author_type;
+                      // Capitalize the role for display
+                      displayRole = role.charAt(0).toUpperCase() + role.slice(1);
+                    } catch (e) {
+                      // Use default displayRole if parsing fails
+                    }
                   }
-                }
 
-                return (
-                  <div
-                    key={message.id}
-                    className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'}`}
-                  >
-                    <div className={`flex items-end gap-3 ${isCurrentUser ? 'flex-row-reverse' : 'flex-row'}`}>
-                      <div className="flex flex-col items-center">
-                        <Avatar className="h-8 w-8 border">
-                          <AvatarImage src={author?.avatarUrl || undefined} alt={displayName || undefined} />
-                          <AvatarFallback>{initials}</AvatarFallback>
-                        </Avatar>
-                        <span className="mt-1 text-[11px] text-muted-foreground/80 max-w-[140px] text-center truncate">
-                          {displayName}
-                        </span>
-                      </div>
-                      <div
-                        className={`max-w-[70%] rounded-lg px-4 py-2 ${
-                          isCurrentUser ? 'bg-roam-blue text-white' : 'bg-white border shadow-sm'
-                        }`}
-                      >
-                        <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
-                        <div className="flex items-center justify-between mt-1 text-[11px] opacity-80">
-                          {!isCurrentUser && displayRole && (
-                            <span className="uppercase tracking-wide">
-                              {displayRole}
+                  // Check if we need to show a date separator
+                  const currentDateKey = getDateKey(message.timestamp);
+                  const showDateSeparator = currentDateKey !== lastDateKey;
+                  lastDateKey = currentDateKey;
+
+                  return (
+                    <div key={message.id}>
+                      {/* Date Separator */}
+                      {showDateSeparator && (
+                        <div className="flex items-center justify-center my-4">
+                          <div className="bg-gray-200 text-gray-600 text-xs font-medium px-3 py-1 rounded-full">
+                            {formatMessageDate(message.timestamp)}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Message */}
+                      <div className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'} mb-3`}>
+                        <div className={`flex items-end gap-3 ${isCurrentUser ? 'flex-row-reverse' : 'flex-row'}`}>
+                          <div className="flex flex-col items-center">
+                            <Avatar className="h-8 w-8 border">
+                              <AvatarImage src={author?.avatarUrl || undefined} alt={displayName || undefined} />
+                              <AvatarFallback>{initials}</AvatarFallback>
+                            </Avatar>
+                            <span className="mt-1 text-[11px] text-muted-foreground/80 max-w-[140px] text-center truncate">
+                              {displayName}
                             </span>
-                          )}
-                          <span>{formatDistanceToNow(new Date(message.timestamp), { addSuffix: true })}</span>
+                          </div>
+                          <div
+                            className={`max-w-[70%] rounded-lg px-4 py-2 ${
+                              isCurrentUser ? 'bg-roam-blue text-white' : 'bg-white border shadow-sm'
+                            }`}
+                          >
+                            <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
+                            <div className="flex items-center justify-between mt-1 text-[11px] opacity-80">
+                              {!isCurrentUser && displayRole && (
+                                <span className="uppercase tracking-wide mr-2">
+                                  {displayRole}
+                                </span>
+                              )}
+                              <span className={isCurrentUser ? 'text-white/80' : 'text-gray-500'}>
+                                {formatMessageTime(message.timestamp)}
+                              </span>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })
+                  );
+                });
+              })()
             )}
             <div ref={messagesEndRef} />
           </div>
