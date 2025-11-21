@@ -84,6 +84,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           conversationSid: result.conversationSid,
           conversationMetadataId: result.conversationMetadataId,
           isNew: result.isNew,
+          participants: participants, // Return the participants that were passed in
         });
       } catch (error: any) {
         console.error('Error creating conversation:', error);
