@@ -1,9 +1,6 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
 /**
  * Mark all messages in a conversation as read for a specific user
  * This clears the unread message counter
@@ -22,8 +19,20 @@ export async function markMessagesAsRead(req: VercelRequest, res: VercelResponse
       });
     }
 
-    // Use service role key to bypass RLS
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    // Get environment variables
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.VITE_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.VITE_PUBLIC_SUPABASE_ANON_KEY;
+
+    if (!supabaseUrl || !supabaseKey) {
+      console.error('Missing Supabase environment variables');
+      return res.status(500).json({ 
+        error: 'Server configuration error',
+        details: 'Missing Supabase credentials'
+      });
+    }
+
+    // Create Supabase client (using anon key since RLS is disabled on message_notifications)
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Update all unread message notifications for this user in this conversation
     const { error } = await supabase
