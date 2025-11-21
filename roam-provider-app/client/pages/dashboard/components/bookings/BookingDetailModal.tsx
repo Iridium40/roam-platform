@@ -244,69 +244,6 @@ export default function BookingDetailModal({
             </div>
           </div>
 
-          {/* Service Details */}
-          <div className="space-y-3">
-            <h3 className="font-semibold text-lg">Service Details</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <Calendar className="h-4 w-4 text-gray-500" />
-                  <span className="text-sm font-medium">Date & Time</span>
-                </div>
-                <div className="ml-6">
-                  <p className="text-sm">
-                    {selectedBooking.booking_date}
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    {formatDisplayTime(selectedBooking.start_time)} - {formatDisplayTime(selectedBooking.end_time)}
-                  </p>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <Clock className="h-4 w-4 text-gray-500" />
-                  <span className="text-sm font-medium">Duration</span>
-                </div>
-                <div className="ml-6">
-                  <p className="text-sm">
-                    {selectedBooking.services?.duration_minutes 
-                      ? `${selectedBooking.services.duration_minutes} minutes`
-                      : "Duration not specified"
-                    }
-                  </p>
-                </div>
-              </div>
-
-            </div>
-          </div>
-
-          {/* Location Information */}
-          <div className="space-y-3">
-            <h3 className="font-semibold text-lg">Location</h3>
-            <div className="flex items-start space-x-2">
-              <MapPin className="h-4 w-4 text-gray-500 mt-0.5" />
-              <div>
-                <p className="text-sm">
-                  {selectedBooking.customer_locations
-                    ? `${selectedBooking.customer_locations.address_line1 || ""} ${selectedBooking.customer_locations.address_line2 || ""}, ${selectedBooking.customer_locations.city || ""}, ${selectedBooking.customer_locations.state || ""} ${selectedBooking.customer_locations.postal_code || ""}`
-                    : selectedBooking.business_locations
-                    ? `${selectedBooking.business_locations.location_name || ""} ${selectedBooking.business_locations.address_line1 || ""}, ${selectedBooking.business_locations.city || ""}, ${selectedBooking.business_locations.state || ""}`
-                    : "Location not specified"
-                  }
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Special Instructions */}
-          {selectedBooking.special_instructions && (
-            <div className="space-y-3">
-              <h3 className="font-semibold text-lg">Special Instructions</h3>
-              <p className="text-sm bg-gray-50 p-3 rounded-md">{selectedBooking.special_instructions}</p>
-            </div>
-          )}
-
           {/* Assigned Provider */}
           {(() => {
             // Handle both array and object formats from Supabase joins
@@ -396,6 +333,69 @@ export default function BookingDetailModal({
                   )}
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* Service Details */}
+          <div className="space-y-3">
+            <h3 className="font-semibold text-lg">Service Details</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <Calendar className="h-4 w-4 text-gray-500" />
+                  <span className="text-sm font-medium">Date & Time</span>
+                </div>
+                <div className="ml-6">
+                  <p className="text-sm">
+                    {selectedBooking.booking_date}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    {formatDisplayTime(selectedBooking.start_time)} - {formatDisplayTime(selectedBooking.end_time)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <Clock className="h-4 w-4 text-gray-500" />
+                  <span className="text-sm font-medium">Duration</span>
+                </div>
+                <div className="ml-6">
+                  <p className="text-sm">
+                    {selectedBooking.services?.duration_minutes 
+                      ? `${selectedBooking.services.duration_minutes} minutes`
+                      : "Duration not specified"
+                    }
+                  </p>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          {/* Location Information */}
+          <div className="space-y-3">
+            <h3 className="font-semibold text-lg">Location</h3>
+            <div className="flex items-start space-x-2">
+              <MapPin className="h-4 w-4 text-gray-500 mt-0.5" />
+              <div>
+                <p className="text-sm">
+                  {selectedBooking.customer_locations
+                    ? `${selectedBooking.customer_locations.address_line1 || ""} ${selectedBooking.customer_locations.address_line2 || ""}, ${selectedBooking.customer_locations.city || ""}, ${selectedBooking.customer_locations.state || ""} ${selectedBooking.customer_locations.postal_code || ""}`
+                    : selectedBooking.business_locations
+                    ? `${selectedBooking.business_locations.location_name || ""} ${selectedBooking.business_locations.address_line1 || ""}, ${selectedBooking.business_locations.city || ""}, ${selectedBooking.business_locations.state || ""}`
+                    : "Location not specified"
+                  }
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Special Instructions */}
+          {selectedBooking.special_instructions && (
+            <div className="space-y-3">
+              <h3 className="font-semibold text-lg">Special Instructions</h3>
+              <p className="text-sm bg-gray-50 p-3 rounded-md">{selectedBooking.special_instructions}</p>
             </div>
           )}
 
