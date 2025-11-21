@@ -195,7 +195,10 @@ export class TwilioConversationsService {
     conversationMetadataId: string,
     participants: Array<{ userId: string; userType: string; userName?: string }>
   ): Promise<void> {
+    console.log('👥 _ensureParticipants called with:', JSON.stringify(participants, null, 2));
+    
     for (const participant of participants) {
+      console.log('🔍 Processing participant:', { userId: participant.userId, userType: participant.userType, userName: participant.userName });
       const identity = `${participant.userType}-${participant.userId}`;
 
       // Check if participant already exists in database
