@@ -328,11 +328,14 @@ export default function EnhancedConversationChat({
   }, [isOpen, conversationId, loadMessages]);
 
   const participantMap = useMemo(() => {
+    console.log('🗺️ Building participantMap from participants:', participants);
     const map = new Map<string, BookingConversationParticipant>();
     for (const participant of participants) {
       const key = `${participant.userType}-${participant.userId}`;
+      console.log(`  Adding to map: ${key} =>`, participant);
       map.set(key, participant);
     }
+    console.log('🗺️ Final participantMap size:', map.size);
     return map;
   }, [participants]);
 
@@ -393,6 +396,13 @@ export default function EnhancedConversationChat({
 
   const resolveAuthor = (message: ConversationMessageWithAuthor) => {
     const identity = `${message.author_type}-${message.author_id}`;
+    console.log(`🔍 Resolving author for message:`, { 
+      author_type: message.author_type, 
+      author_id: message.author_id, 
+      identity,
+      found: participantMap.has(identity),
+      participant: participantMap.get(identity)
+    });
     return participantMap.get(identity) || null;
   };
 
