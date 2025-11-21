@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api/endpoints";
 import { useAuth } from "@/contexts/auth/AuthProvider";
+import { supabase } from "@/lib/supabase";
 
 interface BookingStats {
   totalBookings: number;
@@ -24,6 +25,8 @@ export function useBookings(providerData: any, business: any) {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatusFilter, setSelectedStatusFilter] = useState("all");
+  const [showUnreadOnly, setShowUnreadOnly] = useState(false);
+  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
   const [activeTab, setActiveTab] = useState("present");
   
   // Debug wrapper for setActiveTab
@@ -77,6 +80,69 @@ export function useBookings(providerData: any, business: any) {
     loadBookings();
   }, [business?.id]);
 
+  // Fetch unread message counts for all bookings
+  useEffect(() => {
+    if (!bookings.length || !provider?.user_id) return;
+
+    const fetchUnreadCounts = async () => {
+      try {
+        // Get all conversation IDs for these bookings
+        const bookingIds = bookings.map(b => b.id);
+        const { data: conversations, error: convError } = await supabase
+          .from('conversation_metadata')
+          .select('id, booking_id')
+          .in('booking_id', bookingIds)
+          .eq('is_active', true);
+
+        if (convError || !conversations) {
+          console.error('Error fetching conversations:', convError);
+          return;
+        }
+
+        // Get unread counts for all conversations
+        const conversationIds = conversations.map(c => c.id);
+        if (conversationIds.length === 0) return;
+
+        const { data: notifications, error: notifError } = await supabase
+          .from('message_notifications')
+          .select('conversation_id')
+          .in('conversation_id', conversationIds)
+          .eq('user_id', provider.user_id)
+          .eq('is_read', false);
+
+        if (notifError) {
+          console.error('Error fetching notifications:', notifError);
+          return;
+        }
+
+        // Count unread messages per conversation
+        const counts: Record<string, number> = {};
+        notifications?.forEach(notif => {
+          counts[notif.conversation_id] = (counts[notif.conversation_id] || 0) + 1;
+        });
+
+        // Map conversation IDs to booking IDs
+        const unreadByBooking: Record<string, number> = {};
+        conversations.forEach(conv => {
+          const count = counts[conv.id] || 0;
+          if (count > 0) {
+            unreadByBooking[conv.booking_id] = count;
+          }
+        });
+
+        setUnreadCounts(unreadByBooking);
+      } catch (error) {
+        console.error('Error fetching unread counts:', error);
+      }
+    };
+
+    fetchUnreadCounts();
+
+    // Poll for updates every 30 seconds
+    const interval = setInterval(fetchUnreadCounts, 30000);
+    return () => clearInterval(interval);
+  }, [bookings, provider?.user_id]);
+
   // Reset pagination when tab changes
   useEffect(() => {
     if (activeTab === "present") setPresentPage(1);
@@ -121,13 +187,21 @@ export function useBookings(providerData: any, business: any) {
     return () => clearInterval(interval);
   }, [bookings, activeTab, toast]);
 
-  // Filter bookings based on search and status
+  // Filter bookings based on search, status, and unread messages
   const filteredBookings = useMemo(() => {
     let filtered = bookings;
 
     // Apply status filter
     if (selectedStatusFilter !== "all") {
       filtered = filtered.filter(booking => booking.booking_status === selectedStatusFilter);
+    }
+
+    // Apply unread messages filter
+    if (showUnreadOnly) {
+      filtered = filtered.filter(booking => {
+        const unreadCount = unreadCounts[booking.id] || 0;
+        return unreadCount > 0;
+      });
     }
 
     // Apply search filter
@@ -150,7 +224,7 @@ export function useBookings(providerData: any, business: any) {
       const dateB = new Date(`${b.booking_date} ${b.start_time}`);
       return dateB.getTime() - dateA.getTime();
     });
-  }, [bookings, searchQuery, selectedStatusFilter]);
+  }, [bookings, searchQuery, selectedStatusFilter, showUnreadOnly, unreadCounts]);
 
   // Categorize bookings into present, future, and past
   const categorizedBookings = useMemo(() => {
@@ -354,6 +428,7 @@ export function useBookings(providerData: any, business: any) {
     futureBookings: categorizedBookings.future,
     pastBookings: categorizedBookings.past,
     paginatedData,
+    unreadCounts,
     
     // UI State
     loading,
@@ -361,6 +436,8 @@ export function useBookings(providerData: any, business: any) {
     setSearchQuery,
     selectedStatusFilter,
     setSelectedStatusFilter,
+    showUnreadOnly,
+    setShowUnreadOnly,
     activeTab,
     setActiveTab: handleSetActiveTab,
     selectedBooking,

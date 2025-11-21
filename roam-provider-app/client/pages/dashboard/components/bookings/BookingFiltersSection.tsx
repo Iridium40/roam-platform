@@ -1,5 +1,6 @@
 import React from "react";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -7,13 +8,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search } from "lucide-react";
+import { Search, MessageCircle } from "lucide-react";
 
 interface BookingFiltersSectionProps {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   selectedStatusFilter: string;
   setSelectedStatusFilter: (status: string) => void;
+  showUnreadOnly: boolean;
+  setShowUnreadOnly: (show: boolean) => void;
 }
 
 export default function BookingFiltersSection({
@@ -21,6 +24,8 @@ export default function BookingFiltersSection({
   setSearchQuery,
   selectedStatusFilter,
   setSelectedStatusFilter,
+  showUnreadOnly,
+  setShowUnreadOnly,
 }: BookingFiltersSectionProps) {
   return (
     <div className="flex flex-col sm:flex-row gap-4">
@@ -52,6 +57,14 @@ export default function BookingFiltersSection({
           </SelectContent>
         </Select>
       </div>
+      <Button
+        variant={showUnreadOnly ? "default" : "outline"}
+        onClick={() => setShowUnreadOnly(!showUnreadOnly)}
+        className="sm:w-auto whitespace-nowrap"
+      >
+        <MessageCircle className="w-4 h-4 mr-2" />
+        Unread Only
+      </Button>
     </div>
   );
 }

@@ -26,6 +26,7 @@ interface BookingListSectionProps {
   onViewDetails: (booking: any) => void;
   onUpdateStatus: (bookingId: string, status: string) => Promise<void>;
   formatDisplayTime: (time: string) => string;
+  unreadCounts: Record<string, number>;
 }
 
 export default function BookingListSection({
@@ -44,6 +45,7 @@ export default function BookingListSection({
   onViewDetails,
   onUpdateStatus,
   formatDisplayTime,
+  unreadCounts,
 }: BookingListSectionProps) {
   const PaginationControls = ({ 
     currentPage, 
@@ -147,6 +149,7 @@ export default function BookingListSection({
                   onUpdateStatus={onUpdateStatus}
                   formatDisplayTime={formatDisplayTime}
                   showActions={true}
+                  unreadCount={unreadCounts[booking.id] || 0}
                 />
               ))}
               <PaginationControls
@@ -174,6 +177,7 @@ export default function BookingListSection({
                   onUpdateStatus={onUpdateStatus}
                   formatDisplayTime={formatDisplayTime}
                   showActions={true}
+                  unreadCount={unreadCounts[booking.id] || 0}
                 />
               ))}
               <PaginationControls
@@ -201,6 +205,7 @@ export default function BookingListSection({
                   onUpdateStatus={onUpdateStatus}
                   formatDisplayTime={formatDisplayTime}
                   showActions={false} // Past bookings typically don't need status actions
+                  unreadCount={unreadCounts[booking.id] || 0}
                 />
               ))}
               <PaginationControls

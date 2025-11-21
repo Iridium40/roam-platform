@@ -50,6 +50,7 @@ export function BookingsTab({ providerData, business }: BookingsTabProps) {
     futureBookings,
     pastBookings,
     paginatedData,
+    unreadCounts,
     
     // UI State
     loading,
@@ -57,6 +58,8 @@ export function BookingsTab({ providerData, business }: BookingsTabProps) {
     setSearchQuery,
     selectedStatusFilter,
     setSelectedStatusFilter,
+    showUnreadOnly,
+    setShowUnreadOnly,
     activeTab,
     setActiveTab,
     selectedBooking,
@@ -122,6 +125,8 @@ export function BookingsTab({ providerData, business }: BookingsTabProps) {
         setSearchQuery={setSearchQuery}
         selectedStatusFilter={selectedStatusFilter}
         setSelectedStatusFilter={setSelectedStatusFilter}
+        showUnreadOnly={showUnreadOnly}
+        setShowUnreadOnly={setShowUnreadOnly}
       />
 
         {/* View Toggle */}
@@ -179,6 +184,7 @@ export function BookingsTab({ providerData, business }: BookingsTabProps) {
         onViewDetails={setSelectedBooking}
         onUpdateStatus={updateBookingStatus}
         formatDisplayTime={formatDisplayTime}
+        unreadCounts={unreadCounts}
       />
       ) : viewType === "week" ? (
         <Suspense fallback={<div className="h-96 bg-gray-100 rounded-lg animate-pulse" />}>
