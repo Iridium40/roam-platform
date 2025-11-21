@@ -272,28 +272,26 @@ export class TwilioConversationsService {
       }
 
       // Store participant in Supabase
-      console.log(`💾 Storing participant in Supabase:`, {
+      const participantRecord = {
         conversation_id: conversationMetadataId,
         user_id: participant.userId,
         user_type: participant.userType,
         twilio_participant_sid: twilioParticipantSid,
-      });
+        is_active: true,
+        joined_at: new Date().toISOString(),
+      };
+      
+      console.log(`💾 Storing participant in Supabase:`, JSON.stringify(participantRecord, null, 2));
+      console.log(`💾 Raw participant object:`, JSON.stringify(participant, null, 2));
 
       const { error: insertError } = await this.supabase
         .from('conversation_participants')
-        .insert({
-          conversation_id: conversationMetadataId,
-          user_id: participant.userId,
-          user_type: participant.userType,
-          twilio_participant_sid: twilioParticipantSid,
-          is_active: true,
-          joined_at: new Date().toISOString(),
-        });
+        .insert(participantRecord);
 
       if (insertError) {
-        console.error(`❌ Error storing participant in Supabase:`, insertError);
+        console.error(`❌ Error storing participant in Supabase:`, JSON.stringify(insertError, null, 2));
       } else {
-        console.log(`✅ Participant stored successfully`);
+        console.log(`✅ Participant stored successfully: ${participant.userType}-${participant.userId}`);
       }
     }
   }
