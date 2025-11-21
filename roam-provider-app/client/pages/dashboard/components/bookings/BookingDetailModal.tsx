@@ -16,7 +16,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import BookingStatusIndicator from "@/components/BookingStatusIndicator";
-import ConversationChat from "@/components/ConversationChat";
 import { useProviderAuth } from "@/contexts/auth/ProviderAuthContext";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
@@ -25,10 +24,7 @@ import {
   Clock,
   MapPin,
   Users,
-  MessageCircle,
   Hash,
-  Phone,
-  Mail,
   UserCheck,
   User,
 } from "lucide-react";
@@ -50,7 +46,6 @@ export default function BookingDetailModal({
   const { toast } = useToast();
   const [availableProviders, setAvailableProviders] = useState<any[]>([]);
   const [isAssigning, setIsAssigning] = useState(false);
-  const [isChatOpen, setIsChatOpen] = useState(false);
   const [loadingProviders, setLoadingProviders] = useState(false);
 
   // Check if current user can assign bookings (owners and dispatchers only)
@@ -111,11 +106,14 @@ export default function BookingDetailModal({
       if (error) throw error;
 
       // Update local booking data
+      const assignedProvider = providerId === 'unassigned' 
+        ? null 
+        : availableProviders.find(p => p.id === providerId);
+      
       const updatedBooking = {
         ...selectedBooking,
         provider_id: providerId === 'unassigned' ? null : providerId,
-        providers: providerId === 'unassigned' ? null : 
-          availableProviders.find(p => p.id === providerId)
+        providers: assignedProvider
       };
       setSelectedBooking(updatedBooking);
 
@@ -308,15 +306,24 @@ export default function BookingDetailModal({
           )}
 
           {/* Assigned Provider */}
-          {selectedBooking.providers && (
-            <div className="space-y-3">
-              <h3 className="font-semibold text-lg">Assigned Provider</h3>
-              <div className="flex items-center space-x-2">
-                <Users className="h-4 w-4 text-gray-500" />
-                <p className="text-sm">{selectedBooking.providers.first_name} {selectedBooking.providers.last_name}</p>
+          {(() => {
+            // Handle both array and object formats from Supabase joins
+            const provider = Array.isArray(selectedBooking.providers) 
+              ? selectedBooking.providers[0] 
+              : selectedBooking.providers;
+            
+            if (!provider) return null;
+            
+            return (
+              <div className="space-y-3">
+                <h3 className="font-semibold text-lg">Assigned Provider</h3>
+                <div className="flex items-center space-x-2">
+                  <Users className="h-4 w-4 text-gray-500" />
+                  <p className="text-sm">{provider.first_name} {provider.last_name}</p>
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* Provider Assignment (Owners and Dispatchers Only) */}
           {canAssignBookings && (
@@ -329,12 +336,21 @@ export default function BookingDetailModal({
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">Current Assignment:</span>
-                    <Badge variant={selectedBooking.providers ? "default" : "secondary"}>
-                      {selectedBooking.providers 
-                        ? `${selectedBooking.providers.first_name} ${selectedBooking.providers.last_name}`
-                        : "Unassigned"
-                      }
-                    </Badge>
+                    {(() => {
+                      // Handle both array and object formats from Supabase joins
+                      const provider = Array.isArray(selectedBooking.providers) 
+                        ? selectedBooking.providers[0] 
+                        : selectedBooking.providers;
+                      
+                      return (
+                        <Badge variant={provider ? "default" : "secondary"}>
+                          {provider 
+                            ? `${provider.first_name} ${provider.last_name}`
+                            : "Unassigned"
+                          }
+                        </Badge>
+                      );
+                    })()}
                   </div>
                   
                   {canReassignBooking && (
@@ -381,49 +397,8 @@ export default function BookingDetailModal({
             </div>
           )}
 
-          {/* Chat Actions */}
-          <div className="space-y-3">
-            <h3 className="font-semibold text-lg">Communication</h3>
-            <div className="flex gap-2">
-              <Button
-                onClick={() => setIsChatOpen(true)}
-                variant="outline"
-                className="flex items-center gap-2"
-              >
-                <MessageCircle className="h-4 w-4" />
-                Open Chat
-              </Button>
-              {selectedBooking.customer_profiles?.phone && (
-                <Button
-                  onClick={() => window.open(`tel:${selectedBooking.customer_profiles.phone}`)}
-                  variant="outline"
-                  size="sm"
-                >
-                  <Phone className="h-4 w-4 mr-2" />
-                  Call
-                </Button>
-              )}
-              {selectedBooking.customer_profiles?.email && (
-                <Button
-                  onClick={() => window.open(`mailto:${selectedBooking.customer_profiles.email}`)}
-                  variant="outline"
-                  size="sm"
-                >
-                  <Mail className="h-4 w-4 mr-2" />
-                  Email
-                </Button>
-              )}
-            </div>
-          </div>
         </div>
       </DialogContent>
-
-      {/* Chat Modal */}
-      <ConversationChat
-        isOpen={isChatOpen}
-        onClose={() => setIsChatOpen(false)}
-        booking={selectedBooking}
-      />
     </Dialog>
   );
 }

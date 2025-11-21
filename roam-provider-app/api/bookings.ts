@@ -67,6 +67,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({ error: 'Failed to fetch bookings', details: error.message });
     }
 
+    // Normalize providers relation - Supabase sometimes returns arrays for foreign key relationships
+    const normalizedBookings = (bookings || []).map((booking: any) => {
+      if (booking.providers) {
+        // If providers is an array, take the first element (should only be one for one-to-one relationship)
+        if (Array.isArray(booking.providers)) {
+          booking.providers = booking.providers.length > 0 ? booking.providers[0] : null;
+        }
+      }
+      return booking;
+    });
+
     const { data: stats } = await supabase
       .from('bookings')
       .select('booking_status, total_amount')
@@ -85,7 +96,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }, 0) || 0;
 
     return res.status(200).json({
-      bookings: bookings || [],
+      bookings: normalizedBookings,
       stats: {
         totalBookings,
         pendingBookings,
