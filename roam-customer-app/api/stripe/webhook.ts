@@ -106,28 +106,53 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
   // Record webhook event in database for audit trail
+  // Check if event already exists to handle duplicates gracefully
   try {
-    const { data: webhookEvent, error: webhookError } = await supabase
+    const { data: existingEvent } = await supabase
       .from('stripe_tax_webhook_events')
-      .insert({
-        stripe_event_id: event.id,
-        stripe_event_type: event.type,
-        stripe_object_id: (event.data.object as any).id || null,
-        stripe_object_type: (event.data.object as any).object || null,
-        event_data: event.data as any,
-        processed: false,
-        api_version: event.api_version,
-        webhook_received_at: new Date().toISOString(),
-      })
       .select('id')
-      .single();
+      .eq('stripe_event_id', event.id)
+      .maybeSingle();
 
-    if (webhookError) {
-      console.error('⚠️ Failed to record webhook event:', webhookError);
-      // Continue processing anyway - don't fail webhook due to logging
+    if (existingEvent) {
+      // Event already exists, use existing ID
+      webhookEventId = existingEvent.id;
+      console.log('ℹ️ Webhook event already recorded:', event.id);
     } else {
-      webhookEventId = webhookEvent?.id || null;
-      console.log('✅ Webhook event recorded:', event.id);
+      // Insert new event
+      const { data: webhookEvent, error: webhookError } = await supabase
+        .from('stripe_tax_webhook_events')
+        .insert({
+          stripe_event_id: event.id,
+          stripe_event_type: event.type,
+          stripe_object_id: (event.data.object as any).id || null,
+          stripe_object_type: (event.data.object as any).object || null,
+          event_data: event.data as any,
+          processed: false,
+          api_version: event.api_version,
+          webhook_received_at: new Date().toISOString(),
+        })
+        .select('id')
+        .single();
+
+      if (webhookError) {
+        // If it's a duplicate key error, try to fetch the existing event
+        if (webhookError.code === '23505') {
+          console.log('ℹ️ Duplicate webhook event detected, fetching existing record');
+          const { data: existing } = await supabase
+            .from('stripe_tax_webhook_events')
+            .select('id')
+            .eq('stripe_event_id', event.id)
+            .maybeSingle();
+          webhookEventId = existing?.id || null;
+        } else {
+          console.error('⚠️ Failed to record webhook event:', webhookError);
+        }
+        // Continue processing anyway - don't fail webhook due to logging
+      } else {
+        webhookEventId = webhookEvent?.id || null;
+        console.log('✅ Webhook event recorded:', event.id);
+      }
     }
   } catch (err) {
     console.error('⚠️ Error recording webhook event:', err);
@@ -414,8 +439,16 @@ async function handleBookingPayment(session: Stripe.Checkout.Session) {
       ),
       business_profiles (
         id,
-        business_name,
-        business_address
+        business_name
+      ),
+      business_locations (
+        id,
+        address_line1,
+        address_line2,
+        city,
+        state,
+        postal_code,
+        is_primary
       )
     `)
     .eq('customer_id', customerId)
@@ -463,9 +496,17 @@ async function handleBookingPayment(session: Stripe.Checkout.Session) {
     if (notifyFn) {
       const service = Array.isArray(booking.services) ? booking.services[0] : booking.services;
       const customer = Array.isArray(booking.customer_profiles) ? booking.customer_profiles[0] : booking.customer_profiles;
-      const business = Array.isArray(booking.business_profiles) ? booking.business_profiles[0] : booking.business_profiles;
+        const business = Array.isArray(booking.business_profiles) ? booking.business_profiles[0] : booking.business_profiles;
+        const businessLocation = Array.isArray(booking.business_locations) 
+          ? booking.business_locations.find((loc: any) => loc.is_primary) || booking.business_locations[0]
+          : booking.business_locations;
 
       if (service && customer && business) {
+        // Format business address from location
+        const businessAddress = businessLocation 
+          ? `${businessLocation.address_line1 || ''}${businessLocation.address_line2 ? ` ${businessLocation.address_line2}` : ''}, ${businessLocation.city || ''}, ${businessLocation.state || ''} ${businessLocation.postal_code || ''}`.trim()
+          : '';
+
         await notifyFn({
           booking: {
             id: booking.id,
@@ -487,7 +528,7 @@ async function handleBookingPayment(session: Stripe.Checkout.Session) {
           },
           business: {
             name: business.business_name,
-            business_address: business.business_address,
+            business_address: businessAddress,
           },
         });
         console.log('✅ Provider notifications sent successfully');
@@ -643,8 +684,16 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
         ),
         business_profiles (
           id,
-          business_name,
-          business_address
+          business_name
+        ),
+        business_locations (
+          id,
+          address_line1,
+          address_line2,
+          city,
+          state,
+          postal_code,
+          is_primary
         )
       `)
       .eq('id', bookingId)
@@ -696,8 +745,16 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
         const service = Array.isArray(booking.services) ? booking.services[0] : booking.services;
         const customer = Array.isArray(booking.customer_profiles) ? booking.customer_profiles[0] : booking.customer_profiles;
         const business = Array.isArray(booking.business_profiles) ? booking.business_profiles[0] : booking.business_profiles;
+        const businessLocation = Array.isArray(booking.business_locations) 
+          ? booking.business_locations.find((loc: any) => loc.is_primary) || booking.business_locations[0]
+          : booking.business_locations;
 
         if (service && customer && business) {
+          // Format business address from location
+          const businessAddress = businessLocation 
+            ? `${businessLocation.address_line1 || ''}${businessLocation.address_line2 ? ` ${businessLocation.address_line2}` : ''}, ${businessLocation.city || ''}, ${businessLocation.state || ''} ${businessLocation.postal_code || ''}`.trim()
+            : '';
+
           await notifyFn({
             booking: {
               id: booking.id,
@@ -718,8 +775,8 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
               phone: customer.phone,
             },
             business: {
-              name: business.name,
-              business_address: business.business_address,
+              name: business.business_name,
+              business_address: businessAddress,
             },
           });
           console.log('✅ Provider notifications sent successfully');
