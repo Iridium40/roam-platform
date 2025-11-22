@@ -16,6 +16,7 @@ import {
   Heart,
   MapPin,
   LogOut,
+  Wallet,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -96,6 +97,15 @@ export const CustomerAvatarDropdown: React.FC = () => {
           >
             <CreditCard className="mr-2 h-4 w-4" />
             <span>Transaction History</span>
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link
+            to="/customer/payment-methods"
+            className="w-full flex items-center cursor-pointer"
+          >
+            <Wallet className="mr-2 h-4 w-4" />
+            <span>Payment Methods</span>
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />

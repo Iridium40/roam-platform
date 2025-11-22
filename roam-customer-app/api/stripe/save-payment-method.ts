@@ -48,18 +48,65 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // Attach payment method to Stripe customer
-    await stripe.paymentMethods.attach(payment_method_id, {
-      customer: stripeProfile.stripe_customer_id,
-    });
+    // Check if payment method is already attached to this customer
+    let isAttached = false;
+    let canReuse = true;
+    
+    try {
+      // First, retrieve the payment method to check its status
+      const paymentMethodCheck = await stripe.paymentMethods.retrieve(payment_method_id);
+      isAttached = paymentMethodCheck.customer === stripeProfile.stripe_customer_id;
+      
+      // If not attached, try to attach it
+      if (!isAttached) {
+        try {
+          await stripe.paymentMethods.attach(payment_method_id, {
+            customer: stripeProfile.stripe_customer_id,
+          });
+          isAttached = true;
+          console.log('✅ Payment method attached to customer');
+        } catch (attachError: any) {
+          // Handle different error cases
+          if (attachError.code === 'resource_already_exists') {
+            // Already attached to this or another customer
+            console.log('ℹ️ Payment method already attached to a customer');
+            isAttached = true;
+          } else if (
+            attachError.type === 'invalid_request_error' &&
+            attachError.message?.includes('previously used without being attached')
+          ) {
+            // Payment method was used in a payment intent before being attached
+            // This is okay - we'll save it to our database but can't attach it to Stripe
+            console.log('ℹ️ Payment method was already used - saving reference only (cannot attach to customer)');
+            canReuse = false;
+            // Don't throw - we'll still save it to our database for reference
+          } else {
+            // Other errors should be thrown
+            console.error('Error attaching payment method:', attachError);
+            throw attachError;
+          }
+        }
+      } else {
+        console.log('ℹ️ Payment method already attached to customer');
+      }
+    } catch (retrieveError: any) {
+      // If we can't retrieve the payment method, we can't proceed
+      console.error('Error retrieving payment method:', retrieveError);
+      throw retrieveError;
+    }
 
-    // Set as default if requested
-    if (set_as_default) {
-      await stripe.customers.update(stripeProfile.stripe_customer_id, {
-        invoice_settings: {
-          default_payment_method: payment_method_id,
-        },
-      });
+    // Set as default if requested and payment method is attached
+    if (set_as_default && isAttached) {
+      try {
+        await stripe.customers.update(stripeProfile.stripe_customer_id, {
+          invoice_settings: {
+            default_payment_method: payment_method_id,
+          },
+        });
+      } catch (updateError: any) {
+        console.warn('⚠️ Could not set payment method as default:', updateError.message);
+        // Don't fail - continue to save payment method to database
+      }
     }
 
     // Retrieve payment method details
@@ -76,7 +123,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         exp_year: paymentMethod.card.exp_year,
       } : null,
       created: paymentMethod.created,
-      is_default: set_as_default,
+      is_default: set_as_default && isAttached, // Only set as default if attached
+      is_attached: isAttached, // Track if payment method is attached to Stripe customer
+      can_reuse: canReuse, // Track if payment method can be reused for future payments
     };
 
     // Get existing payment methods from customer_stripe_profiles

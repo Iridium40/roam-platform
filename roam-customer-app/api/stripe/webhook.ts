@@ -479,7 +479,6 @@ async function handleBookingPayment(session: Stripe.Checkout.Session) {
       booking_status: 'confirmed',
       payment_status: 'completed',
       stripe_payment_intent_id: paymentIntent.id,
-      confirmed_at: new Date().toISOString(),
     })
     .eq('id', booking.id);
 
@@ -727,7 +726,6 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
         booking_status: 'confirmed',
         payment_status: 'completed',
         stripe_payment_intent_id: paymentIntent.id,
-        confirmed_at: new Date().toISOString(),
       })
       .eq('id', bookingId);
 

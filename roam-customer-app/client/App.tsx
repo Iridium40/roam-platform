@@ -44,6 +44,7 @@ const CustomerLocations = lazy(() => import("./pages/CustomerLocations"));
 const CustomerTransactions = lazy(() => import("./pages/CustomerTransactions"));
 const CustomerProfile = lazy(() => import("./pages/CustomerProfile"));
 const CustomerSettings = lazy(() => import("./pages/CustomerSettings"));
+const PaymentMethods = lazy(() => import("./pages/PaymentMethods"));
 const Test = lazy(() => import("./pages/Test"));
 const TipSuccess = lazy(() => import("./pages/TipSuccess"));
 const TipCancel = lazy(() => import("./pages/TipCancel"));
@@ -163,6 +164,14 @@ const App = () => (
                   element={
                     <ProtectedRoute>
                       <CustomerSettings />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/customer/payment-methods"
+                  element={
+                    <ProtectedRoute>
+                      <PaymentMethods />
                     </ProtectedRoute>
                   }
                 />
