@@ -133,6 +133,227 @@ function getApplicationSubmittedEmailTemplate(firstName: string, applicationId: 
 // Initialize Resend
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+/**
+ * Notify admin users about new business application submission
+ */
+async function notifyAdminsOfNewApplication(businessProfile: any, application: any) {
+  try {
+    // Get all active admin users
+    const { data: adminUsers, error: adminError } = await supabase
+      .from('admin_users')
+      .select('user_id, email, first_name, last_name, is_active')
+      .eq('is_active', true);
+
+    if (adminError || !adminUsers || adminUsers.length === 0) {
+      console.log('No active admin users found or error:', adminError);
+      return;
+    }
+
+    console.log(`Found ${adminUsers.length} active admin users to notify`);
+
+    // Get user settings for each admin
+    const { data: adminSettings, error: settingsError } = await supabase
+      .from('user_settings')
+      .select('user_id, email_notifications, sms_notifications, admin_business_verification_email, admin_business_verification_sms, notification_email, notification_phone')
+      .in('user_id', adminUsers.map(a => a.user_id));
+
+    if (settingsError) {
+      console.error('Error fetching admin settings:', settingsError);
+      // Continue with default settings
+    }
+
+    // Create a map of user settings
+    const settingsMap = new Map(
+      (adminSettings || []).map(s => [s.user_id, s])
+    );
+
+    // Notify each admin based on their preferences
+    for (const admin of adminUsers) {
+      const settings = settingsMap.get(admin.user_id) || {};
+      const emailEnabled = settings.admin_business_verification_email ?? settings.email_notifications ?? true;
+      const smsEnabled = settings.admin_business_verification_sms ?? settings.sms_notifications ?? false;
+
+      // Send email notification if enabled
+      if (emailEnabled && process.env.RESEND_API_KEY) {
+        try {
+          const adminEmail = settings.notification_email || admin.email;
+          const adminViewUrl = `${process.env.FRONTEND_URL || 'https://www.roamadmin.app'}/verification`;
+
+          const emailHtml = getAdminNotificationEmailTemplate(
+            admin.first_name || 'Admin',
+            businessProfile.business_name,
+            businessProfile.business_type,
+            application.id,
+            adminViewUrl
+          );
+
+          await resend.emails.send({
+            from: `${ROAM_EMAIL_CONFIG.fromName} <${ROAM_EMAIL_CONFIG.fromEmail}>`,
+            to: [adminEmail],
+            subject: `🔔 New Provider Application: ${businessProfile.business_name}`,
+            html: emailHtml,
+          });
+
+          console.log(`✅ Admin notification email sent to: ${adminEmail}`);
+        } catch (emailError) {
+          console.error(`Failed to send email to admin ${admin.email}:`, emailError);
+        }
+      }
+
+      // Send SMS notification if enabled
+      if (smsEnabled && settings.notification_phone) {
+        // TODO: Implement SMS notification via Twilio or similar service
+        console.log(`📱 SMS notification would be sent to: ${settings.notification_phone}`);
+        console.log(`Message: New provider application from ${businessProfile.business_name} requires review.`);
+      }
+    }
+  } catch (error) {
+    console.error('Error in notifyAdminsOfNewApplication:', error);
+    throw error;
+  }
+}
+
+/**
+ * Email template for admin notification about new application
+ */
+function getAdminNotificationEmailTemplate(
+  adminName: string,
+  businessName: string,
+  businessType: string,
+  applicationId: string,
+  adminViewUrl: string
+): string {
+  return `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>ROAM - New Provider Application</title>
+      <style>
+        body {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+          line-height: 1.6;
+          color: #333;
+          max-width: 600px;
+          margin: 0 auto;
+          padding: 20px;
+          background-color: #f9fafb;
+        }
+        .email-container {
+          background-color: white;
+          border-radius: 8px;
+          padding: 40px;
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+          background-color: #f5f5f5;
+          padding: 30px 20px;
+          text-align: center;
+          border-radius: 8px 8px 0 0;
+          margin: -40px -40px 30px -40px;
+        }
+        .logo {
+          max-width: 150px;
+          height: auto;
+        }
+        .content {
+          padding: 20px 0;
+        }
+        .highlight-box {
+          background-color: #f0f9ff;
+          border-left: 4px solid ${ROAM_EMAIL_CONFIG.brandColor};
+          padding: 15px;
+          margin: 20px 0;
+          border-radius: 4px;
+        }
+        .button {
+          display: inline-block;
+          padding: 12px 24px;
+          background-color: ${ROAM_EMAIL_CONFIG.brandColor};
+          color: white;
+          text-decoration: none;
+          border-radius: 6px;
+          font-weight: 600;
+          margin: 20px 0;
+        }
+        .footer {
+          text-align: center;
+          padding-top: 20px;
+          margin-top: 30px;
+          border-top: 1px solid #e5e7eb;
+          color: #6b7280;
+          font-size: 14px;
+        }
+        .info-row {
+          display: flex;
+          justify-content: space-between;
+          padding: 10px 0;
+          border-bottom: 1px solid #e5e7eb;
+        }
+        .info-label {
+          font-weight: 600;
+          color: #4b5563;
+        }
+        .info-value {
+          color: #111827;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="email-container">
+        <div class="header">
+          <img src="${ROAM_EMAIL_CONFIG.logoUrl}" alt="ROAM Logo" class="logo" />
+        </div>
+        
+        <div class="content">
+          <h2 style="color: #111827; margin-bottom: 20px;">Hi ${adminName},</h2>
+          
+          <p>A new provider application has been submitted and is ready for review.</p>
+          
+          <div class="highlight-box">
+            <div class="info-row">
+              <span class="info-label">Business Name:</span>
+              <span class="info-value">${businessName}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Business Type:</span>
+              <span class="info-value">${businessType.replace('_', ' ').toUpperCase()}</span>
+            </div>
+            <div class="info-row" style="border-bottom: none;">
+              <span class="info-label">Application ID:</span>
+              <span class="info-value">${applicationId.substring(0, 8)}...</span>
+            </div>
+          </div>
+          
+          <p><strong>Next Steps:</strong></p>
+          <ul>
+            <li>Review business information and documents</li>
+            <li>Verify identity verification status</li>
+            <li>Approve or request additional information</li>
+          </ul>
+          
+          <center>
+            <a href="${adminViewUrl}" class="button">Review Application</a>
+          </center>
+          
+          <p style="color: #6b7280; font-size: 14px; margin-top: 20px;">
+            This application requires admin review before the provider can proceed to Phase 2 onboarding.
+          </p>
+        </div>
+        
+        <div class="footer">
+          <p>
+            ROAM Admin Dashboard<br>
+            <a href="${adminViewUrl}" style="color: ${ROAM_EMAIL_CONFIG.brandColor};">View All Pending Applications</a>
+          </p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
 interface ApplicationData {
   userId: string;
   businessId: string;
@@ -495,7 +716,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       console.log("Skipping email - no email address or RESEND_API_KEY not configured");
     }
 
-    // TODO: Send email notification to admins about new application
+    // Notify admin users about new application submission
+    try {
+      console.log("Notifying admins about new application submission...");
+      await notifyAdminsOfNewApplication(businessProfile, submission);
+    } catch (notifyError) {
+      console.error("Error notifying admins:", notifyError);
+      // Don't fail the submission if admin notification fails
+    }
+
     // TODO: Queue background check initiation
 
     return res.status(200).json({
