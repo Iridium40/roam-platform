@@ -106,3 +106,4 @@ tests/
 
 # Scripts
 scripts/
+!scripts/vercel-ignore.sh
