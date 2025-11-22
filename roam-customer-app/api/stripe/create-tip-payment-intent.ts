@@ -106,19 +106,40 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       stripeCustomerId = stripeCustomer.id;
       console.log('✅ Created Stripe customer for tip:', stripeCustomerId);
 
-      // Save to database
-      const { error: upsertError } = await supabase
+      // Save to database - check if record exists first, then update or insert
+      const { data: existingProfile } = await supabase
         .from('customer_stripe_profiles')
-        .upsert({
-          user_id: customer.user_id,
-          stripe_customer_id: stripeCustomerId,
-          stripe_email: customer.email
-        }, {
-          onConflict: 'user_id'
-        });
+        .select('id')
+        .eq('user_id', customer.user_id)
+        .maybeSingle();
       
-      if (upsertError) {
-        console.warn('⚠️ Failed to save Stripe profile (non-fatal):', upsertError);
+      if (existingProfile) {
+        // Update existing record
+        const { error: updateError } = await supabase
+          .from('customer_stripe_profiles')
+          .update({
+            stripe_customer_id: stripeCustomerId,
+            stripe_email: customer.email,
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', customer.user_id);
+        
+        if (updateError) {
+          console.warn('⚠️ Failed to update Stripe profile (non-fatal):', updateError);
+        }
+      } else {
+        // Insert new record
+        const { error: insertError } = await supabase
+          .from('customer_stripe_profiles')
+          .insert({
+            user_id: customer.user_id,
+            stripe_customer_id: stripeCustomerId,
+            stripe_email: customer.email
+          });
+        
+        if (insertError) {
+          console.warn('⚠️ Failed to insert Stripe profile (non-fatal):', insertError);
+        }
       }
     }
 
@@ -164,6 +185,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
 
     console.log('✅ Created tip payment intent:', paymentIntent.id);
+
+    // Create tip record in database with 'pending' status
+    const { data: tipRecord, error: tipError } = await supabase
+      .from('tips')
+      .insert({
+        booking_id,
+        customer_id,
+        provider_id,
+        business_id,
+        tip_amount: tip_amount,
+        tip_percentage: null, // Can be calculated later if needed
+        stripe_payment_intent_id: paymentIntent.id,
+        payment_status: 'pending',
+        platform_fee_amount: stripeFeeAmount / 100,
+        provider_net_amount: providerNetAmount / 100,
+        customer_message: customer_message || null,
+      })
+      .select()
+      .single();
+
+    if (tipError) {
+      console.error('⚠️ Failed to create tip record (non-fatal):', tipError);
+      // Don't fail the request - tip record can be created by webhook
+    } else {
+      console.log('✅ Tip record created:', tipRecord.id);
+    }
 
     return res.status(200).json({
       clientSecret: paymentIntent.client_secret,

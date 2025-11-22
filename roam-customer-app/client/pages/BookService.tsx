@@ -9,6 +9,9 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectLabel, SelectGroup } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -251,6 +254,12 @@ export default function BookService() {
   
   // Exit confirmation state
   const [showExitConfirmation, setShowExitConfirmation] = useState(false);
+  
+  // Guest booking state
+  const [isBookingForGuest, setIsBookingForGuest] = useState(false);
+  const [guestName, setGuestName] = useState('');
+  const [guestEmail, setGuestEmail] = useState('');
+  const [guestPhone, setGuestPhone] = useState('');
 
   // Calculate total amount for booking (including any promotions)
   const calculateTotalAmount = (): number => {
@@ -1300,9 +1309,9 @@ export default function BookService() {
       provider_id: selectedProvider?.id || null,
       booking_date: selectedDate.toISOString().split('T')[0],
       start_time: formattedStartTime,
-      guest_name: `${customer.first_name} ${customer.last_name}`,
-      guest_email: customer.email,
-      guest_phone: customer.phone || '',
+      guest_name: isBookingForGuest && guestName ? guestName : `${customer.first_name} ${customer.last_name}`,
+      guest_email: isBookingForGuest && guestEmail ? guestEmail : customer.email,
+      guest_phone: isBookingForGuest && guestPhone ? guestPhone : (customer.phone || ''),
       delivery_type: deliveryType,
       business_location_id,
       customer_location_id,
@@ -2491,6 +2500,68 @@ export default function BookService() {
                         </p>
                       </div>
                     </div>
+                  </CardContent>
+                </Card>
+
+                {/* Guest Information Section */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Guest Information</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label htmlFor="guest-booking-toggle" className="text-base font-medium">
+                          Booking for someone else?
+                        </Label>
+                        <p className="text-sm text-gray-500">
+                          Enter guest details if booking on behalf of another person
+                        </p>
+                      </div>
+                      <Switch
+                        id="guest-booking-toggle"
+                        checked={isBookingForGuest}
+                        onCheckedChange={setIsBookingForGuest}
+                      />
+                    </div>
+
+                    {isBookingForGuest && (
+                      <div className="mt-4 space-y-4 pt-4 border-t">
+                        <div>
+                          <Label htmlFor="guest-name">Guest Name</Label>
+                          <Input
+                            id="guest-name"
+                            type="text"
+                            placeholder="Enter guest's full name"
+                            value={guestName}
+                            onChange={(e) => setGuestName(e.target.value)}
+                            className="mt-1"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="guest-email">Guest Email</Label>
+                          <Input
+                            id="guest-email"
+                            type="email"
+                            placeholder="guest@example.com"
+                            value={guestEmail}
+                            onChange={(e) => setGuestEmail(e.target.value)}
+                            className="mt-1"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="guest-phone">Guest Phone</Label>
+                          <Input
+                            id="guest-phone"
+                            type="tel"
+                            placeholder="(555) 123-4567"
+                            value={guestPhone}
+                            onChange={(e) => setGuestPhone(e.target.value)}
+                            className="mt-1"
+                          />
+                        </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
 

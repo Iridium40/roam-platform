@@ -875,38 +875,75 @@ async function handleTipPaymentIntent(paymentIntent: Stripe.PaymentIntent) {
       tipAmount: tip_amount,
     });
 
-    // Create tip record in database
-    const { data, error } = await supabase
+    // Check if tip record already exists (created when payment intent was created)
+    const { data: existingTip } = await supabase
       .from('tips')
-      .insert({
-        booking_id,
-        customer_id,
-        provider_id,
-        business_id,
-        tip_amount: parseFloat(tip_amount),
-        tip_percentage: 0, // We'll calculate this if needed
-        payment_status: 'completed',
-        stripe_payment_intent_id: paymentIntent.id,
-        platform_fee_amount: parseFloat(stripe_fee), // Stripe processing fees only
-        provider_net_amount: parseFloat(provider_net), // Tip minus Stripe fees
-        customer_message: customer_message || '',
-      })
-      .select()
-      .single();
+      .select('id')
+      .eq('stripe_payment_intent_id', paymentIntent.id)
+      .maybeSingle();
 
-    if (error) {
-      console.error('❌ Error creating tip record:', error);
-      throw error;
+    let tipRecordId: string;
+
+    if (existingTip) {
+      // Update existing tip record
+      console.log('🔄 Updating existing tip record:', existingTip.id);
+      const { data: updatedTip, error: updateError } = await supabase
+        .from('tips')
+        .update({
+          payment_status: 'completed',
+          payment_processed_at: new Date().toISOString(),
+          platform_fee_amount: parseFloat(stripe_fee),
+          provider_net_amount: parseFloat(provider_net),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', existingTip.id)
+        .select()
+        .single();
+
+      if (updateError) {
+        console.error('❌ Error updating tip record:', updateError);
+        throw updateError;
+      }
+
+      tipRecordId = updatedTip.id;
+      console.log('✅ Tip record updated successfully:', tipRecordId);
+    } else {
+      // Create new tip record if it doesn't exist (fallback)
+      console.log('📝 Creating new tip record (fallback)');
+      const { data: newTip, error: insertError } = await supabase
+        .from('tips')
+        .insert({
+          booking_id,
+          customer_id,
+          provider_id,
+          business_id,
+          tip_amount: parseFloat(tip_amount),
+          tip_percentage: null,
+          payment_status: 'completed',
+          stripe_payment_intent_id: paymentIntent.id,
+          platform_fee_amount: parseFloat(stripe_fee),
+          provider_net_amount: parseFloat(provider_net),
+          customer_message: customer_message || null,
+          payment_processed_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error('❌ Error creating tip record:', insertError);
+        throw insertError;
+      }
+
+      tipRecordId = newTip.id;
+      console.log('✅ Tip record created successfully:', tipRecordId);
     }
-
-    console.log('✅ Tip record created successfully:', data.id);
 
     // Update booking with tip information
     await supabase
       .from('bookings')
       .update({
-        has_tip: true,
         tip_amount: parseFloat(tip_amount),
+        tip_status: 'completed',
       })
       .eq('id', booking_id);
 

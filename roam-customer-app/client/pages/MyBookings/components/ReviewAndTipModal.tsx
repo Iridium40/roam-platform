@@ -20,7 +20,7 @@ interface ReviewAndTipModalProps {
 }
 
 // Initialize Stripe only if publishable key is available
-const stripePublishableKey = import.meta.env.VITE_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+const stripePublishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
 const stripePromise = stripePublishableKey ? loadStripe(stripePublishableKey) : null;
 
 const ReviewAndTipModal: React.FC<ReviewAndTipModalProps> = ({
