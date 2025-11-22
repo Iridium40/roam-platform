@@ -186,7 +186,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Step 5: Get currently configured business services
     const { data: businessServices, error: businessServicesError } = await supabase
       .from('business_services')
-      .select('service_id, business_price, is_active')
+      .select('service_id, business_price, business_duration_minutes, delivery_type, is_active')
       .eq('business_id', business_id);
 
     if (businessServicesError) {
@@ -201,6 +201,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const processedServices = (eligibleServices || []).map((service: any) => {
       const subcategoryName = service.service_subcategories?.service_subcategory_type || 'Unknown';
       const categoryName = service.service_subcategories?.service_categories?.service_category_type || 'Unknown';
+      const businessService = businessServicesMap.get(service.id);
       
       return {
         id: service.id,
@@ -213,8 +214,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         subcategory_name: subcategoryName,
         category_name: categoryName,
         is_configured: configuredIds.has(service.id),
-        business_price: businessServicesMap.get(service.id)?.business_price,
-        business_is_active: businessServicesMap.get(service.id)?.is_active
+        business_price: businessService?.business_price,
+        business_duration_minutes: businessService?.business_duration_minutes,
+        delivery_type: businessService?.delivery_type,
+        business_is_active: businessService?.is_active,
+        service_subcategories: service.service_subcategories
       };
     });
 

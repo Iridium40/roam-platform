@@ -1,7 +1,8 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { createClient } from "@supabase/supabase-js";
 import jwt from "jsonwebtoken";
-import { EmailService } from "../_lib/emailService";
+// Temporarily disabled to debug FUNCTION_INVOCATION_FAILED
+// import { EmailService } from "../_lib/emailService";
 
 const supabase = createClient(
   process.env.VITE_PUBLIC_SUPABASE_URL!,
