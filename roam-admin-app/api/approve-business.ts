@@ -48,11 +48,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.log("Provider app response status:", approvalResponse.status);
 
     if (!approvalResponse.ok) {
-      const errorData = await approvalResponse.json().catch(() => ({}));
-      console.error("Provider app approval error:", errorData);
+      const errorText = await approvalResponse.text();
+      console.error("Provider app approval error (raw):", errorText);
+      
+      let errorData;
+      try {
+        errorData = JSON.parse(errorText);
+      } catch (e) {
+        errorData = { error: errorText };
+      }
+      
+      console.error("Provider app approval error (parsed):", errorData);
       return res.status(approvalResponse.status).json({
         error: errorData.error || "Failed to approve application",
-        details: errorData.details || null,
+        details: errorData.details || errorText || null,
       });
     }
 
