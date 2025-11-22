@@ -81,7 +81,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     console.log("Business profile found:", businessProfile.business_name);
 
-    // Get the most recent application for this business
+    // Get the most recent application for this business (optional - business can be approved without application)
     const { data: applications, error: applicationError } = await supabase
       .from("provider_applications")
       .select("*")
@@ -90,31 +90,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (applicationError) {
       console.error("Error fetching applications:", applicationError);
-      return res.status(500).json({
-        error: "Database error",
-        details: applicationError.message,
-      });
+      // Don't block approval if we can't fetch applications
+      console.warn("Continuing approval without application record");
     }
 
-    if (!applications || applications.length === 0) {
-      console.error("Application not found for business:", businessId);
-      return res.status(404).json({
-        error: "Application not found",
-        details: "No applications found for this business",
-      });
-    }
-
-    const application = applications[0]; // Get the most recent
-    console.log(`Found ${applications.length} application(s), using most recent`);
-
-    console.log("Application found, status:", application.application_status);
-
-    if (application.application_status !== "submitted") {
-      console.warn("Application not in submitted status:", application.application_status);
-      return res.status(400).json({
-        error: "Application must be in submitted status to approve",
-        currentStatus: application.application_status,
-      });
+    let application = applications && applications.length > 0 ? applications[0] : null;
+    
+    if (application) {
+      console.log(`Found ${applications.length} application(s), using most recent`);
+      console.log("Application found, status:", application.application_status);
+      
+      // Only check status if application exists and is not already approved
+      if (application.application_status !== "submitted" && application.application_status !== "approved") {
+        console.warn("Application not in submitted status:", application.application_status);
+        // Don't block - allow approval anyway
+      }
+    } else {
+      console.warn("No application record found for business - approving business directly");
     }
 
     console.log("Updating business profile...");
@@ -140,27 +132,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.log("Business profile updated successfully");
 
     console.log("Updating application status...");
-    // Update application status
-    const { error: updateApplicationError } = await supabase
-      .from("provider_applications")
-      .update({
-        application_status: "approved",
-        review_status: "approved",
-        reviewed_at: new Date().toISOString(),
-        reviewed_by: adminUserId,
-        approval_notes: approvalNotes,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("business_id", businessId);
+    // Update application status (if application exists)
+    if (application) {
+      const { error: updateApplicationError } = await supabase
+        .from("provider_applications")
+        .update({
+          application_status: "approved",
+          review_status: "approved",
+          reviewed_at: new Date().toISOString(),
+          reviewed_by: adminUserId,
+          approval_notes: approvalNotes,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", application.id);
 
-    if (updateApplicationError) {
-      console.error("Error updating application:", updateApplicationError);
-      return res.status(500).json({
-        error: "Failed to update application",
-        details: updateApplicationError.message,
-      });
+      if (updateApplicationError) {
+        console.error("Error updating application:", updateApplicationError);
+        // Continue anyway - don't block business approval
+      } else {
+        console.log("Application updated successfully");
+      }
+    } else {
+      console.log("No application record to update - skipping");
     }
-    console.log("Application updated successfully");
 
     console.log("Updating owner provider status...");
     // IMPORTANT: Only approve providers with provider_role = 'owner' when business is approved.
@@ -187,48 +181,55 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     console.log("Generating Phase 2 token...");
     // Generate Phase 2 secure token
-    const userId = businessProfile.owner_user_id || application.user_id;
+    const userId = businessProfile.owner_user_id || (application ? application.user_id : null);
     if (!userId) {
       console.error("No user ID found for token generation");
       return res.status(500).json({
         error: "Missing user ID",
-        details: "Cannot generate approval token without user ID",
+        details: "Cannot generate approval token without user ID. Business must have an owner_user_id.",
       });
     }
 
+    // Use application ID if available, otherwise use business ID as fallback
+    const applicationId = application ? application.id : businessId;
+    
     const approvalToken = TokenService.generatePhase2Token(
       businessId,
       userId,
-      application.id
+      applicationId
     );
     const approvalUrl = TokenService.generatePhase2URL(
       businessId,
       userId,
-      application.id
+      applicationId
     );
     console.log("Phase 2 token generated successfully");
 
     console.log("Creating approval record...");
-    // Create approval record
-    const { error: approvalRecordError } = await supabase
-      .from("application_approvals")
-      .insert({
-        business_id: businessId,
-        application_id: application.id,
-        approved_by: adminUserId,
-        approval_token: approvalToken,
-        token_expires_at: new Date(
-          Date.now() + 7 * 24 * 60 * 60 * 1000,
-        ).toISOString(), // 7 days
-        approval_notes: approvalNotes,
-        created_at: new Date().toISOString(),
-      });
+    // Create approval record (if application exists)
+    if (application) {
+      const { error: approvalRecordError } = await supabase
+        .from("application_approvals")
+        .insert({
+          business_id: businessId,
+          application_id: application.id,
+          approved_by: adminUserId,
+          approval_token: approvalToken,
+          token_expires_at: new Date(
+            Date.now() + 7 * 24 * 60 * 60 * 1000,
+          ).toISOString(), // 7 days
+          approval_notes: approvalNotes,
+          created_at: new Date().toISOString(),
+        });
 
-    if (approvalRecordError) {
-      console.error("Error creating approval record:", approvalRecordError);
-      // Continue anyway - don't block approval on this
+      if (approvalRecordError) {
+        console.error("Error creating approval record:", approvalRecordError);
+        // Continue anyway - don't block approval on this
+      } else {
+        console.log("Approval record created successfully");
+      }
     } else {
-      console.log("Approval record created successfully");
+      console.log("No application record - skipping approval record creation");
     }
 
     console.log("Updating setup progress...");
