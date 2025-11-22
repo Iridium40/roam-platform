@@ -504,9 +504,10 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
         isCurrentUser,
         initials,
         avatarUrl,
+        userType: rawRole, // Include the raw user type
       };
     },
-    [participantMap, currentUserId]
+    [participantMap, currentUserId, provider, booking]
   );
 
 
@@ -585,14 +586,33 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
                         const initials = author?.initials ?? 'U';
                         const roleLabel = author?.roleLabel;
                         const avatarUrl = author?.avatarUrl;
+                        const isCurrentUser = author?.isCurrentUser;
                         const timestamp = message.timestamp;
+                        
+                        // Get author type from attributes first, then fall back to message.author_type
+                        let authorType = message.author_type;
+                        try {
+                          const attrs = typeof message.attributes === 'string' 
+                            ? JSON.parse(message.attributes) 
+                            : message.attributes;
+                          if (attrs?.userType) {
+                            authorType = attrs.userType;
+                          } else if (attrs?.role) {
+                            authorType = attrs.role;
+                          }
+                        } catch (e) {
+                          // Use message.author_type as fallback
+                        }
                         
                         // Check if message is from a provider-side user (owner, dispatcher, provider)
                         // All provider-side messages go on the right (blue), customer messages on the left (white)
-                        const isProviderSide = message.author_type === 'owner' || 
-                                              message.author_type === 'dispatcher' || 
-                                              message.author_type === 'provider';
-                        const isCustomer = message.author_type === 'customer';
+                        const isProviderSide = authorType === 'owner' || 
+                                              authorType === 'dispatcher' || 
+                                              authorType === 'provider';
+                        const isCustomer = authorType === 'customer';
+                        
+                        // Create display label: show role, or name if role is not available
+                        const avatarLabel = roleLabel || displayName;
 
                         // Check if we need to show a date separator
                         const currentDateKey = getDateKey(timestamp);
@@ -619,7 +639,7 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
                                     <AvatarFallback>{initials}</AvatarFallback>
                                   </Avatar>
                                   <span className="mt-1 text-[11px] text-muted-foreground/80 max-w-[140px] text-center truncate">
-                                    {displayName}
+                                    {avatarLabel}
                                   </span>
                                 </div>
                                 <div
