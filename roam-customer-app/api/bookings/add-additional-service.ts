@@ -66,30 +66,51 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const currentRemainingBalance = parseFloat(booking.remaining_balance?.toString() || '0');
     const newRemainingBalance = currentRemainingBalance + amountNum;
 
+    console.log('📊 Updating booking:', {
+      booking_id,
+      currentRemainingBalance,
+      amountNum,
+      newRemainingBalance
+    });
+
     // Update booking's remaining_balance
-    const { error: updateError } = await supabase
+    const { error: updateError, data: updatedBooking } = await supabase
       .from('bookings')
       .update({
         remaining_balance: newRemainingBalance,
         remaining_balance_charged: false, // Reset to false since we added more
-        updated_at: new Date().toISOString()
       })
-      .eq('id', booking_id);
+      .eq('id', booking_id)
+      .select('id, remaining_balance, remaining_balance_charged')
+      .single();
 
     if (updateError) {
       console.error('❌ Error updating booking:', updateError);
+      console.error('Update error details:', {
+        code: updateError.code,
+        message: updateError.message,
+        details: updateError.details,
+        hint: updateError.hint,
+        booking_id,
+        newRemainingBalance
+      });
       return res.status(500).json({ 
         error: 'Failed to update booking',
-        details: updateError.message 
+        details: updateError.message,
+        code: updateError.code,
+        hint: updateError.hint
       });
     }
 
-    // Create financial_transactions record
+    console.log('✅ Booking updated successfully:', updatedBooking);
+
+    // Create financial_transactions record (no customer_id - derive from booking_id relationship)
+    console.log('📝 Creating financial transaction record');
+    
     const { data: financialTransaction, error: financialError } = await supabase
       .from('financial_transactions')
       .insert({
         booking_id: booking_id,
-        customer_id: booking.customer_id,
         amount: amountNum,
         currency: 'USD',
         transaction_type: 'adjustment',
@@ -100,16 +121,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           added_at: new Date().toISOString(),
           original_remaining_balance: currentRemainingBalance,
           new_remaining_balance: newRemainingBalance
-        },
-        created_at: new Date().toISOString()
+        }
       })
       .select()
       .single();
 
     if (financialError) {
       console.error('❌ Error creating financial transaction:', financialError);
+      console.error('Financial error details:', {
+        code: financialError.code,
+        message: financialError.message,
+        details: financialError.details,
+        hint: financialError.hint
+      });
       // Don't fail the request - log and continue
       console.warn('⚠️ Financial transaction creation failed, but booking was updated');
+    } else {
+      console.log('✅ Financial transaction created successfully:', financialTransaction?.id);
     }
 
     // Create booking_changes record for audit trail
@@ -117,19 +145,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .from('booking_changes')
       .insert({
         booking_id: booking_id,
-        change_type: 'addon_added', // Using existing type, or could add 'service_added' to enum
+        change_type: 'addon_added', // Using existing type from check constraint
         additional_cost: amountNum,
+        refund_amount: 0,
         change_reason: description.trim(),
         old_value: { remaining_balance: currentRemainingBalance },
         new_value: { remaining_balance: newRemainingBalance },
         changed_by: booking.customer_id, // Customer is adding the service
-        created_at: new Date().toISOString()
       });
 
     if (changeError) {
       console.error('❌ Error creating booking change record:', changeError);
+      console.error('Change error details:', {
+        code: changeError.code,
+        message: changeError.message,
+        details: changeError.details,
+        hint: changeError.hint
+      });
       // Don't fail the request - log and continue
       console.warn('⚠️ Booking change record creation failed, but booking was updated');
+    } else {
+      console.log('✅ Booking change record created successfully');
     }
 
     console.log('✅ Additional service added successfully:', {
