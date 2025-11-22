@@ -475,6 +475,7 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
         message.author ||
         'Participant';
 
+      // Determine the user's role/type from attributes or participant data
       const rawRole = attrs.role || attrs.userType || participant?.userType || 'participant';
       const roleLabel =
         typeof rawRole === 'string'
