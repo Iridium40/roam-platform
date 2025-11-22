@@ -3,7 +3,7 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist/spa",
   "installCommand": "cd .. && npm install && cd roam-provider-app",
-  "ignoreCommand": "bash ../scripts/vercel-ignore.sh",
+  "ignoreCommand": "bash scripts/vercel-ignore.sh",
   "functions": {
     "api/**/*.ts": {
       "memory": 1024,
