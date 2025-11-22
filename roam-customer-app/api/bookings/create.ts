@@ -38,7 +38,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    // Get service details
+    // Get service details with business type
     const { data: service, error: serviceError } = await supabase
       .from('services')
       .select(`
@@ -53,8 +53,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         ),
         business_profiles (
           id,
-          name,
-          email
+          business_name,
+          contact_email,
+          business_type
         )
       `)
       .eq('id', serviceId)
@@ -64,23 +65,50 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(404).json({ error: 'Service not found' });
     }
 
+    // For independent businesses, automatically assign to owner
+    let assignedProviderId = null;
+    if (service.business_profiles?.business_type === 'independent' && service.business_id) {
+      console.log('Independent business detected, finding owner provider...');
+      
+      const { data: ownerProvider, error: ownerError } = await supabase
+        .from('providers')
+        .select('id')
+        .eq('business_id', service.business_id)
+        .eq('provider_role', 'owner')
+        .single();
+
+      if (ownerProvider && !ownerError) {
+        assignedProviderId = ownerProvider.id;
+        console.log('Auto-assigning booking to owner provider:', assignedProviderId);
+      } else {
+        console.log('Owner provider not found for independent business');
+      }
+    }
+
     // Create booking
+    const bookingData: any = {
+      service_id: serviceId,
+      customer_id: customerId,
+      booking_date: bookingDate,
+      start_time: startTime,
+      guest_name: guestName,
+      guest_email: guestEmail,
+      guest_phone: guestPhone,
+      delivery_type: deliveryType,
+      special_instructions: specialInstructions,
+      booking_status: 'pending',
+      total_amount: service.price,
+      created_at: new Date().toISOString()
+    };
+
+    // Add provider_id if auto-assigned
+    if (assignedProviderId) {
+      bookingData.provider_id = assignedProviderId;
+    }
+
     const { data: booking, error: bookingError } = await supabase
       .from('bookings')
-      .insert({
-        service_id: serviceId,
-        customer_id: customerId,
-        booking_date: bookingDate,
-        start_time: startTime,
-        guest_name: guestName,
-        guest_email: guestEmail,
-        guest_phone: guestPhone,
-        delivery_type: deliveryType,
-        special_instructions: specialInstructions,
-        booking_status: 'pending',
-        total_amount: service.price,
-        created_at: new Date().toISOString()
-      })
+      .insert(bookingData)
       .select(`
         *,
         customers (
