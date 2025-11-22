@@ -225,54 +225,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Send approval email with secure link (if enabled)
-    // Note: Email sending is done asynchronously and won't block the response
+    // TEMPORARILY DISABLED - debugging FUNCTION_INVOCATION_FAILED
     if (sendEmail) {
-      console.log("Starting async email send process...");
+      console.log("Email sending temporarily disabled for debugging");
+      console.log("Approval URL would be:", `${req.headers.origin || process.env.FRONTEND_URL}/provider-onboarding/phase2?token=${approvalToken}`);
       
-      // Fire and forget - don't await this
-      (async () => {
-        try {
-          // Get user ID - try owner_user_id first, then application.user_id
-          const emailUserId = businessProfile.owner_user_id || application.user_id;
-          
-          if (!emailUserId) {
-            console.error("No user ID found for email sending");
-            return;
-          }
-
-          console.log("Fetching user data for email:", emailUserId);
-
-          // Get user email
-          const { data: userData, error: userError } = await supabase.auth.admin.getUserById(emailUserId);
-
-          if (userError || !userData.user?.email) {
-            console.error("Failed to get user data for email:", userError);
-            return;
-          }
-
+      // TODO: Re-enable once function invocation is fixed
+      /*
+      // Get user ID - try owner_user_id first, then application.user_id
+      const emailUserId = businessProfile.owner_user_id || application.user_id;
+      
+      if (emailUserId) {
+        const { data: userData } = await supabase.auth.admin.getUserById(emailUserId);
+        
+        if (userData.user?.email) {
           const approvalUrl = `${req.headers.origin || process.env.FRONTEND_URL}/provider-onboarding/phase2?token=${approvalToken}`;
           const firstName = userData.user.user_metadata?.first_name || "Provider";
-
-          console.log("Sending approval email to:", userData.user.email);
-
-          // Send approval email using Resend
-          const emailSent = await EmailService.sendApplicationApprovedEmail(
-            userData.user.email,
-            firstName,
-            approvalUrl,
-          );
-
-          if (!emailSent) {
-            console.error("Failed to send approval email to:", userData.user.email);
-          } else {
-            console.log("Approval email sent successfully to:", userData.user.email);
-          }
-        } catch (emailError) {
-          console.error("Error in async email sending:", emailError);
+          
+          // Send approval email here
+          console.log("Would send approval email to:", userData.user.email);
         }
-      })();
-      
-      console.log("Email process started in background");
+      }
+      */
     }
 
     return res.status(200).json({
