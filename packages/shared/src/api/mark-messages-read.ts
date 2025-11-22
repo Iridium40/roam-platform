@@ -72,9 +72,36 @@ export async function markMessagesAsRead(req: VercelRequest, res: VercelResponse
     // Create Supabase client
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // conversationId could be either:
+    // 1. A Twilio conversation SID (starts with "CH")
+    // 2. A conversation metadata UUID
+    // We need to convert Twilio SID to metadata UUID if needed
+    let metadataId = conversationId;
+    
+    if (conversationId.startsWith('CH')) {
+      console.log('🔍 Looking up conversation metadata UUID for Twilio SID:', conversationId);
+      const { data: metadata, error: lookupError } = await supabase
+        .from('conversation_metadata')
+        .select('id')
+        .eq('twilio_conversation_sid', conversationId)
+        .single();
+      
+      if (lookupError || !metadata) {
+        console.error('❌ Failed to find conversation metadata for Twilio SID:', conversationId, lookupError);
+        return res.status(404).json({ 
+          error: 'Conversation not found',
+          details: 'Could not find conversation metadata for the provided conversation ID'
+        });
+      }
+      
+      metadataId = metadata.id;
+      console.log('✅ Found metadata UUID:', metadataId);
+    }
+
     // Update all unread message notifications for this user in this conversation
     console.log('📝 Attempting to mark messages as read:', { 
-      conversationId, 
+      originalId: conversationId,
+      metadataId, 
       userId,
       timestamp: new Date().toISOString()
     });
@@ -82,7 +109,7 @@ export async function markMessagesAsRead(req: VercelRequest, res: VercelResponse
     const { data, error } = await supabase
       .from('message_notifications')
       .update({ is_read: true, read_at: new Date().toISOString() })
-      .eq('conversation_id', conversationId)
+      .eq('conversation_id', metadataId)
       .eq('user_id', userId)
       .eq('is_read', false)
       .select();
