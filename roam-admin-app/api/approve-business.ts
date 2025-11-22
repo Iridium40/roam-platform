@@ -1,100 +1,378 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { createClient } from "@supabase/supabase-js";
+import { TokenService } from "../server/services/tokenService.js";
 
-/**
- * Proxy endpoint to call the provider app's approve-application API
- * This creates proper approval records in the application_approvals table
- * Updated: Now properly populates application_approvals audit trail
- */
+const supabase = createClient(
+  process.env.VITE_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+);
+
+interface ApprovalRequest {
+  businessId: string;
+  adminUserId: string;
+  approvalNotes?: string;
+  sendEmail?: boolean;
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  console.log("=== APPROVE-BUSINESS REQUEST ===");
+  console.log("Method:", req.method);
+  console.log("URL:", req.url);
+  console.log("Body:", JSON.stringify(req.body, null, 2));
+
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
   try {
-    const { businessId, adminUserId, approvalNotes, sendEmail = true } = req.body;
+    const {
+      businessId,
+      adminUserId,
+      approvalNotes,
+      sendEmail = true,
+    }: ApprovalRequest = req.body;
+
+    console.log("Parsed request:", { businessId, adminUserId, approvalNotes, sendEmail });
 
     if (!businessId || !adminUserId) {
+      console.error("Missing required fields:", { businessId, adminUserId });
       return res.status(400).json({
         error: "Missing required fields",
         required: ["businessId", "adminUserId"],
       });
     }
 
-    console.log("Proxying approval request to provider app:", {
-      businessId,
-      adminUserId,
-      approvalNotes,
-      sendEmail,
-    });
-
-    // Call the provider app's approve-application API with timeout
-    const providerAppUrl = process.env.VITE_PROVIDER_APP_URL || "https://www.roamprovider.com";
-    
-    // Create abort controller for timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 25000); // 25 second timeout
-    
-    let approvalResponse;
-    try {
-      approvalResponse = await fetch(
-        `${providerAppUrl}/api/admin/approve-application`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            businessId,
-            adminUserId,
-            approvalNotes,
-            sendEmail,
-          }),
-          signal: controller.signal,
-        }
-      );
-      clearTimeout(timeoutId);
-    } catch (fetchError: any) {
-      clearTimeout(timeoutId);
-      if (fetchError.name === 'AbortError') {
-        console.error("Provider app request timed out after 25 seconds");
-        return res.status(504).json({
-          error: "Request timeout",
-          details: "The approval request took too long to complete. Please try again.",
-        });
-      }
-      throw fetchError;
+    // Verify admin permissions
+    const { data: adminUser } = await supabase.auth.admin.getUserById(adminUserId);
+    if (!adminUser.user) {
+      return res.status(403).json({ error: "Invalid admin user" });
     }
 
-    console.log("Provider app response status:", approvalResponse.status);
+    console.log("Fetching business profile for:", businessId);
 
-    if (!approvalResponse.ok) {
-      const errorText = await approvalResponse.text();
-      console.error("Provider app approval error (raw):", errorText);
-      
-      let errorData;
-      try {
-        errorData = JSON.parse(errorText);
-      } catch (e) {
-        errorData = { error: errorText };
-      }
-      
-      console.error("Provider app approval error (parsed):", errorData);
-      return res.status(approvalResponse.status).json({
-        error: errorData.error || "Failed to approve application",
-        details: errorData.details || errorText || null,
+    // Get business profile
+    const { data: businessProfiles, error: businessError } = await supabase
+      .from("business_profiles")
+      .select("*")
+      .eq("id", businessId)
+      .limit(1);
+
+    if (businessError) {
+      console.error("Error fetching business profile:", businessError);
+      return res.status(500).json({
+        error: "Database error",
+        details: businessError.message,
       });
     }
 
-    const approvalResult = await approvalResponse.json();
-    console.log("Approval successful:", approvalResult);
+    if (!businessProfiles || businessProfiles.length === 0) {
+      console.error("Business profile not found for ID:", businessId);
+      return res.status(404).json({
+        error: "Business profile not found",
+        details: `No business profile found with ID: ${businessId}`,
+      });
+    }
 
-    return res.status(200).json(approvalResult);
+    const businessProfile = businessProfiles[0];
+
+    if (businessProfiles.length > 1) {
+      console.warn(`Multiple business profiles found for ID ${businessId}, using first one`);
+    }
+
+    console.log("Business profile found:", businessProfile.business_name);
+
+    // Get the most recent application for this business
+    const { data: applications, error: applicationError } = await supabase
+      .from("provider_applications")
+      .select("*")
+      .eq("business_id", businessId)
+      .order("submitted_at", { ascending: false });
+
+    if (applicationError) {
+      console.error("Error fetching applications:", applicationError);
+      return res.status(500).json({
+        error: "Database error",
+        details: applicationError.message,
+      });
+    }
+
+    if (!applications || applications.length === 0) {
+      console.error("Application not found for business:", businessId);
+      return res.status(404).json({
+        error: "Application not found",
+        details: "No applications found for this business",
+      });
+    }
+
+    const application = applications[0]; // Get the most recent
+    console.log(`Found ${applications.length} application(s), using most recent`);
+
+    console.log("Application found, status:", application.application_status);
+
+    if (application.application_status !== "submitted") {
+      console.warn("Application not in submitted status:", application.application_status);
+      return res.status(400).json({
+        error: "Application must be in submitted status to approve",
+        currentStatus: application.application_status,
+      });
+    }
+
+    console.log("Updating business profile...");
+    // Update business profile to approved
+    const { error: updateBusinessError } = await supabase
+      .from("business_profiles")
+      .update({
+        verification_status: "approved",
+        approved_at: new Date().toISOString(),
+        approved_by: adminUserId,
+        approval_notes: approvalNotes,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", businessId);
+
+    if (updateBusinessError) {
+      console.error("Error updating business profile:", updateBusinessError);
+      return res.status(500).json({
+        error: "Failed to update business profile",
+        details: updateBusinessError.message,
+      });
+    }
+    console.log("Business profile updated successfully");
+
+    console.log("Updating application status...");
+    // Update application status
+    const { error: updateApplicationError } = await supabase
+      .from("provider_applications")
+      .update({
+        application_status: "approved",
+        review_status: "approved",
+        reviewed_at: new Date().toISOString(),
+        reviewed_by: adminUserId,
+        approval_notes: approvalNotes,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("business_id", businessId);
+
+    if (updateApplicationError) {
+      console.error("Error updating application:", updateApplicationError);
+      return res.status(500).json({
+        error: "Failed to update application",
+        details: updateApplicationError.message,
+      });
+    }
+    console.log("Application updated successfully");
+
+    console.log("Updating owner provider status...");
+    // IMPORTANT: Only approve providers with provider_role = 'owner' when business is approved.
+    // - Owners are automatically approved when their business is approved by admin
+    // - Dispatchers (provider_role = 'dispatcher') are approved within the provider app by owners
+    // - Regular providers (provider_role = 'provider') are approved within the provider app by owners or dispatchers
+    // This ensures proper separation: admin approves businesses/owners, business owners approve their staff
+    const { error: updateProviderError } = await supabase
+      .from("providers")
+      .update({
+        verification_status: "approved",
+        background_check_status: "approved",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("business_id", businessId)
+      .eq("provider_role", "owner");
+
+    if (updateProviderError) {
+      console.error("Error updating owner provider:", updateProviderError);
+      // Continue anyway - don't block business approval
+    } else {
+      console.log("Owner provider status updated successfully");
+    }
+
+    console.log("Generating Phase 2 token...");
+    // Generate Phase 2 secure token
+    const userId = businessProfile.owner_user_id || application.user_id;
+    if (!userId) {
+      console.error("No user ID found for token generation");
+      return res.status(500).json({
+        error: "Missing user ID",
+        details: "Cannot generate approval token without user ID",
+      });
+    }
+
+    const approvalToken = TokenService.generatePhase2Token(
+      businessId,
+      userId,
+      application.id
+    );
+    const approvalUrl = TokenService.generatePhase2URL(
+      businessId,
+      userId,
+      application.id
+    );
+    console.log("Phase 2 token generated successfully");
+
+    console.log("Creating approval record...");
+    // Create approval record
+    const { error: approvalRecordError } = await supabase
+      .from("application_approvals")
+      .insert({
+        business_id: businessId,
+        application_id: application.id,
+        approved_by: adminUserId,
+        approval_token: approvalToken,
+        token_expires_at: new Date(
+          Date.now() + 7 * 24 * 60 * 60 * 1000,
+        ).toISOString(), // 7 days
+        approval_notes: approvalNotes,
+        created_at: new Date().toISOString(),
+      });
+
+    if (approvalRecordError) {
+      console.error("Error creating approval record:", approvalRecordError);
+      // Continue anyway - don't block approval on this
+    } else {
+      console.log("Approval record created successfully");
+    }
+
+    console.log("Updating setup progress...");
+    // Update setup progress
+    const { error: progressError } = await supabase
+      .from("business_setup_progress")
+      .update({
+        phase_1_completed: true,
+        phase_1_completed_at: new Date().toISOString(),
+        current_step: 3, // Start of Phase 2
+        updated_at: new Date().toISOString(),
+      })
+      .eq("business_id", businessId);
+
+    if (progressError) {
+      console.error("Error updating setup progress:", progressError);
+      // Continue anyway
+    } else {
+      console.log("Setup progress updated successfully");
+    }
+
+    // Send approval email with secure link (if enabled)
+    if (sendEmail) {
+      console.log("Sending approval email...");
+      try {
+        // Get user email
+        const { data: userData } = await supabase.auth.admin.getUserById(userId);
+        const userEmail = userData.user?.email || businessProfile.contact_email;
+
+        if (userEmail) {
+          const firstName =
+            userData.user?.user_metadata?.first_name ||
+            businessProfile.business_name ||
+            "Provider";
+
+          const resendApiKey = process.env.RESEND_API_KEY || process.env.VITE_RESEND_API_KEY;
+          if (!resendApiKey) {
+            console.warn("Resend API key not found, skipping email");
+          } else {
+            const emailPayload = {
+              from: "ROAM Provider Support <onboarding@resend.dev>",
+              to: [userEmail],
+              subject: "🎉 Your Business Has Been Approved!",
+              html: `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                  <meta charset="utf-8">
+                  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                </head>
+                <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+                  <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+                    <h1 style="color: white; margin: 0; font-size: 28px;">🎉 Congratulations!</h1>
+                    <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px;">Your Business Has Been Approved</p>
+                  </div>
+                  
+                  <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 10px 10px;">
+                    <p style="font-size: 16px; margin: 0 0 20px 0;">Hi ${firstName},</p>
+                    
+                    <p style="font-size: 16px; margin: 0 0 20px 0;">
+                      Great news! Your business application for <strong>${businessProfile.business_name}</strong> has been reviewed and approved.
+                    </p>
+                    
+                    ${approvalNotes ? `
+                    <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; border-radius: 4px;">
+                      <p style="margin: 0; color: #78350f; line-height: 1.5;">${approvalNotes}</p>
+                    </div>
+                    ` : ''}
+                    
+                    <p style="font-size: 16px; margin: 20px 0;">
+                      You can now continue with Phase 2 of your onboarding process. Click the button below to get started:
+                    </p>
+                    
+                    <div style="text-align: center; margin: 30px 0;">
+                      <a href="${approvalUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">
+                        Continue Phase 2 Onboarding
+                      </a>
+                    </div>
+                    
+                    <p style="font-size: 14px; color: #6b7280; margin: 20px 0 0 0;">
+                      Or copy and paste this link into your browser:<br>
+                      <a href="${approvalUrl}" style="color: #667eea; word-break: break-all;">${approvalUrl}</a>
+                    </p>
+                    
+                    <p style="font-size: 14px; color: #6b7280; margin: 20px 0 0 0;">
+                      <strong>Note:</strong> This link will expire in 7 days. If you need a new link, please contact support.
+                    </p>
+                    
+                    <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+                    
+                    <p style="font-size: 14px; color: #6b7280; margin: 0;">
+                      If you have any questions, please don't hesitate to reach out to our support team.
+                    </p>
+                    
+                    <p style="font-size: 14px; color: #6b7280; margin: 20px 0 0 0;">
+                      Best regards,<br>
+                      The ROAM Platform Team
+                    </p>
+                  </div>
+                </body>
+                </html>
+              `,
+            };
+
+            const resendResponse = await fetch("https://api.resend.com/emails", {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${resendApiKey}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(emailPayload),
+            });
+
+            if (resendResponse.ok) {
+              const emailResult = await resendResponse.json();
+              console.log("Approval email sent successfully to:", userEmail);
+            } else {
+              const errorText = await resendResponse.text();
+              console.error("Error sending approval email:", errorText);
+              // Continue anyway - don't block approval on email failure
+            }
+          }
+        } else {
+          console.warn("No email address found for user:", userId);
+        }
+      } catch (emailError) {
+        console.error("Error sending approval email:", emailError);
+        // Continue anyway - don't block approval on email failure
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Application approved successfully",
+      approvalToken,
+      approvalUrl,
+      approvedAt: new Date().toISOString(),
+      approvedBy: adminUserId,
+    });
   } catch (error) {
-    console.error("Error in approve-business proxy:", error);
+    console.error("Application approval error:", error);
     return res.status(500).json({
       error: "Internal server error",
       details: error instanceof Error ? error.message : "Unknown error",
     });
   }
 }
-

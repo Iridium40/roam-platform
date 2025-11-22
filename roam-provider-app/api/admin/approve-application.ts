@@ -52,18 +52,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.log("Fetching business profile for:", businessId);
 
     // Get business profile and application
-    const { data: businessProfile, error: businessError } = await supabase
+    // Use .maybeSingle() instead of .single() to handle cases where there might be 0 or multiple rows
+    const { data: businessProfiles, error: businessError } = await supabase
       .from("business_profiles")
       .select("*")
       .eq("id", businessId)
-      .single();
+      .limit(1);
 
-    if (businessError || !businessProfile) {
-      console.error("Business profile not found:", businessError);
+    if (businessError) {
+      console.error("Error fetching business profile:", businessError);
+      return res.status(500).json({ 
+        error: "Database error",
+        details: businessError.message
+      });
+    }
+
+    if (!businessProfiles || businessProfiles.length === 0) {
+      console.error("Business profile not found for ID:", businessId);
       return res.status(404).json({ 
         error: "Business profile not found",
-        details: businessError?.message
+        details: `No business profile found with ID: ${businessId}`
       });
+    }
+
+    const businessProfile = businessProfiles[0];
+    
+    if (businessProfiles.length > 1) {
+      console.warn(`Multiple business profiles found for ID ${businessId}, using first one`);
     }
 
     console.log("Business profile found:", businessProfile.business_name);
