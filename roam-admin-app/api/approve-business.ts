@@ -180,15 +180,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     console.log("Generating Phase 2 token...");
-    // Generate Phase 2 secure token
-    const userId = businessProfile.owner_user_id || (application ? application.user_id : null);
-    if (!userId) {
-      console.error("No user ID found for token generation");
+    // Get owner user_id from providers table: business_profiles.id -> providers.business_id -> providers.user_id
+    const { data: ownerProvider, error: ownerError } = await supabase
+      .from("providers")
+      .select("user_id")
+      .eq("business_id", businessId)
+      .eq("provider_role", "owner")
+      .maybeSingle();
+    
+    if (ownerError || !ownerProvider?.user_id) {
+      console.error("No owner provider found for business:", businessId);
+      console.error("Owner lookup error:", ownerError);
       return res.status(500).json({
-        error: "Missing user ID",
-        details: "Cannot generate approval token without user ID. Business must have an owner_user_id.",
+        error: "Missing owner provider",
+        details: "Cannot generate approval token. Business must have a provider with provider_role = 'owner'.",
       });
     }
+    
+    const userId = ownerProvider.user_id;
+    console.log("Found owner provider user_id:", userId);
 
     // Use application ID if available, otherwise use business ID as fallback
     const applicationId = application ? application.id : businessId;
