@@ -26,6 +26,7 @@ export function useBookings(providerData: any, business: any) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatusFilter, setSelectedStatusFilter] = useState("all");
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
+  const [showUnassignedOnly, setShowUnassignedOnly] = useState(false);
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
   const [activeTab, setActiveTab] = useState("present");
   
@@ -187,7 +188,7 @@ export function useBookings(providerData: any, business: any) {
     return () => clearInterval(interval);
   }, [bookings, activeTab, toast]);
 
-  // Filter bookings based on search, status, and unread messages
+  // Filter bookings based on search, status, unread messages, and assignment
   const filteredBookings = useMemo(() => {
     let filtered = bookings;
 
@@ -202,6 +203,11 @@ export function useBookings(providerData: any, business: any) {
         const unreadCount = unreadCounts[booking.id] || 0;
         return unreadCount > 0;
       });
+    }
+
+    // Apply unassigned filter
+    if (showUnassignedOnly) {
+      filtered = filtered.filter(booking => !booking.provider_id || booking.provider_id === 'unassigned');
     }
 
     // Apply search filter
@@ -224,7 +230,7 @@ export function useBookings(providerData: any, business: any) {
       const dateB = new Date(`${b.booking_date} ${b.start_time}`);
       return dateB.getTime() - dateA.getTime();
     });
-  }, [bookings, searchQuery, selectedStatusFilter, showUnreadOnly, unreadCounts]);
+  }, [bookings, searchQuery, selectedStatusFilter, showUnreadOnly, showUnassignedOnly, unreadCounts]);
 
   // Categorize bookings into present, future, and past
   const categorizedBookings = useMemo(() => {
@@ -438,6 +444,8 @@ export function useBookings(providerData: any, business: any) {
     setSelectedStatusFilter,
     showUnreadOnly,
     setShowUnreadOnly,
+    showUnassignedOnly,
+    setShowUnassignedOnly,
     activeTab,
     setActiveTab: handleSetActiveTab,
     selectedBooking,

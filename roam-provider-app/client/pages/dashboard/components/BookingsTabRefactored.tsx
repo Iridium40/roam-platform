@@ -60,6 +60,8 @@ export function BookingsTab({ providerData, business }: BookingsTabProps) {
     setSelectedStatusFilter,
     showUnreadOnly,
     setShowUnreadOnly,
+    showUnassignedOnly,
+    setShowUnassignedOnly,
     activeTab,
     setActiveTab,
     selectedBooking,
@@ -78,6 +80,9 @@ export function BookingsTab({ providerData, business }: BookingsTabProps) {
     updateBookingStatus,
     formatDisplayTime,
   } = useBookings(providerData, business);
+
+  // Check if user can view unassigned bookings (owner or dispatcher)
+  const canViewUnassigned = providerData?.provider_role === 'owner' || providerData?.provider_role === 'dispatcher';
 
   // Debug: Log tab data
   console.log('📊 BookingsTab render:', {
@@ -127,6 +132,9 @@ export function BookingsTab({ providerData, business }: BookingsTabProps) {
         setSelectedStatusFilter={setSelectedStatusFilter}
         showUnreadOnly={showUnreadOnly}
         setShowUnreadOnly={setShowUnreadOnly}
+        showUnassignedOnly={showUnassignedOnly}
+        setShowUnassignedOnly={setShowUnassignedOnly}
+        canViewUnassigned={canViewUnassigned}
       />
 
         {/* View Toggle */}

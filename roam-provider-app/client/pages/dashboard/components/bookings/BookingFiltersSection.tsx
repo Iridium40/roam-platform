@@ -8,7 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, MessageCircle } from "lucide-react";
+import { Search, MessageCircle, Users } from "lucide-react";
 
 interface BookingFiltersSectionProps {
   searchQuery: string;
@@ -17,6 +17,9 @@ interface BookingFiltersSectionProps {
   setSelectedStatusFilter: (status: string) => void;
   showUnreadOnly: boolean;
   setShowUnreadOnly: (show: boolean) => void;
+  showUnassignedOnly?: boolean;
+  setShowUnassignedOnly?: (show: boolean) => void;
+  canViewUnassigned?: boolean;
 }
 
 export default function BookingFiltersSection({
@@ -26,6 +29,9 @@ export default function BookingFiltersSection({
   setSelectedStatusFilter,
   showUnreadOnly,
   setShowUnreadOnly,
+  showUnassignedOnly,
+  setShowUnassignedOnly,
+  canViewUnassigned = false,
 }: BookingFiltersSectionProps) {
   return (
     <div className="flex flex-col sm:flex-row gap-4">
@@ -65,6 +71,16 @@ export default function BookingFiltersSection({
         <MessageCircle className="w-4 h-4 mr-2" />
         Unread Only
       </Button>
+      {canViewUnassigned && setShowUnassignedOnly && (
+        <Button
+          variant={showUnassignedOnly ? "default" : "outline"}
+          onClick={() => setShowUnassignedOnly(!showUnassignedOnly)}
+          className="sm:w-auto whitespace-nowrap"
+        >
+          <Users className="w-4 h-4 mr-2" />
+          Unassigned Only
+        </Button>
+      )}
     </div>
   );
 }
