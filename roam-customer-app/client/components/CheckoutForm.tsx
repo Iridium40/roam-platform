@@ -27,11 +27,12 @@ interface CheckoutFormProps {
     taxRate?: number | null;
     total: number;
   };
+  clientSecret: string;
   onSuccess: (paymentIntent: any) => void;
   onError: (error: string) => void;
 }
 
-export function CheckoutForm({ bookingDetails, onSuccess, onError }: CheckoutFormProps) {
+export function CheckoutForm({ bookingDetails, clientSecret, onSuccess, onError }: CheckoutFormProps) {
   const stripe = useStripe();
   const elements = useElements();
   const [isLoading, setIsLoading] = useState(false);
@@ -110,9 +111,6 @@ export function CheckoutForm({ bookingDetails, onSuccess, onError }: CheckoutFor
     setIsLoading(true);
 
     try {
-      // Get client secret from Elements
-      const clientSecret = (elements as any)?._stripeElementsOptions?.clientSecret;
-      
       if (!clientSecret) {
         throw new Error('Payment intent not found');
       }

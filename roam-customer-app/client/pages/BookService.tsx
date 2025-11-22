@@ -2585,6 +2585,7 @@ export default function BookService() {
                     }}
                   >
                     <CheckoutForm
+                      clientSecret={clientSecret}
                       bookingDetails={{
                         id: createdBookingId || '',
                         serviceName: service?.name || '',
