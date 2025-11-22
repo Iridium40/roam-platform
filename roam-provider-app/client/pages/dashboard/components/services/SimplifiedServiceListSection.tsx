@@ -18,16 +18,6 @@ import {
 import { EligibleService } from '@/types/services';
 import { getDeliveryTypeIcon, getDeliveryTypeLabel } from '@/utils/deliveryTypeHelpers';
 
-// Helper function to format subcategory names (e.g., "iv_therapy" -> "IV THERAPY")
-const formatSubcategoryName = (name: string | undefined): string => {
-  if (!name) return '';
-  
-  return name
-    .split('_')
-    .map(word => word.toUpperCase())
-    .join(' ');
-};
-
 interface SimplifiedServiceListSectionProps {
   services: EligibleService[];
   loading: boolean;
@@ -93,7 +83,6 @@ export function SimplifiedServiceListSection({
             <TableHeader>
               <TableRow>
                 <TableHead>Service</TableHead>
-                <TableHead>Category</TableHead>
                 <TableHead>Base Price</TableHead>
                 <TableHead>Your Price</TableHead>
                 <TableHead>Duration</TableHead>
@@ -127,16 +116,6 @@ export function SimplifiedServiceListSection({
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="space-y-1">
-                        <Badge variant="secondary">
-                          {formatSubcategoryName(service.service_subcategories?.service_categories?.service_category_type)}
-                        </Badge>
-                        <p className="text-xs text-muted-foreground">
-                          {formatSubcategoryName(service.service_subcategories?.service_subcategory_type)}
-                        </p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
                       <p className="text-sm text-muted-foreground">${service.min_price}</p>
                     </TableCell>
                     <TableCell>
@@ -147,10 +126,14 @@ export function SimplifiedServiceListSection({
                       )}
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-4 w-4 text-muted-foreground" />
-                        <span>{service.duration_minutes}m</span>
-                      </div>
+                      {isConfigured && service.business_duration_minutes ? (
+                        <div className="flex items-center gap-1">
+                          <Clock className="h-4 w-4 text-muted-foreground" />
+                          <span>{service.business_duration_minutes}m</span>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">Not set</p>
+                      )}
                     </TableCell>
                     <TableCell>
                       {isConfigured && service.delivery_type ? (
