@@ -28,12 +28,14 @@ import {
   Hash,
   Map,
   CreditCard,
+  Plus,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import type { BookingWithDetails } from "@/types/index";
 import { formatBookingDate, isWithin24Hours, getDeliveryTypeLabel, getDeliveryTypeIcon } from "../utils/bookingCalculations";
 import ReviewAndTipModal from "./ReviewAndTipModal";
+import { AddMoreServiceModal } from "./AddMoreServiceModal";
 
 interface BookingCardProps {
   booking: BookingWithDetails;
@@ -62,6 +64,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({
 }) => {
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [showTipModal, setShowTipModal] = useState(false);
+  const [showAddMoreModal, setShowAddMoreModal] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const { customer } = useAuth();
 
@@ -360,8 +363,8 @@ export const BookingCard: React.FC<BookingCardProps> = ({
               </div>
             </div>
 
-            {/* Message Button - Centered Below Progress Bar */}
-            <div className="flex justify-center mt-4">
+            {/* Action Buttons - Centered Below Progress Bar */}
+            <div className="flex justify-center gap-2 mt-4 flex-wrap">
               {(() => {
                 // Show message button for all bookings that are not in final status (completed, cancelled, declined, no_show)
                 const isFinalStatus = booking.booking_status === 'completed' || 
@@ -398,6 +401,19 @@ export const BookingCard: React.FC<BookingCardProps> = ({
                       {unreadCount > 9 ? '9+' : unreadCount}
                     </Badge>
                   )}
+                </Button>
+              )}
+              
+              {/* Add More button - Only show for in_progress bookings */}
+              {booking.booking_status === 'in_progress' && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-purple-500 text-purple-600 hover:bg-purple-50"
+                  onClick={() => setShowAddMoreModal(true)}
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add More
                 </Button>
               )}
             </div>
@@ -653,7 +669,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({
           <div className="flex flex-wrap items-center justify-between gap-2">
             {/* Primary action - Message Provider (only for future bookings) */}
             <div className="flex gap-2">
-              {!isPastBooking && (booking.booking_status === "confirmed" || booking.booking_status === "pending") && booking.providers && (
+              {!isPastBooking && (booking.booking_status === "confirmed" || booking.booking_status === "pending" || booking.booking_status === "in_progress") && booking.providers && (
                 <Button
                   size="sm"
                   className="bg-roam-blue hover:bg-roam-blue/90 text-white font-medium relative"
@@ -669,6 +685,19 @@ export const BookingCard: React.FC<BookingCardProps> = ({
                       {unreadCount > 9 ? '9+' : unreadCount}
                     </Badge>
                   )}
+                </Button>
+              )}
+              
+              {/* Add More button - Only show for in_progress bookings */}
+              {booking.booking_status === 'in_progress' && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-purple-500 text-purple-600 hover:bg-purple-50"
+                  onClick={() => setShowAddMoreModal(true)}
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add More
                 </Button>
               )}
             </div>
@@ -818,6 +847,19 @@ export const BookingCard: React.FC<BookingCardProps> = ({
       }}
       booking={booking}
       initialStep="tip"
+    />
+
+    {/* Add More Service Modal */}
+    <AddMoreServiceModal
+      isOpen={showAddMoreModal}
+      onClose={() => setShowAddMoreModal(false)}
+      booking={booking}
+      onSuccess={() => {
+        // Refresh booking data to get updated remaining_balance
+        if (onRefresh) {
+          onRefresh();
+        }
+      }}
     />
   </>
   );
