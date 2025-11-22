@@ -21,7 +21,3 @@ tests/
 __tests__/
 lighthouse-report.json
 .vercel
-
-# Scripts (but keep vercel-ignore.sh)
-scripts/
-!scripts/vercel-ignore.sh

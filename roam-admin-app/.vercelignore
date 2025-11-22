@@ -126,7 +126,6 @@ __tests__/
 # Development scripts
 scripts/
 !scripts/deploy.sh
-!scripts/vercel-ignore.sh
 
 # Git files
 .git/

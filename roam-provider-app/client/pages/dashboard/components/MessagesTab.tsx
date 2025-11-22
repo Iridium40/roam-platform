@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -56,6 +57,7 @@ export default function MessagesTab({ providerData, business }: MessagesTabProps
   const [selectedConversation, setSelectedConversation] = useState<ConversationSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showUnreadOnly, setShowUnreadOnly] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
 
   // Props currently unused but reserved for future enhancements
@@ -102,27 +104,35 @@ export default function MessagesTab({ providerData, business }: MessagesTabProps
   };
 
   const filteredConversations = useMemo(() => {
-    if (!searchQuery.trim()) {
-      return conversations;
+    let filtered = conversations;
+
+    // Filter by unread status
+    if (showUnreadOnly) {
+      filtered = filtered.filter((conv) => conv.unreadCount > 0);
     }
 
-    const query = searchQuery.toLowerCase();
-    return conversations.filter((conv) => {
-      const customerName = conv.booking?.customer_profiles
-        ? `${conv.booking.customer_profiles.first_name || ""} ${conv.booking.customer_profiles.last_name || ""}`
-            .trim()
-            .toLowerCase()
-        : "";
-      const serviceName = conv.booking?.service_name?.toLowerCase() || "";
-      const lastMessage = conv.lastMessage?.body?.toLowerCase() || "";
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter((conv) => {
+        const customerName = conv.booking?.customer_profiles
+          ? `${conv.booking.customer_profiles.first_name || ""} ${conv.booking.customer_profiles.last_name || ""}`
+              .trim()
+              .toLowerCase()
+          : "";
+        const serviceName = conv.booking?.service_name?.toLowerCase() || "";
+        const lastMessage = conv.lastMessage?.body?.toLowerCase() || "";
 
-      return (
-        customerName.includes(query) ||
-        serviceName.includes(query) ||
-        lastMessage.includes(query)
-      );
-    });
-  }, [conversations, searchQuery]);
+        return (
+          customerName.includes(query) ||
+          serviceName.includes(query) ||
+          lastMessage.includes(query)
+        );
+      });
+    }
+
+    return filtered;
+  }, [conversations, searchQuery, showUnreadOnly]);
 
   const handleConversationClick = (conversation: ConversationSummary) => {
     setSelectedConversation(conversation);
@@ -178,14 +188,29 @@ export default function MessagesTab({ providerData, business }: MessagesTabProps
 
       <Card>
         <CardContent className="pt-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input
-              placeholder="Search conversations..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                placeholder="Search conversations..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <Button
+              variant={showUnreadOnly ? "default" : "outline"}
+              onClick={() => setShowUnreadOnly(!showUnreadOnly)}
+              className="flex items-center gap-2 whitespace-nowrap"
+            >
+              <MessageCircle className="w-4 h-4" />
+              Unread Only
+              {showUnreadOnly && hasUnread > 0 && (
+                <Badge variant="secondary" className="ml-1">
+                  {hasUnread}
+                </Badge>
+              )}
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -202,10 +227,16 @@ export default function MessagesTab({ providerData, business }: MessagesTabProps
             <div className="text-center py-8">
               <MessageCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">
-                {searchQuery ? "No matching conversations" : "No conversations yet"}
+                {showUnreadOnly
+                  ? "No unread conversations"
+                  : searchQuery
+                  ? "No matching conversations"
+                  : "No conversations yet"}
               </h3>
               <p className="text-gray-600">
-                {searchQuery
+                {showUnreadOnly
+                  ? "All conversations have been read"
+                  : searchQuery
                   ? "Try adjusting your search terms"
                   : "Conversations will appear here when customers start chatting"}
               </p>
