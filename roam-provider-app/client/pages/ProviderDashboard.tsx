@@ -91,6 +91,7 @@ import {
   ChevronDown,
   User,
   Menu,
+  X,
 } from "lucide-react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
@@ -878,6 +879,173 @@ export default function ProviderDashboard() {
           </div>
         </div>
       </nav>
+
+      {/* Mobile Navigation Menu */}
+      {showMobileMenu && (
+        <>
+          {/* Overlay */}
+          <div 
+            className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+            onClick={() => setShowMobileMenu(false)}
+          />
+          
+          {/* Sliding Menu */}
+          <div className="fixed inset-y-0 left-0 w-64 bg-white z-50 shadow-xl transform transition-transform duration-300 lg:hidden overflow-y-auto">
+            {/* Close Button */}
+            <div className="flex items-center justify-between p-4 border-b">
+              <h2 className="text-lg font-semibold">Navigation</h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowMobileMenu(false)}
+              >
+                <X className="w-5 h-5" />
+              </Button>
+            </div>
+
+            {/* Navigation Links */}
+            <nav className="p-4 space-y-2">
+              {hasAccess('dashboard') && (
+                <Button
+                  variant={activeTab === "dashboard" ? "default" : "ghost"}
+                  className="w-full justify-start"
+                  onClick={() => {
+                    navigateToTab("dashboard");
+                    setShowMobileMenu(false);
+                  }}
+                >
+                  <Home className="w-4 h-4 mr-2" />
+                  Dashboard
+                </Button>
+              )}
+              
+              {hasAccess('bookings') && (
+                <Button
+                  variant={activeTab === "bookings" ? "default" : "ghost"}
+                  className="w-full justify-start"
+                  onClick={() => {
+                    navigateToTab("bookings");
+                    setShowMobileMenu(false);
+                  }}
+                >
+                  <Calendar className="w-4 h-4 mr-2" />
+                  {isProvider ? 'My Bookings' : 'Bookings'}
+                </Button>
+              )}
+              
+              {hasAccess('messages') && (
+                <Button
+                  variant={activeTab === "messages" ? "default" : "ghost"}
+                  className="w-full justify-start"
+                  onClick={() => {
+                    navigateToTab("messages");
+                    setShowMobileMenu(false);
+                  }}
+                >
+                  <MessageCircle className="w-4 h-4 mr-2" />
+                  Messages
+                </Button>
+              )}
+              
+              {hasAccess('staff') && (
+                <Button
+                  variant={activeTab === "staff" ? "default" : "ghost"}
+                  className="w-full justify-start"
+                  onClick={() => {
+                    navigateToTab("staff");
+                    setShowMobileMenu(false);
+                  }}
+                >
+                  <Users className="w-4 h-4 mr-2" />
+                  {isProvider ? 'Team' : 'Staff Management'}
+                </Button>
+              )}
+              
+              {hasAccess('services') && (
+                <Button
+                  variant={activeTab === "services" ? "default" : "ghost"}
+                  className="w-full justify-start"
+                  onClick={() => {
+                    navigateToTab("services");
+                    setShowMobileMenu(false);
+                  }}
+                >
+                  <Briefcase className="w-4 h-4 mr-2" />
+                  {isProvider ? 'My Services' : 'Services'}
+                </Button>
+              )}
+              
+              {hasAccess('financials') && (
+                <Button
+                  variant={activeTab === "financials" ? "default" : "ghost"}
+                  className="w-full justify-start"
+                  onClick={() => {
+                    navigateToTab("financials");
+                    setShowMobileMenu(false);
+                  }}
+                >
+                  <DollarSign className="w-4 h-4 mr-2" />
+                  Financials
+                </Button>
+              )}
+              
+              {hasAccess('profile') && (
+                <Button
+                  variant={activeTab === "profile" ? "default" : "ghost"}
+                  className="w-full justify-start"
+                  onClick={() => {
+                    navigateToTab("profile");
+                    setShowMobileMenu(false);
+                  }}
+                >
+                  <User className="w-4 h-4 mr-2" />
+                  {isProvider || isDispatcher ? 'My Profile' : 'Profile'}
+                </Button>
+              )}
+              
+              {hasAccess('settings') && (
+                <Button
+                  variant={activeTab === "settings" ? "default" : "ghost"}
+                  className="w-full justify-start"
+                  onClick={() => {
+                    navigateToTab("settings");
+                    setShowMobileMenu(false);
+                  }}
+                >
+                  <Bell className="w-4 h-4 mr-2" />
+                  Settings
+                </Button>
+              )}
+              
+              {hasAccess('business-settings') && (
+                <Button
+                  variant={activeTab === "business-settings" ? "default" : "ghost"}
+                  className="w-full justify-start"
+                  onClick={() => {
+                    navigateToTab("business-settings");
+                    setShowMobileMenu(false);
+                  }}
+                >
+                  <Building className="w-4 h-4 mr-2" />
+                  Business Settings
+                </Button>
+              )}
+
+              {/* Sign Out */}
+              <div className="pt-4 border-t mt-4">
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
+                  onClick={handleSignOut}
+                >
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Sign out
+                </Button>
+              </div>
+            </nav>
+          </div>
+        </>
+      )}
 
       {/* Main Content */}
       <main className="px-6 py-8">
