@@ -2,6 +2,7 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { ConversationService } from './ConversationService.js';
 import { ParticipantService } from './ParticipantService.js';
 import { MessageService } from './MessageService.js';
+import { MessageAnalyticsService } from '../analytics/message-analytics-service.js';
 import type { TwilioConfig } from './types.js';
 
 type ConversationUserProfile = {
@@ -376,10 +377,10 @@ export class TwilioConversationsService {
 
     const messageSid = messageResult.data.sid;
 
-    // Get conversation metadata ID
+    // Get conversation metadata ID and booking ID
     const { data: metadata } = await this.supabase
       .from('conversation_metadata')
-      .select('id')
+      .select('id, booking_id')
       .eq('twilio_conversation_sid', conversationSid)
       .single();
 
@@ -414,6 +415,19 @@ export class TwilioConversationsService {
         await this.supabase
           .from('message_notifications')
           .insert(notifications);
+      }
+
+      // Update message analytics in background (non-blocking, fire-and-forget)
+      // This will not affect message sending even if it fails
+      const bookingIdForAnalytics = metadata.booking_id || _bookingId;
+      if (bookingIdForAnalytics) {
+        const analyticsService = new MessageAnalyticsService(this.supabase);
+        // Fire and forget - don't await, don't block message sending
+        analyticsService.updateConversationAnalytics(metadata.id, bookingIdForAnalytics)
+          .catch(err => {
+            // Silently log errors, never throw
+            console.error('📊 Analytics update failed (non-blocking):', err);
+          });
       }
     }
 
