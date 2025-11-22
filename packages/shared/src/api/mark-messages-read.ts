@@ -6,6 +6,15 @@ import { createClient } from '@supabase/supabase-js';
  * This clears the unread message counter
  */
 export async function markMessagesAsRead(req: VercelRequest, res: VercelResponse) {
+  // Enable CORS
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -13,20 +22,41 @@ export async function markMessagesAsRead(req: VercelRequest, res: VercelResponse
   try {
     const { conversationId, userId } = req.body;
 
+    console.log('📖 mark-messages-read API called:', { 
+      conversationId, 
+      userId,
+      hasBody: !!req.body,
+      bodyKeys: Object.keys(req.body || {})
+    });
+
     if (!conversationId || !userId) {
+      console.error('❌ Missing required fields:', { conversationId, userId });
       return res.status(400).json({ 
         error: 'Missing required fields: conversationId and userId' 
       });
     }
 
-    // Get environment variables
+    // Get environment variables - try service key first, fallback to anon key
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.VITE_PUBLIC_SUPABASE_URL;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.VITE_PUBLIC_SUPABASE_ANON_KEY;
 
-    if (!supabaseUrl || !supabaseServiceKey) {
-      console.error('Missing Supabase environment variables', {
+    if (!supabaseUrl) {
+      console.error('❌ Missing Supabase URL');
+      return res.status(500).json({ 
+        error: 'Server configuration error',
+        details: 'Missing Supabase URL'
+      });
+    }
+
+    // Prefer service key, but fallback to anon key
+    const supabaseKey = supabaseServiceKey || supabaseAnonKey;
+    
+    if (!supabaseKey) {
+      console.error('❌ No Supabase key available', {
         hasUrl: !!supabaseUrl,
-        hasServiceKey: !!supabaseServiceKey
+        hasServiceKey: !!supabaseServiceKey,
+        hasAnonKey: !!supabaseAnonKey
       });
       return res.status(500).json({ 
         error: 'Server configuration error',
@@ -34,11 +64,20 @@ export async function markMessagesAsRead(req: VercelRequest, res: VercelResponse
       });
     }
 
-    // Create Supabase client with service role key to bypass RLS
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    console.log('🔑 Using Supabase key:', {
+      usingServiceKey: !!supabaseServiceKey,
+      usingAnonKey: !supabaseServiceKey && !!supabaseAnonKey
+    });
+
+    // Create Supabase client
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Update all unread message notifications for this user in this conversation
-    console.log('📖 Marking messages as read:', { conversationId, userId });
+    console.log('📝 Attempting to mark messages as read:', { 
+      conversationId, 
+      userId,
+      timestamp: new Date().toISOString()
+    });
     
     const { data, error } = await supabase
       .from('message_notifications')
@@ -49,28 +88,47 @@ export async function markMessagesAsRead(req: VercelRequest, res: VercelResponse
       .select();
 
     if (error) {
-      console.error('❌ Error marking messages as read:', error);
+      console.error('❌ Supabase error marking messages as read:', {
+        error,
+        errorMessage: error.message,
+        errorDetails: error.details,
+        errorHint: error.hint,
+        conversationId,
+        userId
+      });
       return res.status(500).json({ 
         error: 'Failed to mark messages as read',
-        details: error.message 
+        details: error.message,
+        hint: error.hint
       });
     }
 
-    console.log('✅ Messages marked as read:', { 
+    console.log('✅ Successfully marked messages as read:', { 
       count: data?.length || 0,
       conversationId,
-      userId 
+      userId,
+      updatedRecords: data
     });
 
     return res.status(200).json({ 
       success: true,
-      message: 'Messages marked as read' 
+      message: 'Messages marked as read',
+      count: data?.length || 0
     });
   } catch (error: any) {
-    console.error('Error in markMessagesAsRead:', error);
+    console.error('❌ Caught error in markMessagesAsRead:', {
+      error,
+      errorMessage: error?.message,
+      errorStack: error?.stack,
+      errorName: error?.name,
+      conversationId: req.body?.conversationId,
+      userId: req.body?.userId
+    });
+    
     return res.status(500).json({ 
       error: 'Internal server error',
-      details: error.message 
+      details: error?.message || 'Unknown error',
+      errorType: error?.name || 'Error'
     });
   }
 }

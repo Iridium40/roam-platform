@@ -24,7 +24,24 @@ export class MessageService {
     author: string
   ): Promise<TwilioResponse> {
     try {
-      console.log('Sending message to conversation:', conversationSid, 'author:', author);
+      const attributesString = JSON.stringify(messageData.attributes || {});
+      const bodyLength = messageData.body?.length || 0;
+      const attributesLength = attributesString.length;
+      
+      console.log('📨 Sending message to conversation:', {
+        conversationSid,
+        author,
+        bodyLength,
+        attributesLength,
+        totalPayloadSize: bodyLength + attributesLength,
+        attributes: messageData.attributes
+      });
+
+      // Twilio has a 16KB limit on attributes
+      if (attributesLength > 16000) {
+        console.error('❌ Attributes too large:', attributesLength, 'bytes');
+        throw new Error(`Message attributes exceed Twilio's 16KB limit: ${attributesLength} bytes`);
+      }
 
       const message = await this.conversationsService
         .conversations(conversationSid)
@@ -32,7 +49,7 @@ export class MessageService {
         .create({
           body: messageData.body,
           author: author,
-          attributes: JSON.stringify(messageData.attributes || {}),
+          attributes: attributesString,
           mediaSid: messageData.mediaSid,
         });
 

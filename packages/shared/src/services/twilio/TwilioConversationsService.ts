@@ -271,6 +271,21 @@ export class TwilioConversationsService {
         continue;
       }
 
+      // Verify user exists in auth.users before inserting into conversation_participants
+      const { data: authUser, error: authError } = await this.supabase.auth.admin.getUserById(
+        participant.userId
+      );
+
+      if (authError || !authUser) {
+        console.error(`❌ User ${participant.userId} not found in auth.users. Skipping Supabase insert.`, {
+          authError,
+          participantType: participant.userType,
+          participantName: participant.userName
+        });
+        // Continue anyway - participant exists in Twilio which is what matters for messaging
+        continue;
+      }
+
       // Store participant in Supabase
       const participantRecord = {
         conversation_id: conversationMetadataId,
@@ -282,7 +297,6 @@ export class TwilioConversationsService {
       };
       
       console.log(`💾 Storing participant in Supabase:`, JSON.stringify(participantRecord, null, 2));
-      console.log(`💾 Raw participant object:`, JSON.stringify(participant, null, 2));
 
       const { error: insertError } = await this.supabase
         .from('conversation_participants')
@@ -315,7 +329,7 @@ export class TwilioConversationsService {
     if (userType === 'provider' || userType === 'owner' || userType === 'dispatcher') {
       const { data } = await this.supabase
         .from('providers')
-        .select('first_name, last_name, provider_role, image_url')
+        .select('first_name, last_name, provider_role')
         .eq('user_id', userId)
         .single();
       
@@ -328,7 +342,7 @@ export class TwilioConversationsService {
       // Try both user_id and id columns (customer_profiles uses 'id' as primary key)
       const { data } = await this.supabase
         .from('customer_profiles')
-        .select('first_name, last_name, image_url')
+        .select('first_name, last_name')
         .or(`user_id.eq.${userId},id.eq.${userId}`)
         .single();
       
@@ -341,9 +355,9 @@ export class TwilioConversationsService {
     const authorName = userDetails 
       ? `${userDetails.first_name || ''} ${userDetails.last_name || ''}`.trim()
       : identity;
-    const imageUrl = (userDetails as any)?.image_url || null;
 
-    // Send message to Twilio with actual role from database
+    // Twilio has a 16KB limit on attributes - don't send imageUrl to avoid 413 errors
+    // The frontend can fetch images from profiles separately
     const messageResult = await this.messageService.sendMessage(conversationSid, {
       body: message,
       attributes: {
@@ -351,7 +365,7 @@ export class TwilioConversationsService {
         userType: actualRole, // Store the actual role from database
         role: actualRole, // Also include as 'role' for clarity
         authorName,
-        imageUrl,
+        // imageUrl removed to prevent HTTP 413 errors
         timestamp: new Date().toISOString(),
       },
     }, identity);
