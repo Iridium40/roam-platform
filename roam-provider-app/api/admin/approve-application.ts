@@ -68,19 +68,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     console.log("Business profile found:", businessProfile.business_name);
 
-    const { data: application, error: applicationError } = await supabase
+    // Get the most recent application for this business
+    const { data: applications, error: applicationError } = await supabase
       .from("provider_applications")
       .select("*")
       .eq("business_id", businessId)
-      .single();
+      .order("submitted_at", { ascending: false });
 
-    if (applicationError || !application) {
+    if (applicationError || !applications || applications.length === 0) {
       console.error("Application not found:", applicationError);
       return res.status(404).json({ 
         error: "Application not found",
-        details: applicationError?.message
+        details: applicationError?.message || "No applications found for this business"
       });
     }
+
+    const application = applications[0]; // Get the most recent
+    console.log(`Found ${applications.length} application(s), using most recent`);
+
 
     console.log("Application found, status:", application.application_status);
 
@@ -237,15 +242,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       
       if (emailUserId) {
         const { data: userData } = await supabase.auth.admin.getUserById(emailUserId);
-        
+
         if (userData.user?.email) {
           const approvalUrl = `${req.headers.origin || process.env.FRONTEND_URL}/provider-onboarding/phase2?token=${approvalToken}`;
           const firstName = userData.user.user_metadata?.first_name || "Provider";
-          
+
           // Send approval email here
           console.log("Would send approval email to:", userData.user.email);
+          }
         }
-      }
       */
     }
 

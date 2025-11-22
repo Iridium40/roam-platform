@@ -54,16 +54,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(404).json({ error: "Business profile not found" });
     }
 
-    // Get application record
-    const { data: application, error: applicationError } = await supabase
+    // Get the most recent application for this business
+    const { data: applications, error: applicationError } = await supabase
       .from("provider_applications")
       .select("*")
       .eq("business_id", businessId)
-      .single();
+      .order("submitted_at", { ascending: false });
 
-    if (applicationError || !application) {
-      return res.status(404).json({ error: "Application not found" });
+    if (applicationError || !applications || applications.length === 0) {
+      return res.status(404).json({ 
+        error: "Application not found",
+        details: applicationError?.message || "No applications found for this business"
+      });
     }
+
+    const application = applications[0]; // Get the most recent
 
     // Update business profile status
     const { error: updateBusinessError } = await supabase

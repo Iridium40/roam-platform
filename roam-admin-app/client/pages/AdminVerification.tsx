@@ -1009,25 +1009,25 @@ export default function AdminVerification() {
         });
       } else {
         // For other actions (reject, suspend, pending), update directly
-        console.log("Update data prepared:", updateData);
+      console.log("Update data prepared:", updateData);
 
-        const { error } = await supabase
-          .from("business_profiles")
-          .update(updateData)
-          .eq("id", businessId);
+      const { error } = await supabase
+        .from("business_profiles")
+        .update(updateData)
+        .eq("id", businessId);
 
-        console.log("Supabase update result:", { error });
+      console.log("Supabase update result:", { error });
 
-        if (error) {
-          console.error("Supabase update error:", error);
-          throw error;
-        }
+      if (error) {
+        console.error("Supabase update error:", error);
+        throw error;
+      }
 
-        toast({
+            toast({
           title: `Business ${newStatus.charAt(0).toUpperCase() + newStatus.slice(1)}`,
           description: `Business verification status updated to ${newStatus}.`,
-          variant: "default",
-        });
+              variant: "default",
+            });
       }
 
       // Send rejection email if business was rejected
@@ -2074,7 +2074,7 @@ export default function AdminVerification() {
               year: "numeric",
               month: "short",
               day: "numeric",
-            });
+                                    });
           }}
         />
 

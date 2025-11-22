@@ -127,6 +127,10 @@
       "destination": "/api/admin/reject-application.ts"
     },
     {
+      "source": "/api/approve-business",
+      "destination": "/api/approve-business.ts"
+    },
+    {
       "source": "/api/onboarding/complete",
       "destination": "/api/onboarding/complete.ts"
     },

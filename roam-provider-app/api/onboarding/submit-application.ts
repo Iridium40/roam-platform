@@ -459,7 +459,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       identity_verified_at: businessProfile.identity_verified_at,
       identity_verification_status: businessProfile.identity_verification_status
     });
-    
+
     // Check if verification was started (we check for Stripe Identity session)
     const { data: verificationSessionData, error: verificationError } = await supabase
       .from("stripe_identity_verifications")
@@ -467,14 +467,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .eq("business_id", businessId)
       .order("created_at", { ascending: false })
       .limit(1);
-    
+
     // Normalize Supabase result - it always returns an array, so get first item or null
     const verificationSession = Array.isArray(verificationSessionData) && verificationSessionData.length > 0
       ? verificationSessionData[0]
       : null;
     
     const verificationStatus = verificationSession?.status || null;
-    
+
     console.log("Stripe Identity verification session:", {
       found: !!verificationSession,
       status: verificationStatus,
@@ -708,10 +708,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           console.log("✅ Application submitted email sent successfully:", emailData);
         }
 
-      } catch (emailError) {
-        console.error("Error sending application submitted email:", emailError);
-        // Continue - don't fail the submission if email fails
-      }
+    } catch (emailError) {
+      console.error("Error sending application submitted email:", emailError);
+      // Continue - don't fail the submission if email fails
+    }
     } else {
       console.log("Skipping email - no email address or RESEND_API_KEY not configured");
     }
