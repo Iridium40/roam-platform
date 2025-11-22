@@ -497,36 +497,30 @@ async function handleBookingPayment(session: Stripe.Checkout.Session) {
     console.error('⚠️ Error sending provider notifications (non-fatal):', notificationError);
   }
 
-  // Record in financial_transactions
+  // Record in financial_transactions (matching tip payment pattern - no customer_id field)
   const totalAmount = paymentIntent.amount / 100;
   console.log(`💵 Recording financial transaction: $${totalAmount} for booking ${booking.id}`);
   
-  const financialTransactionData: any = {
-    booking_id: booking.id,
-    amount: totalAmount,
-    currency: paymentIntent.currency.toUpperCase(),
-    stripe_transaction_id: paymentIntent.id,
-    payment_method: 'card',
-    description: 'Service booking payment received',
-    transaction_type: 'booking_payment',
-    status: 'completed',
-    processed_at: new Date().toISOString(),
-    metadata: {
-      charge_id: paymentIntent.latest_charge,
-      customer_id: paymentIntent.customer,
-      payment_method_types: paymentIntent.payment_method_types,
-      booking_reference: booking.booking_reference || null,
-      booking_customer_id: booking.customer_id || null
-    }
-  };
-
-  if (booking.customer_id) {
-    financialTransactionData.customer_id = booking.customer_id;
-  }
-
   const { data: financialTransaction, error: financialError } = await supabase
     .from('financial_transactions')
-    .insert(financialTransactionData)
+    .insert({
+      booking_id: booking.id,
+      amount: totalAmount,
+      currency: paymentIntent.currency.toUpperCase(),
+      stripe_transaction_id: paymentIntent.id,
+      payment_method: 'card',
+      description: 'Service booking payment received',
+      transaction_type: 'booking_payment',
+      status: 'completed',
+      processed_at: new Date().toISOString(),
+      metadata: {
+        charge_id: paymentIntent.latest_charge,
+        customer_id: paymentIntent.customer,
+        payment_method_types: paymentIntent.payment_method_types,
+        booking_reference: booking.booking_reference || null,
+        booking_customer_id: booking.customer_id || null
+      }
+    })
     .select()
     .single();
 
@@ -746,62 +740,50 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
     console.log(`📋 Booking reference: ${booking.booking_reference || 'N/A'}`);
     console.log(`👤 Customer ID: ${booking.customer_id || 'N/A'}`);
     
-    const financialTransactionData: any = {
-      booking_id: bookingId,
-      amount: totalAmount,
-      currency: paymentIntent.currency.toUpperCase(),
-      stripe_transaction_id: paymentIntent.id,
-      payment_method: 'card',
-      description: 'Service booking payment received',
-      transaction_type: 'booking_payment',
-      status: 'completed',
-      processed_at: new Date().toISOString(),
-      metadata: {
-        charge_id: paymentIntent.latest_charge,
-        customer_id: paymentIntent.customer,
-        payment_method_types: paymentIntent.payment_method_types,
-        booking_reference: booking.booking_reference || null,
-        booking_customer_id: booking.customer_id || null
-      }
-    };
-
-    // Add customer_id if available (some tables may require it)
-    if (booking.customer_id) {
-      financialTransactionData.customer_id = booking.customer_id;
-    }
-
-    console.log('📝 Financial transaction data:', JSON.stringify(financialTransactionData, null, 2));
+    // Record in financial_transactions (matching tip payment pattern - no customer_id field)
+    console.log('📝 Recording financial transaction data');
     
-    try {
-      const { data: financialTransaction, error: financialError } = await supabase
-        .from('financial_transactions')
-        .insert(financialTransactionData)
-        .select()
-        .single();
-
-      if (financialError) {
-        console.error('❌ Error recording financial transaction:', financialError);
-        console.error('❌ Error code:', financialError.code);
-        console.error('❌ Error message:', financialError.message);
-        console.error('❌ Error details:', JSON.stringify(financialError, null, 2));
-        console.error('❌ Transaction data attempted:', JSON.stringify(financialTransactionData, null, 2));
-        
-        // Check for specific error types
-        if (financialError.code === '23505') {
-          console.error('⚠️ Duplicate transaction detected - transaction may already exist');
-          // Don't throw - this is not a critical error
-        } else if (financialError.code === '23503') {
-          console.error('⚠️ Foreign key constraint violation - booking may not exist');
-          throw new Error(`Booking ${bookingId} not found or invalid`);
-        } else {
-          throw financialError;
+    const { data: financialTransaction, error: financialError } = await supabase
+      .from('financial_transactions')
+      .insert({
+        booking_id: bookingId,
+        amount: totalAmount,
+        currency: paymentIntent.currency.toUpperCase(),
+        stripe_transaction_id: paymentIntent.id,
+        payment_method: 'card',
+        description: 'Service booking payment received',
+        transaction_type: 'booking_payment',
+        status: 'completed',
+        processed_at: new Date().toISOString(),
+        metadata: {
+          charge_id: paymentIntent.latest_charge,
+          customer_id: paymentIntent.customer,
+          payment_method_types: paymentIntent.payment_method_types,
+          booking_reference: booking.booking_reference || null,
+          booking_customer_id: booking.customer_id || null
         }
+      })
+      .select()
+      .single();
+
+    if (financialError) {
+      console.error('❌ Error recording financial transaction:', financialError);
+      console.error('❌ Error code:', financialError.code);
+      console.error('❌ Error message:', financialError.message);
+      console.error('❌ Error details:', JSON.stringify(financialError, null, 2));
+      
+      // Check for specific error types
+      if (financialError.code === '23505') {
+        console.error('⚠️ Duplicate transaction detected - transaction may already exist');
+        // Don't throw - this is not a critical error
+      } else if (financialError.code === '23503') {
+        console.error('⚠️ Foreign key constraint violation - booking may not exist');
+        throw new Error(`Booking ${bookingId} not found or invalid`);
       } else {
-        console.log('✅ Financial transaction recorded:', financialTransaction?.id);
+        throw financialError;
       }
-    } catch (dbError: any) {
-      console.error('❌ Database error in financial transaction insert:', dbError);
-      throw dbError;
+    } else {
+      console.log('✅ Financial transaction recorded:', financialTransaction?.id);
     }
 
     // Record payment splits in payment_transactions
