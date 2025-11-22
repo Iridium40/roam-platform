@@ -14,29 +14,34 @@ Implemented Vercel's `ignoreCommand` feature to skip builds when only documentat
 
 ## Implementation
 
-### 1. Created Build Ignore Script
+### Updated vercel.json Files
 
-**File**: `scripts/vercel-ignore.sh`
+Added inline `ignoreCommand` using `git diff` to all three apps:
 
-```bash
-#!/bin/bash
-# Returns exit code 1 to skip build, 0 to proceed
-
-# Detects changed files and checks if any are non-documentation
-# Skips build if ONLY these types of files changed:
-- *.md (markdown documentation)
-- *.txt (text files)
-- .github/ (GitHub workflows/config)
-- .vscode/ (editor settings)
-- LICENSE (license file)
+```json
+"ignoreCommand": "if git diff HEAD^ HEAD --quiet -- . ':(exclude)*.md' ':(exclude)*.txt' ':(exclude).github/' ':(exclude).vscode/' ':(exclude)LICENSE'; then echo 'Only docs changed, skipping'; exit 1; else echo 'Code changed, building'; exit 0; fi"
 ```
 
-### 2. Updated vercel.json Files
-
-Added `"ignoreCommand": "bash ../scripts/vercel-ignore.sh"` to:
+Applied to:
 - ✅ `roam-provider-app/vercel.json`
 - ✅ `roam-customer-app/vercel.json`
 - ✅ `roam-admin-app/vercel.json`
+
+### How the Command Works
+
+The command uses `git diff` with pathspec exclude patterns:
+- `git diff HEAD^ HEAD` - Compare previous commit to current commit
+- `--quiet` - Don't output diff, just return exit code
+- `-- .` - Check current directory
+- `':(exclude)*.md'` - Exclude markdown files from diff
+- `':(exclude)*.txt'` - Exclude text files
+- `':(exclude).github/'` - Exclude GitHub workflows
+- `':(exclude).vscode/'` - Exclude VS Code settings
+- `':(exclude)LICENSE'` - Exclude license file
+
+**Logic**:
+- If diff is empty (only excluded files changed) → exit 1 (skip build)
+- If diff has changes (code files changed) → exit 0 (build)
 
 ## How It Works
 
@@ -112,20 +117,15 @@ When a build is skipped, Vercel will show:
 To test the ignore logic locally:
 
 ```bash
-# Simulate Vercel environment
-export VERCEL_GIT_COMMIT_REF=main
+# Test with doc-only changes (after committing)
+git commit -m "Update docs"
+if git diff HEAD^ HEAD --quiet -- . ':(exclude)*.md' ':(exclude)*.txt' ':(exclude).github/' ':(exclude).vscode/' ':(exclude)LICENSE'; then echo 'Skip build'; else echo 'Build'; fi
+# Should output: "Skip build"
 
-# Test with doc-only changes
-git add README.md
-bash scripts/vercel-ignore.sh
-# Should output: "✅ Only documentation files changed, skipping build"
-# Exit code: 1 (skip build)
-
-# Test with code changes
-git add roam-admin-app/api/some-file.ts
-bash scripts/vercel-ignore.sh
-# Should output: "🚀 Code changes detected, proceeding with build"
-# Exit code: 0 (proceed)
+# Test with code changes (after committing)
+git commit -m "Update code"
+if git diff HEAD^ HEAD --quiet -- . ':(exclude)*.md' ':(exclude)*.txt' ':(exclude).github/' ':(exclude).vscode/' ':(exclude)LICENSE'; then echo 'Skip build'; else echo 'Build'; fi
+# Should output: "Build"
 ```
 
 ## Files That Trigger Builds
@@ -168,9 +168,10 @@ To see which commits triggered builds vs were skipped:
 
 If you need to disable this optimization:
 
-```bash
-# Remove ignoreCommand from all vercel.json files
-# Or modify vercel-ignore.sh to always exit 0
+```json
+// Simply remove the "ignoreCommand" line from all vercel.json files
+// Or change it to always build:
+"ignoreCommand": "exit 0"
 ```
 
 ## Cost Savings
