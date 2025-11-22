@@ -241,11 +241,12 @@ const App = () => (
             />
 
             {/* Provider-specific routes */}
+            {/* Dashboard route hidden for providers - they are redirected to bookings */}
             <Route
               path="/provider/dashboard"
               element={
                 <ProtectedRoute
-                  allowedRoles={["owner", "dispatcher", "provider"]}
+                  allowedRoles={["owner", "dispatcher"]}
                 >
                   <ProviderDashboard />
                 </ProtectedRoute>

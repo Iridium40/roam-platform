@@ -193,9 +193,9 @@ export default function ProviderDashboard() {
     }
     
     if (isProvider) {
-      // Providers can access: Dashboard, My Bookings, Messages, My Profile, My Services (read-only), Settings
-      // NO access to: Staff, Financials, Business Settings
-      return ['dashboard', 'bookings', 'messages', 'profile', 'services', 'settings'].includes(feature);
+      // Providers can access: My Bookings, Messages, My Profile, My Services (read-only), Settings
+      // NO access to: Dashboard, Staff, Financials, Business Settings
+      return ['bookings', 'messages', 'profile', 'services', 'settings'].includes(feature);
     }
     
     return false;
@@ -227,11 +227,19 @@ export default function ProviderDashboard() {
       case 'settings':
         return 'settings';
       default:
-        return 'dashboard';
+        // Providers should default to bookings, not dashboard
+        return isProvider && !isOwner && !isDispatcher ? 'bookings' : 'dashboard';
     }
   };
 
   const activeTab = getCurrentTab();
+
+  // Redirect providers away from dashboard if they somehow access it
+  useEffect(() => {
+    if (isProvider && !isOwner && !isDispatcher && activeTab === 'dashboard') {
+      navigate(`${basePath}/bookings`, { replace: true });
+    }
+  }, [isProvider, isOwner, isDispatcher, activeTab, basePath, navigate]);
 
   // Get the base path for navigation (depends on user role)
   const getBasePath = () => {
@@ -873,8 +881,8 @@ export default function ProviderDashboard() {
 
       {/* Main Content */}
       <main className="px-6 py-8">
-        {/* Dashboard Tab */}
-        {activeTab === "dashboard" && (
+        {/* Dashboard Tab - Hidden for providers */}
+        {activeTab === "dashboard" && hasAccess('dashboard') && (
           <DashboardTab
             providerData={providerData}
             business={business}

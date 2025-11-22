@@ -68,8 +68,9 @@ export const RoleBasedRedirect: React.FC = () => {
     case "dispatcher":
       return <Navigate to="/dispatcher/dashboard" replace />;
     case "provider":
-      return <Navigate to="/provider/dashboard" replace />;
+      // Providers should not access dashboard - redirect to bookings instead
+      return <Navigate to="/provider/bookings" replace />;
     default:
-      return <Navigate to="/provider/dashboard" replace />;
+      return <Navigate to="/provider/bookings" replace />;
   }
 };

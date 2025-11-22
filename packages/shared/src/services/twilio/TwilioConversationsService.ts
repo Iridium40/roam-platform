@@ -512,11 +512,12 @@ export class TwilioConversationsService {
   async getConversationsForUser(
     userId: string,
     userType: 'customer' | 'provider' | 'owner' | 'dispatcher',
-    businessId?: string
+    businessId?: string,
+    providerId?: string
   ): Promise<ConversationSummary[]> {
-    console.log('🔍 getConversationsForUser called:', { userId, userType, businessId });
+    console.log('🔍 getConversationsForUser called:', { userId, userType, businessId, providerId });
     
-    const { data: participantData, error } = await this.supabase
+    let query = this.supabase
       .from('conversation_participants')
       .select(`
         conversation_id,
@@ -536,6 +537,7 @@ export class TwilioConversationsService {
             booking_date,
             booking_status,
             business_id,
+            provider_id,
             services (
               name
             ),
@@ -561,6 +563,8 @@ export class TwilioConversationsService {
       .eq('user_id', userId)
       .eq('user_type', userType)
       .eq('is_active', true);
+    
+    const { data: participantData, error } = await query;
 
     console.log('📊 Query result:', { 
       foundParticipants: participantData?.length || 0, 
@@ -582,8 +586,18 @@ export class TwilioConversationsService {
       .filter((meta: any) => Boolean(meta));
 
     const filteredMetadata = metadataList.filter((meta: any) => {
-      if (!businessId) return true;
-      return meta?.bookings?.business_id === businessId;
+      // Filter by business_id if provided
+      if (businessId && meta?.bookings?.business_id !== businessId) {
+        return false;
+      }
+      
+      // For providers with provider_role = 'provider', filter by provider_id
+      // Only show conversations for bookings assigned to them
+      if (userType === 'provider' && providerId && meta?.bookings?.provider_id !== providerId) {
+        return false;
+      }
+      
+      return true;
     });
 
     const conversationIds = filteredMetadata

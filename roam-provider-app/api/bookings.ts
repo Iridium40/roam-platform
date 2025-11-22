@@ -39,6 +39,40 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Check if user is authenticated and get their provider role
+    let authenticatedProviderId: string | null = null;
+    let shouldFilterByProvider = false;
+    
+    const authHeader = req.headers.authorization;
+    if (authHeader) {
+      try {
+        const token = authHeader.replace('Bearer ', '');
+        const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+        
+        if (!userError && user) {
+          // Get provider record to check role
+          const { data: providerData } = await supabase
+            .from('providers')
+            .select('id, provider_role')
+            .eq('user_id', user.id)
+            .eq('business_id', business_id)
+            .eq('is_active', true)
+            .maybeSingle();
+          
+          if (providerData) {
+            // If provider_role is 'provider', filter bookings to only show assigned ones
+            if (providerData.provider_role === 'provider') {
+              authenticatedProviderId = providerData.id;
+              shouldFilterByProvider = true;
+            }
+          }
+        }
+      } catch (authError) {
+        // If auth fails, continue without filtering (for backward compatibility)
+        console.warn('Auth check failed in bookings API:', authError);
+      }
+    }
+
     let query = supabase
       .from('bookings')
       .select(`
@@ -51,7 +85,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       `)
       .eq('business_id', business_id);
 
-    if (provider_id) query = query.eq('provider_id', provider_id);
+    // Filter by provider_id if:
+    // 1. Explicitly provided in query params, OR
+    // 2. User is authenticated as a provider (provider_role = 'provider')
+    const finalProviderId = provider_id || (shouldFilterByProvider ? authenticatedProviderId : null);
+    if (finalProviderId) {
+      query = query.eq('provider_id', finalProviderId);
+    }
+    
     if (status) query = query.eq('booking_status', status);
 
     const limitNum = limit ? Math.min(Math.max(parseInt(limit as string, 10), 1), 1000) : 50;
@@ -78,10 +119,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return booking;
     });
 
-    const { data: stats } = await supabase
+    // Build stats query with same filters as bookings query
+    let statsQuery = supabase
       .from('bookings')
       .select('booking_status, total_amount')
       .eq('business_id', business_id);
+    
+    if (finalProviderId) {
+      statsQuery = statsQuery.eq('provider_id', finalProviderId);
+    }
+    
+    const { data: stats } = await statsQuery;
 
     const totalBookings = stats?.length || 0;
     const pendingBookings = stats?.filter(b => b.booking_status === 'pending').length || 0;
