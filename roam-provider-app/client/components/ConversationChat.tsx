@@ -491,12 +491,14 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
         .slice(0, 2)
         .toUpperCase();
 
-      // Get avatar URL from attributes or booking data
-      let avatarUrl = attrs.imageUrl || null;
-      if (!avatarUrl && attrs.userType === 'customer' && booking?.customer_profiles?.image_url) {
+      // Get avatar URL from booking data (imageUrl no longer in attributes to save payload size)
+      let avatarUrl = null;
+      if (attrs.userType === 'customer' && booking?.customer_profiles?.image_url) {
         avatarUrl = booking.customer_profiles.image_url;
-      } else if (!avatarUrl && isCurrentUser && provider?.image_url) {
+      } else if (isCurrentUser && provider?.image_url) {
         avatarUrl = provider.image_url;
+      } else if ((attrs.userType === 'provider' || attrs.userType === 'owner' || attrs.userType === 'dispatcher') && booking?.providers?.image_url) {
+        avatarUrl = booking.providers.image_url;
       }
 
       return {

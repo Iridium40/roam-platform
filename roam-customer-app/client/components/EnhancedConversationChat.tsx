@@ -430,6 +430,17 @@ export default function EnhancedConversationChat({
   }
 
   const resolveAuthor = (message: ConversationMessageWithAuthor) => {
+    // Helper function to get avatar from booking data or user context
+    const getAvatarFromBooking = (authorType: string) => {
+      if (authorType === 'customer') {
+        // Try customer context first, then booking customer_profiles
+        return customer?.image_url || booking?.customer_profiles?.image_url || null;
+      } else if (booking?.providers?.image_url) {
+        return booking.providers.image_url;
+      }
+      return null;
+    };
+
     // First, try to get author info from message attributes (most reliable)
     if (message.attributes) {
       try {
@@ -443,7 +454,7 @@ export default function EnhancedConversationChat({
             userType: (message.author_type || 'customer') as 'customer' | 'provider' | 'owner' | 'dispatcher',
             userName: attrs.authorName,
             email: attrs.email || null,
-            avatarUrl: attrs.imageUrl || null,
+            avatarUrl: getAvatarFromBooking(message.author_type || 'customer'),
           };
         }
       } catch (e) {
@@ -455,23 +466,19 @@ export default function EnhancedConversationChat({
     const identity = `${message.author_type}-${message.author_id}`;
     const participant = participantMap.get(identity);
     if (participant) {
-      return participant;
+      return {
+        ...participant,
+        avatarUrl: participant.avatarUrl || getAvatarFromBooking(message.author_type || 'customer'),
+      };
     }
     
     // Last resort: return a basic author object with avatar from booking data
-    let avatarUrl = null;
-    if (message.author_type === 'customer') {
-      avatarUrl = customer?.image_url || null;
-    } else if (booking?.providers?.image_url) {
-      avatarUrl = booking.providers.image_url;
-    }
-    
     return {
       userId: message.author_id || '',
       userType: (message.author_type || 'customer') as 'customer' | 'provider' | 'owner' | 'dispatcher',
       userName: message.author_type === 'customer' ? 'Customer' : 'Provider',
       email: null,
-      avatarUrl,
+      avatarUrl: getAvatarFromBooking(message.author_type || 'customer'),
     };
   };
 
