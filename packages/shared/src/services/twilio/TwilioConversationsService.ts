@@ -571,6 +571,7 @@ export class TwilioConversationsService {
             ),
             customer_profiles (
               id,
+              user_id,
               first_name,
               last_name,
               email,
