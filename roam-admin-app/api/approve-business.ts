@@ -111,6 +111,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     console.log("Updating business profile...");
     // Update business profile to approved
+    // Note: business_profiles table does not have updated_at column
     const { error: updateBusinessError } = await supabase
       .from("business_profiles")
       .update({
@@ -118,7 +119,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         approved_at: new Date().toISOString(),
         approved_by: adminUserId,
         approval_notes: approvalNotes,
-        updated_at: new Date().toISOString(),
       })
       .eq("id", businessId);
 
@@ -133,6 +133,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     console.log("Updating application status...");
     // Update application status (if application exists)
+    // Note: updated_at is automatically managed by Supabase triggers
     if (application) {
       const { error: updateApplicationError } = await supabase
         .from("provider_applications")
@@ -142,7 +143,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           reviewed_at: new Date().toISOString(),
           reviewed_by: adminUserId,
           approval_notes: approvalNotes,
-          updated_at: new Date().toISOString(),
         })
         .eq("id", application.id);
 
@@ -162,12 +162,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // - Dispatchers (provider_role = 'dispatcher') are approved within the provider app by owners
     // - Regular providers (provider_role = 'provider') are approved within the provider app by owners or dispatchers
     // This ensures proper separation: admin approves businesses/owners, business owners approve their staff
+    // Note: providers table does not have updated_at column
     const { error: updateProviderError } = await supabase
       .from("providers")
       .update({
         verification_status: "approved",
         background_check_status: "approved",
-        updated_at: new Date().toISOString(),
       })
       .eq("business_id", businessId)
       .eq("provider_role", "owner");
@@ -207,6 +207,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     console.log("Creating approval record...");
     // Create approval record (if application exists)
+    // Note: created_at and updated_at are automatically managed by Supabase triggers
     if (application) {
       const { error: approvalRecordError } = await supabase
         .from("application_approvals")
@@ -219,7 +220,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             Date.now() + 7 * 24 * 60 * 60 * 1000,
           ).toISOString(), // 7 days
           approval_notes: approvalNotes,
-          created_at: new Date().toISOString(),
         });
 
       if (approvalRecordError) {
@@ -234,13 +234,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     console.log("Updating setup progress...");
     // Update setup progress
+    // Note: updated_at is automatically managed by Supabase triggers
     const { error: progressError } = await supabase
       .from("business_setup_progress")
       .update({
         phase_1_completed: true,
         phase_1_completed_at: new Date().toISOString(),
         current_step: 3, // Start of Phase 2
-        updated_at: new Date().toISOString(),
       })
       .eq("business_id", businessId);
 
