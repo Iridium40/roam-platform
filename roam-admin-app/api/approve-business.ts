@@ -214,6 +214,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       applicationId
     );
     console.log("Phase 2 token generated successfully");
+    console.log("Phase 2 onboarding URL:", approvalUrl);
 
     console.log("Creating approval record...");
     // Create approval record (if application exists)
@@ -261,13 +262,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       console.log("Setup progress updated successfully");
     }
 
-    // Send approval email with secure link (if enabled)
+    // Send approval email with Phase 2 onboarding link (if enabled)
     if (sendEmail) {
-      console.log("Sending approval email...");
+      console.log("Sending approval email with Phase 2 onboarding link...");
+      console.log("Approval URL to include in email:", approvalUrl);
       try {
         // Get user email
         const { data: userData } = await supabase.auth.admin.getUserById(userId);
         const userEmail = userData.user?.email || businessProfile.contact_email;
+        console.log("Sending email to:", userEmail);
 
         if (userEmail) {
           const firstName =
