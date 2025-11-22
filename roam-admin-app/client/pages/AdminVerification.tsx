@@ -967,139 +967,67 @@ export default function AdminVerification() {
         verification_notes: notes || null,
       };
 
-      // Add approval tracking if approving
+      // Handle approve action via proper API endpoint
       if (action === "approve") {
-        console.log("Approval action - looking up admin user for:", user?.id);
+        console.log("Approval action - calling approve-business API for:", businessId);
 
-        // Look up the admin_users record for the current auth user
-        const { data: adminUser, error: adminUserError } = await supabase
-          .from("admin_users")
-          .select("id")
-          .eq("user_id", user?.id)
-          .single();
+        if (!user?.id) {
+          throw new Error("User ID not found. Please log in again.");
+        }
 
-        console.log("Admin user lookup result:", { adminUser, adminUserError });
+        // Call the proxy API that creates proper approval records
+        const approvalResponse = await fetch("/api/approve-business", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            businessId: businessId,
+            adminUserId: user.id, // Auth user ID
+            approvalNotes: notes || null,
+            sendEmail: true,
+          }),
+        });
 
-        if (adminUserError || !adminUser) {
-          console.error("Admin user lookup failed:", adminUserError);
+        console.log("Approval API response status:", approvalResponse.status);
+
+        if (!approvalResponse.ok) {
+          const errorData = await approvalResponse.json().catch(() => ({}));
+          console.error("Approval API error:", errorData);
           throw new Error(
-            "Admin user record not found. Please contact support.",
+            errorData.error || `Failed to approve application (${approvalResponse.status})`
           );
         }
 
-        updateData.approved_at = new Date().toISOString();
-        updateData.approved_by = adminUser.id;
-        updateData.approval_notes = notes || null;
-      }
+        const approvalResult = await approvalResponse.json();
+        console.log("Approval successful:", approvalResult);
 
-      console.log("Update data prepared:", updateData);
+        toast({
+          title: "Business Approved",
+          description: `Business has been approved successfully. An approval email with Phase 2 onboarding link has been sent.`,
+          variant: "default",
+        });
+      } else {
+        // For other actions (reject, suspend, pending), update directly
+        console.log("Update data prepared:", updateData);
 
-      const { error } = await supabase
-        .from("business_profiles")
-        .update(updateData)
-        .eq("id", businessId);
+        const { error } = await supabase
+          .from("business_profiles")
+          .update(updateData)
+          .eq("id", businessId);
 
-      console.log("Supabase update result:", { error });
+        console.log("Supabase update result:", { error });
 
-      if (error) {
-        console.error("Supabase update error:", error);
-        throw error;
-      }
-
-      // Send approval email if business was approved
-      if (action === "approve") {
-        try {
-          console.log("Sending approval email for business:", businessId);
-
-          // Get business details for the email
-          const { data: businessData, error: businessFetchError } =
-            await supabase
-              .from("business_profiles")
-              .select("business_name, contact_email")
-              .eq("id", businessId)
-              .single();
-
-          if (businessFetchError || !businessData?.contact_email) {
-            console.error(
-              "Could not fetch business email:",
-              businessFetchError,
-            );
-            toast({
-              title: "Business Approved",
-              description:
-                "Business verification approved successfully. Note: No contact email found for approval notification.",
-              variant: "default",
-            });
-          } else {
-            console.log(
-              "Sending approval email to:",
-              businessData.contact_email,
-            );
-
-            const emailPayload = {
-              businessName: businessData.business_name,
-              contactEmail: businessData.contact_email,
-              approvalNotes: notes || null,
-              businessId: businessId,
-              userId: user?.id, // Optional: admin user ID for audit trail
-            };
-
-            console.log("Email API payload:", emailPayload);
-
-            // Send email via our server-side API endpoint
-            const emailResponse = await fetch("/api/send-approval-email", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify(emailPayload),
-            });
-
-            console.log("Email API response status:", emailResponse.status);
-
-            if (emailResponse.ok) {
-              // Only try to read response body for successful responses
-              try {
-                const emailResult = await emailResponse.json();
-                console.log("Approval email sent successfully:", emailResult);
-              } catch (parseError) {
-                console.log("Email sent successfully (could not parse response details)");
-              }
-            } else {
-              // For error responses, don't try to read body - just use status
-              const errorMessage = `HTTP ${emailResponse.status} - Email service error`;
-              console.error("Failed to send approval email:", errorMessage);
-
-              toast({
-                title: "Business Approved",
-                description: `Business verification approved successfully. Note: Approval email could not be sent. Error: ${errorMessage}`,
-                variant: "default",
-              });
-            }
-          }
-        } catch (emailError) {
-          console.error("Error sending approval email:", emailError);
-
-          let errorMessage = "Network error or server unavailable";
-          if (emailError instanceof Error) {
-            errorMessage = emailError.message;
-          } else if (typeof emailError === "string") {
-            errorMessage = emailError;
-          } else if (emailError && typeof emailError === "object") {
-            try {
-              errorMessage = JSON.stringify(emailError);
-            } catch (e) {
-              errorMessage = "Unknown error occurred";
-            }
-          }
-
-          // Don't throw error here - business approval succeeded
-          toast({
-            title: "Business Approved",
-            description: `Business verification approved successfully. Note: Approval email could not be sent. Error: ${errorMessage}`,
-            variant: "default",
-          });
+        if (error) {
+          console.error("Supabase update error:", error);
+          throw error;
         }
+
+        toast({
+          title: `Business ${newStatus.charAt(0).toUpperCase() + newStatus.slice(1)}`,
+          description: `Business verification status updated to ${newStatus}.`,
+          variant: "default",
+        });
       }
 
       // Send rejection email if business was rejected
