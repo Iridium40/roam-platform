@@ -141,11 +141,6 @@ export function CheckoutForm({ bookingDetails, clientSecret, onSuccess, onError 
       if (error) {
         console.error('Payment failed:', error);
         onError(error.message || 'Payment failed');
-        toast({
-          title: "Payment Failed",
-          description: error.message,
-          variant: "destructive",
-        });
       } else if (paymentIntent && paymentIntent.status === 'succeeded') {
         // Save payment method if requested and using new card
         if (savePaymentMethod && selectedPaymentMethod === 'new' && customer?.user_id && paymentIntent.payment_method) {
@@ -178,20 +173,11 @@ export function CheckoutForm({ bookingDetails, clientSecret, onSuccess, onError 
           }
         }
 
-        toast({
-          title: "Payment Successful!",
-          description: "Your booking has been confirmed.",
-        });
         onSuccess(paymentIntent);
       }
     } catch (err: any) {
       console.error('Payment error:', err);
       onError(err.message);
-      toast({
-        title: "Payment Error",
-        description: err.message || "An unexpected error occurred",
-        variant: "destructive",
-      });
     } finally {
       setIsLoading(false);
     }
@@ -227,20 +213,11 @@ export function CheckoutForm({ bookingDetails, clientSecret, onSuccess, onError 
             setSelectedPaymentMethod('new');
           }
         }
-        toast({
-          title: "Payment Method Deleted",
-          description: "The payment method has been removed.",
-        });
       } else {
         throw new Error('Failed to delete payment method');
       }
     } catch (error: any) {
       console.error('Error deleting payment method:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to delete payment method",
-        variant: "destructive",
-      });
     }
   };
 

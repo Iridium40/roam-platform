@@ -51,11 +51,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Check if payment method is already attached to this customer
     let isAttached = false;
     let canReuse = true;
+    let paymentMethod: Stripe.PaymentMethod;
     
     try {
       // First, retrieve the payment method to check its status
-      const paymentMethodCheck = await stripe.paymentMethods.retrieve(payment_method_id);
-      isAttached = paymentMethodCheck.customer === stripeProfile.stripe_customer_id;
+      paymentMethod = await stripe.paymentMethods.retrieve(payment_method_id);
+      isAttached = paymentMethod.customer === stripeProfile.stripe_customer_id;
       
       // If not attached, try to attach it
       if (!isAttached) {
@@ -67,22 +68,37 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           console.log('✅ Payment method attached to customer');
         } catch (attachError: any) {
           // Handle different error cases
+          const errorMessage = attachError.message || attachError.raw?.message || '';
+          const errorType = attachError.type || attachError.rawType || '';
+          
           if (attachError.code === 'resource_already_exists') {
             // Already attached to this or another customer
             console.log('ℹ️ Payment method already attached to a customer');
             isAttached = true;
           } else if (
-            attachError.type === 'invalid_request_error' &&
-            attachError.message?.includes('previously used without being attached')
+            (errorType === 'invalid_request_error' || attachError.statusCode === 400) &&
+            (errorMessage.includes('previously used without being attached') ||
+             errorMessage.includes('may not be used again') ||
+             errorMessage.includes('was detached from a Customer') ||
+             errorMessage.includes('cannot be used again'))
           ) {
             // Payment method was used in a payment intent before being attached
             // This is okay - we'll save it to our database but can't attach it to Stripe
             console.log('ℹ️ Payment method was already used - saving reference only (cannot attach to customer)');
+            console.log('Error details:', { errorMessage, errorType, statusCode: attachError.statusCode });
             canReuse = false;
             // Don't throw - we'll still save it to our database for reference
+            // Continue execution to save payment method data
           } else {
             // Other errors should be thrown
             console.error('Error attaching payment method:', attachError);
+            console.error('Error details:', {
+              code: attachError.code,
+              type: errorType,
+              message: errorMessage,
+              statusCode: attachError.statusCode,
+              raw: attachError.raw
+            });
             throw attachError;
           }
         }
@@ -109,8 +125,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
-    // Retrieve payment method details
-    const paymentMethod = await stripe.paymentMethods.retrieve(payment_method_id);
+    // Payment method details already retrieved above, reuse it
 
     // Prepare payment method data for storage
     const paymentMethodData = {

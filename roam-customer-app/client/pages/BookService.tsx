@@ -387,11 +387,6 @@ export default function BookService() {
         }
       } catch (error) {
         console.error('Error loading service:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load service details",
-          variant: "destructive",
-        });
       } finally {
         setLoading(false);
       }
@@ -458,12 +453,6 @@ export default function BookService() {
       selectedDateType: typeof selectedDate,
       selectedDateValid: selectedDate instanceof Date,
       selectedTimeType: typeof selectedTime
-    });
-
-    // Show loading state to user
-    toast({
-      title: "Loading businesses...",
-      description: "Finding available providers for your selected time",
     });
 
     if (!serviceId) {
@@ -671,12 +660,6 @@ export default function BookService() {
       const sortedBusinesses = sortAndFilterBusinesses(transformedBusinesses, sortBy, sortOrder);
       setFilteredAndSortedBusinesses(sortedBusinesses);
 
-      // Show success message
-      toast({
-        title: "Businesses loaded successfully",
-        description: `Found ${transformedBusinesses.length} available businesses for your selected time`,
-      });
-
     } catch (error) {
       console.error('Error loading businesses - Full error object:', error);
       console.error('Error type:', typeof error);
@@ -707,13 +690,9 @@ export default function BookService() {
 
       console.error('Parsed error message:', errorMessage);
 
-      // If this is a database schema issue, provide a helpful message
+      // If this is a database schema issue, log it
       if (errorMessage.includes('business_services') || errorMessage.includes('relation') || errorMessage.includes('does not exist')) {
-        toast({
-          title: "Database Schema Issue",
-          description: "The business_services table may not exist. Using simplified business loading...",
-          variant: "destructive",
-        });
+        console.warn('Database schema issue detected - using simplified business loading');
 
         // Try one more simplified approach
         try {
@@ -770,11 +749,7 @@ export default function BookService() {
         }
       }
 
-      toast({
-        title: "Error loading businesses",
-        description: errorMessage,
-        variant: "destructive",
-      });
+      console.error('Error loading businesses:', errorMessage);
     }
   };
 
@@ -874,11 +849,6 @@ export default function BookService() {
       }
     } catch (error) {
       console.error('Error loading business locations:', error);
-      toast({
-        title: "Error loading business locations",
-        description: "Unable to load business addresses",
-        variant: "destructive",
-      });
     }
   };
 
@@ -908,11 +878,6 @@ export default function BookService() {
       }
     } catch (error) {
       console.error('Error loading customer locations:', error);
-      toast({
-        title: "Error loading your locations",
-        description: "Unable to load your saved addresses",
-        variant: "destructive",
-      });
     }
   };
 
@@ -999,22 +964,12 @@ export default function BookService() {
 
       if (error) throw error;
 
-      toast({
-        title: "Location saved",
-        description: "Your new location has been saved successfully",
-      });
-
       // Refresh customer locations
       await loadCustomerLocations();
 
       return data;
     } catch (error) {
       console.error('Error saving customer location:', error);
-      toast({
-        title: "Error saving location",
-        description: "Unable to save your location. Please try again.",
-        variant: "destructive",
-      });
       return null;
     }
   };
@@ -1052,12 +1007,6 @@ export default function BookService() {
             loadBusinesses();
             setCurrentStep('business');
           }
-        } else {
-          toast({
-            title: "Please select date and time",
-            description: "Both date and time are required to continue",
-            variant: "destructive",
-          });
         }
         break;
       case 'business':
@@ -1083,33 +1032,17 @@ export default function BookService() {
             // Multiple delivery types available, go to delivery-location selection
             setCurrentStep('delivery-location');
           }
-        } else {
-          toast({
-            title: "Please select a business",
-            description: "Choose a business to continue",
-            variant: "destructive",
-          });
         }
         break;
       case 'delivery-location':
         // First validate delivery type is selected
         if (!selectedDeliveryType) {
-          toast({
-            title: "Please select delivery type",
-            description: "Choose how you'd like to receive the service",
-            variant: "destructive",
-          });
           return;
         }
         
         // Then validate location selection based on delivery type
         if (selectedDeliveryType === 'business_location') {
           if (!selectedBusinessLocation && businessLocations.length > 1) {
-            toast({
-              title: "Please select a location",
-              description: "Choose which business location you'd like to visit",
-              variant: "destructive",
-            });
             return;
           }
         } else if (selectedDeliveryType === 'customer_location') {
@@ -1120,11 +1053,6 @@ export default function BookService() {
                                        newCustomerLocation.zip_code;
           
           if (!selectedCustomerLocation && !isNewLocationEntered) {
-            toast({
-              title: "Please provide a location",
-              description: "Select a saved location or enter a new address",
-              variant: "destructive",
-            });
             return;
           }
           
@@ -1132,11 +1060,6 @@ export default function BookService() {
           if (!selectedCustomerLocation && isNewLocationEntered) {
             if (!newCustomerLocation.street_address || !newCustomerLocation.city || 
                 !newCustomerLocation.state || !newCustomerLocation.zip_code) {
-              toast({
-                title: "Please complete the address",
-                description: "All address fields are required",
-                variant: "destructive",
-              });
               return;
             }
             
@@ -1169,12 +1092,6 @@ export default function BookService() {
       case 'provider':
         if (selectedProvider || noProviderPreference) {
           setCurrentStep('summary');
-        } else {
-          toast({
-            title: "Please select a provider",
-            description: "Choose a provider or select 'No Preference'",
-            variant: "destructive",
-          });
         }
         break;
     }
@@ -1221,10 +1138,6 @@ export default function BookService() {
           setClientSecret('');
           setPaymentBreakdown(null);
         }
-        toast({
-          title: "Checkout Cancelled",
-          description: "You can update your booking details and try again.",
-        });
         break;
     }
   };
@@ -1262,11 +1175,6 @@ export default function BookService() {
   const handleCheckout = async () => {
     // Check if user is authenticated first
     if (!customer) {
-      toast({
-        title: "Sign In Required",
-        description: "Please sign in or create an account to complete your booking.",
-        variant: "default",
-      });
       setShowAuthModal(true);
       setPendingCheckout(true);
       return;
@@ -1275,11 +1183,6 @@ export default function BookService() {
     // Ensure all necessary data is available
     // Note: selectedProvider can be null if noProviderPreference is true (business will assign)
     if (!service || !selectedBusiness || (!selectedProvider && !noProviderPreference) || !selectedDate || !selectedTime) {
-      toast({
-        title: "Missing Information",
-        description: "Please complete all booking steps before proceeding.",
-        variant: "destructive",
-      });
       return;
     }
 
@@ -1445,11 +1348,6 @@ export default function BookService() {
       // Move to checkout step (embedded form)
       setCurrentStep('checkout');
       setCheckoutLoading(false);
-
-      toast({
-        title: "Ready for Payment",
-        description: "Please complete your payment to confirm the booking.",
-      });
     } catch (error) {
       console.error('❌ Error preparing checkout:', error);
       setCheckoutLoading(false);
@@ -1467,11 +1365,7 @@ export default function BookService() {
         errorMessage = error.message;
       }
       
-      toast({
-        title: "Checkout Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
+      console.error('Checkout error:', errorMessage);
     }
   };
 
@@ -2605,23 +2499,12 @@ export default function BookService() {
                       }}
                       onSuccess={(paymentIntent) => {
                         console.log('✅ Payment successful!', paymentIntent);
-                        
-                        toast({
-                          title: "Payment Successful!",
-                          description: "Your booking has been confirmed.",
-                        });
 
                         // Redirect to success page
                         navigate(`/booking-success?booking_id=${createdBookingId}`);
                       }}
                       onError={(error) => {
                         console.error('❌ Payment error:', error);
-                        
-                        toast({
-                          title: "Payment Failed",
-                          description: error,
-                          variant: "destructive",
-                        });
                       }}
                     />
                   </Elements>
