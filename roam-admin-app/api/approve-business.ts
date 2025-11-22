@@ -3,6 +3,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 /**
  * Proxy endpoint to call the provider app's approve-application API
  * This creates proper approval records in the application_approvals table
+ * Updated: Now properly populates application_approvals audit trail
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") {
