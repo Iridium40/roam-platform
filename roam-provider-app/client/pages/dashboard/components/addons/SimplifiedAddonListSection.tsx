@@ -14,7 +14,6 @@ import {
   Edit,
   Puzzle,
   DollarSign,
-  CheckCircle2,
 } from 'lucide-react';
 import { EligibleAddon } from '@/types/addons';
 
@@ -83,7 +82,6 @@ export function SimplifiedAddonListSection({
             <TableHeader>
               <TableRow>
                 <TableHead>Add-on</TableHead>
-                <TableHead>Compatible Services</TableHead>
                 <TableHead>Custom Price</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -115,14 +113,6 @@ export function SimplifiedAddonListSection({
                             {addon.description}
                           </p>
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <CheckCircle2 className="h-4 w-4 text-green-600" />
-                        <span className="text-sm">
-                          {addon.compatible_service_count || 0} service{addon.compatible_service_count !== 1 ? 's' : ''}
-                        </span>
                       </div>
                     </TableCell>
                     <TableCell>

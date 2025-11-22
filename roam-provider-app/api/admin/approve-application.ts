@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { createClient } from "@supabase/supabase-js";
 import jwt from "jsonwebtoken";
-import { EmailService } from "../../server/services/emailService";
+import { EmailService } from "../_lib/emailService";
 
 const supabase = createClient(
   process.env.VITE_PUBLIC_SUPABASE_URL!,
@@ -16,6 +16,10 @@ interface ApprovalRequest {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  console.log("=== APPROVE APPLICATION REQUEST ===");
+  console.log("Method:", req.method);
+  console.log("Body:", JSON.stringify(req.body, null, 2));
+
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -28,7 +32,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       sendEmail = true,
     }: ApprovalRequest = req.body;
 
+    console.log("Parsed request:", { businessId, adminUserId, approvalNotes, sendEmail });
+
     if (!businessId || !adminUserId) {
+      console.error("Missing required fields:", { businessId, adminUserId });
       return res
         .status(400)
         .json({ error: "Missing businessId or adminUserId" });
@@ -217,20 +224,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Send approval email with secure link (if enabled)
+    // Note: Email sending is done asynchronously and won't block the response
     if (sendEmail) {
-      // Don't block the response on email sending - do it asynchronously
-      const sendEmailAsync = async () => {
+      console.log("Starting async email send process...");
+      
+      // Fire and forget - don't await this
+      (async () => {
         try {
           // Get user ID - try owner_user_id first, then application.user_id
-          const userId = businessProfile.owner_user_id || application.user_id;
+          const emailUserId = businessProfile.owner_user_id || application.user_id;
           
-          if (!userId) {
+          if (!emailUserId) {
             console.error("No user ID found for email sending");
             return;
           }
 
-          // Get user email with timeout
-          const { data: userData, error: userError } = await supabase.auth.admin.getUserById(userId);
+          console.log("Fetching user data for email:", emailUserId);
+
+          // Get user email
+          const { data: userData, error: userError } = await supabase.auth.admin.getUserById(emailUserId);
 
           if (userError || !userData.user?.email) {
             console.error("Failed to get user data for email:", userError);
@@ -242,19 +254,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
           console.log("Sending approval email to:", userData.user.email);
 
-          // Send approval email using Resend with timeout
-          const emailPromise = EmailService.sendApplicationApprovedEmail(
+          // Send approval email using Resend
+          const emailSent = await EmailService.sendApplicationApprovedEmail(
             userData.user.email,
             firstName,
             approvalUrl,
           );
-          
-          // Set a timeout for email sending
-          const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error("Email timeout")), 15000)
-          );
-          
-          const emailSent = await Promise.race([emailPromise, timeoutPromise]);
 
           if (!emailSent) {
             console.error("Failed to send approval email to:", userData.user.email);
@@ -262,13 +267,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             console.log("Approval email sent successfully to:", userData.user.email);
           }
         } catch (emailError) {
-          console.error("Error sending approval email:", emailError);
-          // Don't fail the approval if email fails
+          console.error("Error in async email sending:", emailError);
         }
-      };
-
-      // Start email sending but don't wait for it
-      sendEmailAsync().catch(err => console.error("Async email error:", err));
+      })();
+      
+      console.log("Email process started in background");
     }
 
     return res.status(200).json({
