@@ -234,13 +234,6 @@ export default function ProviderDashboard() {
 
   const activeTab = getCurrentTab();
 
-  // Redirect providers away from dashboard if they somehow access it
-  useEffect(() => {
-    if (isProvider && !isOwner && !isDispatcher && activeTab === 'dashboard') {
-      navigate(`${basePath}/bookings`, { replace: true });
-    }
-  }, [isProvider, isOwner, isDispatcher, activeTab, basePath, navigate]);
-
   // Get the base path for navigation (depends on user role)
   const getBasePath = () => {
     if (isOwner) return '/owner';
@@ -249,6 +242,13 @@ export default function ProviderDashboard() {
   };
 
   const basePath = getBasePath();
+
+  // Redirect providers away from dashboard if they somehow access it
+  useEffect(() => {
+    if (isProvider && !isOwner && !isDispatcher && activeTab === 'dashboard') {
+      navigate(`${basePath}/bookings`, { replace: true });
+    }
+  }, [isProvider, isOwner, isDispatcher, activeTab, basePath, navigate]);
 
   // Navigation helper
   const navigateToTab = (tab: string) => {
