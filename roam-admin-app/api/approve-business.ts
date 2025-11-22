@@ -27,23 +27,43 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       sendEmail,
     });
 
-    // Call the provider app's approve-application API
+    // Call the provider app's approve-application API with timeout
     const providerAppUrl = process.env.VITE_PROVIDER_APP_URL || "https://www.roamprovider.com";
-    const approvalResponse = await fetch(
-      `${providerAppUrl}/api/admin/approve-application`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          businessId,
-          adminUserId,
-          approvalNotes,
-          sendEmail,
-        }),
+    
+    // Create abort controller for timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 25000); // 25 second timeout
+    
+    let approvalResponse;
+    try {
+      approvalResponse = await fetch(
+        `${providerAppUrl}/api/admin/approve-application`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            businessId,
+            adminUserId,
+            approvalNotes,
+            sendEmail,
+          }),
+          signal: controller.signal,
+        }
+      );
+      clearTimeout(timeoutId);
+    } catch (fetchError: any) {
+      clearTimeout(timeoutId);
+      if (fetchError.name === 'AbortError') {
+        console.error("Provider app request timed out after 25 seconds");
+        return res.status(504).json({
+          error: "Request timeout",
+          details: "The approval request took too long to complete. Please try again.",
+        });
       }
-    );
+      throw fetchError;
+    }
 
     console.log("Provider app response status:", approvalResponse.status);
 
