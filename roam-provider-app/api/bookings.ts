@@ -81,7 +81,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         customer_locations (id, location_name, street_address, city, state, zip_code),
         business_locations (id, location_name, address_line1, city, state, postal_code),
         services (id, name, description, duration_minutes, min_price),
-        providers (id, user_id, first_name, last_name, image_url)
+        providers (id, user_id, first_name, last_name, image_url),
+        business_profiles (id, business_name, business_type)
       `)
       .eq('business_id', business_id);
 

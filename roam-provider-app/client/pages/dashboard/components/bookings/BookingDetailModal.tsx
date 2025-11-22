@@ -53,9 +53,14 @@ export default function BookingDetailModal({
   // Check if current user can assign bookings (owners and dispatchers only)
   const canAssignBookings = isOwner || isDispatcher;
 
+  // Check if business is independent (single provider, assignment locked)
+  const isIndependentBusiness = selectedBooking?.business_profiles?.business_type === 'independent';
+
   // Check if booking can be reassigned (only pending, confirmed, or in_progress bookings)
+  // Independent businesses cannot reassign since they have only one provider
   const canReassignBooking = selectedBooking && 
-    ['pending', 'confirmed', 'in_progress'].includes(selectedBooking.booking_status);
+    ['pending', 'confirmed', 'in_progress'].includes(selectedBooking.booking_status) &&
+    !isIndependentBusiness;
 
   // Load available providers when modal opens and user can assign
   useEffect(() => {
@@ -291,6 +296,12 @@ export default function BookingDetailModal({
                       );
                     })()}
                   </div>
+                  
+                  {isIndependentBusiness && (
+                    <div className="text-sm text-gray-600 bg-gray-50 p-2 rounded border border-gray-200">
+                      <span className="font-medium">Independent Business:</span> Provider assignment is automatic and cannot be changed.
+                    </div>
+                  )}
                   
                   {canReassignBooking && (
                     <div className="space-y-2">
