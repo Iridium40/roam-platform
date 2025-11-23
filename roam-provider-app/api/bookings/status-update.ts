@@ -61,17 +61,28 @@ async function sendNotificationViaService(
     }
 
     // 5. Get notification template from database
-    const { data: template } = await supabase
+    console.log(`🔍 Looking up notification template: ${notificationType}`);
+    const { data: template, error: templateError } = await supabase
       .from('notification_templates')
       .select('*')
       .eq('template_key', notificationType)
       .eq('is_active', true)
       .single();
 
-    if (!template) {
-      console.error(`❌ Template not found: ${notificationType}`);
+    if (templateError) {
+      console.error(`❌ Error fetching template: ${notificationType}`, templateError);
       return;
     }
+
+    if (!template) {
+      console.error(`❌ Template not found or inactive: ${notificationType}`);
+      return;
+    }
+
+    console.log(`✅ Template found: ${notificationType}`, {
+      hasEmailBody: !!template.email_body_html,
+      hasSubject: !!template.email_subject
+    });
 
     // 6. Get recipient contact info (prioritize custom notification email/phone)
     let recipientEmail = settings?.notification_email;
@@ -106,12 +117,23 @@ async function sendNotificationViaService(
     }
 
     // 7. Send email if enabled and recipient exists
+    console.log(`📧 Email sending check:`, {
+      emailAllowed,
+      hasRecipientEmail: !!recipientEmail,
+      recipientEmail,
+      hasTemplateBody: !!template.email_body_html,
+      notificationType
+    });
+
     if (emailAllowed && recipientEmail && template.email_body_html) {
       try {
+        console.log(`📧 Preparing to send email to: ${recipientEmail}`);
         // Replace template variables
         let subject = template.email_subject || '';
         let htmlBody = template.email_body_html || '';
         let textBody = template.email_body_text || '';
+
+        console.log(`📧 Template variables:`, templateVariables);
 
         for (const [key, value] of Object.entries(templateVariables)) {
           const regex = new RegExp(`{{${key}}}`, 'g');
@@ -119,6 +141,8 @@ async function sendNotificationViaService(
           htmlBody = htmlBody.replace(regex, String(value ?? ''));
           textBody = textBody.replace(regex, String(value ?? ''));
         }
+
+        console.log(`📧 Sending email via Resend...`);
 
         const { data: emailData, error: emailError } = await resend.emails.send({
           from: 'ROAM Support <support@roamyourbestlife.com>',
@@ -374,6 +398,15 @@ async function sendStatusNotifications(
   options: { notifyCustomer: boolean; notifyProvider: boolean }
 ) {
   try {
+    console.log('📧 sendStatusNotifications called:', {
+      newStatus,
+      notifyCustomer: options.notifyCustomer,
+      notifyProvider: options.notifyProvider,
+      bookingId: booking?.id,
+      customerProfilesType: typeof booking.customer_profiles,
+      isCustomerArray: Array.isArray(booking.customer_profiles)
+    });
+
     const customer = Array.isArray(booking.customer_profiles)
       ? booking.customer_profiles[0]
       : booking.customer_profiles;
@@ -388,6 +421,16 @@ async function sendStatusNotifications(
     const service = Array.isArray(booking.services)
       ? booking.services[0]
       : booking.services;
+
+    console.log('📧 Extracted data:', {
+      hasCustomer: !!customer,
+      customerUserId: customer?.user_id,
+      customerEmail: customer?.email,
+      customerName: customer ? `${customer.first_name || ''} ${customer.last_name || ''}`.trim() : null,
+      hasProvider: !!provider,
+      hasBusiness: !!business,
+      hasService: !!service
+    });
 
     const bookingDateRaw = booking.booking_date || booking.original_booking_date;
     const startTimeRaw = booking.start_time || booking.booking_time || booking.original_start_time;
@@ -440,25 +483,49 @@ async function sendStatusNotifications(
     // Send notifications using inline notification service (Vercel-compatible)
     
     // Notify customer when booking is confirmed/accepted
-    if ((newStatus === 'confirmed' || newStatus === 'accepted') && options.notifyCustomer && customer?.user_id) {
-      await sendNotificationViaService(
-        customer.user_id,
-        'customer_booking_accepted',
-        {
-          customer_name: customerName,
-          service_name: serviceName,
-          provider_name: provider ? `${provider.first_name} ${provider.last_name}` : 'Provider',
-          booking_date: bookingDate,
-          booking_time: bookingTime,
-          booking_location: locationAddress || 'Location TBD',
-          total_amount: totalAmountFormatted,
-          booking_id: booking.id,
-        },
-        {
-          booking_id: booking.id,
-          event_type: 'booking_accepted',
+    if ((newStatus === 'confirmed' || newStatus === 'accepted') && options.notifyCustomer) {
+      console.log('📧 Checking if customer notification should be sent:', {
+        newStatus,
+        notifyCustomer: options.notifyCustomer,
+        hasCustomer: !!customer,
+        customerUserId: customer?.user_id,
+        customerName,
+        customerEmail: customer?.email
+      });
+
+      if (!customer?.user_id) {
+        console.error('❌ Cannot send notification: customer.user_id is missing', {
+          bookingId: booking.id,
+          customerId: customer?.id,
+          customerEmail: customer?.email,
+          customerName
+        });
+      } else {
+        console.log('📧 Sending customer_booking_accepted notification to user:', customer.user_id);
+        try {
+          await sendNotificationViaService(
+            customer.user_id,
+            'customer_booking_accepted',
+            {
+              customer_name: customerName,
+              service_name: serviceName,
+              provider_name: provider ? `${provider.first_name} ${provider.last_name}` : 'Provider',
+              booking_date: bookingDate,
+              booking_time: bookingTime,
+              booking_location: locationAddress || 'Location TBD',
+              total_amount: totalAmountFormatted,
+              booking_id: booking.id,
+            },
+            {
+              booking_id: booking.id,
+              event_type: 'booking_accepted',
+            }
+          );
+          console.log('✅ Notification sent successfully');
+        } catch (notificationError) {
+          console.error('❌ Error sending notification:', notificationError);
         }
-      );
+      }
     }
     
     // Notify customer when booking is completed
