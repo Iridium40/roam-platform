@@ -680,71 +680,17 @@ async function sendStatusNotifications(
         }
       );
     }
-    // Notify providers when booking is cancelled (owners/dispatchers + assigned provider)
-    if (newStatus === 'cancelled' && options.notifyProvider && business && notifyProvidersBookingCancelled) {
-      try {
-        await notifyProvidersBookingCancelled({
-          booking: {
-            id: booking.id,
-            business_id: booking.business_id,
-            provider_id: booking.provider_id,
-            booking_date: bookingDateRaw || '',
-            start_time: startTimeRaw || '',
-            cancellation_reason: booking.cancellation_reason,
-          },
-          service: {
-            name: serviceName,
-          },
-          customer: {
-            first_name: customer?.first_name || booking.guest_name?.split(' ')[0] || 'Customer',
-            last_name: customer?.last_name || booking.guest_name?.split(' ').slice(1).join(' ') || '',
-          },
-          business: {
-            name: locationName,
-            business_address: locationAddress,
-          },
-        });
-      } catch (notificationError) {
-        console.error('⚠️ Error sending cancellation notifications (non-fatal):', notificationError);
-      }
-    }
+    // TODO: Implement provider notifications for cancelled bookings
+    // Should use provider_booking_cancelled template and notify owners/dispatchers + assigned provider
+    // if (newStatus === 'cancelled' && options.notifyProvider && business) {
+    //   // Call sendNotificationViaService for each provider
+    // }
 
-    // Notify providers when booking is rescheduled (owners/dispatchers + assigned provider)
-    // Check if this is a reschedule by looking for reschedule fields
-    if (options.notifyProvider && business && notifyProvidersBookingRescheduled && (
-      booking.rescheduled_at || 
-      booking.reschedule_reason || 
-      (booking.original_booking_date && booking.original_booking_date !== booking.booking_date) ||
-      (booking.original_start_time && booking.original_start_time !== booking.start_time)
-    )) {
-      try {
-        await notifyProvidersBookingRescheduled({
-          booking: {
-            id: booking.id,
-            business_id: booking.business_id,
-            provider_id: booking.provider_id,
-            booking_date: booking.booking_date || '',
-            start_time: booking.start_time || '',
-            original_booking_date: booking.original_booking_date,
-            original_start_time: booking.original_start_time,
-            reschedule_reason: booking.reschedule_reason,
-          },
-          service: {
-            name: serviceName,
-          },
-          customer: {
-            first_name: customer?.first_name || booking.guest_name?.split(' ')[0] || 'Customer',
-            last_name: customer?.last_name || booking.guest_name?.split(' ').slice(1).join(' ') || '',
-          },
-          business: {
-            name: locationName,
-            business_address: locationAddress,
-          },
-        });
-      } catch (notificationError) {
-        console.error('⚠️ Error sending reschedule notifications (non-fatal):', notificationError);
-      }
-    }
+    // TODO: Implement provider notifications for rescheduled bookings  
+    // Should use provider_booking_rescheduled template and notify owners/dispatchers + assigned provider
+    // if (options.notifyProvider && business && (booking.rescheduled_at || booking.reschedule_reason)) {
+    //   // Call sendNotificationViaService for each provider
+    // }
 
     // ✅ All customer notifications now handled by NotificationService above
     // (which checks granular preferences, quiet hours, uses DB templates, etc.)
