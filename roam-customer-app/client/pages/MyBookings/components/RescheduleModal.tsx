@@ -9,7 +9,8 @@ import {
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { AlertCircle, Edit } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectLabel, SelectGroup } from "@/components/ui/select";
+import { AlertCircle, Edit, Clock } from "lucide-react";
 import type { BookingWithDetails } from "@/types/index";
 import { formatBookingDate } from "../utils/bookingCalculations";
 
@@ -42,6 +43,39 @@ export const RescheduleModal: React.FC<RescheduleModalProps> = ({
 }) => {
   if (!booking) return null;
 
+  // Time slots data (matching BookService.tsx)
+  const timeSlots = [
+    { value: '09:00', label: '9:00 AM', period: 'Morning' },
+    { value: '09:30', label: '9:30 AM', period: 'Morning' },
+    { value: '10:00', label: '10:00 AM', period: 'Morning' },
+    { value: '10:30', label: '10:30 AM', period: 'Morning' },
+    { value: '11:00', label: '11:00 AM', period: 'Morning' },
+    { value: '11:30', label: '11:30 AM', period: 'Morning' },
+    { value: '12:00', label: '12:00 PM', period: 'Afternoon' },
+    { value: '12:30', label: '12:30 PM', period: 'Afternoon' },
+    { value: '13:00', label: '1:00 PM', period: 'Afternoon' },
+    { value: '13:30', label: '1:30 PM', period: 'Afternoon' },
+    { value: '14:00', label: '2:00 PM', period: 'Afternoon' },
+    { value: '14:30', label: '2:30 PM', period: 'Afternoon' },
+    { value: '15:00', label: '3:00 PM', period: 'Afternoon' },
+    { value: '15:30', label: '3:30 PM', period: 'Afternoon' },
+    { value: '16:00', label: '4:00 PM', period: 'Afternoon' },
+    { value: '16:30', label: '4:30 PM', period: 'Afternoon' },
+    { value: '17:00', label: '5:00 PM', period: 'Evening' },
+    { value: '17:30', label: '5:30 PM', period: 'Evening' },
+    { value: '18:00', label: '6:00 PM', period: 'Evening' },
+    { value: '18:30', label: '6:30 PM', period: 'Evening' },
+  ];
+
+  // Group time slots by period
+  const groupedTimeSlots = timeSlots.reduce((acc, slot) => {
+    if (!acc[slot.period]) {
+      acc[slot.period] = [];
+    }
+    acc[slot.period].push(slot);
+    return acc;
+  }, {} as Record<string, typeof timeSlots>);
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
@@ -64,7 +98,7 @@ export const RescheduleModal: React.FC<RescheduleModalProps> = ({
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="new-booking-date" className="text-sm font-medium">
                 New Date <span className="text-red-500">*</span>
@@ -82,13 +116,33 @@ export const RescheduleModal: React.FC<RescheduleModalProps> = ({
               <Label htmlFor="new-booking-time" className="text-sm font-medium">
                 New Time <span className="text-red-500">*</span>
               </Label>
-              <Input
-                id="new-booking-time"
-                type="time"
-                value={newBookingTime}
-                onChange={(e) => onNewTimeChange(e.target.value)}
-                required
-              />
+              <Select value={newBookingTime} onValueChange={onNewTimeChange}>
+                <SelectTrigger className="w-full h-12">
+                  <Clock className="mr-2 h-4 w-4" />
+                  <SelectValue placeholder="Select a time slot" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(groupedTimeSlots).map(([period, slots]) => (
+                    <SelectGroup key={period}>
+                      <SelectLabel className="flex items-center">
+                        <Clock className="w-4 h-4 mr-1" />
+                        {period}
+                      </SelectLabel>
+                      {slots.map((slot) => (
+                        <SelectItem key={slot.value} value={slot.value}>
+                          {slot.label}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  ))}
+                </SelectContent>
+              </Select>
+              {newBookingTime && (
+                <div className="text-sm text-gray-600 bg-green-50 p-3 rounded-lg">
+                  <Clock className="w-4 h-4 inline mr-2" />
+                  You selected: {timeSlots.find(slot => slot.value === newBookingTime)?.label}
+                </div>
+              )}
             </div>
           </div>
 
