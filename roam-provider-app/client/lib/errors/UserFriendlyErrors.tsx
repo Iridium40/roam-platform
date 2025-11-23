@@ -134,19 +134,7 @@ export const ERROR_MAPPINGS: ErrorMapping[] = [
     severity: "error",
   },
 
-  // Plaid errors
-  {
-    code: "PLAID_LINK_FAILED",
-    userMessage: "Bank account connection failed. Please try again.",
-    action: "Ensure your bank credentials are correct and try again.",
-    severity: "error",
-  },
-  {
-    code: "PLAID_TOKEN_EXPIRED",
-    userMessage: "Bank connection session expired. Please try again.",
-    action: "Click the link again to reconnect your bank account.",
-    severity: "warning",
-  },
+  // Plaid errors removed - using Stripe Connect for bank connections
 ];
 
 export function getUserFriendlyError(error: Error | string, context?: any): ErrorMapping {

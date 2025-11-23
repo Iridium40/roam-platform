@@ -130,7 +130,7 @@ export const ROAM_EMAIL_TEMPLATES = {
         <li><strong>Background Check & Document Verification</strong> (2-3 business days)</li>
         <li><strong>Admin Review</strong> (1-2 business days)</li>
         <li><strong>Email Notification</strong> with secure link for Phase 2 setup</li>
-        <li><strong>Identity Verification & Financial Setup</strong> (Stripe & Plaid)</li>
+        <li><strong>Identity Verification & Financial Setup</strong> (Stripe Connect)</li>
       </ul>
       
       <div class="info-box">
@@ -158,7 +158,7 @@ export const ROAM_EMAIL_TEMPLATES = {
         <p>Click the button below to complete your Phase 2 setup, including:</p>
         <ul>
           <li>Identity verification with Stripe</li>
-          <li>Bank account connection via Plaid</li>
+          <li>Bank account connection via Stripe Connect</li>
           <li>Payment setup and configuration</li>
           <li>Service pricing and availability</li>
         </ul>

@@ -583,14 +583,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       console.error("Submission data being inserted:", JSON.stringify(submissionData, null, 2));
       return res.status(500).json({ 
         error: "Failed to submit application",
-        details: submissionError.message,
+        details: updateError.message,
         debug: {
           userId,
           businessId,
           submissionData,
-          errorCode: submissionError.code,
-          errorHint: submissionError.hint,
-          errorDetails: submissionError.details
+          errorCode: updateError.code,
+          errorHint: updateError.hint,
+          errorDetails: updateError.details
         }
       });
     }

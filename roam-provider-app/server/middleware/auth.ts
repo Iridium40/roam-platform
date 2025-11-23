@@ -126,7 +126,7 @@ export const requireAuth = (allowedRoles?: string[]) => {
         decoded = { user_id: user.id, email: user.email };
       }
 
-      // Get user roles
+      // Determine user role from customer_profiles or providers tables (user_roles table removed)
       const userId = decoded.user_id || decoded.sub;
       console.log('Fetching roles for user:', userId);
       console.log('Decoded token details:', {
@@ -136,32 +136,42 @@ export const requireAuth = (allowedRoles?: string[]) => {
         tokenKeys: Object.keys(decoded)
       });
 
-      const { data: userRoles, error: rolesError } = await supabaseAdmin
-        .from('user_roles')
-        .select('role, business_id')
+      let userRole = 'customer'; // Default to customer
+      let businessId: string | undefined;
+
+      // Check if user exists in customer_profiles (defaults to customer role)
+      const { data: customerProfile, error: customerError } = await supabaseAdmin
+        .from('customer_profiles')
+        .select('id')
         .eq('user_id', userId)
-        .eq('is_active', true);
-
-      console.log('User roles query result:', {
-        userId,
-        userRoles: userRoles?.length || 0,
-        roles: userRoles?.map(r => r.role),
-        rawUserRoles: userRoles,
-        error: rolesError?.message,
-        errorCode: rolesError?.code,
-        fullError: rolesError
-      });
-
-      if (rolesError) {
-        console.error('Error fetching user roles:', rolesError);
-        return res.status(500).json({
-          error: 'Failed to verify user permissions',
-          code: 'ROLES_ERROR'
-        });
+        .maybeSingle();
+      
+      if (!customerError && customerProfile) {
+        // User is a customer, use default role
+        userRole = 'customer';
+      } else {
+        // Check if user is a provider
+        const { data: providerProfile, error: providerError } = await supabaseAdmin
+          .from('providers')
+          .select('id, provider_role, business_id')
+          .eq('user_id', userId)
+          .maybeSingle();
+        
+        if (!providerError && providerProfile) {
+          // User is a provider, use provider_role or default to 'provider'
+          userRole = (providerProfile.provider_role as string) || 'provider';
+          businessId = providerProfile.business_id;
+        } else {
+          // Default to customer if we can't determine the role
+          userRole = 'customer';
+        }
       }
 
-      const userRole = userRoles?.[0]?.role || 'customer';
-      const businessId = userRoles?.[0]?.business_id;
+      console.log('User role determined:', {
+        userId,
+        userRole,
+        businessId
+      });
 
       console.log('Role permission check:', {
         userRole,
@@ -235,16 +245,15 @@ export const requireBusinessAccess = (businessIdParam: string = 'businessId') =>
         return next();
       }
 
-      // Check if user has access to this business
-      const { data: userRoles, error } = await supabaseAdmin
-        .from('user_roles')
-        .select('role, business_id')
+      // Check if user has access to this business via providers table
+      const { data: provider, error } = await supabaseAdmin
+        .from('providers')
+        .select('id, business_id')
         .eq('user_id', req.user.id)
         .eq('business_id', businessId)
-        .eq('is_active', true)
-        .single();
+        .maybeSingle();
 
-      if (error || !userRoles) {
+      if (error || !provider) {
         return res.status(403).json({ 
           error: 'Access denied to this business',
           code: 'BUSINESS_ACCESS_DENIED'

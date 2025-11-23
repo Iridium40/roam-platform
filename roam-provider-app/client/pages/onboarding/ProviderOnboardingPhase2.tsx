@@ -22,7 +22,7 @@ import QuickSetup from "@/components/Phase2Components/QuickSetup";
 import BankingPayoutSetup from "@/components/Phase2Components/BankingPayoutSetup";
 import ServicePricingSetup from "@/components/Phase2Components/ServicePricingSetup";
 import StripeIdentityVerification from "@/components/StripeIdentityVerification";
-import { PlaidBankConnection } from "@/components/PlaidBankConnection";
+// Plaid integration removed - using Stripe Connect for bank connections
 import StripeConnectSetup from "@/components/StripeConnectSetup";
 
 type Phase2Step =
@@ -244,15 +244,12 @@ export default function ProviderOnboardingPhase2() {
         );
 
       case "bank_connection":
+        // Plaid integration removed - using Stripe Connect for bank connections
         return (
-          <PlaidBankConnection
+          <StripeConnectSetup
             userId={onboardingState.userId!}
             businessId={onboardingState.businessId!}
-            businessType={
-              onboardingState.businessData?.businessType ||
-              "sole_proprietorship"
-            }
-            onConnectionComplete={handleBankConnectionComplete}
+            onSetupComplete={handleBankConnectionComplete}
             className="max-w-2xl mx-auto"
           />
         );

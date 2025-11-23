@@ -198,16 +198,7 @@ export const stripeAPI = {
     ),
 };
 
-// Plaid API endpoints
-export const plaidAPI = {
-  // Create link token
-  createLinkToken: (data: { userId: string; businessId: string }) =>
-    apiClient.post<{ linkToken: string }>("/plaid/create-link-token", data),
-
-  // Exchange public token
-  exchangePublicToken: (data: { publicToken: string; userId: string; businessId: string }) =>
-    apiClient.post("/plaid/exchange-public-token", data),
-};
+// Plaid API endpoints removed - using Stripe Connect for bank connections
 
 // Test API endpoints
 export const testAPI = {
@@ -289,7 +280,7 @@ export const api = {
   provider: providerAPI,
   admin: adminAPI,
   stripe: stripeAPI,
-  plaid: plaidAPI,
+  // plaid: plaidAPI, // Removed - using Stripe Connect
   test: testAPI,
   notifications: notificationsAPI,
   bookings: bookingsAPI,

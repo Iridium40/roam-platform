@@ -19,12 +19,7 @@ export const config = {
     secretKey: env.stripe.secretKey,
     webhookSecret: env.stripe.webhookSecret,
   },
-  plaid: {
-    clientId: env.plaid.clientId,
-    secret: env.plaid.secret,
-    env: env.plaid.env,
-    webhookUrl: env.plaid.webhookUrl,
-  },
+  // Plaid config removed - using Stripe Connect for bank connections
   twilio: {
     accountSid: env.twilio.accountSid,
     authToken: env.twilio.authToken,

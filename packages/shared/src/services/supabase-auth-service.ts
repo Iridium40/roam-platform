@@ -370,38 +370,45 @@ export class SupabaseAuthService extends BaseAuthService implements AuthService 
   }
 
   async assignUserRole(userId: string, role: AuthUserRole): Promise<AuthResult> {
-    try {
-      // Insert or update user role in user_roles table
-      const { data, error } = await this.supabase
-        .from('user_roles')
-        .upsert({
-          user_id: userId,
-          role: role,
-          assigned_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        })
-        .select()
-        .single();
-
-      if (error) {
-        return this.formatErrorResult('Failed to assign user role', 'role_assignment_failed', error);
-      }
-
-      return this.formatSuccessResult(data, `Role ${role} assigned successfully`);
-    } catch (error) {
-      console.error('Assign user role error:', error);
-      return this.formatErrorResult('Internal server error', 'internal_error', error);
-    }
+    // Note: user_roles table has been removed. Roles are now determined from customer_profiles or providers tables.
+    // This method is deprecated and should not be used.
+    return this.formatErrorResult(
+      'User role assignment is no longer supported. Roles are determined from user profiles.',
+      'deprecated_method',
+      null
+    );
   }
 
   async getUserRoles(userId: string): Promise<AuthResult> {
     try {
-      const { data, error } = await this.supabase
-        .from('user_roles')
-        .select('*')
-        .eq('user_id', userId);
+      // user_roles table removed - determine role from customer_profiles or providers tables
+      const { data: customerProfile } = await this.supabase
+        .from('customer_profiles')
+        .select('id')
+        .eq('user_id', userId)
+        .maybeSingle();
 
-      if (error) {
+      if (customerProfile) {
+        return this.formatSuccessResult([{ role: 'customer' }], 'User roles retrieved');
+      }
+
+      const { data: providerProfile } = await this.supabase
+        .from('providers')
+        .select('provider_role, business_id')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (providerProfile) {
+        return this.formatSuccessResult([{ 
+          role: providerProfile.provider_role || 'provider',
+          business_id: providerProfile.business_id
+        }], 'User roles retrieved');
+      }
+
+      // Default to customer if no profile found
+      return this.formatSuccessResult([{ role: 'customer' }], 'User roles retrieved');
+
+      // if (error) {
         return this.formatErrorResult('Failed to get user roles', 'role_retrieval_failed', error);
       }
 

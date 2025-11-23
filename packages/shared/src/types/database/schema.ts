@@ -21,13 +21,11 @@ import {
   CustomerProfilesTable,
   CustomerLocationsTable,
   ProvidersTable,
-  ProviderAvailabilityTable,
-  UserRolesTable
+  ProviderAvailabilityTable
 } from './tables/user';
 
 import {
   TransactionsTable,
-  PlaidBankConnectionsTable,
   ManualBankAccountsTable,
   SubscriptionPlansTable,
   DeviceSubscriptionsTable
@@ -56,7 +54,6 @@ export type Database = {
 
       // Booking and service tables
       bookings: BookingsTable;
-      user_roles: UserRolesTable;
       reviews: ReviewsTable;
       promotions: PromotionsTable;
       promotion_usage: PromotionUsageTable;
@@ -69,7 +66,6 @@ export type Database = {
 
       // Payment tables
       financial_transactions: TransactionsTable;
-      plaid_bank_connections: PlaidBankConnectionsTable;
       business_manual_bank_accounts: ManualBankAccountsTable;
       subscription_plans: SubscriptionPlansTable;
       device_subscriptions: DeviceSubscriptionsTable;

@@ -7,7 +7,7 @@ import {
   handleEdgeNotifications,
   handleNotificationUpdates,
 } from "./routes/edge-notifications";
-import { createLinkToken, exchangePublicToken, checkConnection } from "./routes/plaid";
+// Plaid routes removed - using Stripe Connect for bank connections
 import { getServiceEligibility } from "./routes/service-eligibility";
 import { sendStaffInvite, createStaffManually, validateStaffInvitation, completeStaffOnboarding } from "./routes/staff";
 import { 
@@ -184,52 +184,7 @@ export function createServer() {
     }
   });
 
-  // Plaid routes
-  app.post("/api/plaid/create-link-token", createLinkToken);
-  app.post("/api/plaid/exchange-public-token", async (req, res) => {
-    try {
-      console.log("Local server: Plaid exchange public token route called");
-      
-      // Development mode bypass for Plaid token exchange
-      if (process.env.NODE_ENV === 'development') {
-        console.log("Development mode: Bypassing Plaid token exchange");
-        
-        const { public_token, account_id, userId, businessId } = req.body;
-        
-        // Return mock Plaid connection data
-        res.json({
-          success: true,
-          connection: {
-            access_token: 'access-sandbox-mock123456789',
-            item_id: 'item-sandbox-mock123456789',
-            accounts: [{
-              account_id: account_id || 'mock-account-id',
-              name: 'Mock Checking Account',
-              mask: '1234',
-              type: 'depository',
-              subtype: 'checking'
-            }],
-            institution: {
-              name: 'Mock Bank',
-              institution_id: 'ins_mock123456789'
-            }
-          },
-          testMode: true,
-          message: 'Development mode: Mock Plaid connection created'
-        });
-        return;
-      }
-      
-      // Production mode: use validation and handler
-      validateRequest(schemas.plaidToken)(req, res, () => {
-        exchangePublicToken(req, res);
-      });
-    } catch (error) {
-      console.error("Error in Plaid exchange public token:", error);
-      res.status(500).json({ error: "Failed to process Plaid token exchange" });
-    }
-  });
-  app.get("/api/plaid/check-connection/:userId", checkConnection);
+  // Plaid routes removed - using Stripe Connect for bank connections
 
   // Stripe create connect account route
   app.post("/api/stripe/create-connect-account", async (req, res) => {

@@ -63,21 +63,7 @@ export const schemas = {
     data: z.record(z.any()).optional()
   }),
   
-  plaidToken: z.object({
-    publicToken: z.string(),
-    metadata: z.object({
-      institution: z.object({
-        name: z.string()
-      }),
-      accounts: z.array(z.object({
-        id: z.string(),
-        name: z.string(),
-        mask: z.string(),
-        type: z.string(),
-        subtype: z.string()
-      }))
-    })
-  }),
+  // plaidToken schema removed - using Stripe Connect for bank connections
   
   applicationApproval: z.object({
     applicationId: uuidSchema,

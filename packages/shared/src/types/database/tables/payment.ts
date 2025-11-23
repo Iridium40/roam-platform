@@ -50,73 +50,6 @@ export interface TransactionsTable {
   };
 }
 
-// Plaid Bank Connections Table
-export interface PlaidBankConnectionsTable {
-  Row: {
-    id: string;
-    user_id: string | null;
-    business_id: string | null;
-    plaid_access_token: string | null;
-    plaid_item_id: string | null;
-    plaid_account_id: string | null;
-    institution_id: string | null;
-    institution_name: string | null;
-    account_name: string | null;
-    account_mask: string | null;
-    account_type: string | null;
-    account_subtype: string | null;
-    verification_status: string | null;
-    routing_numbers: string[] | null;
-    account_number_mask: string | null;
-    connected_at: string | null;
-    is_active: boolean | null;
-    created_at: string | null;
-    updated_at: string | null;
-  };
-  Insert: {
-    id?: string;
-    user_id?: string | null;
-    business_id?: string | null;
-    plaid_access_token?: string | null;
-    plaid_item_id?: string | null;
-    plaid_account_id?: string | null;
-    institution_id?: string | null;
-    institution_name?: string | null;
-    account_name?: string | null;
-    account_mask?: string | null;
-    account_type?: string | null;
-    account_subtype?: string | null;
-    verification_status?: string | null;
-    routing_numbers?: string[] | null;
-    account_number_mask?: string | null;
-    connected_at?: string | null;
-    is_active?: boolean | null;
-    created_at?: string | null;
-    updated_at?: string | null;
-  };
-  Update: {
-    id?: string;
-    user_id?: string | null;
-    business_id?: string | null;
-    plaid_access_token?: string | null;
-    plaid_item_id?: string | null;
-    plaid_account_id?: string | null;
-    institution_id?: string | null;
-    institution_name?: string | null;
-    account_name?: string | null;
-    account_mask?: string | null;
-    account_type?: string | null;
-    account_subtype?: string | null;
-    verification_status?: string | null;
-    routing_numbers?: string[] | null;
-    account_number_mask?: string | null;
-    connected_at?: string | null;
-    is_active?: boolean | null;
-    created_at?: string | null;
-    updated_at?: string | null;
-  };
-}
-
 // Business Manual Bank Accounts Table
 export interface ManualBankAccountsTable {
   Row: {
@@ -278,7 +211,6 @@ export interface DeviceSubscriptionsTable {
 
 // Type exports for convenience
 export type Transaction = TransactionsTable['Row'];
-export type PlaidBankConnection = PlaidBankConnectionsTable['Row'];
 export type ManualBankAccount = ManualBankAccountsTable['Row'];
 export type SubscriptionPlan = SubscriptionPlansTable['Row'];
 export type DeviceSubscription = DeviceSubscriptionsTable['Row'];

@@ -387,13 +387,13 @@ Provider booking preferences and settings.
 ### `provider_bank_accounts`
 **Rows**: 0 | **RLS**: ✅ Enabled
 
-Provider Plaid bank account connections.
+Provider bank account connections (deprecated - using Stripe Connect).
 
 **Key Columns**:
 - `id` (uuid, PK)
 - `user_id` (uuid, FK → auth.users.id)
 - `business_id` (uuid, unique, FK → business_profiles.id)
-- `plaid_access_token`, `plaid_item_id` (text, unique)
+- `plaid_access_token`, `plaid_item_id` (text, unique) - Deprecated, using Stripe Connect
 - `account_data`, `institution_data` (jsonb)
 - `webhook_status` (text)
 - `webhook_error` (jsonb)
@@ -679,7 +679,7 @@ Business onboarding progress tracking.
 - `banking_payout_completed` (boolean, default: false)
 - `banking_payout_data` (jsonb, default: `{}`)
 - `stripe_connect_completed` (boolean, default: false)
-- `plaid_connected` (boolean, default: false)
+- `plaid_connected` (boolean, default: false) - Deprecated, using `stripe_connect_completed` instead
 - `integrations_completed` (boolean, default: false)
 - `subscription_completed` (boolean, default: false)
 - `final_review_completed` (boolean, default: false)
@@ -1429,7 +1429,9 @@ Manual bank account management for businesses.
 
 ---
 
-### `plaid_bank_connections`
+<!-- Plaid tables removed: plaid_bank_connections, plaid_link_sessions -->
+
+---
 **Rows**: 0 | **RLS**: ✅ Enabled
 
 Plaid integration.

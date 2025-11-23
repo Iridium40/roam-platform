@@ -81,33 +81,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     console.log("Business profile found:", businessProfile.business_name);
 
-    // Get the most recent application for this business (optional - business can be approved without application)
-    const { data: applications, error: applicationError } = await supabase
-      .from("provider_applications")
-      .select("*")
-      .eq("business_id", businessId)
-      .order("submitted_at", { ascending: false });
-
-    if (applicationError) {
-      console.error("Error fetching applications:", applicationError);
-      // Don't block approval if we can't fetch applications
-      console.warn("Continuing approval without application record");
-    }
-
-    let application = applications && applications.length > 0 ? applications[0] : null;
-    
-    if (application) {
-      console.log(`Found ${applications.length} application(s), using most recent`);
-      console.log("Application found, status:", application.application_status);
-      
-      // Only check status if application exists and is not already approved
-      if (application.application_status !== "submitted" && application.application_status !== "approved") {
-        console.warn("Application not in submitted status:", application.application_status);
-        // Don't block - allow approval anyway
-      }
-    } else {
-      console.warn("No application record found for business - approving business directly");
-    }
+    // Note: provider_applications table removed - approval is based on business_profiles verification_status only
 
     console.log("Updating business profile...");
     // Update business profile to approved
