@@ -680,17 +680,179 @@ async function sendStatusNotifications(
         }
       );
     }
-    // TODO: Implement provider notifications for cancelled bookings
-    // Should use provider_booking_cancelled template and notify owners/dispatchers + assigned provider
-    // if (newStatus === 'cancelled' && options.notifyProvider && business) {
-    //   // Call sendNotificationViaService for each provider
-    // }
+    
+    // Notify customer when booking is declined
+    if (newStatus === 'declined' && options.notifyCustomer && customer?.user_id) {
+      console.log('📧 Sending customer_booking_declined notification to user:', customer.user_id);
+      await sendNotificationViaService(
+        customer.user_id,
+        'customer_booking_declined',
+        {
+          customer_name: customerName,
+          service_name: serviceName,
+          provider_name: provider ? `${provider.first_name} ${provider.last_name}` : 'Provider',
+          booking_date: bookingDate,
+          booking_time: bookingTime,
+          booking_location: locationAddress,
+          decline_reason: booking.decline_reason || 'The provider is unavailable at the requested time.',
+          booking_id: booking.id,
+        },
+        {
+          booking_id: booking.id,
+          event_type: 'booking_declined',
+        }
+      );
+      console.log('✅ Declined notification sent successfully');
+    }
+    
+    // Notify providers when booking is cancelled by customer
+    if (newStatus === 'cancelled' && options.notifyProvider && business) {
+      console.log('📧 Booking cancelled - notifying providers');
+      
+      // Query owners and dispatchers for the business
+      const { data: businessProviders, error: providersError } = await supabase
+        .from('providers')
+        .select('id, user_id, provider_role, is_active')
+        .eq('business_id', booking.business_id)
+        .eq('is_active', true)
+        .in('provider_role', ['owner', 'dispatcher']);
 
-    // TODO: Implement provider notifications for rescheduled bookings  
-    // Should use provider_booking_rescheduled template and notify owners/dispatchers + assigned provider
-    // if (options.notifyProvider && business && (booking.rescheduled_at || booking.reschedule_reason)) {
-    //   // Call sendNotificationViaService for each provider
-    // }
+      let providersToNotify: Array<{ id: string; user_id: string; provider_role: string }> = businessProviders || [];
+
+      // If booking has an assigned provider, add them too
+      if (booking.provider_id) {
+        const { data: assignedProvider } = await supabase
+          .from('providers')
+          .select('id, user_id, provider_role, is_active')
+          .eq('id', booking.provider_id)
+          .eq('is_active', true)
+          .single();
+
+        if (assignedProvider) {
+          const alreadyNotified = providersToNotify.some(p => p.id === assignedProvider.id);
+          if (!alreadyNotified) {
+            providersToNotify.push(assignedProvider);
+          }
+        }
+      }
+
+      console.log(`📧 Notifying ${providersToNotify.length} provider(s) about cancellation`);
+
+      // Send notification to each provider
+      for (const providerToNotify of providersToNotify) {
+        try {
+          await sendNotificationViaService(
+            providerToNotify.user_id,
+            'provider_booking_cancelled',
+            {
+              provider_name: `${providerToNotify.provider_role}`,
+              customer_name: customerName,
+              service_name: serviceName,
+              booking_date: bookingDate,
+              booking_time: bookingTime,
+              booking_location: locationAddress,
+              cancellation_reason: booking.cancellation_reason || 'No reason provided',
+              booking_id: booking.id,
+            },
+            {
+              booking_id: booking.id,
+              event_type: 'booking_cancelled',
+              provider_id: providerToNotify.id,
+            }
+          );
+          console.log(`✅ Cancellation notification sent to provider ${providerToNotify.id}`);
+        } catch (error) {
+          console.error(`❌ Failed to notify provider ${providerToNotify.id}:`, error);
+        }
+      }
+    }
+
+    // Notify providers when booking is rescheduled by customer
+    if (options.notifyProvider && business && (
+      booking.rescheduled_at || 
+      booking.reschedule_reason || 
+      (booking.original_booking_date && booking.original_booking_date !== booking.booking_date) ||
+      (booking.original_start_time && booking.original_start_time !== booking.start_time)
+    )) {
+      console.log('📧 Booking rescheduled - notifying providers');
+      
+      // Query owners and dispatchers for the business
+      const { data: businessProviders, error: providersError } = await supabase
+        .from('providers')
+        .select('id, user_id, provider_role, is_active')
+        .eq('business_id', booking.business_id)
+        .eq('is_active', true)
+        .in('provider_role', ['owner', 'dispatcher']);
+
+      let providersToNotify: Array<{ id: string; user_id: string; provider_role: string }> = businessProviders || [];
+
+      // If booking has an assigned provider, add them too
+      if (booking.provider_id) {
+        const { data: assignedProvider } = await supabase
+          .from('providers')
+          .select('id, user_id, provider_role, is_active')
+          .eq('id', booking.provider_id)
+          .eq('is_active', true)
+          .single();
+
+        if (assignedProvider) {
+          const alreadyNotified = providersToNotify.some(p => p.id === assignedProvider.id);
+          if (!alreadyNotified) {
+            providersToNotify.push(assignedProvider);
+          }
+        }
+      }
+
+      console.log(`📧 Notifying ${providersToNotify.length} provider(s) about reschedule`);
+
+      // Format original date and time
+      const originalDate = booking.original_booking_date
+        ? new Date(booking.original_booking_date).toLocaleDateString('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+          })
+        : 'Unknown';
+
+      const originalTime = booking.original_start_time
+        ? new Date(`2000-01-01T${booking.original_start_time}`).toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true,
+          })
+        : 'Unknown';
+
+      // Send notification to each provider
+      for (const providerToNotify of providersToNotify) {
+        try {
+          await sendNotificationViaService(
+            providerToNotify.user_id,
+            'provider_booking_rescheduled',
+            {
+              provider_name: `${providerToNotify.provider_role}`,
+              customer_name: customerName,
+              service_name: serviceName,
+              original_date: originalDate,
+              original_time: originalTime,
+              new_date: bookingDate,
+              new_time: bookingTime,
+              booking_location: locationAddress,
+              reschedule_reason: booking.reschedule_reason || 'No reason provided',
+              booking_id: booking.id,
+            },
+            {
+              booking_id: booking.id,
+              event_type: 'booking_rescheduled',
+              provider_id: providerToNotify.id,
+            }
+          );
+          console.log(`✅ Reschedule notification sent to provider ${providerToNotify.id}`);
+        } catch (error) {
+          console.error(`❌ Failed to notify provider ${providerToNotify.id}:`, error);
+        }
+      }
+    }
 
     // ✅ All customer notifications now handled by NotificationService above
     // (which checks granular preferences, quiet hours, uses DB templates, etc.)
