@@ -317,6 +317,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           business_name,
           contact_email
         ),
+        business_locations!bookings_business_location_id_fkey (
+          id,
+          location_name,
+          address_line1,
+          address_line2,
+          city,
+          state,
+          postal_code,
+          country
+        ),
+        customer_locations!bookings_customer_location_id_fkey (
+          id,
+          location_name,
+          street_address,
+          unit_number,
+          city,
+          state,
+          zip_code
+        ),
         services (
           id,
           name
@@ -439,7 +458,35 @@ async function sendStatusNotifications(
     const bookingDateRaw = booking.booking_date || booking.original_booking_date;
     const startTimeRaw = booking.start_time || booking.booking_time || booking.original_start_time;
     const locationName = business?.business_name || booking.business_name || 'Location';
-    const locationAddress = business?.business_address || booking.business_address || booking.service_location;
+    
+    // Format location address from business_locations or customer_locations
+    let locationAddress = '';
+    
+    // Check if booking has business location (most common case)
+    if (booking.business_locations && Array.isArray(booking.business_locations) && booking.business_locations[0]) {
+      const loc = booking.business_locations[0];
+      const parts = [
+        loc.address_line1,
+        loc.address_line2,
+        `${loc.city}, ${loc.state} ${loc.postal_code}`,
+      ].filter(Boolean);
+      locationAddress = parts.join(', ');
+    }
+    // Check if booking has customer location (for mobile services)
+    else if (booking.customer_locations && Array.isArray(booking.customer_locations) && booking.customer_locations[0]) {
+      const loc = booking.customer_locations[0];
+      const parts = [
+        loc.street_address,
+        loc.unit_number,
+        `${loc.city}, ${loc.state} ${loc.zip_code}`,
+      ].filter(Boolean);
+      locationAddress = parts.join(', ');
+    }
+    // Fallback (should rarely happen)
+    else {
+      locationAddress = 'Location TBD';
+    }
+    
     const serviceName = service?.name || booking.service_name || 'Service';
 
     const totalAmountValue =
@@ -516,7 +563,7 @@ async function sendStatusNotifications(
               provider_name: provider ? `${provider.first_name} ${provider.last_name}` : 'Provider',
               booking_date: bookingDate,
               booking_time: bookingTime,
-              booking_location: locationAddress || 'Location TBD',
+              booking_location: locationAddress,
               total_amount: totalAmountFormatted,
               booking_id: booking.id,
             },
@@ -545,7 +592,7 @@ async function sendStatusNotifications(
           booking_id: booking.id,
           booking_date: bookingDate,
           booking_time: bookingTime,
-          booking_location: locationAddress || 'Location TBD',
+          booking_location: locationAddress,
           total_amount: totalAmountFormatted,
         },
         {
