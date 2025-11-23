@@ -335,19 +335,19 @@ export function CheckoutForm({ bookingDetails, clientSecret, onSuccess, onError 
                       </Button>
                     </div>
                   ))}
+                  
+                  <div
+                    className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 ${
+                      selectedPaymentMethod === 'new' ? 'border-roam-blue bg-blue-50' : ''
+                    }`}
+                    onClick={() => setSelectedPaymentMethod('new')}
+                  >
+                    <RadioGroupItem value="new" id="new" />
+                    <Label htmlFor="new" className="cursor-pointer">
+                      Use a new payment method
+                    </Label>
+                  </div>
                 </RadioGroup>
-                
-                <div
-                  className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 ${
-                    selectedPaymentMethod === 'new' ? 'border-roam-blue bg-blue-50' : ''
-                  }`}
-                  onClick={() => setSelectedPaymentMethod('new')}
-                >
-                  <RadioGroupItem value="new" id="new" />
-                  <Label htmlFor="new" className="cursor-pointer">
-                    Use a new payment method
-                  </Label>
-                </div>
               </div>
             )}
 

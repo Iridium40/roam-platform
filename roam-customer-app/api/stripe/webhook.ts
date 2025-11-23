@@ -472,13 +472,12 @@ async function handleBookingPayment(session: Stripe.Checkout.Session) {
   });
 
   // Process the payment using the same logic as handlePaymentIntentSucceeded
-  // Update booking status to confirmed
+  // Update booking status to confirmed (without stripe_payment_intent_id - that column doesn't exist)
   const { error: updateError } = await supabase
     .from('bookings')
     .update({
       booking_status: 'confirmed',
       payment_status: 'completed',
-      stripe_payment_intent_id: paymentIntent.id,
     })
     .eq('id', booking.id);
 
@@ -573,33 +572,57 @@ async function handleBookingPayment(session: Stripe.Checkout.Session) {
     console.log('✅ Financial transaction recorded:', financialTransaction?.id);
   }
 
-  // Record payment splits
-  const platformFee = totalAmount * 0.12;
+  // Calculate platform fee for business_payment_transactions
+  // Get platform fee from payment intent metadata or use default
+  const platformFeePercentage = parseFloat(paymentIntent.metadata?.platformFee || '0.2'); // Default 20% if not in metadata
+  const platformFee = totalAmount * platformFeePercentage;
   const providerAmount = totalAmount - platformFee;
 
-  await supabase.from('payment_transactions').insert({
-    booking_id: booking.id,
-    transaction_type: 'platform_fee',
-    amount: platformFee,
-    destination_account: 'roam_platform',
-    stripe_payment_intent_id: paymentIntent.id,
-    stripe_charge_id: paymentIntent.latest_charge as string,
-    status: 'completed',
-    processed_at: new Date().toISOString()
-  });
+  console.log(`✅ Financial transaction recorded for booking ${booking.id}`);
 
-  await supabase.from('payment_transactions').insert({
-    booking_id: booking.id,
-    transaction_type: 'provider_payout',
-    amount: providerAmount,
-    destination_account: 'provider_connected',
-    stripe_payment_intent_id: paymentIntent.id,
-    stripe_charge_id: paymentIntent.latest_charge as string,
-    status: 'pending',
-    processed_at: null
-  });
+  // Create business_payment_transactions record
+  // Use the same platformFee calculated above
+  const netPaymentAmount = totalAmount - platformFee;
+  
+  // Extract tax year from booking date or use current year
+  const bookingDate = booking.booking_date ? new Date(booking.booking_date) : new Date();
+  const taxYear = bookingDate.getFullYear();
+  const paymentDate = bookingDate.toISOString().split('T')[0]; // Format as YYYY-MM-DD
 
-  console.log(`✅ All financial transactions recorded for booking ${booking.id}`);
+  // Get Stripe Connect account ID from business profile if available
+  const { data: businessProfile } = await supabase
+    .from('business_profiles')
+    .select('stripe_connect_account_id')
+    .eq('id', booking.business_id)
+    .single();
+
+  const businessPaymentTransactionData = {
+    booking_id: booking.id,
+    business_id: booking.business_id,
+    payment_date: paymentDate,
+    gross_payment_amount: totalAmount,
+    platform_fee: platformFee,
+    net_payment_amount: netPaymentAmount,
+    tax_year: taxYear,
+    stripe_payment_intent_id: paymentIntent.id,
+    stripe_connect_account_id: businessProfile?.stripe_connect_account_id || null,
+    transaction_description: 'Platform service payment',
+    booking_reference: booking.booking_reference || null,
+  };
+
+  const { data: businessPaymentTransaction, error: businessPaymentError } = await supabase
+    .from('business_payment_transactions')
+    .insert(businessPaymentTransactionData)
+    .select()
+    .single();
+
+  if (businessPaymentError) {
+    console.error('❌ Error creating business_payment_transactions record:', businessPaymentError);
+    // Don't throw - this is not critical for the booking confirmation
+    console.warn('⚠️ Business payment transaction creation failed, but booking was confirmed');
+  } else {
+    console.log('✅ Business payment transaction created:', businessPaymentTransaction.id);
+  }
 }
 
 async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent) {
@@ -719,13 +742,12 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
       payment_status: booking.payment_status
     });
 
-    // Update booking status to confirmed
+    // Update booking status to confirmed (without stripe_payment_intent_id - that column doesn't exist)
     const { error: updateError } = await supabase
       .from('bookings')
       .update({
         booking_status: 'confirmed',
         payment_status: 'completed',
-        stripe_payment_intent_id: paymentIntent.id,
       })
       .eq('id', bookingId);
 
@@ -841,49 +863,60 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
       console.log('✅ Financial transaction recorded:', financialTransaction?.id);
     }
 
-    // Record payment splits in payment_transactions
-    const platformFee = totalAmount * 0.12; // 12% platform fee
+    // Calculate platform fee for business_payment_transactions
+    // Get platform fee from payment intent metadata or use default
+    const platformFeePercentage = parseFloat(paymentIntent.metadata?.platformFee || '0.2'); // Default 20% if not in metadata
+    const platformFee = totalAmount * platformFeePercentage;
     const providerAmount = totalAmount - platformFee;
 
-    console.log(`💰 Recording payment splits: Platform $${platformFee.toFixed(2)}, Provider $${providerAmount.toFixed(2)}`);
+    console.log(`💰 Payment splits calculated: Platform $${platformFee.toFixed(2)}, Provider $${providerAmount.toFixed(2)}`);
 
-    // Platform fee transaction
-    const { error: platformError } = await supabase.from('payment_transactions').insert({
+    // Create business_payment_transactions record
+    const totalAmount = paymentIntent.amount / 100;
+    const platformFeePercentage = parseFloat(paymentIntent.metadata.platformFee || '0.2'); // Default 20% if not in metadata
+    const platformFee = totalAmount * platformFeePercentage;
+    const netPaymentAmount = totalAmount - platformFee;
+    
+    // Extract tax year from booking date or use current year
+    const bookingDate = booking.booking_date ? new Date(booking.booking_date) : new Date();
+    const taxYear = bookingDate.getFullYear();
+    const paymentDate = bookingDate.toISOString().split('T')[0]; // Format as YYYY-MM-DD
+
+    // Get Stripe Connect account ID from business profile if available
+    const { data: businessProfile } = await supabase
+      .from('business_profiles')
+      .select('stripe_connect_account_id')
+      .eq('id', booking.business_id)
+      .single();
+
+    const businessPaymentTransactionData = {
       booking_id: bookingId,
-      transaction_type: 'platform_fee', // Fixed: use enum value 'platform_fee' instead of 'service_fee'
-      amount: platformFee,
-      destination_account: 'roam_platform',
+      business_id: booking.business_id,
+      payment_date: paymentDate,
+      gross_payment_amount: totalAmount,
+      platform_fee: platformFee,
+      net_payment_amount: netPaymentAmount,
+      tax_year: taxYear,
       stripe_payment_intent_id: paymentIntent.id,
-      stripe_charge_id: paymentIntent.latest_charge as string,
-      status: 'completed',
-      processed_at: new Date().toISOString()
-    });
+      stripe_connect_account_id: businessProfile?.stripe_connect_account_id || null,
+      transaction_description: 'Platform service payment',
+      booking_reference: booking.booking_reference || null,
+    };
 
-    if (platformError) {
-      console.error('❌ Error recording platform fee:', platformError);
-      throw platformError;
+    const { data: businessPaymentTransaction, error: businessPaymentError } = await supabase
+      .from('business_payment_transactions')
+      .insert(businessPaymentTransactionData)
+      .select()
+      .single();
+
+    if (businessPaymentError) {
+      console.error('❌ Error creating business_payment_transactions record:', businessPaymentError);
+      // Don't throw - this is not critical for the booking confirmation
+      console.warn('⚠️ Business payment transaction creation failed, but booking was confirmed');
+    } else {
+      console.log('✅ Business payment transaction created:', businessPaymentTransaction.id);
     }
 
-    console.log('✅ Platform fee transaction recorded');
-
-    // Provider payment transaction (pending transfer)
-    const { error: providerError } = await supabase.from('payment_transactions').insert({
-      booking_id: bookingId,
-      transaction_type: 'provider_payout', // Fixed: use enum value 'provider_payout' instead of 'remaining_balance'
-      amount: providerAmount,
-      destination_account: 'provider_connected',
-      stripe_payment_intent_id: paymentIntent.id,
-      stripe_charge_id: paymentIntent.latest_charge as string,
-      status: 'pending', // Will be completed when transferred to provider
-      processed_at: null
-    });
-
-    if (providerError) {
-      console.error('❌ Error recording provider payment:', providerError);
-      throw providerError;
-    }
-
-    console.log('✅ Provider payment transaction recorded');
     console.log(`✅ All financial transactions recorded for booking ${bookingId}`);
 
   } catch (error: any) {
