@@ -407,12 +407,6 @@ export class SupabaseAuthService extends BaseAuthService implements AuthService 
 
       // Default to customer if no profile found
       return this.formatSuccessResult([{ role: 'customer' }], 'User roles retrieved');
-
-      // if (error) {
-        return this.formatErrorResult('Failed to get user roles', 'role_retrieval_failed', error);
-      }
-
-      return this.formatSuccessResult(data, 'User roles retrieved successfully');
     } catch (error) {
       console.error('Get user roles error:', error);
       return this.formatErrorResult('Internal server error', 'internal_error', error);
