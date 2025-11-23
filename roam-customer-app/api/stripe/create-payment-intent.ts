@@ -219,7 +219,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Get customer details from Supabase
     const { data: customer, error: customerError } = await supabase
       .from('customer_profiles')
-      .select('*')
+      .select('id, user_id, email, first_name, last_name, phone')
       .eq('id', customerId)
       .single();
 
@@ -228,13 +228,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Get or create Stripe customer
+    // IMPORTANT: Use customer.user_id (not customerId) to lookup Stripe profile
     let stripeCustomerId: string | undefined;
     
     // Check if customer already has a Stripe profile
     const { data: existingProfile } = await supabase
       .from('customer_stripe_profiles')
       .select('stripe_customer_id')
-      .eq('user_id', customerId)
+      .eq('user_id', customer.user_id) // Use customer.user_id, not customerId
       .single();
 
     if (existingProfile) {
@@ -246,7 +247,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         name: guestName,
         phone: guestPhone,
         metadata: {
-          user_id: customerId,
+          user_id: customer.user_id, // Use customer.user_id, not customerId
           source: 'roam_booking'
         }
       });
@@ -257,7 +258,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       await supabase
         .from('customer_stripe_profiles')
         .insert({
-          user_id: customerId,
+          user_id: customer.user_id, // Use customer.user_id, not customerId
           stripe_customer_id: stripeCustomerId,
           stripe_email: guestEmail
         });

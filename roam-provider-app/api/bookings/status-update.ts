@@ -61,7 +61,7 @@ async function sendNotificationViaService(
     }
 
     // 5. Get notification template from database
-    console.log(`🔍 Looking up notification template: ${notificationType}`);
+    console.log(`🔍 Looking up notification template: ${notificationType} for user: ${userId}`);
     const { data: template, error: templateError } = await supabase
       .from('notification_templates')
       .select('*')
@@ -70,18 +70,29 @@ async function sendNotificationViaService(
       .single();
 
     if (templateError) {
-      console.error(`❌ Error fetching template: ${notificationType}`, templateError);
+      console.error(`❌ Error fetching template: ${notificationType}`, {
+        error: templateError,
+        message: templateError.message,
+        code: templateError.code,
+        details: templateError.details,
+        hint: templateError.hint,
+      });
       return;
     }
 
     if (!template) {
       console.error(`❌ Template not found or inactive: ${notificationType}`);
+      console.error(`❌ Check if template exists in notification_templates table with template_key='${notificationType}' and is_active=true`);
       return;
     }
 
     console.log(`✅ Template found: ${notificationType}`, {
+      templateId: template.id,
+      templateKey: template.template_key,
       hasEmailBody: !!template.email_body_html,
-      hasSubject: !!template.email_subject
+      hasSubject: !!template.email_subject,
+      emailBodyLength: template.email_body_html?.length || 0,
+      subjectLength: template.email_subject?.length || 0,
     });
 
     // 6. Get recipient contact info (prioritize custom notification email/phone)
@@ -120,10 +131,21 @@ async function sendNotificationViaService(
     console.log(`📧 Email sending check:`, {
       emailAllowed,
       hasRecipientEmail: !!recipientEmail,
-      recipientEmail,
+      recipientEmail: recipientEmail ? recipientEmail.substring(0, 10) + '...' : null, // Log partial email for privacy
       hasTemplateBody: !!template.email_body_html,
-      notificationType
+      notificationType,
+      userId,
     });
+
+    if (!emailAllowed) {
+      console.log(`ℹ️ Email not allowed for ${notificationType} - user preferences or quiet hours`);
+    }
+    if (!recipientEmail) {
+      console.warn(`⚠️ No recipient email found for user ${userId}`);
+    }
+    if (!template.email_body_html) {
+      console.warn(`⚠️ Template ${notificationType} has no email body HTML`);
+    }
 
     if (emailAllowed && recipientEmail && template.email_body_html) {
       try {
@@ -452,7 +474,17 @@ async function sendStatusNotifications(
       customerName: customer ? `${customer.first_name || ''} ${customer.last_name || ''}`.trim() : null,
       hasProvider: !!provider,
       hasBusiness: !!business,
-      hasService: !!service
+      hasService: !!service,
+      hasBusinessLocations: !!booking.business_locations,
+      businessLocationsType: typeof booking.business_locations,
+      isBusinessLocationsArray: Array.isArray(booking.business_locations),
+      businessLocationsLength: Array.isArray(booking.business_locations) ? booking.business_locations.length : 0,
+      hasCustomerLocations: !!booking.customer_locations,
+      customerLocationsType: typeof booking.customer_locations,
+      isCustomerLocationsArray: Array.isArray(booking.customer_locations),
+      customerLocationsLength: Array.isArray(booking.customer_locations) ? booking.customer_locations.length : 0,
+      businessLocationId: booking.business_location_id,
+      customerLocationId: booking.customer_location_id,
     });
 
     const bookingDateRaw = booking.booking_date || booking.original_booking_date;
@@ -460,30 +492,79 @@ async function sendStatusNotifications(
     const locationName = business?.business_name || booking.business_name || 'Location';
     
     // Format location address from business_locations or customer_locations
+    // Note: Supabase foreign key relationships can return either a single object or an array
     let locationAddress = '';
     
+    // Helper function to get location object (handles both array and single object)
+    const getLocationObject = (locationData: any) => {
+      if (!locationData) return null;
+      if (Array.isArray(locationData)) {
+        return locationData.length > 0 ? locationData[0] : null;
+      }
+      return locationData; // Single object
+    };
+    
     // Check if booking has business location (most common case)
-    if (booking.business_locations && Array.isArray(booking.business_locations) && booking.business_locations[0]) {
-      const loc = booking.business_locations[0];
+    const businessLocation = getLocationObject(booking.business_locations);
+    if (businessLocation) {
+      console.log('📧 Found business location:', {
+        address_line1: businessLocation.address_line1,
+        address_line2: businessLocation.address_line2,
+        city: businessLocation.city,
+        state: businessLocation.state,
+        postal_code: businessLocation.postal_code,
+      });
       const parts = [
-        loc.address_line1,
-        loc.address_line2,
-        `${loc.city}, ${loc.state} ${loc.postal_code}`,
+        businessLocation.address_line1,
+        businessLocation.address_line2,
+        businessLocation.city && businessLocation.state && businessLocation.postal_code 
+          ? `${businessLocation.city}, ${businessLocation.state} ${businessLocation.postal_code}` 
+          : null,
       ].filter(Boolean);
       locationAddress = parts.join(', ');
+      console.log('📧 Formatted business location address:', locationAddress);
     }
     // Check if booking has customer location (for mobile services)
-    else if (booking.customer_locations && Array.isArray(booking.customer_locations) && booking.customer_locations[0]) {
-      const loc = booking.customer_locations[0];
-      const parts = [
-        loc.street_address,
-        loc.unit_number,
-        `${loc.city}, ${loc.state} ${loc.zip_code}`,
-      ].filter(Boolean);
-      locationAddress = parts.join(', ');
-    }
-    // Fallback (should rarely happen)
     else {
+      const customerLocation = getLocationObject(booking.customer_locations);
+      if (customerLocation) {
+        console.log('📧 Found customer location:', {
+          street_address: customerLocation.street_address,
+          unit_number: customerLocation.unit_number,
+          city: customerLocation.city,
+          state: customerLocation.state,
+          zip_code: customerLocation.zip_code,
+        });
+        const parts = [
+          customerLocation.street_address,
+          customerLocation.unit_number,
+          customerLocation.city && customerLocation.state && customerLocation.zip_code 
+            ? `${customerLocation.city}, ${customerLocation.state} ${customerLocation.zip_code}` 
+            : null,
+        ].filter(Boolean);
+        locationAddress = parts.join(', ');
+        console.log('📧 Formatted customer location address:', locationAddress);
+      }
+      // Fallback (should rarely happen)
+      else {
+        console.warn('⚠️ No location data found in booking. Using fallback.');
+        locationAddress = 'Location TBD';
+      }
+    }
+    
+    // Ensure location is not empty or "TBD" if we have location IDs
+    if ((locationAddress === 'Location TBD' || !locationAddress) && (booking.business_location_id || booking.customer_location_id)) {
+      console.warn('⚠️ Location IDs exist but location data not fetched. Location ID:', {
+        business_location_id: booking.business_location_id,
+        customer_location_id: booking.customer_location_id,
+        business_locations: booking.business_locations,
+        customer_locations: booking.customer_locations,
+      });
+    }
+    
+    // Final validation - ensure location is not empty
+    if (!locationAddress || locationAddress.trim() === '') {
+      console.warn('⚠️ Location address is empty, using fallback');
       locationAddress = 'Location TBD';
     }
     
@@ -541,7 +622,11 @@ async function sendStatusNotifications(
         hasCustomer: !!customer,
         customerUserId: customer?.user_id,
         customerName,
-        customerEmail: customer?.email
+        customerEmail: customer?.email,
+        locationAddress,
+        bookingDate,
+        bookingTime,
+        serviceName,
       });
 
       if (!customer?.user_id) {
@@ -549,12 +634,23 @@ async function sendStatusNotifications(
           bookingId: booking.id,
           customerId: customer?.id,
           customerEmail: customer?.email,
-          customerName
+          customerName,
+          customerData: customer,
         });
       } else {
         console.log('📧 Sending customer_booking_accepted notification to user:', customer.user_id);
+        console.log('📧 Notification payload:', {
+          customer_name: customerName,
+          service_name: serviceName,
+          provider_name: provider ? `${provider.first_name} ${provider.last_name}` : 'Provider',
+          booking_date: bookingDate,
+          booking_time: bookingTime,
+          booking_location: locationAddress,
+          total_amount: totalAmountFormatted,
+          booking_id: booking.id,
+        });
         try {
-          await sendNotificationViaService(
+          const notificationResult = await sendNotificationViaService(
             customer.user_id,
             'customer_booking_accepted',
             {
@@ -572,11 +668,21 @@ async function sendStatusNotifications(
               event_type: 'booking_accepted',
             }
           );
-          console.log('✅ Notification sent successfully');
+          console.log('✅ Notification sent successfully. Result:', notificationResult);
         } catch (notificationError) {
-          console.error('❌ Error sending notification:', notificationError);
+          console.error('❌ Error sending notification:', {
+            error: notificationError,
+            message: notificationError instanceof Error ? notificationError.message : String(notificationError),
+            stack: notificationError instanceof Error ? notificationError.stack : undefined,
+          });
         }
       }
+    } else {
+      console.log('ℹ️ Customer notification skipped:', {
+        newStatus,
+        notifyCustomer: options.notifyCustomer,
+        statusMatches: newStatus === 'confirmed' || newStatus === 'accepted',
+      });
     }
     
     // Notify customer when booking is completed

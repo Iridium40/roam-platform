@@ -178,8 +178,31 @@ export function CheckoutForm({ bookingDetails, clientSecret, onSuccess, onError 
       let error;
 
       if (selectedPaymentMethod !== 'new') {
-        // Use saved payment method - confirm directly
-        // Note: Non-reusable payment methods are filtered out by the API, so we don't need to check here
+        // Use saved payment method - verify it belongs to the customer first
+        if (customer?.user_id) {
+          try {
+            const verifyResponse = await fetch('/api/stripe/verify-payment-method', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                payment_method_id: selectedPaymentMethod,
+                customer_id: customer.user_id,
+              }),
+            });
+
+            if (!verifyResponse.ok) {
+              const errorData = await verifyResponse.json();
+              throw new Error(errorData.error || 'Payment method verification failed');
+            }
+          } catch (verifyError: any) {
+            console.error('Payment method verification error:', verifyError);
+            onError(verifyError.message || 'This payment method cannot be used. Please select a different card or add a new one.');
+            setIsLoading(false);
+            return;
+          }
+        }
+
+        // Confirm payment with saved payment method
         const result = await stripe.confirmCardPayment(clientSecret, {
           payment_method: selectedPaymentMethod,
         });
@@ -525,23 +548,25 @@ export function CheckoutForm({ bookingDetails, clientSecret, onSuccess, onError 
               </div>
             )}
 
-            {/* Address Element */}
-            <div>
-              <h3 className="text-sm font-medium mb-2">Billing Address</h3>
-              <AddressElement 
-                options={{ 
-                  mode: 'billing',
-                  allowedCountries: ['US'],
-                  ...(billingAddress && {
-                    defaultValues: {
-                      name: billingAddress.name,
-                      address: billingAddress.address,
-                      phone: billingAddress.phone,
-                    }
-                  })
-                }} 
-              />
-            </div>
+            {/* Address Element - Only show when using a new payment method */}
+            {selectedPaymentMethod === 'new' && (
+              <div>
+                <h3 className="text-sm font-medium mb-2">Billing Address</h3>
+                <AddressElement 
+                  options={{ 
+                    mode: 'billing',
+                    allowedCountries: ['US'],
+                    ...(billingAddress && {
+                      defaultValues: {
+                        name: billingAddress.name,
+                        address: billingAddress.address,
+                        phone: billingAddress.phone,
+                      }
+                    })
+                  }} 
+                />
+              </div>
+            )}
 
             {/* Submit Button */}
             <Button
