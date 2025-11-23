@@ -52,15 +52,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Parse payment methods
-    const paymentMethods = stripeProfile?.payment_methods 
+    const allPaymentMethods = stripeProfile?.payment_methods 
       ? (typeof stripeProfile.payment_methods === 'string' 
           ? JSON.parse(stripeProfile.payment_methods) 
           : stripeProfile.payment_methods)
       : [];
 
+    // Filter out payment methods that can't be reused (they serve no purpose)
+    const paymentMethods = allPaymentMethods.filter((pm: any) => pm.can_reuse !== false);
+
+    // If the default payment method was filtered out, find a new default
+    let defaultPaymentMethodId = stripeProfile?.default_payment_method_id || null;
+    if (defaultPaymentMethodId && !paymentMethods.find((pm: any) => pm.id === defaultPaymentMethodId)) {
+      // Default was filtered out, use the first available payment method or null
+      defaultPaymentMethodId = paymentMethods.length > 0 ? paymentMethods[0].id : null;
+    }
+
     return res.status(200).json({
       payment_methods: paymentMethods,
-      default_payment_method_id: stripeProfile?.default_payment_method_id || null
+      default_payment_method_id: defaultPaymentMethodId
     });
 
   } catch (error: any) {

@@ -2,11 +2,15 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { CreditCard, Plus, Trash2, ArrowLeft, Check, Loader2, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
+
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
 interface PaymentMethod {
   id: string;
@@ -34,6 +38,9 @@ export default function PaymentMethods() {
   const [deletingPaymentMethod, setDeletingPaymentMethod] = useState<PaymentMethod | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSettingDefault, setIsSettingDefault] = useState<string | null>(null);
+  const [isAddCardDialogOpen, setIsAddCardDialogOpen] = useState(false);
+  const [isAddingCard, setIsAddingCard] = useState(false);
+  const [setAsDefaultOnAdd, setSetAsDefaultOnAdd] = useState(false);
 
   // Load payment methods
   useEffect(() => {
@@ -201,6 +208,10 @@ export default function PaymentMethods() {
                 Manage your saved payment methods for faster checkout
               </p>
             </div>
+            <Button onClick={() => setIsAddCardDialogOpen(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              Add New Card
+            </Button>
           </div>
         </div>
 
@@ -211,10 +222,11 @@ export default function PaymentMethods() {
               <CreditCard className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
               <h3 className="text-xl font-semibold mb-2">No saved payment methods</h3>
               <p className="text-muted-foreground mb-6">
-                Save a payment method during checkout to see it here
+                Add a payment method for faster checkout
               </p>
-              <Button onClick={() => navigate('/')}>
-                Browse Services
+              <Button onClick={() => setIsAddCardDialogOpen(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add New Card
               </Button>
             </CardContent>
           </Card>
@@ -336,6 +348,43 @@ export default function PaymentMethods() {
         )}
       </div>
 
+      {/* Add New Card Dialog */}
+      <Dialog open={isAddCardDialogOpen} onOpenChange={setIsAddCardDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Add New Payment Method</DialogTitle>
+            <DialogDescription>
+              Add a new card to your account for faster checkout
+            </DialogDescription>
+          </DialogHeader>
+          {stripePromise && (
+            <Elements stripe={stripePromise}>
+              <AddCardForm
+                customerId={customer?.user_id || ''}
+                onSuccess={async () => {
+                  setIsAddCardDialogOpen(false);
+                  await loadPaymentMethods();
+                  toast({
+                    title: "Card Added",
+                    description: "Your payment method has been added successfully.",
+                  });
+                }}
+                onError={(error: string) => {
+                  toast({
+                    title: "Error",
+                    description: error,
+                    variant: "destructive",
+                  });
+                }}
+                setAsDefault={setAsDefaultOnAdd}
+                onSetAsDefaultChange={setSetAsDefaultOnAdd}
+                onCancel={() => setIsAddCardDialogOpen(false)}
+              />
+            </Elements>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent>
@@ -382,6 +431,124 @@ export default function PaymentMethods() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+// Add Card Form Component
+interface AddCardFormProps {
+  customerId: string;
+  onSuccess: () => void;
+  onError: (error: string) => void;
+  setAsDefault: boolean;
+  onSetAsDefaultChange: (value: boolean) => void;
+  onCancel: () => void;
+}
+
+function AddCardForm({ customerId, onSuccess, onError, setAsDefault, onSetAsDefaultChange, onCancel }: AddCardFormProps) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!stripe || !elements) {
+      onError('Stripe has not loaded yet');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      // Create payment method from PaymentElement
+      const { error: pmError, paymentMethod } = await stripe.createPaymentMethod({
+        elements,
+      });
+
+      if (pmError) {
+        throw new Error(pmError.message || 'Failed to create payment method');
+      }
+
+      if (!paymentMethod) {
+        throw new Error('Payment method was not created');
+      }
+
+      // Attach payment method to customer
+      const attachResponse = await fetch('/api/stripe/attach-payment-method-from-element', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          payment_method_id: paymentMethod.id,
+          customer_id: customerId,
+          set_as_default: setAsDefault,
+        }),
+      });
+
+      if (!attachResponse.ok) {
+        const errorData = await attachResponse.json();
+        throw new Error(errorData.error || 'Failed to save payment method');
+      }
+
+      onSuccess();
+    } catch (error: any) {
+      console.error('Error adding card:', error);
+      onError(error.message || 'Failed to add payment method');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div>
+        <PaymentElement 
+          options={{
+            layout: "tabs",
+            paymentMethodOrder: ['card'],
+          }}
+        />
+      </div>
+
+      <div className="flex items-center gap-2">
+        <input
+          type="checkbox"
+          id="set-as-default"
+          checked={setAsDefault}
+          onChange={(e) => onSetAsDefaultChange(e.target.checked)}
+          className="w-4 h-4 text-roam-blue border-gray-300 rounded focus:ring-roam-blue"
+        />
+        <label htmlFor="set-as-default" className="text-sm text-gray-600 cursor-pointer">
+          Set as default payment method
+        </label>
+      </div>
+
+      <DialogFooter>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onCancel}
+          disabled={isLoading}
+        >
+          Cancel
+        </Button>
+        <Button
+          type="submit"
+          disabled={!stripe || isLoading}
+        >
+          {isLoading ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Adding...
+            </>
+          ) : (
+            <>
+              <Plus className="w-4 h-4 mr-2" />
+              Add Card
+            </>
+          )}
+        </Button>
+      </DialogFooter>
+    </form>
   );
 }
 

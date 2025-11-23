@@ -12,6 +12,7 @@ import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { Loader2, CreditCard, Trash2, Check } from 'lucide-react';
 import { useToast } from '../hooks/use-toast';
 import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabase';
 
 interface CheckoutFormProps {
   bookingDetails: {
@@ -40,6 +41,7 @@ export function CheckoutForm({ bookingDetails, clientSecret, onSuccess, onError 
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('new');
   const [savePaymentMethod, setSavePaymentMethod] = useState(true);
   const [loadingPaymentMethods, setLoadingPaymentMethods] = useState(true);
+  const [billingAddress, setBillingAddress] = useState<any>(null);
   const { toast } = useToast();
   const { customer } = useAuth();
 
@@ -86,6 +88,63 @@ export function CheckoutForm({ bookingDetails, clientSecret, onSuccess, onError 
     loadPaymentMethods();
   }, [customer?.user_id]);
 
+  // Load customer billing address for pre-filling
+  useEffect(() => {
+    const loadBillingAddress = async () => {
+      if (!customer?.user_id) return;
+
+      try {
+        // Try to get primary customer location
+        const { data: locations, error: locationError } = await supabase
+          .from('customer_locations')
+          .select('*')
+          .eq('customer_id', customer.user_id)
+          .eq('is_primary', true)
+          .eq('is_active', true)
+          .limit(1)
+          .maybeSingle();
+
+        if (locations && !locationError) {
+          setBillingAddress({
+            name: customer.first_name && customer.last_name 
+              ? `${customer.first_name} ${customer.last_name}` 
+              : customer.email || '',
+            address: {
+              line1: locations.street_address || '',
+              line2: locations.unit_number || '',
+              city: locations.city || '',
+              state: locations.state || '',
+              postal_code: locations.zip_code || '',
+              country: 'US',
+            },
+            phone: customer.phone || '',
+          });
+        } else if (customer.first_name || customer.last_name || customer.email) {
+          // Fallback to customer profile data
+          setBillingAddress({
+            name: customer.first_name && customer.last_name 
+              ? `${customer.first_name} ${customer.last_name}` 
+              : customer.email || '',
+            phone: customer.phone || '',
+          });
+        }
+      } catch (error) {
+        console.error('Error loading billing address:', error);
+        // Fallback to customer profile data
+        if (customer.first_name || customer.last_name || customer.email) {
+          setBillingAddress({
+            name: customer.first_name && customer.last_name 
+              ? `${customer.first_name} ${customer.last_name}` 
+              : customer.email || '',
+            phone: customer.phone || '',
+          });
+        }
+      }
+    };
+
+    loadBillingAddress();
+  }, [customer]);
+
   // Format card brand name
   const getCardBrandName = (brand: string) => {
     const brands: Record<string, string> = {
@@ -120,6 +179,7 @@ export function CheckoutForm({ bookingDetails, clientSecret, onSuccess, onError 
 
       if (selectedPaymentMethod !== 'new') {
         // Use saved payment method - confirm directly
+        // Note: Non-reusable payment methods are filtered out by the API, so we don't need to check here
         const result = await stripe.confirmCardPayment(clientSecret, {
           payment_method: selectedPaymentMethod,
         });
@@ -127,13 +187,95 @@ export function CheckoutForm({ bookingDetails, clientSecret, onSuccess, onError 
         error = result.error;
       } else {
         // Use new payment method from PaymentElement
-        const result = await stripe.confirmPayment({
-          elements,
-          confirmParams: {
-            return_url: `${window.location.origin}/booking-success?booking_id=${bookingDetails.id || ''}`,
-          },
-          redirect: 'if_required',
-        });
+        let paymentMethodId: string | null = null;
+
+        // If user wants to save the payment method, attach it to customer BEFORE processing payment
+        if (savePaymentMethod && customer?.user_id) {
+          try {
+            // Create payment method from PaymentElement
+            const { error: pmError, paymentMethod } = await stripe.createPaymentMethod({
+              elements,
+              params: {
+                billing_details: billingAddress ? {
+                  name: billingAddress.name,
+                  address: billingAddress.address,
+                  phone: billingAddress.phone,
+                } : undefined,
+              },
+            });
+
+            if (pmError) {
+              throw new Error(`Failed to create payment method: ${pmError.message}`);
+            }
+
+            if (paymentMethod) {
+              paymentMethodId = paymentMethod.id;
+
+              // Attach payment method to customer BEFORE using it
+              const attachResponse = await fetch('/api/stripe/attach-payment-method-from-element', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  payment_method_id: paymentMethodId,
+                  customer_id: customer.user_id,
+                  set_as_default: savedPaymentMethods.length === 0, // Set as default if first card
+                }),
+              });
+
+              if (!attachResponse.ok) {
+                const errorData = await attachResponse.json();
+                throw new Error(`Failed to save payment method: ${errorData.error || 'Unknown error'}`);
+              }
+
+              // Reload payment methods to include the newly saved one
+              const listResponse = await fetch(`/api/stripe/list-payment-methods?customer_id=${customer.user_id}`);
+              if (listResponse.ok) {
+                const data = await listResponse.json();
+                setSavedPaymentMethods(data.payment_methods || []);
+              }
+
+              // Extract payment intent ID from client secret (format: pi_xxx_secret_yyy)
+              const paymentIntentId = clientSecret.split('_secret_')[0];
+              
+              // Update payment intent with the attached payment method
+              const updateResponse = await fetch('/api/stripe/update-payment-intent', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  payment_intent_id: paymentIntentId,
+                  payment_method_id: paymentMethodId,
+                }),
+              });
+
+              if (!updateResponse.ok) {
+                console.warn('⚠️ Could not update payment intent with payment method, continuing anyway');
+              }
+            }
+          } catch (saveError: any) {
+            console.error('Error saving payment method:', saveError);
+            // Don't fail the payment - just continue without saving
+            // User can still complete payment, just won't save the card
+          }
+        }
+
+        // Confirm payment
+        // If we have a payment_method_id, use confirmCardPayment; otherwise use confirmPayment with elements
+        let result;
+        if (paymentMethodId) {
+          // Use the attached payment method
+          result = await stripe.confirmCardPayment(clientSecret, {
+            payment_method: paymentMethodId,
+          });
+        } else {
+          // Use PaymentElement
+          result = await stripe.confirmPayment({
+            elements,
+            confirmParams: {
+              return_url: `${window.location.origin}/booking-success?booking_id=${bookingDetails.id || ''}`,
+            },
+            redirect: 'if_required',
+          });
+        }
         paymentIntent = result.paymentIntent;
         error = result.error;
       }
@@ -389,7 +531,14 @@ export function CheckoutForm({ bookingDetails, clientSecret, onSuccess, onError 
               <AddressElement 
                 options={{ 
                   mode: 'billing',
-                  allowedCountries: ['US']
+                  allowedCountries: ['US'],
+                  ...(billingAddress && {
+                    defaultValues: {
+                      name: billingAddress.name,
+                      address: billingAddress.address,
+                      phone: billingAddress.phone,
+                    }
+                  })
                 }} 
               />
             </div>

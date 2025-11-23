@@ -915,6 +915,89 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
       console.log('✅ Business payment transaction created:', businessPaymentTransaction.id);
     }
 
+    // Save payment method to database if it's attached to a customer
+    // This ensures payment methods are saved even if frontend saving fails
+    if (paymentIntent.payment_method && paymentIntent.customer && booking.customer_id) {
+      try {
+        const paymentMethodId = typeof paymentIntent.payment_method === 'string' 
+          ? paymentIntent.payment_method 
+          : paymentIntent.payment_method.id;
+
+        // Retrieve payment method to check if it's attached
+        const paymentMethod = await stripe.paymentMethods.retrieve(paymentMethodId);
+        
+        // Only save if payment method is attached to the customer
+        if (paymentMethod.customer === paymentIntent.customer) {
+          console.log('💳 Saving payment method to database:', paymentMethodId);
+
+          // Get Stripe customer profile
+          const { data: stripeProfile } = await supabase
+            .from('customer_stripe_profiles')
+            .select('stripe_customer_id, payment_methods, default_payment_method_id')
+            .eq('user_id', booking.customer_id)
+            .single();
+
+          if (stripeProfile && stripeProfile.stripe_customer_id === paymentIntent.customer) {
+            // Prepare payment method data
+            const paymentMethodData = {
+              id: paymentMethodId,
+              type: paymentMethod.type,
+              card: paymentMethod.card ? {
+                brand: paymentMethod.card.brand,
+                last4: paymentMethod.card.last4,
+                exp_month: paymentMethod.card.exp_month,
+                exp_year: paymentMethod.card.exp_year,
+              } : null,
+              created: paymentMethod.created,
+              is_default: false, // Don't change default in webhook
+              is_attached: true,
+              can_reuse: true, // Since it's attached, it can be reused
+            };
+
+            // Get existing payment methods
+            const existingMethods = stripeProfile.payment_methods 
+              ? (typeof stripeProfile.payment_methods === 'string' 
+                  ? JSON.parse(stripeProfile.payment_methods) 
+                  : stripeProfile.payment_methods)
+              : [];
+
+            // Check if payment method already exists
+            const existingIndex = existingMethods.findIndex((pm: any) => pm.id === paymentMethodId);
+            
+            if (existingIndex >= 0) {
+              // Update existing payment method
+              existingMethods[existingIndex] = paymentMethodData;
+            } else {
+              // Add new payment method
+              existingMethods.push(paymentMethodData);
+            }
+
+            // Update database
+            const { error: updateError } = await supabase
+              .from('customer_stripe_profiles')
+              .update({
+                payment_methods: existingMethods,
+              })
+              .eq('user_id', booking.customer_id);
+
+            if (updateError) {
+              console.error('❌ Error saving payment method in webhook:', updateError);
+              // Don't throw - this is not critical
+            } else {
+              console.log('✅ Payment method saved to database in webhook:', paymentMethodId);
+            }
+          } else {
+            console.log('ℹ️ Payment method not attached to customer or customer profile not found - skipping save');
+          }
+        } else {
+          console.log('ℹ️ Payment method not attached to customer - skipping save');
+        }
+      } catch (pmError: any) {
+        console.error('⚠️ Error saving payment method in webhook (non-fatal):', pmError);
+        // Don't throw - this is not critical for the booking confirmation
+      }
+    }
+
     console.log(`✅ All financial transactions recorded for booking ${bookingId}`);
 
   } catch (error: any) {

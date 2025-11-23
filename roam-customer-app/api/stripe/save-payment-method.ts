@@ -127,6 +127,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Payment method details already retrieved above, reuse it
 
+    // If payment method can't be reused, don't save it - it serves no purpose
+    if (!canReuse) {
+      console.log('ℹ️ Payment method cannot be reused - not saving to database');
+      return res.status(200).json({
+        success: true,
+        message: 'Payment method cannot be saved for reuse',
+        payment_method_id: payment_method_id,
+        can_reuse: false
+      });
+    }
+
     // Prepare payment method data for storage
     const paymentMethodData = {
       id: payment_method_id,
