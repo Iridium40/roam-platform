@@ -369,7 +369,7 @@ export class SupabaseAuthService extends BaseAuthService implements AuthService 
     }
   }
 
-  async assignUserRole(userId: string, role: AuthUserRole): Promise<AuthResult> {
+  async assignUserRole(_userId: string, _role: AuthUserRole): Promise<AuthResult> {
     // Note: user_roles table has been removed. Roles are now determined from customer_profiles or providers tables.
     // This method is deprecated and should not be used.
     return this.formatErrorResult(
