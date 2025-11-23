@@ -627,6 +627,7 @@ const ReviewAndTipModal: React.FC<ReviewAndTipModalProps> = ({
                   <TipCheckoutForm
                     tipAmount={tipData.tip_amount}
                     providerName={booking?.providers?.first_name || 'Provider'}
+                    clientSecret={clientSecret}
                     onSuccess={handleTipCheckoutSuccess}
                     onError={handleTipCheckoutError}
                   />

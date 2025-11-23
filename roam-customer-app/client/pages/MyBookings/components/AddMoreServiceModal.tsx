@@ -13,7 +13,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Plus, DollarSign } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
+import { loadStripe } from "@stripe/stripe-js";
+import { Elements } from "@stripe/react-stripe-js";
+import { CheckoutForm } from "@/components/CheckoutForm";
+import { useAuth } from "@/contexts/AuthContext";
 import type { BookingWithDetails } from "@/types/index";
+
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
 interface AddMoreServiceModalProps {
   isOpen: boolean;
@@ -31,7 +37,13 @@ export const AddMoreServiceModal: React.FC<AddMoreServiceModalProps> = ({
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPayment, setShowPayment] = useState(false);
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [paymentAmount, setPaymentAmount] = useState<number>(0);
+  const [paymentDescription, setPaymentDescription] = useState<string>("");
+  const [paymentBreakdown, setPaymentBreakdown] = useState<any>(null);
   const { toast } = useToast();
+  const { customer } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,7 +72,68 @@ export const AddMoreServiceModal: React.FC<AddMoreServiceModalProps> = ({
     setIsSubmitting(true);
 
     try {
-      // Get auth token
+      // Create payment intent for the additional service
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token || localStorage.getItem('roam_access_token');
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      // Create payment intent
+      const paymentIntentResponse = await fetch('/api/stripe/create-payment-intent', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          bookingId: booking.id,
+          customerId: booking.customer_id,
+          serviceId: booking.service_id,
+          businessId: booking.business_id,
+          serviceAmount: amountNum * 100, // Convert to cents
+          bookingDate: booking.booking_date,
+          startTime: booking.start_time,
+          guestEmail: customer?.email || '',
+          guestName: customer?.first_name && customer?.last_name 
+            ? `${customer.first_name} ${customer.last_name}` 
+            : customer?.email || '',
+          guestPhone: customer?.phone || '',
+          deliveryType: booking.delivery_type || 'business_location',
+          specialInstructions: `Additional service: ${description.trim()}`,
+          promotionId: null,
+        }),
+      });
+
+      if (!paymentIntentResponse.ok) {
+        const errorData = await paymentIntentResponse.json();
+        throw new Error(errorData.error || 'Failed to create payment intent');
+      }
+
+      const paymentData = await paymentIntentResponse.json();
+      
+      // Store payment details and show payment form
+      setClientSecret(paymentData.clientSecret);
+      setPaymentAmount(amountNum);
+      setPaymentDescription(description.trim());
+      setPaymentBreakdown(paymentData.breakdown || null);
+      setShowPayment(true);
+    } catch (error: any) {
+      console.error('Error creating payment intent:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to initialize payment. Please try again.",
+        variant: "destructive",
+      });
+      setIsSubmitting(false);
+    }
+  };
+
+  const handlePaymentSuccess = async (paymentIntent: any) => {
+    try {
+      // Now add the service to the booking after payment succeeds
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token || localStorage.getItem('roam_access_token');
 
@@ -76,9 +149,9 @@ export const AddMoreServiceModal: React.FC<AddMoreServiceModalProps> = ({
         method: 'POST',
         headers,
         body: JSON.stringify({
-          booking_id: booking.id,
-          amount: amountNum,
-          description: description.trim(),
+          booking_id: booking?.id,
+          amount: paymentAmount,
+          description: paymentDescription,
         }),
       });
 
@@ -87,16 +160,16 @@ export const AddMoreServiceModal: React.FC<AddMoreServiceModalProps> = ({
         throw new Error(errorData.error || 'Failed to add additional service');
       }
 
-      const data = await response.json();
-
       toast({
-        title: "Additional Service Added",
-        description: `$${amountNum.toFixed(2)} has been added to your booking. You can pay for it now or later.`,
+        title: "Payment Successful",
+        description: `$${paymentAmount.toFixed(2)} has been charged and added to your booking.`,
       });
 
       // Reset form
       setAmount("");
       setDescription("");
+      setShowPayment(false);
+      setClientSecret(null);
       onClose();
 
       // Call success callback to refresh booking data
@@ -104,10 +177,10 @@ export const AddMoreServiceModal: React.FC<AddMoreServiceModalProps> = ({
         onSuccess();
       }
     } catch (error: any) {
-      console.error('Error adding additional service:', error);
+      console.error('Error adding additional service after payment:', error);
       toast({
-        title: "Error",
-        description: error.message || "Failed to add additional service. Please try again.",
+        title: "Payment Successful",
+        description: "Payment was processed, but there was an issue updating the booking. Please contact support.",
         variant: "destructive",
       });
     } finally {
@@ -115,28 +188,42 @@ export const AddMoreServiceModal: React.FC<AddMoreServiceModalProps> = ({
     }
   };
 
+  const handlePaymentError = (error: string) => {
+    toast({
+      title: "Payment Failed",
+      description: error,
+      variant: "destructive",
+    });
+    setIsSubmitting(false);
+    setShowPayment(false);
+    setClientSecret(null);
+  };
+
   const handleClose = () => {
     if (!isSubmitting) {
       setAmount("");
       setDescription("");
+      setShowPayment(false);
+      setClientSecret(null);
       onClose();
     }
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className={showPayment ? "sm:max-w-[700px] max-h-[90vh] overflow-y-auto" : "sm:max-w-[500px]"}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Plus className="w-5 h-5" />
             Add More Services
           </DialogTitle>
           <DialogDescription>
-            Add an additional service or charge to this booking. You can pay for it now or later.
+            Add an additional service or charge to this booking. Payment will be processed immediately.
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        {!showPayment ? (
+          <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="amount">
               Amount <span className="text-red-500">*</span>
@@ -186,7 +273,7 @@ export const AddMoreServiceModal: React.FC<AddMoreServiceModalProps> = ({
                 <strong>Current Booking:</strong> {booking.service_name}
               </p>
               <p className="text-xs text-blue-700 mt-1">
-                This charge will be added to your booking and can be paid together with any remaining balance.
+                Payment will be processed immediately for this additional service.
               </p>
             </div>
           )}
@@ -219,6 +306,30 @@ export const AddMoreServiceModal: React.FC<AddMoreServiceModalProps> = ({
             </Button>
           </div>
         </form>
+        ) : (
+          clientSecret && stripePromise && (
+            <Elements stripe={stripePromise} options={{ clientSecret }}>
+              <CheckoutForm
+                bookingDetails={{
+                  id: booking?.id,
+                  serviceName: paymentDescription,
+                  providerName: booking?.provider_name || '',
+                  businessName: booking?.business_name || '',
+                  scheduledDate: booking?.booking_date || '',
+                  serviceAmount: paymentAmount,
+                  platformFee: paymentBreakdown?.platformFee || paymentAmount * 0.2,
+                  discountAmount: paymentBreakdown?.discountAmount || 0,
+                  taxAmount: paymentBreakdown?.taxAmount || 0,
+                  taxRate: paymentBreakdown?.taxRate || null,
+                  total: paymentBreakdown?.total || (paymentAmount * 1.2), // Include platform fee in total
+                }}
+                clientSecret={clientSecret}
+                onSuccess={handlePaymentSuccess}
+                onError={handlePaymentError}
+              />
+            </Elements>
+          )
+        )}
       </DialogContent>
     </Dialog>
   );
