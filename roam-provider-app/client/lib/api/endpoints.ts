@@ -256,7 +256,9 @@ export const bookingsAPI = {
       bookingId: data.bookingId,
       newStatus: data.status,
       updatedBy: data.updatedBy || 'provider',
-      reason: data.reason
+      reason: data.reason,
+      notifyCustomer: true, // Explicitly enable customer notifications
+      notifyProvider: true  // Explicitly enable provider notifications
     }),
 };
 

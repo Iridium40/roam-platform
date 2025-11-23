@@ -350,6 +350,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     console.log('✅ Booking updated successfully:', { bookingId, newStatus, timestamp: new Date().toISOString() });
+    console.log('📧 Notification settings:', { notifyCustomer, notifyProvider, willNotify: notifyCustomer || notifyProvider });
 
     // Note: Status history tracking removed - table doesn't exist in current schema
     // The booking record itself maintains the current status
@@ -357,12 +358,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Send notifications based on status change (non-blocking)
     // Don't await - let it run in background
     if (notifyCustomer || notifyProvider) {
-      console.log('📧 Queueing notifications for status:', newStatus);
+      console.log('📧 Queueing notifications for status:', newStatus, { notifyCustomer, notifyProvider });
       // Fire and forget - don't block the response
       sendStatusNotifications(booking, newStatus, { notifyCustomer, notifyProvider })
         .catch((notificationError) => {
         console.error('⚠️ Notification error (non-fatal):', notificationError);
+        console.error('⚠️ Notification error stack:', notificationError instanceof Error ? notificationError.stack : 'No stack');
         });
+    } else {
+      console.log('⚠️ Notifications skipped - both notifyCustomer and notifyProvider are false');
     }
 
     console.log('🎉 Status update completed successfully');
