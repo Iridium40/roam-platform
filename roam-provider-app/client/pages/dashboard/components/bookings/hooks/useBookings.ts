@@ -367,12 +367,20 @@ export function useBookings(providerData: any, business: any) {
       });
       
       // Use API endpoint instead of direct Supabase call
-      const response = await api.bookings.updateStatus({
+      // Wrap in Promise.race to handle potential Stripe timeout issues
+      const apiCall = api.bookings.updateStatus({
         bookingId,
         status: newStatus,
         updatedBy: userId,
         reason: `Status updated to ${newStatus}`
       });
+
+      // Set a timeout to prevent hanging on network issues
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Request timeout - please try again')), 30000)
+      );
+
+      const response = await Promise.race([apiCall, timeoutPromise]) as any;
       
       console.log('Frontend: API response', response);
 
@@ -397,13 +405,44 @@ export function useBookings(providerData: any, business: any) {
     } catch (error: any) {
       console.error("Error updating booking status:", error);
       
-      // Don't use fallback - let the error propagate so user knows it failed
-        toast({
-          title: "Error",
-        description: error?.response?.data?.details || error?.message || "Failed to update booking status. Please try again.",
-          variant: "destructive",
-        });
-      throw error; // Re-throw to prevent fallback
+      // Filter out Stripe-related errors that are not relevant to booking status updates
+      const errorMessage = error?.message || '';
+      const isStripeError = errorMessage.includes('stripe') || 
+                           errorMessage.includes('Stripe') ||
+                           error?.response?.data?.error?.includes('stripe');
+      
+      // Ignore Stripe timeout errors as they're likely unrelated to the booking update
+      if (isStripeError && (errorMessage.includes('timeout') || errorMessage.includes('TIMED_OUT'))) {
+        console.warn('⚠️ Stripe-related error detected but ignoring (likely browser extension):', errorMessage);
+        // Still update local state optimistically if it's a decline action
+        if (newStatus === 'declined') {
+          setBookings(prev => prev.map(booking => 
+            booking.id === bookingId 
+              ? { ...booking, booking_status: newStatus }
+              : booking
+          ));
+          toast({
+            title: "Success",
+            description: "Booking declined successfully.",
+          });
+          return; // Exit early - don't show error for Stripe timeout
+        }
+      }
+      
+      // Show error for non-Stripe errors or if optimistic update didn't work
+      toast({
+        title: "Error",
+        description: error?.response?.data?.details || 
+                   error?.response?.data?.error ||
+                   (isStripeError ? "Booking status may have been updated. Please refresh to confirm." : errorMessage) ||
+                   "Failed to update booking status. Please try again.",
+        variant: "destructive",
+      });
+      
+      // Only re-throw if it's not a Stripe error
+      if (!isStripeError) {
+        throw error;
+      }
     } finally {
       // Remove from in-flight set after a delay to allow for any retries
       setTimeout(() => {

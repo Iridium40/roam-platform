@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 
 // Import notification function
 import { notifyProvidersBookingCancelled } from '../../lib/notifications/notify-providers-booking-cancelled';
+import { handleBookingCancellation } from './payment-processor';
 
 const supabase = createClient(
   process.env.VITE_PUBLIC_SUPABASE_URL!,
@@ -32,6 +33,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'bookingId is required' });
     }
 
+    // Process payment refund based on acceptance status and timing
+    console.log('💰 Processing payment refund for cancellation...');
+    const paymentResult = await handleBookingCancellation(
+      bookingId,
+      cancelledBy || 'customer',
+      cancellationReason
+    );
+
+    if (!paymentResult.success) {
+      console.error('⚠️ Payment refund processing failed:', paymentResult.error);
+      // Continue with cancellation even if refund fails - can be retried manually
+    } else {
+      console.log('✅ Payment refund processed:', {
+        refundAmount: paymentResult.refundAmount,
+      });
+    }
+
+    // Use refund amount from payment processor if available, otherwise use provided values
+    const finalRefundAmount = paymentResult.refundAmount !== undefined 
+      ? paymentResult.refundAmount 
+      : (refundAmount || 0);
+    const finalCancellationFee = paymentResult.refundAmount !== undefined
+      ? ((paymentResult.refundAmount || 0) > 0 
+          ? (cancellationFee || 0) 
+          : (cancellationFee || 0)) // Keep provided fee if refund was processed
+      : (cancellationFee || 0);
+
     // Update booking status to cancelled
     const { data: booking, error: updateError } = await supabase
       .from('bookings')
@@ -40,8 +68,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         cancelled_at: new Date().toISOString(),
         cancelled_by: cancelledBy || null,
         cancellation_reason: cancellationReason || 'Cancelled by customer',
-        cancellation_fee: cancellationFee || 0,
-        refund_amount: refundAmount || 0,
+        cancellation_fee: finalCancellationFee,
+        refund_amount: finalRefundAmount,
       })
       .eq('id', bookingId)
       .select(`

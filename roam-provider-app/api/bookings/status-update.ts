@@ -1,6 +1,10 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
+import {
+  processBookingAcceptance,
+  processBookingDecline,
+} from './payment-processor';
 
 // Initialize Resend for email sending
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -472,6 +476,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     console.log('✅ Booking updated successfully:', { bookingId, newStatus, timestamp: new Date().toISOString() });
     console.log('📧 Notification settings:', { notifyCustomer, notifyProvider, willNotify: notifyCustomer || notifyProvider });
+
+    // Process payments based on status change
+    if (newStatus === 'confirmed' || newStatus === 'accepted') {
+      console.log('💰 Processing payment for booking acceptance...');
+      const paymentResult = await processBookingAcceptance(bookingId, updatedBy);
+      
+      if (!paymentResult.success) {
+        console.error('⚠️ Payment processing failed:', paymentResult.error);
+        // Don't fail the status update - payment can be retried
+        // But log the error for monitoring
+      } else {
+        console.log('✅ Payment processed successfully:', {
+          serviceFeeCharged: paymentResult.serviceFeeCharged,
+          serviceAmountCharged: paymentResult.serviceAmountCharged,
+          serviceAmountAuthorized: paymentResult.serviceAmountAuthorized,
+        });
+      }
+    } else if (newStatus === 'declined') {
+      console.log('🚫 Processing payment cancellation for booking decline...');
+      const declineResult = await processBookingDecline(bookingId, updatedBy, reason);
+      
+      if (!declineResult.success) {
+        console.error('⚠️ Payment cancellation failed:', declineResult.error);
+        // Don't fail the status update - payment cancellation can be retried
+      } else {
+        console.log('✅ Payment cancellation processed successfully');
+      }
+    }
 
     // Note: Status history tracking removed - table doesn't exist in current schema
     // The booking record itself maintains the current status

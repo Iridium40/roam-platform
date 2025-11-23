@@ -47,10 +47,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'bookingId, bookingDate, and startTime are required' });
     }
 
-    // Get current booking to preserve original dates if not provided
+    // Get current booking to preserve original dates if not provided and check status
     const { data: currentBooking, error: fetchError } = await supabase
       .from('bookings')
-      .select('original_booking_date, original_start_time, booking_date, start_time, reschedule_count')
+      .select(`
+        original_booking_date, 
+        original_start_time, 
+        booking_date, 
+        start_time, 
+        reschedule_count,
+        booking_status,
+        service_fee_charged,
+        remaining_balance_charged
+      `)
       .eq('id', bookingId)
       .single();
 
@@ -63,20 +72,61 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const originalTime = originalStartTime || currentBooking?.original_start_time || currentBooking?.start_time;
     const rescheduleCount = (currentBooking?.reschedule_count || 0) + 1;
 
+    // Check if booking was previously accepted/confirmed
+    const wasAccepted = currentBooking?.booking_status === 'confirmed' || 
+                        currentBooking?.booking_status === 'accepted' ||
+                        currentBooking?.service_fee_charged === true;
+
+    // Calculate if new booking date is within 24 hours
+    const newBookingDateTime = new Date(`${bookingDate}T${startTime}`);
+    const now = new Date();
+    const hoursUntilNewBooking = (newBookingDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+    const isNewBookingWithin24Hours = hoursUntilNewBooking <= 24;
+
+    // Determine remaining balance charge status based on new date
+    // Note: We don't charge or refund - we just update the status
+    // If booking moves from >24h to ≤24h, remaining balance should be marked as charged
+    // If booking moves from ≤24h to >24h, we can't undo the charge but we update status
+    const shouldMarkRemainingBalanceCharged = isNewBookingWithin24Hours;
+
     // Update booking with reschedule data
+    // If booking was accepted, change status back to pending so business can accept again
+    const updateData: any = {
+      booking_date: bookingDate,
+      start_time: startTime,
+      reschedule_reason: rescheduleReason || 'Rescheduled by customer',
+      rescheduled_at: new Date().toISOString(),
+      rescheduled_by: rescheduledBy || null,
+      original_booking_date: originalDate,
+      original_start_time: originalTime,
+      reschedule_count: rescheduleCount,
+      last_reschedule_date: new Date().toISOString(),
+    };
+
+    // If booking was accepted, change status back to pending
+    if (wasAccepted) {
+      updateData.booking_status = 'pending';
+      console.log('🔄 Changing booking status from accepted to pending for reschedule');
+    }
+
+    // Update remaining balance charge status based on new date
+    // Note: We're not charging/refunding, just updating the status field
+    if (wasAccepted) {
+      updateData.remaining_balance_charged = shouldMarkRemainingBalanceCharged;
+      if (shouldMarkRemainingBalanceCharged && !currentBooking?.remaining_balance_charged) {
+        // If moving to ≤24h and wasn't charged before, mark as charged
+        updateData.remaining_balance_charged_at = new Date().toISOString();
+      }
+      console.log('📊 Updated remaining balance charge status:', {
+        wasCharged: currentBooking?.remaining_balance_charged,
+        shouldBeCharged: shouldMarkRemainingBalanceCharged,
+        hoursUntilNewBooking: hoursUntilNewBooking.toFixed(2),
+      });
+    }
+
     const { data: booking, error: updateError } = await supabase
       .from('bookings')
-      .update({
-        booking_date: bookingDate,
-        start_time: startTime,
-        reschedule_reason: rescheduleReason || 'Rescheduled by customer',
-        rescheduled_at: new Date().toISOString(),
-        rescheduled_by: rescheduledBy || null,
-        original_booking_date: originalDate,
-        original_start_time: originalTime,
-        reschedule_count: rescheduleCount,
-        last_reschedule_date: new Date().toISOString(),
-      })
+      .update(updateData)
       .eq('id', bookingId)
       .select(`
         *,
@@ -117,8 +167,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     console.log('✅ Booking rescheduled successfully:', booking.id);
+    console.log('💰 Payment status:', {
+      wasAccepted,
+      serviceFeeCharged: currentBooking?.service_fee_charged,
+      remainingBalanceCharged: currentBooking?.remaining_balance_charged,
+      newRemainingBalanceCharged: shouldMarkRemainingBalanceCharged,
+      note: 'No charges or refunds occur during reschedule - only status updates',
+    });
 
     // Notify providers about the reschedule (non-blocking)
+    // Business users (owners/dispatchers) will be notified via email/SMS
+    // Booking status has been changed to 'pending' so business must accept again
     if (notifyProvidersBookingRescheduled) {
       try {
         const service = Array.isArray(booking.services) ? booking.services[0] : booking.services;
