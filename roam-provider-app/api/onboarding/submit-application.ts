@@ -133,6 +133,17 @@ function getApplicationSubmittedEmailTemplate(firstName: string, applicationId: 
 // Initialize Resend
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+// Type definition for user settings
+interface UserSettings {
+  user_id: string;
+  email_notifications?: boolean;
+  sms_notifications?: boolean;
+  admin_business_verification_email?: boolean;
+  admin_business_verification_sms?: boolean;
+  notification_email?: string;
+  notification_phone?: string;
+}
+
 /**
  * Notify admin users about new business application submission
  */
@@ -163,13 +174,13 @@ async function notifyAdminsOfNewApplication(businessProfile: any, application: a
     }
 
     // Create a map of user settings
-    const settingsMap = new Map(
-      (adminSettings || []).map(s => [s.user_id, s])
+    const settingsMap = new Map<string, UserSettings>(
+      (adminSettings || []).map(s => [s.user_id, s as UserSettings])
     );
 
     // Notify each admin based on their preferences
     for (const admin of adminUsers) {
-      const settings = settingsMap.get(admin.user_id) || {};
+      const settings: UserSettings = settingsMap.get(admin.user_id) || {} as UserSettings;
       const emailEnabled = settings.admin_business_verification_email ?? settings.email_notifications ?? true;
       const smsEnabled = settings.admin_business_verification_sms ?? settings.sms_notifications ?? false;
 
@@ -583,14 +594,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       console.error("Submission data being inserted:", JSON.stringify(submissionData, null, 2));
       return res.status(500).json({ 
         error: "Failed to submit application",
-        details: updateError.message,
+        details: submissionError.message,
         debug: {
           userId,
           businessId,
           submissionData,
-          errorCode: updateError.code,
-          errorHint: updateError.hint,
-          errorDetails: updateError.details
+          errorCode: submissionError.code,
+          errorHint: submissionError.hint,
+          errorDetails: submissionError.details
         }
       });
     }

@@ -225,35 +225,8 @@ async function sendNotificationViaService(
   }
 }
 
-// Safely import notification functions - these may fail in some environments
-let sendSMS: any = null;
-let notifyProvidersBookingCancelled: any = null;
-let notifyProvidersBookingRescheduled: any = null;
-
-try {
-  const smsModule = require('../../lib/notifications/sms-service.js');
-  sendSMS = smsModule.sendSMS;
-} catch (e) {
-  console.warn('⚠️ Could not load SMS service module:', e);
-}
-
-try {
-  const cancelledModule = require('../../lib/notifications/notify-providers-booking-cancelled.js');
-  notifyProvidersBookingCancelled = cancelledModule.notifyProvidersBookingCancelled;
-} catch (e) {
-  console.warn('⚠️ Could not load booking cancelled notification module:', e);
-}
-
-try {
-  const rescheduledModule = require('../../lib/notifications/notify-providers-booking-rescheduled.js');
-  notifyProvidersBookingRescheduled = rescheduledModule.notifyProvidersBookingRescheduled;
-} catch (e) {
-  console.warn('⚠️ Could not load booking rescheduled notification module:', e);
-}
-
-// ✅ Email sending now handled by NotificationService (no need for inline Resend setup)
-
-// ✅ Old inline email templates removed - now using NotificationService with DB templates
+// ✅ All notification logic now handled by inline sendNotificationViaService function
+// ✅ No external imports needed - everything is self-contained for Vercel compatibility
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS headers
