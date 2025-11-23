@@ -358,29 +358,28 @@ export default function PaymentMethods() {
             </DialogDescription>
           </DialogHeader>
           {stripePromise && (
-            <Elements stripe={stripePromise}>
-              <AddCardForm
-                customerId={customer?.user_id || ''}
-                onSuccess={async () => {
-                  setIsAddCardDialogOpen(false);
-                  await loadPaymentMethods();
-                  toast({
-                    title: "Card Added",
-                    description: "Your payment method has been added successfully.",
-                  });
-                }}
-                onError={(error: string) => {
-                  toast({
-                    title: "Error",
-                    description: error,
-                    variant: "destructive",
-                  });
-                }}
-                setAsDefault={setAsDefaultOnAdd}
-                onSetAsDefaultChange={setSetAsDefaultOnAdd}
-                onCancel={() => setIsAddCardDialogOpen(false)}
-              />
-            </Elements>
+            <AddCardFormWrapper
+              stripePromise={stripePromise}
+              customerId={customer?.user_id || ''}
+              onSuccess={async () => {
+                setIsAddCardDialogOpen(false);
+                await loadPaymentMethods();
+                toast({
+                  title: "Card Added",
+                  description: "Your payment method has been added successfully.",
+                });
+              }}
+              onError={(error: string) => {
+                toast({
+                  title: "Error",
+                  description: error,
+                  variant: "destructive",
+                });
+              }}
+              setAsDefault={setAsDefaultOnAdd}
+              onSetAsDefaultChange={setSetAsDefaultOnAdd}
+              onCancel={() => setIsAddCardDialogOpen(false)}
+            />
           )}
         </DialogContent>
       </Dialog>
@@ -434,8 +433,9 @@ export default function PaymentMethods() {
   );
 }
 
-// Add Card Form Component
-interface AddCardFormProps {
+// Add Card Form Wrapper Component (handles Elements with clientSecret)
+interface AddCardFormWrapperProps {
+  stripePromise: Promise<any>;
   customerId: string;
   onSuccess: () => void;
   onError: (error: string) => void;
@@ -444,7 +444,76 @@ interface AddCardFormProps {
   onCancel: () => void;
 }
 
-function AddCardForm({ customerId, onSuccess, onError, setAsDefault, onSetAsDefaultChange, onCancel }: AddCardFormProps) {
+function AddCardFormWrapper({ stripePromise, customerId, onSuccess, onError, setAsDefault, onSetAsDefaultChange, onCancel }: AddCardFormWrapperProps) {
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [loadingSecret, setLoadingSecret] = useState(true);
+
+  // Load setup intent client secret
+  useEffect(() => {
+    const loadSetupIntent = async () => {
+      try {
+        const response = await fetch('/api/stripe/create-setup-intent', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ customer_id: customerId }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setClientSecret(data.clientSecret);
+        } else {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to initialize payment form');
+        }
+      } catch (error: any) {
+        console.error('Error loading setup intent:', error);
+        onError(error.message || 'Failed to initialize payment form');
+      } finally {
+        setLoadingSecret(false);
+      }
+    };
+
+    if (customerId) {
+      loadSetupIntent();
+    }
+  }, [customerId, onError]);
+
+  if (loadingSecret || !clientSecret) {
+    return (
+      <div className="py-8 text-center">
+        <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-roam-blue" />
+        <p className="text-sm text-muted-foreground">Loading payment form...</p>
+      </div>
+    );
+  }
+
+  return (
+    <Elements stripe={stripePromise} options={{ clientSecret }}>
+      <AddCardForm
+        customerId={customerId}
+        onSuccess={onSuccess}
+        onError={onError}
+        setAsDefault={setAsDefault}
+        onSetAsDefaultChange={onSetAsDefaultChange}
+        onCancel={onCancel}
+        clientSecret={clientSecret}
+      />
+    </Elements>
+  );
+}
+
+// Add Card Form Component
+interface AddCardFormProps {
+  customerId: string;
+  onSuccess: () => void;
+  onError: (error: string) => void;
+  setAsDefault: boolean;
+  onSetAsDefaultChange: (value: boolean) => void;
+  onCancel: () => void;
+  clientSecret: string;
+}
+
+function AddCardForm({ customerId, onSuccess, onError, setAsDefault, onSetAsDefaultChange, onCancel, clientSecret }: AddCardFormProps) {
   const stripe = useStripe();
   const elements = useElements();
   const [isLoading, setIsLoading] = useState(false);
@@ -452,7 +521,7 @@ function AddCardForm({ customerId, onSuccess, onError, setAsDefault, onSetAsDefa
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!stripe || !elements) {
+    if (!stripe || !elements || !clientSecret) {
       onError('Stripe has not loaded yet');
       return;
     }
@@ -460,25 +529,31 @@ function AddCardForm({ customerId, onSuccess, onError, setAsDefault, onSetAsDefa
     setIsLoading(true);
 
     try {
-      // Create payment method from PaymentElement
-      const { error: pmError, paymentMethod } = await stripe.createPaymentMethod({
+      // Confirm setup intent to collect payment method
+      const { error: confirmError, setupIntent } = await stripe.confirmSetup({
         elements,
+        clientSecret,
+        redirect: 'if_required',
       });
 
-      if (pmError) {
-        throw new Error(pmError.message || 'Failed to create payment method');
+      if (confirmError) {
+        throw new Error(confirmError.message || 'Failed to confirm setup');
       }
 
-      if (!paymentMethod) {
-        throw new Error('Payment method was not created');
+      if (!setupIntent || !setupIntent.payment_method) {
+        throw new Error('Payment method was not collected');
       }
 
-      // Attach payment method to customer
+      const paymentMethodId = typeof setupIntent.payment_method === 'string' 
+        ? setupIntent.payment_method 
+        : setupIntent.payment_method.id;
+
+      // Attach payment method to customer (it should already be attached via setup intent, but ensure it's saved)
       const attachResponse = await fetch('/api/stripe/attach-payment-method-from-element', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          payment_method_id: paymentMethod.id,
+          payment_method_id: paymentMethodId,
           customer_id: customerId,
           set_as_default: setAsDefault,
         }),
