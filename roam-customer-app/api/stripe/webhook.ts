@@ -872,9 +872,7 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
     console.log(`💰 Payment splits calculated: Platform $${platformFee.toFixed(2)}, Provider $${providerAmount.toFixed(2)}`);
 
     // Create business_payment_transactions record
-    const totalAmount = paymentIntent.amount / 100;
-    const platformFeePercentage = parseFloat(paymentIntent.metadata.platformFee || '0.2'); // Default 20% if not in metadata
-    const platformFee = totalAmount * platformFeePercentage;
+    // Use the platformFee already calculated above
     const netPaymentAmount = totalAmount - platformFee;
     
     // Extract tax year from booking date or use current year
