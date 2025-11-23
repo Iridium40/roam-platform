@@ -35,6 +35,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       hasSupabaseUrl: !!process.env.VITE_PUBLIC_SUPABASE_URL,
       hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY
     });
+    console.log('📦 Request body serviceAmount:', req.body.serviceAmount);
+    
     const {
       bookingId,
       serviceId,
@@ -48,8 +50,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       deliveryType,
       specialInstructions,
       promotionId,
-      customerAddress
+      customerAddress,
+      serviceAmount: customServiceAmount // For "Add More Service" - amount in cents
     } = req.body;
+    
+    console.log('🔍 Extracted customServiceAmount:', customServiceAmount);
 
     // Validate required fields
     if (!serviceId || !businessId || !customerId) {
@@ -58,40 +63,78 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // Pull authoritative pricing from Supabase
-    const { data: businessService, error: businessServiceError } = await supabase
-      .from('business_services')
-      .select(`
-        business_price,
-        delivery_type,
-        is_active,
-        services:service_id (
-          id,
-          name,
-          description,
-          min_price,
-          duration_minutes
-        )
-      `)
-      .eq('business_id', businessId)
-      .eq('service_id', serviceId)
-      .eq('is_active', true)
-      .single();
+    let serviceAmount: number;
+    let service: any;
 
-    if (businessServiceError || !businessService) {
-      return res.status(404).json({ 
-        error: 'Service not available from this business' 
-      });
-    }
-
-    const service = businessService.services as any;
-    const serviceAmount = businessService.business_price;
+    // Check if customServiceAmount is provided (for "Add More Service" ad-hoc charges)
+    // This is sent in cents from the frontend (e.g., 500 for $5.00)
+    const hasCustomAmount = customServiceAmount !== undefined && 
+                           customServiceAmount !== null && 
+                           typeof customServiceAmount === 'number' && 
+                           customServiceAmount > 0;
     
-    // Validate service pricing
-    if (serviceAmount < service.min_price) {
-      return res.status(400).json({ 
-        error: `Invalid pricing configuration for ${service.name}` 
+    if (hasCustomAmount) {
+      // Convert from cents to dollars for calculations
+      serviceAmount = customServiceAmount / 100;
+      console.log('✅ Using ad-hoc/custom service amount from "Add More Service":', {
+        customServiceAmountCents: customServiceAmount,
+        serviceAmountDollars: serviceAmount,
+        originalBookingServiceId: serviceId
       });
+      
+      // Still fetch service info for metadata, but don't validate pricing
+      const { data: businessService } = await supabase
+        .from('business_services')
+        .select(`
+          services:service_id (
+            id,
+            name,
+            description,
+            min_price,
+            duration_minutes
+          )
+        `)
+        .eq('business_id', businessId)
+        .eq('service_id', serviceId)
+        .single();
+      
+      service = businessService?.services as any;
+    } else {
+      // Pull authoritative pricing from Supabase for normal bookings
+      const { data: businessService, error: businessServiceError } = await supabase
+        .from('business_services')
+        .select(`
+          business_price,
+          delivery_type,
+          is_active,
+          services:service_id (
+            id,
+            name,
+            description,
+            min_price,
+            duration_minutes
+          )
+        `)
+        .eq('business_id', businessId)
+        .eq('service_id', serviceId)
+        .eq('is_active', true)
+        .single();
+
+      if (businessServiceError || !businessService) {
+        return res.status(404).json({ 
+          error: 'Service not available from this business' 
+        });
+      }
+
+      service = businessService.services as any;
+      serviceAmount = businessService.business_price;
+      
+      // Validate service pricing only for normal bookings
+      if (serviceAmount < service.min_price) {
+        return res.status(400).json({ 
+          error: `Invalid pricing configuration for ${service.name}` 
+        });
+      }
     }
 
     // Fetch platform fee from system configuration
@@ -308,18 +351,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .eq('id', bookingId);
     }
 
+    const breakdown = {
+      serviceAmount: serviceAmount,
+      platformFee: platformFee / 100,
+      discountAmount: discountAmount / 100,
+      taxAmount: taxAmount / 100,
+      taxRate: taxCalculation?.tax_breakdown?.[0]?.tax_rate_details?.percentage_decimal || null,
+      subtotal: subtotalAmount / 100,
+      total: totalAmount / 100
+    };
+
+    console.log('💰 Payment breakdown for Add More Service:', {
+      customServiceAmountCents: customServiceAmount,
+      serviceAmountDollars: serviceAmount,
+      platformFeeCents: platformFee,
+      platformFeeDollars: platformFee / 100,
+      totalAmountCents: totalAmount,
+      totalAmountDollars: totalAmount / 100,
+      breakdown
+    });
+
     return res.status(200).json({
       clientSecret: paymentIntent.client_secret,
       amount: totalAmount / 100,
-      breakdown: {
-        serviceAmount: serviceAmount,
-        platformFee: platformFee / 100,
-        discountAmount: discountAmount / 100,
-        taxAmount: taxAmount / 100,
-        taxRate: taxCalculation?.tax_breakdown?.[0]?.tax_rate_details?.percentage_decimal || null,
-        subtotal: subtotalAmount / 100,
-        total: totalAmount / 100
-      }
+      breakdown
     });
 
   } catch (error: any) {
