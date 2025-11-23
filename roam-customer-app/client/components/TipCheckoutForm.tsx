@@ -348,10 +348,7 @@ export function TipCheckoutForm({ tipAmount, providerName, clientSecret, onSucce
                   Processing Tip...
                 </>
               ) : (
-                <>
-                  <DollarSign className="w-4 h-4 mr-2" />
-                  Send ${tipAmount.toFixed(2)} Tip
-                </>
+                `Send ${tipAmount.toFixed(2)} Tip`
               )}
             </Button>
           </form>

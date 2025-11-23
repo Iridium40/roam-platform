@@ -199,8 +199,10 @@ export const AddMoreServiceModal: React.FC<AddMoreServiceModalProps> = ({
     setClientSecret(null);
   };
 
-  const handleClose = () => {
-    if (!isSubmitting) {
+  const handleClose = (open: boolean) => {
+    // onOpenChange receives true when opening, false when closing
+    // Only handle close action (when open is false)
+    if (!open && !isSubmitting) {
       setAmount("");
       setDescription("");
       setShowPayment(false);
