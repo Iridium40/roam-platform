@@ -49,6 +49,7 @@ const Test = lazy(() => import("./pages/Test"));
 const TipSuccess = lazy(() => import("./pages/TipSuccess"));
 const TipCancel = lazy(() => import("./pages/TipCancel"));
 const Privacy = lazy(() => import("./pages/Privacy"));
+const TermsAndConditions = lazy(() => import("./pages/TermsAndConditions"));
 const Services = lazy(() => import("./pages/Services"));
 const BusinessResults = lazy(() => import("./pages/BusinessResults"));
 
@@ -179,6 +180,7 @@ const App = () => (
                 <Route path="/tip-success" element={<TipSuccess />} />
                 <Route path="/tip-cancel" element={<TipCancel />} />
                 <Route path="/privacy" element={<Privacy />} />
+                <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
                 <Route path="/services" element={<Services />} />
                 <Route path="/businesses" element={<BusinessResults />} />
                 <Route path="*" element={<NotFound />} />

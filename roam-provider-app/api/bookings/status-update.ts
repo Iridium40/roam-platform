@@ -343,8 +343,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // Validate that booking has a provider assigned before accepting/confirming
-    if (newStatus === 'confirmed' || newStatus === 'accepted') {
+    // Validate that booking has a provider assigned before confirming
+    if (newStatus === 'confirmed') {
       // First, fetch the current booking to check if it has a provider_id
       const { data: currentBooking, error: fetchError } = await supabase
         .from('bookings')
@@ -478,8 +478,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.log('📧 Notification settings:', { notifyCustomer, notifyProvider, willNotify: notifyCustomer || notifyProvider });
 
     // Process payments based on status change
-    if (newStatus === 'confirmed' || newStatus === 'accepted') {
-      console.log('💰 Processing payment for booking acceptance...');
+    if (newStatus === 'confirmed') {
+      console.log('💰 Processing payment for booking confirmation...');
       const paymentResult = await processBookingAcceptance(bookingId, updatedBy);
       
       if (!paymentResult.success) {
@@ -726,8 +726,8 @@ async function sendStatusNotifications(
 
     // Send notifications using inline notification service (Vercel-compatible)
     
-    // Notify customer when booking is confirmed/accepted
-    if ((newStatus === 'confirmed' || newStatus === 'accepted') && options.notifyCustomer) {
+    // Notify customer when booking is confirmed
+    if (newStatus === 'confirmed' && options.notifyCustomer) {
       console.log('📧 Checking if customer notification should be sent:', {
         newStatus,
         notifyCustomer: options.notifyCustomer,
@@ -893,12 +893,12 @@ async function sendStatusNotifications(
       console.log('ℹ️ Customer notification skipped:', {
         newStatus,
         notifyCustomer: options.notifyCustomer,
-        statusMatches: newStatus === 'confirmed' || newStatus === 'accepted',
+        statusMatches: newStatus === 'confirmed',
       });
     }
 
-    // Send calendar invite to provider when booking is accepted/confirmed
-    if ((newStatus === 'confirmed' || newStatus === 'accepted') && provider?.user_id && options.notifyProvider) {
+    // Send calendar invite to provider when booking is confirmed
+    if (newStatus === 'confirmed' && provider?.user_id && options.notifyProvider) {
       try {
         console.log('📅 Preparing to send calendar invite to provider:', {
           providerUserId: provider.user_id,

@@ -53,6 +53,7 @@ export async function handleBookingCancellation(
       .select(`
         id,
         stripe_payment_intent_id,
+        stripe_service_amount_payment_intent_id,
         total_amount,
         service_fee,
         service_fee_charged,
@@ -72,9 +73,8 @@ export async function handleBookingCancellation(
       };
     }
 
-    // Check if booking was accepted/confirmed
-    const wasAccepted = booking.booking_status === 'confirmed' || 
-                        booking.booking_status === 'accepted' ||
+    // Check if booking was confirmed
+    const wasAccepted = booking.booking_status === 'confirmed' ||
                         booking.service_fee_charged === true;
 
     if (!wasAccepted) {
@@ -143,16 +143,66 @@ export async function handleBookingCancellation(
       refundAmount,
     });
 
-    if (!booking.stripe_payment_intent_id) {
+    // Use service amount payment intent if available, otherwise try to refund from main payment intent
+    const paymentIntentIdToRefund = booking.stripe_service_amount_payment_intent_id || booking.stripe_payment_intent_id;
+
+    if (!paymentIntentIdToRefund) {
       return {
         success: false,
         error: 'No payment intent found for refund',
       };
     }
 
+    // Check payment intent status
+    let paymentIntent;
+    try {
+      paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentIdToRefund);
+    } catch (error: any) {
+      return {
+        success: false,
+        error: `Failed to retrieve payment intent: ${error.message}`,
+      };
+    }
+
+    // If payment intent is authorized but not captured, just cancel it
+    if (paymentIntent.status === 'requires_capture') {
+      try {
+        await stripe.paymentIntents.cancel(paymentIntent.id);
+        console.log('✅ Cancelled authorized payment intent (no refund needed):', paymentIntent.id);
+        
+        // Update booking
+        await supabase
+          .from('bookings')
+          .update({
+            cancellation_fee: serviceFeeAmount,
+            refund_amount: 0, // No refund needed - payment wasn't captured
+          })
+          .eq('id', bookingId);
+
+        return {
+          success: true,
+          refundAmount: 0, // No refund - payment was never captured
+        };
+      } catch (cancelError: any) {
+        console.error('⚠️ Error cancelling payment intent:', cancelError);
+        return {
+          success: false,
+          error: `Failed to cancel payment intent: ${cancelError.message}`,
+        };
+      }
+    }
+
+    // If payment intent was already captured, create refund
+    if (paymentIntent.status !== 'succeeded') {
+      return {
+        success: false,
+        error: `Payment intent not in succeeded status: ${paymentIntent.status}`,
+      };
+    }
+
     // Create partial refund for service amount only
     const refund = await stripe.refunds.create({
-      payment_intent: booking.stripe_payment_intent_id,
+      payment_intent: paymentIntentIdToRefund,
       amount: Math.round(refundAmount * 100), // Convert to cents
       reason: 'requested_by_customer',
       metadata: {

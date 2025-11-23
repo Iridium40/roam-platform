@@ -72,9 +72,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const originalTime = originalStartTime || currentBooking?.original_start_time || currentBooking?.start_time;
     const rescheduleCount = (currentBooking?.reschedule_count || 0) + 1;
 
-    // Check if booking was previously accepted/confirmed
-    const wasAccepted = currentBooking?.booking_status === 'confirmed' || 
-                        currentBooking?.booking_status === 'accepted' ||
+    // Check if booking was previously confirmed
+    const wasAccepted = currentBooking?.booking_status === 'confirmed' ||
                         currentBooking?.service_fee_charged === true;
 
     // Calculate if new booking date is within 24 hours

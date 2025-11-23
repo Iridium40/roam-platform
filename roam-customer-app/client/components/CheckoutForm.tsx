@@ -9,10 +9,12 @@ import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Label } from './ui/label';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
+import { Checkbox } from './ui/checkbox';
 import { Loader2, CreditCard, Trash2, Check } from 'lucide-react';
 import { useToast } from '../hooks/use-toast';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
+import { Link } from 'react-router-dom';
 
 interface CheckoutFormProps {
   bookingDetails: {
@@ -42,6 +44,7 @@ export function CheckoutForm({ bookingDetails, clientSecret, onSuccess, onError 
   const [savePaymentMethod, setSavePaymentMethod] = useState(true);
   const [loadingPaymentMethods, setLoadingPaymentMethods] = useState(true);
   const [billingAddress, setBillingAddress] = useState<any>(null);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
   const { toast } = useToast();
   const { customer } = useAuth();
 
@@ -164,6 +167,15 @@ export function CheckoutForm({ bookingDetails, clientSecret, onSuccess, onError 
     
     if (!stripe || !elements) {
       onError('Stripe has not loaded yet');
+      return;
+    }
+
+    if (!agreedToTerms) {
+      toast({
+        title: "Terms and Conditions Required",
+        description: "Please agree to the terms and conditions to proceed with your booking.",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -568,11 +580,33 @@ export function CheckoutForm({ bookingDetails, clientSecret, onSuccess, onError 
               </div>
             )}
 
+            {/* Terms and Conditions */}
+            <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <Checkbox
+                id="terms-agreement"
+                checked={agreedToTerms}
+                onCheckedChange={(checked) => setAgreedToTerms(checked === true)}
+                className="mt-1"
+              />
+              <Label htmlFor="terms-agreement" className="text-sm text-gray-700 cursor-pointer leading-relaxed">
+                By submitting this booking, I agree to the{" "}
+                <Link
+                  to="/terms-and-conditions"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-roam-blue hover:underline font-medium"
+                >
+                  Terms and Conditions
+                </Link>
+                . I understand that I will not be charged unless the booking is accepted by the business. Service fees (non-refundable) will be charged upon booking acceptance, and the remaining balance will be charged 24 hours prior to the scheduled booking date. Cancellation prior to 24 hours will result in no refund of the service fee. Cancellation within 24 hours will result in 100% loss with no refund.
+              </Label>
+            </div>
+
             {/* Submit Button */}
             <Button
               type="submit"
               className="w-full h-12 text-base bg-roam-blue hover:bg-roam-blue/90"
-              disabled={!stripe || isLoading}
+              disabled={!stripe || isLoading || !agreedToTerms}
             >
               {isLoading ? (
                 <>
