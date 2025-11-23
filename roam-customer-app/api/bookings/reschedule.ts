@@ -92,8 +92,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         ),
         business_profiles (
           id,
-          name,
-          business_address
+          name
         )
       `)
       .single();
@@ -133,6 +132,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             hasBusiness: !!business,
           });
         } else {
+          // Fetch business location to get address
+          let businessAddress = '';
+          try {
+            const { data: businessLocation } = await supabase
+              .from('business_locations')
+              .select('address_line1, address_line2, city, state, postal_code')
+              .eq('business_id', booking.business_id)
+              .eq('is_primary', true)
+              .eq('is_active', true)
+              .limit(1)
+              .maybeSingle();
+
+            if (businessLocation) {
+              const addressParts = [
+                businessLocation.address_line1,
+                businessLocation.address_line2,
+                businessLocation.city,
+                businessLocation.state,
+                businessLocation.postal_code,
+              ].filter(Boolean);
+              businessAddress = addressParts.join(', ');
+            }
+          } catch (locationError) {
+            console.warn('⚠️ Could not fetch business location:', locationError);
+          }
+
           console.log('📧 Sending reschedule notifications...');
           await notifyProvidersBookingRescheduled({
             booking: {
@@ -156,7 +181,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             },
             business: {
               name: business.name,
-              business_address: business.business_address,
+              business_address: businessAddress,
             },
           });
           console.log('✅ Reschedule notifications sent');
