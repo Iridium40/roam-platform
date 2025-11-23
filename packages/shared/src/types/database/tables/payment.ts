@@ -117,59 +117,53 @@ export interface PlaidBankConnectionsTable {
   };
 }
 
-// Manual Bank Accounts Table
+// Business Manual Bank Accounts Table
 export interface ManualBankAccountsTable {
   Row: {
     id: string;
-    user_id: string | null;
+    user_id: string;
     business_id: string | null;
-    account_holder_name: string;
-    bank_name: string;
-    routing_number: string;
-    account_number_last4: string;
+    account_name: string;
     account_type: string;
+    account_number: string;
+    routing_number: string;
+    bank_name: string;
+    is_verified: boolean | null;
+    is_default: boolean | null;
+    stripe_account_id: string | null;
     verification_status: string | null;
-    verification_method: string | null;
-    micro_deposit_amounts: number[] | null;
-    verification_attempts: number | null;
-    verified_at: string | null;
-    is_active: boolean | null;
     created_at: string | null;
     updated_at: string | null;
   };
   Insert: {
     id?: string;
-    user_id?: string | null;
+    user_id: string;
     business_id?: string | null;
-    account_holder_name: string;
-    bank_name: string;
+    account_name: string;
+    account_type: string;
+    account_number: string;
     routing_number: string;
-    account_number_last4: string;
-    account_type?: string;
+    bank_name: string;
+    is_verified?: boolean | null;
+    is_default?: boolean | null;
+    stripe_account_id?: string | null;
     verification_status?: string | null;
-    verification_method?: string | null;
-    micro_deposit_amounts?: number[] | null;
-    verification_attempts?: number | null;
-    verified_at?: string | null;
-    is_active?: boolean | null;
     created_at?: string | null;
     updated_at?: string | null;
   };
   Update: {
     id?: string;
-    user_id?: string | null;
+    user_id?: string;
     business_id?: string | null;
-    account_holder_name?: string;
-    bank_name?: string;
-    routing_number?: string;
-    account_number_last4?: string;
+    account_name?: string;
     account_type?: string;
+    account_number?: string;
+    routing_number?: string;
+    bank_name?: string;
+    is_verified?: boolean | null;
+    is_default?: boolean | null;
+    stripe_account_id?: string | null;
     verification_status?: string | null;
-    verification_method?: string | null;
-    micro_deposit_amounts?: number[] | null;
-    verification_attempts?: number | null;
-    verified_at?: string | null;
-    is_active?: boolean | null;
     created_at?: string | null;
     updated_at?: string | null;
   };

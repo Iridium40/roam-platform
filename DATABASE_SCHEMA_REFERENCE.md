@@ -983,10 +983,10 @@ Payment processing.
 
 ---
 
-### `payment_schedules`
+### `booking_payment_schedules`
 **Rows**: 0 | **RLS**: ❌ Disabled
 
-Scheduled payment processing.
+Scheduled payment processing for bookings.
 
 **Key Columns**:
 - `id` (uuid, PK)
@@ -1409,10 +1409,10 @@ Stripe tax webhook processing.
 
 ---
 
-### `manual_bank_accounts`
+### `business_manual_bank_accounts`
 **Rows**: 0 | **RLS**: ✅ Enabled
 
-Manual bank account management.
+Manual bank account management for businesses.
 
 **Key Columns**:
 - `id` (uuid, PK)

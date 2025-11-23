@@ -70,7 +70,7 @@ export type Database = {
       // Payment tables
       financial_transactions: TransactionsTable;
       plaid_bank_connections: PlaidBankConnectionsTable;
-      manual_bank_accounts: ManualBankAccountsTable;
+      business_manual_bank_accounts: ManualBankAccountsTable;
       subscription_plans: SubscriptionPlansTable;
       device_subscriptions: DeviceSubscriptionsTable;
 
