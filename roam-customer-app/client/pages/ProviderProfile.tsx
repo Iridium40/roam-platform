@@ -1,12 +1,14 @@
 import { useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, User, Calendar, Star, MapPin, Share2, Clock } from "lucide-react";
+import { ArrowLeft, User, Calendar, Star, MapPin, Share2, Clock, MessageSquare } from "lucide-react";
 import { useState, useEffect, lazy, Suspense } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { FavoriteButton } from "@/components/FavoriteButton";
+import { format } from "date-fns";
 
 // Lazy load ShareModal
 const ShareModal = lazy(() => import("@/components/ShareModal"));
@@ -36,15 +38,35 @@ interface Service {
   image_url?: string;
 }
 
+interface Review {
+  id: string;
+  booking_id: string;
+  overall_rating: number;
+  service_rating: number | null;
+  communication_rating: number | null;
+  punctuality_rating: number | null;
+  review_text: string | null;
+  created_at: string;
+  customer_profiles?: {
+    first_name: string;
+    last_name: string;
+  };
+  services?: {
+    name: string;
+  };
+}
+
 export default function ProviderProfile() {
   const { providerId } = useParams();
   const { toast } = useToast();
   
   const [provider, setProvider] = useState<Provider | null>(null);
   const [services, setServices] = useState<Service[]>([]);
+  const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [expandedServices, setExpandedServices] = useState<Set<string>>(new Set());
+  const [activeTab, setActiveTab] = useState('services');
 
   useEffect(() => {
     const loadProviderData = async () => {
@@ -104,6 +126,45 @@ export default function ProviderProfile() {
             .map((ps: any) => ps.services)
             .filter(Boolean);
           setServices(providerServices);
+        }
+
+        // Load featured reviews for this provider
+        const { data: reviewsData, error: reviewsError } = await supabase
+          .from('reviews')
+          .select(`
+            id,
+            booking_id,
+            overall_rating,
+            service_rating,
+            communication_rating,
+            punctuality_rating,
+            review_text,
+            created_at,
+            bookings (
+              service_id,
+              customer_id,
+              services (
+                name
+              ),
+              customer_profiles (
+                first_name,
+                last_name
+              )
+            )
+          `)
+          .eq('provider_id', providerData.id)
+          .eq('is_featured', true)
+          .eq('is_approved', true)
+          .order('created_at', { ascending: false });
+
+        if (!reviewsError && reviewsData) {
+          // Transform reviews to include service name and customer info
+          const transformedReviews = reviewsData.map((review: any) => ({
+            ...review,
+            services: review.bookings?.services,
+            customer_profiles: review.bookings?.customer_profiles,
+          }));
+          setReviews(transformedReviews);
         }
 
       } catch (error) {
@@ -255,10 +316,19 @@ export default function ProviderProfile() {
             </div>
           </div>
 
-          {/* Services */}
+          {/* Tabs for Services and Reviews */}
           <div className="bg-white rounded-lg shadow-lg p-8">
-            <h2 className="text-2xl font-semibold mb-6">Services Offered</h2>
-            {services.length > 0 ? (
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid w-full max-w-md grid-cols-2 mb-6">
+                <TabsTrigger value="services">Services</TabsTrigger>
+                <TabsTrigger value="reviews">
+                  Reviews {reviews.length > 0 && `(${reviews.length})`}
+                </TabsTrigger>
+              </TabsList>
+
+              {/* Services Tab */}
+              <TabsContent value="services" className="mt-0">
+                {services.length > 0 ? (
               <div className="grid md:grid-cols-2 gap-6">
                 {services.map((service) => {
                   const isExpanded = expandedServices.has(service.id);
@@ -360,6 +430,117 @@ export default function ProviderProfile() {
                 </p>
               </div>
             )}
+              </TabsContent>
+
+              {/* Reviews Tab */}
+              <TabsContent value="reviews" className="mt-0">
+                {reviews.length > 0 ? (
+                  <div className="space-y-6">
+                    {reviews.map((review) => {
+                      const customerName = review.customer_profiles
+                        ? `${review.customer_profiles.first_name} ${review.customer_profiles.last_name}`
+                        : 'Anonymous';
+                      const serviceName = review.services?.name || 'Service';
+                      
+                      // Render stars helper
+                      const renderStars = (rating: number) => {
+                        return (
+                          <div className="flex items-center gap-0.5">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <Star
+                                key={star}
+                                className={`w-4 h-4 ${
+                                  star <= rating
+                                    ? 'fill-roam-yellow text-roam-yellow'
+                                    : 'text-gray-300'
+                                }`}
+                              />
+                            ))}
+                          </div>
+                        );
+                      };
+
+                      return (
+                        <Card key={review.id} className="hover:shadow-md transition-shadow">
+                          <CardContent className="p-6">
+                            <div className="flex items-start justify-between mb-4">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-3 mb-2">
+                                  <div className="w-10 h-10 bg-roam-blue/10 rounded-full flex items-center justify-center">
+                                    <User className="w-5 h-5 text-roam-blue" />
+                                  </div>
+                                  <div>
+                                    <h4 className="font-semibold text-lg">{customerName}</h4>
+                                    <p className="text-sm text-gray-500">
+                                      {serviceName} • {format(new Date(review.created_at), 'MMMM d, yyyy')}
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2 mb-3">
+                                  {renderStars(review.overall_rating)}
+                                  <span className="text-sm font-medium text-gray-700">
+                                    {review.overall_rating}/5
+                                  </span>
+                                </div>
+                                {review.review_text && (
+                                  <div className="mt-3">
+                                    <p className="text-gray-700 leading-relaxed italic">
+                                      "{review.review_text}"
+                                    </p>
+                                  </div>
+                                )}
+                                {/* Additional ratings if available */}
+                                {(review.service_rating || review.communication_rating || review.punctuality_rating) && (
+                                  <div className="mt-4 pt-4 border-t border-gray-200 grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    {review.service_rating && (
+                                      <div>
+                                        <p className="text-xs text-gray-500 mb-1">Service</p>
+                                        <div className="flex items-center gap-1">
+                                          {renderStars(review.service_rating)}
+                                          <span className="text-xs text-gray-600">{review.service_rating}/5</span>
+                                        </div>
+                                      </div>
+                                    )}
+                                    {review.communication_rating && (
+                                      <div>
+                                        <p className="text-xs text-gray-500 mb-1">Communication</p>
+                                        <div className="flex items-center gap-1">
+                                          {renderStars(review.communication_rating)}
+                                          <span className="text-xs text-gray-600">{review.communication_rating}/5</span>
+                                        </div>
+                                      </div>
+                                    )}
+                                    {review.punctuality_rating && (
+                                      <div>
+                                        <p className="text-xs text-gray-500 mb-1">Punctuality</p>
+                                        <div className="flex items-center gap-1">
+                                          {renderStars(review.punctuality_rating)}
+                                          <span className="text-xs text-gray-600">{review.punctuality_rating}/5</span>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <MessageSquare className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-gray-600 mb-2">
+                      No Featured Reviews Yet
+                    </h3>
+                    <p className="text-gray-500">
+                      This provider doesn't have any featured reviews at the moment.
+                    </p>
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
       </div>

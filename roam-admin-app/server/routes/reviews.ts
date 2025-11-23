@@ -167,6 +167,21 @@ async function createReview(req: Request, res: Response) {
       }
     }
 
+    // Fetch booking to get business_id and provider_id
+    const { data: booking, error: bookingError } = await supabase
+      .from('bookings')
+      .select('business_id, provider_id')
+      .eq('id', booking_id)
+      .single();
+
+    if (bookingError) {
+      console.error('Error fetching booking:', bookingError);
+      return res.status(404).json({ 
+        error: 'Booking not found',
+        details: bookingError.message 
+      });
+    }
+
     const { data: review, error: insertError } = await supabase
       .from('reviews')
       .insert([{
@@ -178,7 +193,9 @@ async function createReview(req: Request, res: Response) {
         timeliness_rating,
         review_text,
         is_featured,
-        is_flagged: false
+        is_flagged: false,
+        business_id: booking.business_id || null,
+        provider_id: booking.provider_id || null,
       }])
       .select()
       .single();

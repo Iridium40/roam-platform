@@ -256,6 +256,8 @@ export interface ReviewsTable {
     moderated_at: string | null;
     moderation_notes: string | null;
     created_at: string;
+    business_id: string | null;
+    provider_id: string | null;
   };
   Insert: {
     id?: string;
@@ -271,6 +273,8 @@ export interface ReviewsTable {
     moderated_at?: string | null;
     moderation_notes?: string | null;
     created_at?: string;
+    business_id?: string | null;
+    provider_id?: string | null;
   };
   Update: {
     id?: string;
@@ -286,6 +290,8 @@ export interface ReviewsTable {
     moderated_at?: string | null;
     moderation_notes?: string | null;
     created_at?: string;
+    business_id?: string | null;
+    provider_id?: string | null;
   };
 }
 

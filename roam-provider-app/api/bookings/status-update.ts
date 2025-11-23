@@ -5,6 +5,66 @@ import { Resend } from 'resend';
 // Initialize Resend for email sending
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+/**
+ * Generate iCal file content for calendar invite
+ */
+function generateICalFile(
+  summary: string,
+  description: string,
+  location: string,
+  startDate: Date,
+  endDate: Date,
+  organizerEmail: string = 'support@roamyourbestlife.com',
+  organizerName: string = 'ROAM',
+  attendeeEmail: string
+): string {
+  // Format dates in UTC (iCal format: YYYYMMDDTHHMMSSZ)
+  const formatDate = (date: Date): string => {
+    return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+  };
+
+  // Generate unique ID for the event
+  const uid = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}@roamyourbestlife.com`;
+
+  // Escape special characters in text fields
+  const escapeText = (text: string): string => {
+    return text
+      .replace(/\\/g, '\\\\')
+      .replace(/;/g, '\\;')
+      .replace(/,/g, '\\,')
+      .replace(/\n/g, '\\n');
+  };
+
+  const ical = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//ROAM//Booking Calendar//EN',
+    'CALSCALE:GREGORIAN',
+    'METHOD:REQUEST',
+    'BEGIN:VEVENT',
+    `UID:${uid}`,
+    `DTSTAMP:${formatDate(new Date())}`,
+    `DTSTART:${formatDate(startDate)}`,
+    `DTEND:${formatDate(endDate)}`,
+    `SUMMARY:${escapeText(summary)}`,
+    `DESCRIPTION:${escapeText(description)}`,
+    `LOCATION:${escapeText(location)}`,
+    `ORGANIZER;CN="${escapeText(organizerName)}":MAILTO:${organizerEmail}`,
+    `ATTENDEE;CN="${escapeText(attendeeEmail)}";RSVP=TRUE:MAILTO:${attendeeEmail}`,
+    'STATUS:CONFIRMED',
+    'SEQUENCE:0',
+    'BEGIN:VALARM',
+    'TRIGGER:-PT15M',
+    'ACTION:DISPLAY',
+    'DESCRIPTION:Reminder: Booking starts in 15 minutes',
+    'END:VALARM',
+    'END:VEVENT',
+    'END:VCALENDAR',
+  ].join('\r\n');
+
+  return ical;
+}
+
 // Inline notification service for Vercel compatibility
 async function sendNotificationViaService(
   userId: string,
@@ -279,6 +339,52 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
+    // Validate that booking has a provider assigned before accepting/confirming
+    if (newStatus === 'confirmed' || newStatus === 'accepted') {
+      // First, fetch the current booking to check if it has a provider_id
+      const { data: currentBooking, error: fetchError } = await supabase
+        .from('bookings')
+        .select('id, provider_id, booking_status')
+        .eq('id', bookingId)
+        .single();
+
+      if (fetchError) {
+        console.error('❌ Error fetching booking for validation:', fetchError);
+        return res.status(500).json({
+          error: 'Failed to validate booking',
+          details: fetchError.message
+        });
+      }
+
+      if (!currentBooking) {
+        console.error('❌ Booking not found:', { bookingId });
+        return res.status(404).json({
+          error: 'Booking not found',
+          details: `No booking found with ID: ${bookingId}`
+        });
+      }
+
+      if (!currentBooking.provider_id) {
+        console.error('❌ Cannot accept booking without assigned provider:', {
+          bookingId,
+          currentStatus: currentBooking.booking_status,
+          providerId: currentBooking.provider_id
+        });
+        return res.status(400).json({
+          error: 'Cannot accept booking without assigned provider',
+          details: 'A provider must be assigned to the booking before it can be accepted.',
+          bookingId,
+          currentStatus: currentBooking.booking_status
+        });
+      }
+
+      console.log('✅ Booking has provider assigned:', {
+        bookingId,
+        providerId: currentBooking.provider_id,
+        newStatus
+      });
+    }
+
     console.log('✅ Updating booking status:', { bookingId, newStatus, updatedBy, timestamp: new Date().toISOString() });
 
     // Update booking status in Supabase
@@ -333,7 +439,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         ),
         services (
           id,
-          name
+          name,
+          duration_minutes
         )
       `)
       .single();
@@ -623,6 +730,106 @@ async function sendStatusNotifications(
           booking_id: booking.id,
         });
         try {
+          // Generate calendar invite for customer
+          let calendarLinks: { google?: string; outlook?: string; ics?: string } = {};
+          let icalContent: string | null = null;
+
+          if (bookingDateRaw && startTimeRaw && customerEmail) {
+            try {
+              // Parse booking date and time
+              const bookingDateTime = new Date(`${bookingDateRaw}T${startTimeRaw}`);
+              if (!isNaN(bookingDateTime.getTime())) {
+                // Get service duration (default to 60 minutes if not available)
+                const durationMinutes = service?.duration_minutes || booking.duration_minutes || 60;
+                const endDateTime = new Date(bookingDateTime.getTime() + durationMinutes * 60000);
+
+                // Generate calendar summary and description
+                const calendarSummary = `${serviceName} with ${provider ? `${provider.first_name} ${provider.last_name}` : 'Provider'}`;
+                const calendarDescription = `Service: ${serviceName}\nProvider: ${provider ? `${provider.first_name} ${provider.last_name}` : 'Provider'}\n\nLocation: ${locationAddress}\n\nBooking ID: ${booking.id}`;
+
+                // Generate ICS file
+                icalContent = generateICalFile(
+                  calendarSummary,
+                  calendarDescription,
+                  locationAddress,
+                  bookingDateTime,
+                  endDateTime,
+                  'support@roamyourbestlife.com',
+                  'ROAM',
+                  customerEmail
+                );
+
+                // Generate calendar links
+                const formatDateForURL = (date: Date): string => {
+                  return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+                };
+
+                const startDateStr = formatDateForURL(bookingDateTime);
+                const endDateStr = formatDateForURL(endDateTime);
+                const encodedSummary = encodeURIComponent(calendarSummary);
+                const encodedDescription = encodeURIComponent(calendarDescription);
+                const encodedLocation = encodeURIComponent(locationAddress);
+
+                // Google Calendar link
+                calendarLinks.google = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodedSummary}&dates=${startDateStr}/${endDateStr}&details=${encodedDescription}&location=${encodedLocation}`;
+
+                // Outlook Calendar link
+                calendarLinks.outlook = `https://outlook.live.com/calendar/0/deeplink/compose?subject=${encodedSummary}&startdt=${bookingDateTime.toISOString()}&enddt=${endDateTime.toISOString()}&body=${encodedDescription}&location=${encodedLocation}`;
+
+                // ICS file download link
+                const baseUrl = process.env.VERCEL_URL 
+                  ? `https://${process.env.VERCEL_URL}` 
+                  : process.env.PROVIDER_APP_API_URL || 'https://provider.roamyourbestlife.com';
+                calendarLinks.ics = `${baseUrl}/api/bookings/calendar-invite/${booking.id}`;
+              }
+            } catch (calendarError) {
+              console.warn('⚠️ Error generating calendar links:', calendarError);
+            }
+          }
+
+          // Send direct email with calendar attachment
+          if (customerEmail && icalContent) {
+            try {
+              const { ROAM_EMAIL_TEMPLATES } = await import('../../shared/emailTemplates');
+              const emailHtml = ROAM_EMAIL_TEMPLATES.bookingConfirmed(
+                customerName,
+                serviceName,
+                provider ? `${provider.first_name} ${provider.last_name}` : 'Provider',
+                bookingDate,
+                bookingTime,
+                locationAddress,
+                totalAmountFormatted,
+                calendarLinks
+              );
+
+              const { data: emailData, error: emailError } = await resend.emails.send({
+                from: 'ROAM Support <support@roamyourbestlife.com>',
+                to: [customerEmail],
+                subject: `✅ Your Booking is Confirmed! - ${serviceName}`,
+                html: emailHtml,
+                text: `Hi ${customerName},\n\nYour booking has been confirmed!\n\nService: ${serviceName}\nProvider: ${provider ? `${provider.first_name} ${provider.last_name}` : 'Provider'}\nDate: ${bookingDate}\nTime: ${bookingTime}\nLocation: ${locationAddress}\nTotal: $${totalAmountFormatted}\n\nView your bookings: https://roamyourbestlife.com/my-bookings\n\nBest regards,\nThe ROAM Team`,
+                attachments: [
+                  {
+                    filename: 'booking.ics',
+                    content: Buffer.from(icalContent).toString('base64'),
+                  },
+                ],
+              });
+
+              if (emailError) {
+                console.error('❌ Error sending customer booking email:', emailError);
+              } else {
+                console.log('✅ Customer booking email sent successfully:', {
+                  email: customerEmail,
+                  resendId: emailData?.id,
+                });
+              }
+            } catch (emailError) {
+              console.error('❌ Error sending direct email to customer:', emailError);
+            }
+          }
+
+          // Also send via notification service (for in-app notifications)
           const notificationResult = await sendNotificationViaService(
             customer.user_id,
             'customer_booking_accepted',
@@ -656,6 +863,219 @@ async function sendStatusNotifications(
         notifyCustomer: options.notifyCustomer,
         statusMatches: newStatus === 'confirmed' || newStatus === 'accepted',
       });
+    }
+
+    // Send calendar invite to provider when booking is accepted/confirmed
+    if ((newStatus === 'confirmed' || newStatus === 'accepted') && provider?.user_id && options.notifyProvider) {
+      try {
+        console.log('📅 Preparing to send calendar invite to provider:', {
+          providerUserId: provider.user_id,
+          providerId: provider.id,
+          providerName: provider ? `${provider.first_name} ${provider.last_name}` : 'Provider',
+        });
+
+        // Get provider's notification email from user_settings or providers table
+        const { data: userSettings } = await supabase
+          .from('user_settings')
+          .select('notification_email')
+          .eq('user_id', provider.user_id)
+          .maybeSingle();
+
+        // Also get provider record for notification_email fallback
+        const { data: providerRecord } = await supabase
+          .from('providers')
+          .select('notification_email, email')
+          .eq('id', provider.id)
+          .single();
+
+        // Priority: user_settings.notification_email -> providers.notification_email -> providers.email
+        const providerNotificationEmail = 
+          userSettings?.notification_email || 
+          providerRecord?.notification_email || 
+          providerRecord?.email || 
+          provider.email;
+
+        if (!providerNotificationEmail) {
+          console.warn('⚠️ Cannot send calendar invite: No provider email found', {
+            providerUserId: provider.user_id,
+            providerId: provider.id,
+          });
+          return;
+        }
+
+        // Calculate booking start and end times
+        if (!bookingDateRaw || !startTimeRaw) {
+          console.warn('⚠️ Cannot send calendar invite: Missing booking date or time', {
+            bookingDateRaw,
+            startTimeRaw,
+          });
+          return;
+        }
+
+        // Parse booking date and time
+        const bookingDateTime = new Date(`${bookingDateRaw}T${startTimeRaw}`);
+        if (isNaN(bookingDateTime.getTime())) {
+          console.error('❌ Invalid booking date/time:', { bookingDateRaw, startTimeRaw });
+          return;
+        }
+
+        // Get service duration (default to 60 minutes if not available)
+        const durationMinutes = service?.duration_minutes || booking.duration_minutes || 60;
+        const endDateTime = new Date(bookingDateTime.getTime() + durationMinutes * 60000);
+
+        // Validate location before sending calendar invite
+        if (!locationAddress || locationAddress === 'Location TBD' || locationAddress.trim() === '') {
+          console.warn('⚠️ Cannot send calendar invite: Invalid or missing location', {
+            locationAddress,
+            bookingId: booking.id,
+            businessLocationId: booking.business_location_id,
+            customerLocationId: booking.customer_location_id,
+          });
+          // Still send the email notification, but without calendar attachment
+          console.log('📧 Sending booking confirmation email without calendar invite due to missing location');
+        } else {
+          // Generate calendar invite with location
+          const calendarSummary = `${serviceName} - ${customerName}`;
+          const calendarDescription = `Service: ${serviceName}\nCustomer: ${customerName}${customerEmail ? `\nEmail: ${customerEmail}` : ''}${customer?.phone ? `\nPhone: ${customer.phone}` : ''}\n\nLocation: ${locationAddress}\n\nBooking ID: ${booking.id}`;
+          
+          const icalContent = generateICalFile(
+            calendarSummary,
+            calendarDescription,
+            locationAddress, // Location is included in the calendar invite
+            bookingDateTime,
+            endDateTime,
+            'support@roamyourbestlife.com',
+            'ROAM',
+            providerNotificationEmail
+          );
+
+          // Send calendar invite email with attachment
+          const { data: emailData, error: emailError } = await resend.emails.send({
+            from: 'ROAM Support <support@roamyourbestlife.com>',
+            to: [providerNotificationEmail],
+            subject: `📅 Calendar Invite: ${serviceName} - ${bookingDate}`,
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #4F46E5;">Booking Confirmed</h2>
+                <p>Hi ${provider.first_name || 'Provider'},</p>
+                <p>A new booking has been confirmed and added to your calendar:</p>
+                <div style="background-color: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                  <p><strong>Service:</strong> ${serviceName}</p>
+                  <p><strong>Customer:</strong> ${customerName}</p>
+                  <p><strong>Date:</strong> ${bookingDate}</p>
+                  <p><strong>Time:</strong> ${bookingTime}</p>
+                  <p><strong>Duration:</strong> ${durationMinutes} minutes</p>
+                  <p><strong>Location:</strong> ${locationAddress}</p>
+                </div>
+                <p>Please accept the calendar invite attached to this email to add this booking to your calendar. The location has been included in the calendar event.</p>
+                <p>If you have any questions, please contact us at <a href="mailto:support@roamyourbestlife.com">support@roamyourbestlife.com</a></p>
+                <p>Best regards,<br>The ROAM Team</p>
+              </div>
+            `,
+            text: `
+Booking Confirmed
+
+Hi ${provider.first_name || 'Provider'},
+
+A new booking has been confirmed and added to your calendar:
+
+Service: ${serviceName}
+Customer: ${customerName}
+Date: ${bookingDate}
+Time: ${bookingTime}
+Duration: ${durationMinutes} minutes
+Location: ${locationAddress}
+
+Please accept the calendar invite attached to this email to add this booking to your calendar. The location has been included in the calendar event.
+
+If you have any questions, please contact us at support@roamyourbestlife.com
+
+Best regards,
+The ROAM Team
+            `,
+            attachments: [
+              {
+                filename: 'booking.ics',
+                content: Buffer.from(icalContent).toString('base64'),
+              },
+            ],
+          });
+
+          if (emailError) {
+            console.error('❌ Error sending calendar invite:', emailError);
+          } else {
+            console.log('✅ Calendar invite sent successfully to provider:', {
+              email: providerNotificationEmail,
+              resendId: emailData?.id,
+              location: locationAddress,
+            });
+          }
+          return; // Exit early if calendar invite was sent successfully
+        }
+
+        // Send booking confirmation email without calendar attachment (location missing)
+        const { data: emailData, error: emailError } = await resend.emails.send({
+          from: 'ROAM Support <support@roamyourbestlife.com>',
+          to: [providerNotificationEmail],
+          subject: `Booking Confirmed: ${serviceName} - ${bookingDate}`,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h2 style="color: #4F46E5;">Booking Confirmed</h2>
+              <p>Hi ${provider.first_name || 'Provider'},</p>
+              <p>A new booking has been confirmed:</p>
+              <div style="background-color: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <p><strong>Service:</strong> ${serviceName}</p>
+                <p><strong>Customer:</strong> ${customerName}</p>
+                <p><strong>Date:</strong> ${bookingDate}</p>
+                <p><strong>Time:</strong> ${bookingTime}</p>
+                <p><strong>Duration:</strong> ${durationMinutes} minutes</p>
+                ${locationAddress && locationAddress !== 'Location TBD' ? `<p><strong>Location:</strong> ${locationAddress}</p>` : '<p><strong>Location:</strong> To be determined</p>'}
+              </div>
+              <p style="color: #dc2626; font-weight: bold;">⚠️ Note: Calendar invite not included - location information is pending.</p>
+              <p>If you have any questions, please contact us at <a href="mailto:support@roamyourbestlife.com">support@roamyourbestlife.com</a></p>
+              <p>Best regards,<br>The ROAM Team</p>
+            </div>
+          `,
+          text: `
+Booking Confirmed
+
+Hi ${provider.first_name || 'Provider'},
+
+A new booking has been confirmed:
+
+Service: ${serviceName}
+Customer: ${customerName}
+Date: ${bookingDate}
+Time: ${bookingTime}
+Duration: ${durationMinutes} minutes
+${locationAddress && locationAddress !== 'Location TBD' ? `Location: ${locationAddress}` : 'Location: To be determined'}
+
+⚠️ Note: Calendar invite not included - location information is pending.
+
+If you have any questions, please contact us at support@roamyourbestlife.com
+
+Best regards,
+The ROAM Team
+          `,
+        });
+
+        if (emailError) {
+          console.error('❌ Error sending booking confirmation email:', emailError);
+        } else {
+          console.log('✅ Booking confirmation email sent (without calendar invite):', {
+            email: providerNotificationEmail,
+            resendId: emailData?.id,
+            reason: 'Location missing or invalid',
+          });
+        }
+      } catch (calendarError) {
+        console.error('❌ Error sending calendar invite:', {
+          error: calendarError,
+          message: calendarError instanceof Error ? calendarError.message : String(calendarError),
+          stack: calendarError instanceof Error ? calendarError.stack : undefined,
+        });
+        // Don't throw - calendar invite failure shouldn't block booking acceptance
+      }
     }
     
     // Notify customer when booking is completed

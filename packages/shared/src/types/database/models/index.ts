@@ -15,6 +15,8 @@ export interface Review {
   moderated_at?: string;
   moderation_notes?: string;
   created_at: string;
+  business_id?: string | null;
+  provider_id?: string | null;
 }
 
 // Tip model interface

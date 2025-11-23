@@ -192,6 +192,7 @@ const ReviewAndTipModal: React.FC<ReviewAndTipModalProps> = ({
       console.log('✅ DATABASE CHECK DEBUG: No existing review found, proceeding with submission');
 
       // No existing review, proceed with insertion
+      // Include business_id and provider_id from the booking
       const { data, error } = await supabase
         .from('reviews')
         .insert({
@@ -201,6 +202,8 @@ const ReviewAndTipModal: React.FC<ReviewAndTipModalProps> = ({
           communication_rating: reviewData.communication_rating,
           punctuality_rating: reviewData.punctuality_rating,
           review_text: reviewData.review_text,
+          business_id: booking.business_id || null,
+          provider_id: booking.providers?.id || booking.provider_id || null,
         })
         .select()
         .single();

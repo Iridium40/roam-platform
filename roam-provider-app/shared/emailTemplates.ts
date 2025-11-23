@@ -202,7 +202,31 @@ export const ROAM_EMAIL_TEMPLATES = {
     return getROAMEmailTemplate(content);
   },
 
-  bookingConfirmed: (customerName: string, serviceName: string, providerName: string, bookingDate: string, bookingTime: string, location: string, totalAmount: string) => {
+  bookingConfirmed: (customerName: string, serviceName: string, providerName: string, bookingDate: string, bookingTime: string, location: string, totalAmount: string, calendarLinks?: { google?: string; outlook?: string; ics?: string }) => {
+    const calendarSection = calendarLinks ? `
+      <div class="highlight" style="background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 20px; border-radius: 8px; margin: 25px 0;">
+        <h3 style="margin-top: 0; color: #1e40af;">📅 Add to Calendar</h3>
+        <p style="margin-bottom: 15px;">Add this booking to your calendar so you don't miss it!</p>
+        <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px;">
+          ${calendarLinks.google ? `
+            <a href="${calendarLinks.google}" target="_blank" style="display: inline-block; background-color: #4285f4; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 14px;">
+              📅 Google Calendar
+            </a>
+          ` : ''}
+          ${calendarLinks.outlook ? `
+            <a href="${calendarLinks.outlook}" target="_blank" style="display: inline-block; background-color: #0078d4; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 14px;">
+              📅 Outlook
+            </a>
+          ` : ''}
+          ${calendarLinks.ics ? `
+            <a href="${calendarLinks.ics}" style="display: inline-block; background-color: #6b7280; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 14px;">
+              📥 Download .ics File
+            </a>
+          ` : ''}
+        </div>
+      </div>
+    ` : '';
+
     const content = `
       <h1>🎉 Your Booking Has Been Confirmed!</h1>
       <p>Hi ${customerName},</p>
@@ -217,6 +241,8 @@ export const ROAM_EMAIL_TEMPLATES = {
         <p style="margin: 10px 0;"><strong>Location:</strong> ${location}</p>
         <p style="margin: 10px 0;"><strong>Total:</strong> $${totalAmount}</p>
       </div>
+      
+      ${calendarSection}
       
       <div class="highlight">
         <h3>What's Next?</h3>

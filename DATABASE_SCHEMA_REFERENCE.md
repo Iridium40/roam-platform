@@ -1114,6 +1114,8 @@ Customer reviews and ratings.
 **Key Columns**:
 - `id` (uuid, PK)
 - `booking_id` (uuid, unique, FK → bookings.id)
+- `business_id` (uuid, FK → business_profiles.id) - Direct reference to business being reviewed
+- `provider_id` (uuid, FK → providers.id) - Direct reference to provider being reviewed
 - `overall_rating` (integer, check: 1-5)
 - `service_rating` (integer, check: 1-5)
 - `communication_rating` (integer, check: 1-5)
@@ -1125,6 +1127,15 @@ Customer reviews and ratings.
 - `moderated_at` (timestamptz)
 - `moderation_notes` (text)
 - `created_at` (timestamptz)
+
+**Indexes**:
+- `idx_reviews_booking_id` on `booking_id`
+- `idx_reviews_business_id` on `business_id`
+- `idx_reviews_provider_id` on `provider_id`
+- `idx_reviews_overall_rating` on `overall_rating`
+- `idx_reviews_is_approved` on `is_approved`
+- `idx_reviews_is_featured` on `is_featured`
+- `idx_reviews_created_at` on `created_at`
 
 ---
 
