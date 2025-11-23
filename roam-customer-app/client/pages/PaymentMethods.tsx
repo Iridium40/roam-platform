@@ -529,6 +529,12 @@ function AddCardForm({ customerId, onSuccess, onError, setAsDefault, onSetAsDefa
     setIsLoading(true);
 
     try {
+      // Submit elements first (required by Stripe)
+      const { error: submitError } = await elements.submit();
+      if (submitError) {
+        throw new Error(submitError.message || 'Failed to validate payment details');
+      }
+
       // Confirm setup intent to collect payment method
       const { error: confirmError, setupIntent } = await stripe.confirmSetup({
         elements,
