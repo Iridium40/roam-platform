@@ -343,8 +343,8 @@ async function handleTipPayment(session: Stripe.Checkout.Session) {
         payment_status: 'completed',
         stripe_payment_intent_id: session.payment_intent as string,
         stripe_session_id: session.id,
-        platform_fee_amount: parseFloat(stripe_fee), // Stripe processing fees only
-        provider_net_amount: parseFloat(provider_net), // Tip minus Stripe fees
+        platform_fee_amount: parseFloat(stripe_fee || '0'), // Stripe processing fees (will be updated with actual fees in webhook)
+        provider_net_amount: parseFloat(provider_net || tip_amount || '0'), // Tip minus Stripe fees (will be updated with actual amount in webhook)
         customer_message: customer_message || '',
       })
       .select()
@@ -573,16 +573,25 @@ async function handleBookingPayment(session: Stripe.Checkout.Session) {
   }
 
   // Calculate platform fee for business_payment_transactions
-  // Get platform fee from payment intent metadata or use default
+  // Platform fee is 20% of the SERVICE AMOUNT (not total amount)
+  // The 20% service fee covers Stripe fees, so business receives full service amount
+  // If business charges $100, platform fee = $20, customer pays $120 total
   const platformFeePercentage = parseFloat(paymentIntent.metadata?.platformFee || '0.2'); // Default 20% if not in metadata
-  const platformFee = totalAmount * platformFeePercentage;
-  const providerAmount = totalAmount - platformFee;
+  
+  // Get service amount from metadata if available, otherwise calculate from total
+  // totalAmount = serviceAmount + platformFee = serviceAmount + (serviceAmount * 0.2) = serviceAmount * 1.2
+  // Therefore: serviceAmount = totalAmount / 1.2
+  const serviceAmountFromMetadata = paymentIntent.metadata?.serviceAmount 
+    ? parseFloat(paymentIntent.metadata.serviceAmount) 
+    : null;
+  
+  const serviceAmount = serviceAmountFromMetadata || (totalAmount / (1 + platformFeePercentage));
+  const platformFee = serviceAmount * platformFeePercentage;
+  const netPaymentAmount = serviceAmount; // Business receives full service amount
+
+  console.log(`💰 Payment splits calculated: Service Amount $${serviceAmount.toFixed(2)}, Platform Fee $${platformFee.toFixed(2)}, Customer Paid $${totalAmount.toFixed(2)}, Business Receives $${netPaymentAmount.toFixed(2)}`);
 
   console.log(`✅ Financial transaction recorded for booking ${booking.id}`);
-
-  // Create business_payment_transactions record
-  // Use the same platformFee calculated above
-  const netPaymentAmount = totalAmount - platformFee;
   
   // Extract tax year from booking date or use current year
   const bookingDate = booking.booking_date ? new Date(booking.booking_date) : new Date();
@@ -864,16 +873,23 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
     }
 
     // Calculate platform fee for business_payment_transactions
-    // Get platform fee from payment intent metadata or use default
+    // Platform fee is 20% of the SERVICE AMOUNT (not total amount)
+    // The 20% service fee covers Stripe fees, so business receives full service amount
+    // If business charges $100, platform fee = $20, customer pays $120 total
     const platformFeePercentage = parseFloat(paymentIntent.metadata?.platformFee || '0.2'); // Default 20% if not in metadata
-    const platformFee = totalAmount * platformFeePercentage;
-    const providerAmount = totalAmount - platformFee;
+    
+    // Get service amount from metadata if available, otherwise calculate from total
+    // totalAmount = serviceAmount + platformFee = serviceAmount + (serviceAmount * 0.2) = serviceAmount * 1.2
+    // Therefore: serviceAmount = totalAmount / 1.2
+    const serviceAmountFromMetadata = paymentIntent.metadata?.serviceAmount 
+      ? parseFloat(paymentIntent.metadata.serviceAmount) 
+      : null;
+    
+    const serviceAmount = serviceAmountFromMetadata || (totalAmount / (1 + platformFeePercentage));
+    const platformFee = serviceAmount * platformFeePercentage;
+    const netPaymentAmount = serviceAmount; // Business receives full service amount
 
-    console.log(`💰 Payment splits calculated: Platform $${platformFee.toFixed(2)}, Provider $${providerAmount.toFixed(2)}`);
-
-    // Create or update business_payment_transactions record
-    // Use the platformFee already calculated above
-    const netPaymentAmount = totalAmount - platformFee;
+    console.log(`💰 Payment splits calculated: Service Amount $${serviceAmount.toFixed(2)}, Platform Fee $${platformFee.toFixed(2)}, Customer Paid $${totalAmount.toFixed(2)}, Business Receives $${netPaymentAmount.toFixed(2)}`);
     
     // Extract tax year from booking date or use current year
     const bookingDate = booking.booking_date ? new Date(booking.booking_date) : new Date();
@@ -907,9 +923,9 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
       booking_id: bookingId,
       business_id: booking.business_id,
       payment_date: paymentDate,
-      gross_payment_amount: totalAmount,
-      platform_fee: platformFee,
-      net_payment_amount: netPaymentAmount,
+      gross_payment_amount: totalAmount, // Total amount customer paid
+      platform_fee: platformFee, // 20% of service amount
+      net_payment_amount: netPaymentAmount, // Full service amount (what business receives)
       tax_year: taxYear,
       stripe_payment_intent_id: paymentIntent.id,
       stripe_connect_account_id: businessProfile?.stripe_connect_account_id || null,
@@ -1051,6 +1067,45 @@ async function handleTipPaymentIntent(paymentIntent: Stripe.PaymentIntent) {
       tipAmount: tip_amount,
     });
 
+    // Retrieve actual Stripe fees from the charge's balance transaction
+    // Tips don't have a service fee, but Stripe processing fees are deducted
+    let actualStripeFee = 0;
+    let actualProviderNet = parseFloat(tip_amount || '0');
+    
+    if (paymentIntent.latest_charge) {
+      try {
+        const chargeId = typeof paymentIntent.latest_charge === 'string' 
+          ? paymentIntent.latest_charge 
+          : paymentIntent.latest_charge.id;
+        
+        const charge = await stripe.charges.retrieve(chargeId, {
+          expand: ['balance_transaction']
+        });
+        
+        if (charge.balance_transaction) {
+          const balanceTransaction = typeof charge.balance_transaction === 'string'
+            ? await stripe.balanceTransactions.retrieve(charge.balance_transaction)
+            : charge.balance_transaction;
+          
+          // Stripe fee is the difference between amount and net (after Stripe fees)
+          actualStripeFee = (balanceTransaction.fee || 0) / 100; // Convert from cents to dollars
+          actualProviderNet = (balanceTransaction.net || 0) / 100; // Convert from cents to dollars
+          
+          console.log(`💰 Actual Stripe fees from balance transaction: $${actualStripeFee.toFixed(2)}, Provider net: $${actualProviderNet.toFixed(2)}`);
+        }
+      } catch (feeError: any) {
+        console.warn('⚠️ Could not retrieve actual Stripe fees from balance transaction, using metadata:', feeError.message);
+        // Fallback to metadata values if balance transaction retrieval fails
+        actualStripeFee = parseFloat(stripe_fee || '0');
+        actualProviderNet = parseFloat(provider_net || tip_amount || '0');
+      }
+    } else {
+      // Fallback to metadata values if no charge available
+      actualStripeFee = parseFloat(stripe_fee || '0');
+      actualProviderNet = parseFloat(provider_net || tip_amount || '0');
+      console.log('⚠️ No charge available, using estimated fees from metadata');
+    }
+
     // Check if tip record already exists (created when payment intent was created)
     const { data: existingTip } = await supabase
       .from('tips')
@@ -1068,8 +1123,8 @@ async function handleTipPaymentIntent(paymentIntent: Stripe.PaymentIntent) {
         .update({
           payment_status: 'completed',
           payment_processed_at: new Date().toISOString(),
-          platform_fee_amount: parseFloat(stripe_fee),
-          provider_net_amount: parseFloat(provider_net),
+          platform_fee_amount: actualStripeFee, // Actual Stripe fees from balance transaction
+          provider_net_amount: actualProviderNet, // Actual net amount after Stripe fees
           updated_at: new Date().toISOString(),
         })
         .eq('id', existingTip.id)
@@ -1097,8 +1152,8 @@ async function handleTipPaymentIntent(paymentIntent: Stripe.PaymentIntent) {
           tip_percentage: null,
           payment_status: 'completed',
           stripe_payment_intent_id: paymentIntent.id,
-          platform_fee_amount: parseFloat(stripe_fee),
-          provider_net_amount: parseFloat(provider_net),
+          platform_fee_amount: actualStripeFee, // Actual Stripe fees from balance transaction
+          provider_net_amount: actualProviderNet, // Actual net amount after Stripe fees
           customer_message: customer_message || null,
           payment_processed_at: new Date().toISOString(),
         })
@@ -1140,8 +1195,8 @@ async function handleTipPaymentIntent(paymentIntent: Stripe.PaymentIntent) {
         provider_id,
         business_id,
         tip_amount: parseFloat(tip_amount),
-        stripe_fee: parseFloat(stripe_fee),
-        provider_net: parseFloat(provider_net),
+        stripe_fee: actualStripeFee, // Actual Stripe fees from balance transaction
+        provider_net: actualProviderNet, // Actual net amount after Stripe fees
         customer_message: customer_message || ''
       }
     });
