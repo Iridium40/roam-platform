@@ -44,9 +44,9 @@ This document explains how the three payment-related tables are updated during t
 }
 ```
 
-#### Service Amount
+#### Service Amount (Business Service Fee)
 
-**If ≤24 hours away (Charged Immediately):**
+**Charged Immediately Upon Acceptance (All Bookings):**
 
 **`financial_transactions` table:**
 ```typescript
@@ -61,19 +61,6 @@ This document explains how the three payment-related tables are updated during t
 }
 ```
 
-**`booking_payment_schedules` table:**
-```typescript
-{
-  booking_id: bookingId,
-  payment_type: 'remaining_balance',
-  scheduled_at: NOW(),
-  amount: serviceAmount,
-  status: 'processed',
-  stripe_payment_intent_id: serviceAmountPaymentIntent.id,
-  processed_at: NOW()
-}
-```
-
 **`business_payment_transactions` table:**
 ```typescript
 {
@@ -86,88 +73,75 @@ This document explains how the three payment-related tables are updated during t
   tax_year: CURRENT_YEAR,
   stripe_payment_intent_id: serviceAmountPaymentIntent.id,
   stripe_connect_account_id: stripeConnectAccountId,
-  booking_reference: bookingReference
+  booking_reference: bookingReference,
+  transaction_type: 'initial_booking'
 }
 ```
 
-**If >24 hours away (Authorized, Scheduled for Capture):**
-
-**`financial_transactions` table:**
-```typescript
-{
-  booking_id: bookingId,
-  amount: serviceAmount,
-  stripe_transaction_id: serviceAmountPaymentIntent.id,
-  transaction_type: 'booking_payment',
-  status: 'pending', // Not charged yet
-  processed_at: null,
-  metadata: { payment_type: 'service_amount', charged_immediately: false, capture_at_24h: true }
-}
-```
-
-**`booking_payment_schedules` table:**
-```typescript
-{
-  booking_id: bookingId,
-  payment_type: 'remaining_balance',
-  scheduled_at: bookingDateTime - 24 hours,
-  amount: serviceAmount,
-  status: 'scheduled',
-  stripe_payment_intent_id: serviceAmountPaymentIntent.id,
-  processed_at: null
-}
-```
-
-**`business_payment_transactions` table:** *Not created yet* (will be created when payment is captured)
+**Note:** Both service fees (platform fees) and business service fees are charged immediately upon booking acceptance, regardless of booking date/time. There is no delayed charging or authorization for future capture.
 
 ---
 
-### 2. Scheduled Capture (24 Hours Before Booking)
+### 2. Additional Service Payments (Add More Service)
 
-**When:** Cron job runs (every hour) and finds payments due
+**When:** Customer adds additional services to an existing booking
 
-**Location:** `roam-provider-app/api/bookings/capture-service-amount.ts`
-
-**Process:**
-1. Query `booking_payment_schedules` for `status = 'scheduled'` and `scheduled_at <= NOW()`
-2. Capture payment intent via Stripe
-3. Update all three tables
-
-**Updates:**
-
-**`booking_payment_schedules` table:**
-```typescript
-UPDATE booking_payment_schedules
-SET 
-  status = 'processed',
-  processed_at = NOW()
-WHERE id = schedule_id;
-```
+**Location:** `roam-customer-app/api/stripe/webhook.ts` → `handlePaymentIntentSucceeded()`
 
 **`financial_transactions` table:**
 ```typescript
-UPDATE financial_transactions
-SET 
-  status = 'completed',
-  processed_at = NOW()
-WHERE stripe_transaction_id = paymentIntentId;
+{
+  booking_id: bookingId,
+  amount: additionalServiceAmount,
+  stripe_transaction_id: paymentIntent.id,
+  transaction_type: 'booking_payment',
+  status: 'completed',
+  processed_at: NOW(),
+  metadata: { payment_type: 'additional_service' }
+}
 ```
 
 **`business_payment_transactions` table:**
 ```typescript
-INSERT INTO business_payment_transactions {
+{
   booking_id: bookingId,
   business_id: businessId,
   payment_date: TODAY,
-  gross_payment_amount: totalAmount,
-  platform_fee: serviceFeeAmount,
-  net_payment_amount: serviceAmount,
+  gross_payment_amount: additionalServiceAmount,
+  platform_fee: platformFeeOnAdditionalService,
+  net_payment_amount: netAdditionalServiceAmount,
   tax_year: CURRENT_YEAR,
-  stripe_payment_intent_id: paymentIntentId,
+  stripe_payment_intent_id: paymentIntent.id,
   stripe_connect_account_id: stripeConnectAccountId,
-  booking_reference: bookingReference
+  booking_reference: bookingReference,
+  transaction_type: 'additional_service' // Distinguishes from initial booking
 }
 ```
+
+**Note:** Each "add more service" payment creates a separate `business_payment_transactions` record to maintain audit trail. Multiple records per booking are allowed.
+
+---
+
+### 3. Tip Payments
+
+**When:** Customer tips provider after service completion
+
+**Location:** `roam-customer-app/api/stripe/webhook.ts` → `handleTipPaymentIntent()`
+
+**`financial_transactions` table:**
+```typescript
+{
+  booking_id: bookingId,
+  amount: tipAmount,
+  stripe_transaction_id: paymentIntent.id,
+  transaction_type: 'tip',
+  status: 'completed',
+  processed_at: NOW(),
+  metadata: { tip_amount, provider_id, business_id }
+}
+```
+
+**`business_payment_transactions` table:** *NOT created* - Tips go directly to providers, not through businesses
 
 ---
 
@@ -176,19 +150,23 @@ INSERT INTO business_payment_transactions {
 ```
 bookings (1) ──┬──> financial_transactions (many)
                │
-               ├──> booking_payment_schedules (many)
-               │
-               └──> business_payment_transactions (1)
+               └──> business_payment_transactions (many) - one per payment type
 ```
+
+**Note:** `business_payment_transactions` can have multiple records per booking:
+- One for initial booking payment (`transaction_type: 'initial_booking'`)
+- One or more for additional service payments (`transaction_type: 'additional_service'`)
 
 ## Key Points
 
-1. **Service Fee**: Always charged immediately when booking is accepted
-2. **Service Amount**: 
-   - Charged immediately if booking ≤24h away
-   - Authorized and scheduled if booking >24h away
-3. **`business_payment_transactions`**: Created when service amount is actually charged (either immediately or via cron)
-4. **All tables are updated atomically** - if one fails, the transaction is rolled back
+1. **Service Fee (Platform Fee)**: Always charged immediately when booking is accepted (non-refundable)
+2. **Business Service Fee (Service Amount)**: Always charged immediately when booking is accepted
+3. **Both fees charged immediately**: No delayed charging or authorization - all money is taken at acceptance
+4. **`business_payment_transactions`**: 
+   - Created immediately when booking is accepted (`transaction_type: 'initial_booking'`)
+   - Additional records created for "add more service" payments (`transaction_type: 'additional_service'`)
+   - Multiple records per booking allowed (unique constraint removed)
+5. **Tips**: Do NOT create `business_payment_transactions` records (tips go directly to providers)
 
 ## Query Examples
 
@@ -209,12 +187,11 @@ SELECT * FROM business_payment_transactions
 WHERE booking_id = 'xxx';
 ```
 
-### Find scheduled payments due for capture
+### Find all payments for a booking (including add more service)
 ```sql
-SELECT * FROM booking_payment_schedules 
-WHERE status = 'scheduled' 
-  AND scheduled_at <= NOW()
-ORDER BY scheduled_at;
+SELECT * FROM business_payment_transactions 
+WHERE booking_id = 'xxx'
+ORDER BY created_at;
 ```
 
 ### Business payment summary

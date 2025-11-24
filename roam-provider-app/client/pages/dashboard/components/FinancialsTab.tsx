@@ -54,6 +54,7 @@ import {
   RefreshCw,
   Settings,
   Building2,
+  Star,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
@@ -87,16 +88,57 @@ export default function FinancialsTab({
   const [businessPaymentTransactions, setBusinessPaymentTransactions] = useState<any[]>([]);
   const [supabaseLoading, setSupabaseLoading] = useState(false);
 
-  const businessId = business?.id || providerData?.business_id;
+  // Financial summary data from API (using real payment transactions)
+  const [financialSummary, setFinancialSummary] = useState<any>(null);
+  const [financialSummaryLoading, setFinancialSummaryLoading] = useState(false);
 
-  // Load financial data
+  // Tips data state (owner only)
+  const [tipsData, setTipsData] = useState<any[]>([]);
+  const [tipsLoading, setTipsLoading] = useState(false);
+
+  const businessId = business?.id || providerData?.business_id;
+  const isOwner = providerData?.provider_role === 'owner';
+
+  // Load financial summary data from API (using real payment transactions)
+  const loadFinancialSummary = async () => {
+    if (!businessId) return;
+
+    try {
+      setFinancialSummaryLoading(true);
+
+      const res = await fetch(`/api/business/financial-summary?business_id=${businessId}&period=${selectedPeriod}`);
+      if (res.ok) {
+        const data = await res.json();
+        setFinancialSummary(data);
+      } else {
+        const error = await res.json();
+        console.error('Failed to load financial summary:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load financial summary",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error loading financial summary:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load financial summary",
+        variant: "destructive",
+      });
+    } finally {
+      setFinancialSummaryLoading(false);
+    }
+  };
+
+  // Load bookings data (still needed for some display purposes)
   const loadFinancialData = async () => {
     if (!providerData) return;
 
     try {
       setLoading(true);
 
-      // Load bookings for financial calculations
+      // Load bookings for display purposes
       const { data: bookingsData, error: bookingsError } = await supabase
         .from('bookings')
         .select(`
@@ -105,7 +147,8 @@ export default function FinancialsTab({
           customer_profiles:customer_id(*)
         `)
         .eq('business_id', businessId)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(100); // Limit for performance
 
       if (bookingsError) throw bookingsError;
       setBookings(bookingsData || []);
@@ -233,6 +276,32 @@ export default function FinancialsTab({
     }
   };
 
+  // Load tips data (owner only) - using eligible_provider_tips view
+  const loadTipsData = async () => {
+    if (!businessId || !isOwner) return;
+
+    try {
+      setTipsLoading(true);
+
+      const { data: tipsData, error: tipsError } = await supabase
+        .from('eligible_provider_tips')
+        .select('*')
+        .eq('business_id', businessId)
+        .order('tip_given_at', { ascending: false })
+        .limit(100);
+
+      if (tipsError) {
+        console.error('Error loading tips data:', tipsError);
+      } else {
+        setTipsData(tipsData || []);
+      }
+    } catch (error) {
+      console.error('Error loading tips data:', error);
+    } finally {
+      setTipsLoading(false);
+    }
+  };
+
   // Open Stripe Express Dashboard
   const openStripeDashboard = async () => {
     try {
@@ -275,6 +344,7 @@ export default function FinancialsTab({
       loadStripePayouts(),
       loadStripeTransactions(),
       loadSupabaseFinancialData(), // Also refresh Supabase data
+      loadFinancialSummary(), // Refresh financial summary
     ]);
     setStripeLoading(false);
   };
@@ -289,14 +359,39 @@ export default function FinancialsTab({
 
   useEffect(() => {
     loadFinancialData();
+    loadFinancialSummary(); // Load financial summary from API
     loadStripeBalance();
     loadStripePayouts();
     loadStripeTransactions();
     loadSupabaseFinancialData(); // Load Supabase financial data
-  }, [providerData, business]);
+    if (isOwner) {
+      loadTipsData(); // Load tips data for owners only
+    }
+  }, [providerData, business, isOwner, selectedPeriod]); // Add selectedPeriod dependency
 
-  // Calculate financial metrics
+  // Calculate financial metrics using real payment transaction data
   const financialMetrics = useMemo(() => {
+    // Use real data from financial summary API if available
+    if (financialSummary?.period_summary) {
+      const period = financialSummary.period_summary;
+      return {
+        totalRevenue: period.net_earnings || 0, // Net earnings (what business actually receives)
+        totalGrossRevenue: period.gross_earnings || 0, // Gross earnings (before platform fees)
+        totalBookings: period.booking_count || 0,
+        completedCount: period.initial_bookings || 0,
+        cancelledCount: 0, // Would need to calculate from bookings if needed
+        averageOrderValue: period.average_order_value || 0,
+        completionRate: financialSummary.calculated_metrics?.completion_rate || 0,
+        revenueChange: period.revenue_change || 0,
+        bookingsChange: period.bookings_change || 0,
+        platformFees: period.platform_fees || 0,
+        transactionCount: period.transaction_count || 0,
+        periodBookings: bookings, // Keep for backward compatibility
+        completedBookings: bookings.filter(b => b.booking_status === 'completed'),
+      };
+    }
+
+    // Fallback to bookings-based calculation if API data not available
     const now = new Date();
     const periodStart = new Date();
     periodStart.setDate(now.getDate() - parseInt(selectedPeriod));
@@ -332,6 +427,7 @@ export default function FinancialsTab({
 
     return {
       totalRevenue,
+      totalGrossRevenue: totalRevenue,
       totalBookings,
       completedCount,
       cancelledCount,
@@ -339,12 +435,26 @@ export default function FinancialsTab({
       completionRate,
       revenueChange,
       bookingsChange,
+      platformFees: 0,
+      transactionCount: totalBookings,
       periodBookings,
       completedBookings,
     };
-  }, [bookings, selectedPeriod]);
+  }, [financialSummary, bookings, selectedPeriod]);
 
   const getRevenueByService = () => {
+    // Use real data from API if available
+    if (financialSummary?.earnings_by_service && financialSummary.earnings_by_service.length > 0) {
+      return financialSummary.earnings_by_service
+        .slice(0, 5)
+        .map((service: any) => ({
+          name: service.service_name || 'Unknown Service',
+          revenue: parseFloat(service.total_net_earnings || 0),
+          bookingCount: service.booking_count || 0,
+        }));
+    }
+
+    // Fallback to bookings-based calculation
     const serviceRevenue: { [key: string]: number } = {};
     
     financialMetrics.completedBookings.forEach(booking => {
@@ -359,6 +469,18 @@ export default function FinancialsTab({
   };
 
   const getRevenueByMonth = () => {
+    // Use real data from API if available
+    if (financialSummary?.monthly_earnings && financialSummary.monthly_earnings.length > 0) {
+      return financialSummary.monthly_earnings
+        .slice(0, 6)
+        .map((month: any) => ({
+          month: month.month_key || month.month_start,
+          revenue: parseFloat(month.net_earnings || 0),
+        }))
+        .sort((a: any, b: any) => a.month.localeCompare(b.month));
+    }
+
+    // Fallback to bookings-based calculation
     const monthlyRevenue: { [key: string]: number } = {};
     
     financialMetrics.completedBookings.forEach(booking => {
@@ -466,9 +588,13 @@ export default function FinancialsTab({
             <div>
               <p className="text-sm text-gray-600">Total Earnings (YTD)</p>
               <p className="text-4xl font-bold text-gray-900 mt-2">
-                ${financialMetrics.totalRevenue.toFixed(2)}
+                ${financialSummary?.summary?.total_net_earnings 
+                  ? parseFloat(financialSummary.summary.total_net_earnings).toFixed(2)
+                  : financialMetrics.totalRevenue.toFixed(2)}
               </p>
-              <p className="text-sm text-gray-500 mt-2">{financialMetrics.completedCount} bookings</p>
+              <p className="text-sm text-gray-500 mt-2">
+                {financialSummary?.summary?.total_bookings || financialMetrics.completedCount} bookings
+              </p>
             </div>
             <div className="w-14 h-14 bg-purple-100 rounded-lg flex items-center justify-center">
               <TrendingUp className="w-7 h-7 text-purple-600" />
@@ -479,10 +605,11 @@ export default function FinancialsTab({
 
       {/* Tabs for detailed views */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className={`grid w-full ${isOwner ? 'grid-cols-5' : 'grid-cols-4'}`}>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="payouts">Payouts</TabsTrigger>
           <TabsTrigger value="transactions">Transactions</TabsTrigger>
+          {isOwner && <TabsTrigger value="tips">Tips</TabsTrigger>}
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
 
@@ -775,7 +902,63 @@ export default function FinancialsTab({
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {financialTransactions.length > 0 ? (
+                {financialSummary?.recent_transactions && financialSummary.recent_transactions.length > 0 ? (
+                  financialSummary.recent_transactions.map((transaction: any) => (
+                    <div key={transaction.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                          transaction.transaction_type === 'initial_booking' ? 'bg-green-100' :
+                          transaction.transaction_type === 'additional_service' ? 'bg-blue-100' :
+                          'bg-gray-100'
+                        }`}>
+                          {transaction.transaction_type === 'initial_booking' || transaction.transaction_type === 'additional_service' ? (
+                            <ArrowDownRight className="w-5 h-5 text-green-600" />
+                          ) : (
+                            <Receipt className="w-5 h-5 text-gray-600" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-medium text-sm">
+                            {transaction.transaction_description || 
+                             (transaction.transaction_type === 'initial_booking' ? 'Initial Booking Payment' :
+                              transaction.transaction_type === 'additional_service' ? 'Additional Service' :
+                              'Payment')}
+                          </p>
+                          {transaction.service_name && (
+                            <p className="text-xs text-gray-600">{transaction.service_name}</p>
+                          )}
+                          {transaction.booking_reference && (
+                            <p className="text-xs text-gray-600">Booking: {transaction.booking_reference}</p>
+                          )}
+                          {transaction.customer_first_name && transaction.customer_last_name && (
+                            <p className="text-xs text-gray-500">
+                              Customer: {transaction.customer_first_name} {transaction.customer_last_name}
+                            </p>
+                          )}
+                          <p className="text-xs text-gray-500">
+                            {new Date(transaction.payment_date).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold text-green-600">
+                          +${parseFloat(transaction.net_payment_amount || 0).toFixed(2)}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Gross: ${parseFloat(transaction.gross_payment_amount || 0).toFixed(2)}
+                        </p>
+                        <p className="text-xs text-gray-400">
+                          Fee: ${parseFloat(transaction.platform_fee || 0).toFixed(2)}
+                        </p>
+                        {transaction.transaction_type && (
+                          <Badge variant="outline" className="text-xs mt-1">
+                            {transaction.transaction_type === 'initial_booking' ? 'Initial' : 'Additional'}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                ) : financialTransactions.length > 0 ? (
                   financialTransactions.map((transaction) => (
                     <div key={transaction.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                       <div className="flex items-center space-x-3">
@@ -887,6 +1070,192 @@ export default function FinancialsTab({
             </Card>
           )}
         </TabsContent>
+
+        {/* Tips Tab - Owner Only */}
+        {isOwner && (
+          <TabsContent value="tips" className="space-y-6 mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Star className="w-5 h-5" />
+                  <span>Provider Tips Report</span>
+                </CardTitle>
+                <CardDescription>
+                  Tips received by providers who are eligible for bookings
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {tipsLoading ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                    <p className="text-sm text-gray-500 mt-2">Loading tips data...</p>
+                  </div>
+                ) : tipsData.length > 0 ? (
+                  <div className="space-y-6">
+                    {/* Summary Cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <Card className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm text-gray-600">Total Tips</p>
+                            <p className="text-2xl font-bold text-gray-900 mt-1">
+                              ${tipsData.reduce((sum, tip) => sum + parseFloat(tip.tip_amount || 0), 0).toFixed(2)}
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">{tipsData.length} tips</p>
+                          </div>
+                          <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+                            <Star className="w-6 h-6 text-yellow-600" />
+                          </div>
+                        </div>
+                      </Card>
+                      <Card className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm text-gray-600">Provider Net</p>
+                            <p className="text-2xl font-bold text-gray-900 mt-1">
+                              ${tipsData.reduce((sum, tip) => sum + parseFloat(tip.provider_net_amount || 0), 0).toFixed(2)}
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">After platform fees</p>
+                          </div>
+                          <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                            <Wallet className="w-6 h-6 text-green-600" />
+                          </div>
+                        </div>
+                      </Card>
+                      <Card className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm text-gray-600">Platform Fees</p>
+                            <p className="text-2xl font-bold text-gray-900 mt-1">
+                              ${tipsData.reduce((sum, tip) => sum + parseFloat(tip.platform_fee_amount || 0), 0).toFixed(2)}
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">From tips</p>
+                          </div>
+                          <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <DollarSign className="w-6 h-6 text-blue-600" />
+                          </div>
+                        </div>
+                      </Card>
+                    </div>
+
+                    {/* Tips by Provider */}
+                    {(() => {
+                      const tipsByProvider = tipsData.reduce((acc: any, tip: any) => {
+                        const providerId = tip.provider_id;
+                        const providerName = `${tip.provider_first_name || ''} ${tip.provider_last_name || ''}`.trim() || 'Unknown Provider';
+                        
+                        if (!acc[providerId]) {
+                          acc[providerId] = {
+                            providerId,
+                            providerName,
+                            tips: [],
+                            totalAmount: 0,
+                            totalNet: 0,
+                            totalFees: 0,
+                          };
+                        }
+                        
+                        acc[providerId].tips.push(tip);
+                        acc[providerId].totalAmount += parseFloat(tip.tip_amount || 0);
+                        acc[providerId].totalNet += parseFloat(tip.provider_net_amount || 0);
+                        acc[providerId].totalFees += parseFloat(tip.platform_fee_amount || 0);
+                        
+                        return acc;
+                      }, {});
+
+                      const providerStats = Object.values(tipsByProvider).sort((a: any, b: any) => b.totalAmount - a.totalAmount);
+
+                      return (
+                        <div className="space-y-4">
+                          <h3 className="text-lg font-semibold">Tips by Provider</h3>
+                          {providerStats.map((provider: any) => (
+                            <Card key={provider.providerId} className="p-4">
+                              <div className="flex items-start justify-between mb-3">
+                                <div>
+                                  <p className="font-semibold text-lg">{provider.providerName}</p>
+                                  <p className="text-sm text-gray-500">{provider.tips.length} tip{provider.tips.length !== 1 ? 's' : ''}</p>
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-xl font-bold text-gray-900">
+                                    ${provider.totalAmount.toFixed(2)}
+                                  </p>
+                                  <p className="text-xs text-gray-500">
+                                    Net: ${provider.totalNet.toFixed(2)}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="space-y-2">
+                                {provider.tips.map((tip: any) => (
+                                  <div key={tip.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                    <div className="flex-1">
+                                      <div className="flex items-center space-x-2">
+                                        <p className="font-medium text-sm">
+                                          {tip.customer_first_name && tip.customer_last_name
+                                            ? `${tip.customer_first_name} ${tip.customer_last_name}`
+                                            : 'Anonymous Customer'}
+                                        </p>
+                                        {tip.service_name && (
+                                          <Badge variant="outline" className="text-xs">
+                                            {tip.service_name}
+                                          </Badge>
+                                        )}
+                                      </div>
+                                      <div className="flex items-center space-x-4 mt-1 text-xs text-gray-500">
+                                        {tip.booking_reference && (
+                                          <span>Booking: {tip.booking_reference}</span>
+                                        )}
+                                        {tip.tip_given_at && (
+                                          <span>
+                                            {new Date(tip.tip_given_at).toLocaleDateString()}
+                                          </span>
+                                        )}
+                                      </div>
+                                      {tip.customer_message && (
+                                        <p className="text-xs text-gray-600 mt-1 italic">
+                                          "{tip.customer_message}"
+                                        </p>
+                                      )}
+                                    </div>
+                                    <div className="text-right ml-4">
+                                      <p className="font-semibold text-green-600">
+                                        ${parseFloat(tip.tip_amount || 0).toFixed(2)}
+                                      </p>
+                                      <p className="text-xs text-gray-500">
+                                        Net: ${parseFloat(tip.provider_net_amount || 0).toFixed(2)}
+                                      </p>
+                                      {tip.payment_status && (
+                                        <Badge 
+                                          variant={
+                                            tip.payment_status === 'completed' ? 'default' :
+                                            tip.payment_status === 'pending' ? 'secondary' :
+                                            'destructive'
+                                          }
+                                          className="text-xs mt-1"
+                                        >
+                                          {tip.payment_status}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </Card>
+                          ))}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Star className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                    <p className="text-sm text-gray-500">No tips received yet</p>
+                    <p className="text-xs text-gray-400 mt-1">Tips from eligible providers will appear here</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
 
         {/* Settings Tab */}
         <TabsContent value="settings" className="space-y-6 mt-6">

@@ -3,9 +3,10 @@
 ## ✅ **Strengths**
 
 ### 1. **Business Logic Compliance**
-- ✅ Service fee charged immediately on acceptance (non-refundable)
-- ✅ Service amount charged immediately if ≤24h, authorized if >24h
-- ✅ Refund logic correctly implements: service fee non-refundable, service amount refundable >24h
+- ✅ Service fee (platform fee) charged immediately on acceptance (non-refundable)
+- ✅ Business service fee (service amount) charged immediately on acceptance
+- ✅ Both fees charged immediately upon booking acceptance, regardless of booking date/time
+- ✅ Refund logic correctly implements: service fee non-refundable, business service fee refundable if cancelled 24+ hours before booking
 - ✅ No charges until business accepts (zero risk for customers)
 
 ### 2. **Database Design**
