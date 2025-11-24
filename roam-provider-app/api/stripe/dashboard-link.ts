@@ -37,7 +37,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Get business profile with stripe account
     const { data: business, error: businessError } = await supabase
       .from('business_profiles')
-      .select('stripe_account_id, owner_id')
+      .select('stripe_account_id, stripe_connect_account_id, owner_id')
       .eq('id', business_id)
       .single();
 
@@ -45,20 +45,42 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(404).json({ error: 'Business not found' });
     }
 
-    if (!business.stripe_account_id) {
+    // Use stripe_connect_account_id if available, otherwise fall back to stripe_account_id
+    const stripeAccountId = business.stripe_connect_account_id || business.stripe_account_id;
+
+    if (!stripeAccountId) {
       return res.status(400).json({ error: 'Stripe account not connected' });
     }
 
-    // Create login link (expires in 5 minutes)
-    const loginLink = await stripe.accounts.createLoginLink(
-      business.stripe_account_id
-    );
+    try {
+      // Retrieve account to verify it exists and get account type
+      const account = await stripe.accounts.retrieve(stripeAccountId);
+      
+      // Create login link
+      // For Express accounts, this creates a one-time login link that automatically logs them in
+      // Users don't need separate Stripe login credentials - the link handles authentication
+      // The link expires after a short period (typically 5 minutes) for security
+      const loginLink = await stripe.accounts.createLoginLink(stripeAccountId);
 
-    return res.json({
-      url: loginLink.url,
-      created: loginLink.created,
-      expiresIn: 300, // 5 minutes
-    });
+      return res.json({
+        url: loginLink.url,
+        created: loginLink.created,
+        accountType: account.type, // 'express' or 'standard'
+      });
+    } catch (stripeError: any) {
+      console.error('Stripe API error:', stripeError);
+      
+      // If login link creation fails, provide helpful error message
+      if (stripeError.type === 'StripeInvalidRequestError') {
+        return res.status(400).json({ 
+          error: 'Unable to create dashboard access link',
+          details: 'Your Stripe account may need additional setup. Please contact support.',
+          stripeError: stripeError.message
+        });
+      }
+      
+      throw stripeError;
+    }
 
   } catch (error: any) {
     console.error('Error creating dashboard link:', error);

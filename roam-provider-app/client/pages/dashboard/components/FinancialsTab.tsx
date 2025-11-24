@@ -302,7 +302,7 @@ export default function FinancialsTab({
     }
   };
 
-  // Open Stripe Express Dashboard
+  // Open Stripe Dashboard
   const openStripeDashboard = async () => {
     try {
       setStripeLoading(true);
@@ -314,21 +314,26 @@ export default function FinancialsTab({
 
       if (!res.ok) {
         const error = await res.json();
-        throw new Error(error.error || 'Failed to create dashboard link');
+        throw new Error(error.error || error.details || 'Failed to create dashboard link');
       }
 
       const data = await res.json();
+      
+      // Open the login link in a new tab
+      // This link will automatically log them into their Stripe Express Dashboard
+      // The link expires in 1 hour
       window.open(data.url, '_blank');
 
       toast({
-        title: "Dashboard Opened",
-        description: "Opening Stripe Express Dashboard in a new tab",
+        title: "Opening Stripe Dashboard",
+        description: "You'll be automatically logged into your Stripe account in a new tab",
       });
 
     } catch (error: any) {
+      console.error('Error opening Stripe dashboard:', error);
       toast({
         title: "Error",
-        description: error.message || "Failed to open dashboard",
+        description: error.message || "Failed to open Stripe dashboard. Please try again or contact support.",
         variant: "destructive",
       });
     } finally {
