@@ -82,7 +82,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         business_locations (id, location_name, address_line1, city, state, postal_code),
         services (id, name, description, duration_minutes, min_price),
         providers (id, user_id, first_name, last_name, image_url),
-        business_profiles (id, business_name, business_type)
+        business_profiles (id, business_name, business_type),
+        business_payment_transactions (id, booking_id, payment_date, gross_payment_amount, net_payment_amount, stripe_payment_intent_id, created_at)
       `)
       .eq('business_id', business_id);
 

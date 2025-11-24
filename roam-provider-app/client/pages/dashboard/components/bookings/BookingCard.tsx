@@ -21,6 +21,7 @@ import {
   Star,
   Building,
   User,
+  CreditCard,
 } from "lucide-react";
 
 interface BookingCardProps {
@@ -213,6 +214,40 @@ export default function BookingCard({
                 <div className="text-2xl font-bold text-blue-600">
                   ${booking.total_amount}
                 </div>
+                {/* Payment Success Indicator */}
+                {(() => {
+                  // Check if payment transaction exists (payment was successful)
+                  const hasPaymentTransaction = booking.business_payment_transactions && 
+                    (Array.isArray(booking.business_payment_transactions) 
+                      ? booking.business_payment_transactions.length > 0
+                      : !!booking.business_payment_transactions);
+                  
+                  if (hasPaymentTransaction) {
+                    return (
+                      <div className="flex items-center justify-end space-x-1 mt-1">
+                        <Badge 
+                          variant="outline" 
+                          className="bg-green-50 text-green-700 border-green-200 text-xs px-2 py-0.5"
+                        >
+                          <CreditCard className="w-3 h-3 mr-1" />
+                          Payment Received
+                        </Badge>
+                      </div>
+                    );
+                  } else {
+                    return (
+                      <div className="flex items-center justify-end space-x-1 mt-1">
+                        <Badge 
+                          variant="outline" 
+                          className="bg-yellow-50 text-yellow-700 border-yellow-200 text-xs px-2 py-0.5"
+                        >
+                          <AlertCircle className="w-3 h-3 mr-1" />
+                          Payment Pending
+                        </Badge>
+                      </div>
+                    );
+                  }
+                })()}
               </div>
             )}
           </div>

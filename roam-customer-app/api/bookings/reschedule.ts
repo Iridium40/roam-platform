@@ -55,6 +55,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         original_start_time, 
         booking_date, 
         start_time, 
+        created_at,
         reschedule_count,
         booking_status,
         service_fee_charged,
@@ -76,18 +77,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const wasAccepted = currentBooking?.booking_status === 'confirmed' ||
                         currentBooking?.service_fee_charged === true;
 
-    // Calculate if new booking date is within 24 hours
-    const newBookingDateTime = new Date(`${bookingDate}T${startTime}`);
-    const now = new Date();
-    const hoursUntilNewBooking = (newBookingDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
-    const isNewBookingWithin24Hours = hoursUntilNewBooking <= 24;
-
-    // Determine remaining balance charge status based on new date
-    // Note: We don't charge or refund - we just update the status
-    // If booking moves from >24h to ≤24h, remaining balance should be marked as charged
-    // If booking moves from ≤24h to >24h, we can't undo the charge but we update status
-    const shouldMarkRemainingBalanceCharged = isNewBookingWithin24Hours;
-
     // Update booking with reschedule data
     // If booking was accepted, change status back to pending so business can accept again
     const updateData: any = {
@@ -103,24 +92,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     };
 
     // If booking was accepted, change status back to pending
+    // Note: Payments are already charged, so we don't need to update payment status
+    // The business just needs to re-accept the rescheduled booking
     if (wasAccepted) {
       updateData.booking_status = 'pending';
-      console.log('🔄 Changing booking status from accepted to pending for reschedule');
-    }
-
-    // Update remaining balance charge status based on new date
-    // Note: We're not charging/refunding, just updating the status field
-    if (wasAccepted) {
-      updateData.remaining_balance_charged = shouldMarkRemainingBalanceCharged;
-      if (shouldMarkRemainingBalanceCharged && !currentBooking?.remaining_balance_charged) {
-        // If moving to ≤24h and wasn't charged before, mark as charged
-        updateData.remaining_balance_charged_at = new Date().toISOString();
-      }
-      console.log('📊 Updated remaining balance charge status:', {
-        wasCharged: currentBooking?.remaining_balance_charged,
-        shouldBeCharged: shouldMarkRemainingBalanceCharged,
-        hoursUntilNewBooking: hoursUntilNewBooking.toFixed(2),
-      });
+      console.log('🔄 Changing booking status from confirmed to pending for reschedule');
+      console.log('ℹ️ Payments already charged - no payment changes needed');
     }
 
     const { data: booking, error: updateError } = await supabase

@@ -47,7 +47,7 @@ export async function handleBookingCancellation(
       reason,
     });
 
-    // Fetch booking details
+    // Fetch booking details including business info for transfer reversal
     const { data: booking, error: bookingError } = await supabase
       .from('bookings')
       .select(`
@@ -61,7 +61,12 @@ export async function handleBookingCancellation(
         booking_date,
         start_time,
         booking_status,
-        payment_status
+        payment_status,
+        business_id,
+        business_profiles!inner (
+          id,
+          stripe_connect_account_id
+        )
       `)
       .eq('id', bookingId)
       .single();
@@ -164,6 +169,21 @@ export async function handleBookingCancellation(
       };
     }
 
+    // Cancel any scheduled payments for this booking
+    if (booking.stripe_service_amount_payment_intent_id) {
+      await supabase
+        .from('booking_payment_schedules')
+        .update({
+          status: 'cancelled',
+          failure_reason: `Booking cancelled by ${cancelledBy}`,
+        })
+        .eq('booking_id', bookingId)
+        .eq('status', 'scheduled')
+        .eq('payment_type', 'remaining_balance');
+      
+      console.log('✅ Cancelled scheduled payment for cancelled booking');
+    }
+
     // If payment intent is authorized but not captured, just cancel it
     if (paymentIntent.status === 'requires_capture') {
       try {
@@ -200,7 +220,92 @@ export async function handleBookingCancellation(
       };
     }
 
-    // Create partial refund for service amount only
+    // Check if business received a Stripe Connect transfer that needs to be reversed
+    const { data: businessPaymentTransaction, error: bptError } = await supabase
+      .from('business_payment_transactions')
+      .select('id, stripe_transfer_id, net_payment_amount, stripe_connect_account_id')
+      .eq('booking_id', bookingId)
+      .maybeSingle();
+
+    let transferReversed = false;
+    let transferReversalId: string | null = null;
+
+    // If business received a transfer and service amount was charged, reverse it
+    if (businessPaymentTransaction?.stripe_transfer_id && booking.remaining_balance_charged) {
+      const business = Array.isArray(booking.business_profiles) 
+        ? booking.business_profiles[0] 
+        : booking.business_profiles;
+      
+      const stripeConnectAccountId = businessPaymentTransaction.stripe_connect_account_id || business?.stripe_connect_account_id;
+
+      if (stripeConnectAccountId) {
+        try {
+          console.log('🔄 Reversing Stripe Connect transfer to business:', {
+            transferId: businessPaymentTransaction.stripe_transfer_id,
+            amount: businessPaymentTransaction.net_payment_amount,
+            connectAccountId: stripeConnectAccountId,
+          });
+
+          // Reverse the transfer
+          const reversal = await stripe.transfers.createReversal(
+            businessPaymentTransaction.stripe_transfer_id,
+            {
+              amount: Math.round(businessPaymentTransaction.net_payment_amount * 100), // Convert to cents
+              description: `Transfer reversal - booking ${bookingId} cancelled`,
+              metadata: {
+                booking_id: bookingId,
+                reason: 'customer_cancellation',
+                cancelled_by: cancelledBy,
+              },
+            }
+          );
+
+          transferReversed = true;
+          transferReversalId = reversal.id;
+
+          console.log('✅ Stripe Connect transfer reversed:', reversal.id);
+
+          // Update business_payment_transactions to record the reversal
+          await supabase
+            .from('business_payment_transactions')
+            .update({
+              stripe_tax_reported: false, // Mark as needing tax report update
+              stripe_tax_report_error: `Transfer reversed due to cancellation. Reversal ID: ${reversal.id}`,
+            })
+            .eq('id', businessPaymentTransaction.id);
+
+          // Record reversal transaction
+          await supabase.from('financial_transactions').insert({
+            booking_id: bookingId,
+            amount: businessPaymentTransaction.net_payment_amount,
+            currency: 'USD',
+            stripe_transaction_id: reversal.id,
+            payment_method: 'transfer_reversal',
+            description: `Transfer reversal - business service amount refunded due to cancellation`,
+            transaction_type: 'refund',
+            status: 'completed',
+            processed_at: new Date().toISOString(),
+            metadata: {
+              original_transfer_id: businessPaymentTransaction.stripe_transfer_id,
+              reversal_type: 'business_service_amount',
+              reason: 'customer_cancellation',
+              connect_account_id: stripeConnectAccountId,
+            },
+          });
+
+        } catch (reversalError: any) {
+          console.error('⚠️ Error reversing Stripe Connect transfer:', reversalError);
+          // Don't fail the refund if transfer reversal fails - log and continue
+          // The transfer reversal might fail if:
+          // - Transfer was already reversed
+          // - Transfer hasn't been paid out yet (can't reverse pending transfers)
+          // - Transfer is too old
+          console.warn('⚠️ Transfer reversal failed, but customer refund will proceed:', reversalError.message);
+        }
+      }
+    }
+
+    // Create partial refund for service amount only (to customer)
     const refund = await stripe.refunds.create({
       payment_intent: paymentIntentIdToRefund,
       amount: Math.round(refundAmount * 100), // Convert to cents
@@ -211,6 +316,8 @@ export async function handleBookingCancellation(
         cancelled_by: cancelledBy,
         refund_type: 'service_amount_only',
         service_fee_kept: serviceFeeAmount.toString(),
+        transfer_reversed: transferReversed.toString(),
+        transfer_reversal_id: transferReversalId || '',
       },
     });
 
@@ -228,10 +335,12 @@ export async function handleBookingCancellation(
       status: 'completed',
       processed_at: new Date().toISOString(),
       metadata: {
-        original_payment_intent: booking.stripe_payment_intent_id,
+        original_payment_intent: paymentIntentIdToRefund,
         refund_amount: refundAmount,
         service_fee_kept: serviceFeeAmount,
         reason: 'customer_cancellation',
+        transfer_reversed,
+        transfer_reversal_id: transferReversalId,
       },
     });
 

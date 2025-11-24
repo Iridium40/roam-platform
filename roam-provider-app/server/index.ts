@@ -732,6 +732,15 @@ export function createServer() {
               user_id,
               first_name,
               last_name
+            ),
+            business_payment_transactions (
+              id,
+              booking_id,
+              payment_date,
+              gross_payment_amount,
+              net_payment_amount,
+              stripe_payment_intent_id,
+              created_at
             )
           `)
           .eq('business_id', business_id)

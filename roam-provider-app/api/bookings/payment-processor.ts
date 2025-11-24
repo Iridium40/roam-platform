@@ -151,18 +151,10 @@ export async function processBookingAcceptance(
     const serviceFeeAmount = booking.service_fee || 0;
     const serviceAmount = totalAmount - serviceFeeAmount;
 
-    // Check if booking is within 24 hours
-    const bookingDateTime = new Date(`${booking.booking_date}T${booking.start_time}`);
-    const now = new Date();
-    const hoursUntilBooking = (bookingDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
-    const isWithin24Hours = hoursUntilBooking <= 24;
-
     console.log('📊 Payment breakdown:', {
       totalAmount,
       serviceFeeAmount,
       serviceAmount,
-      hoursUntilBooking: hoursUntilBooking.toFixed(2),
-      isWithin24Hours,
     });
 
     // Get payment method from original payment intent
@@ -201,7 +193,7 @@ export async function processBookingAcceptance(
 
     // Create TWO separate payment intents:
     // 1. Service fee payment intent (charged immediately)
-    // 2. Service amount payment intent (authorized, captured 24h before if >24h away)
+    // 2. Service amount payment intent (charged immediately)
 
     // 1. Create and charge service fee payment intent immediately
     const serviceFeePaymentIntent = await stripe.paymentIntents.create({
@@ -227,69 +219,33 @@ export async function processBookingAcceptance(
 
     console.log('✅ Service fee charged immediately:', serviceFeePaymentIntent.id);
 
-    // 2. Create service amount payment intent
-    let serviceAmountPaymentIntent: Stripe.PaymentIntent;
-    let serviceAmountCharged = false;
+    // 2. Create and charge service amount payment intent immediately
+    const serviceAmountPaymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(serviceAmount * 100), // Convert to cents
+      currency: 'usd',
+      customer: stripeCustomerId,
+      payment_method: paymentMethodId,
+      confirm: true, // Charge immediately
+      description: `Service amount for booking ${bookingId}`,
+      metadata: {
+        bookingId: bookingId,
+        paymentType: 'service_amount',
+        chargedImmediately: 'true',
+      },
+    });
 
-    if (isWithin24Hours) {
-      // Charge immediately if ≤24h away
-      serviceAmountPaymentIntent = await stripe.paymentIntents.create({
-        amount: Math.round(serviceAmount * 100), // Convert to cents
-        currency: 'usd',
-        customer: stripeCustomerId,
-        payment_method: paymentMethodId,
-        confirm: true, // Charge immediately
-        description: `Service amount for booking ${bookingId}`,
-        metadata: {
-          bookingId: bookingId,
-          paymentType: 'service_amount',
-          chargedImmediately: 'true',
-        },
-      });
-
-      if (serviceAmountPaymentIntent.status !== 'succeeded') {
-        return {
-          success: false,
-          error: `Service amount payment failed: ${serviceAmountPaymentIntent.status}`,
-        };
-      }
-
-      serviceAmountCharged = true;
-      console.log('✅ Service amount charged immediately (≤24h):', serviceAmountPaymentIntent.id);
-    } else {
-      // Authorize but don't capture if >24h away (will be captured by cron job)
-      serviceAmountPaymentIntent = await stripe.paymentIntents.create({
-        amount: Math.round(serviceAmount * 100), // Convert to cents
-        currency: 'usd',
-        customer: stripeCustomerId,
-        payment_method: paymentMethodId,
-        confirm: true,
-        capture_method: 'manual', // Authorize but don't capture
-        description: `Service amount for booking ${bookingId} (capture 24h before)`,
-        metadata: {
-          bookingId: bookingId,
-          paymentType: 'service_amount',
-          chargedImmediately: 'false',
-          captureAt24Hours: 'true',
-        },
-      });
-
-      // Check if it's authorized (requires_capture) or succeeded
-      if (serviceAmountPaymentIntent.status === 'requires_capture') {
-        console.log('✅ Service amount authorized (will capture 24h before):', serviceAmountPaymentIntent.id);
-      } else if (serviceAmountPaymentIntent.status === 'succeeded') {
-        // Some payment methods capture immediately even with manual capture
-        serviceAmountCharged = true;
-        console.log('✅ Service amount charged (payment method auto-captured):', serviceAmountPaymentIntent.id);
-      } else {
-        return {
-          success: false,
-          error: `Service amount authorization failed: ${serviceAmountPaymentIntent.status}`,
-        };
-      }
+    if (serviceAmountPaymentIntent.status !== 'succeeded') {
+      return {
+        success: false,
+        error: `Service amount payment failed: ${serviceAmountPaymentIntent.status}`,
+      };
     }
 
+    console.log('✅ Service amount charged immediately:', serviceAmountPaymentIntent.id);
+    const serviceAmountCharged = true;
+
     // Update booking with both payment intent IDs and status
+    // Both are charged immediately, so mark everything as paid
     await supabase
       .from('bookings')
       .update({
@@ -297,9 +253,9 @@ export async function processBookingAcceptance(
         stripe_service_amount_payment_intent_id: serviceAmountPaymentIntent.id,
         service_fee_charged: true,
         service_fee_charged_at: new Date().toISOString(),
-        remaining_balance_charged: serviceAmountCharged,
-        remaining_balance_charged_at: serviceAmountCharged ? new Date().toISOString() : null,
-        payment_status: serviceAmountCharged ? 'paid' : 'partial',
+        remaining_balance_charged: true,
+        remaining_balance_charged_at: new Date().toISOString(),
+        payment_status: 'paid',
       })
       .eq('id', bookingId);
 
@@ -337,80 +293,31 @@ export async function processBookingAcceptance(
       currency: 'USD',
       stripe_transaction_id: serviceAmountPaymentIntent.id,
       payment_method: 'card',
-      description: serviceAmountCharged 
-        ? 'Service amount - charged immediately (≤24h)' 
-        : 'Service amount - authorized (will capture 24h before)',
+      description: 'Service amount - charged immediately',
       transaction_type: 'booking_payment',
-      status: serviceAmountCharged ? 'completed' : 'pending',
-      processed_at: serviceAmountCharged ? new Date().toISOString() : null,
+      status: 'completed',
+      processed_at: new Date().toISOString(),
       metadata: {
         payment_type: 'service_amount',
-        charged_immediately: serviceAmountCharged,
-        capture_at_24h: !serviceAmountCharged,
+        charged_immediately: true,
       },
     });
 
-    // Create booking_payment_schedules entry ONLY for remaining balance (service amount)
-    // Service fee is charged immediately and doesn't need scheduling
-    if (serviceAmountCharged) {
-      // If charged immediately, mark as processed (for tracking purposes)
-      const { error: serviceAmountScheduleError } = await supabase
-        .from('booking_payment_schedules')
-        .insert({
-          booking_id: bookingId,
-          payment_type: 'remaining_balance',
-          scheduled_at: new Date().toISOString(),
-          amount: serviceAmount,
-          status: 'processed',
-          stripe_payment_intent_id: serviceAmountPaymentIntent.id,
-          processed_at: new Date().toISOString(),
-        });
-
-      if (serviceAmountScheduleError) {
-        console.error('⚠️ Failed to create service amount payment schedule:', serviceAmountScheduleError);
-      }
-
-      // Create business_payment_transaction for immediate charge
-      if (businessId) {
-        await supabase.from('business_payment_transactions').insert({
-          booking_id: bookingId,
-          business_id: businessId,
-          payment_date: paymentDate,
-          gross_payment_amount: totalAmount,
-          platform_fee: serviceFeeAmount,
-          net_payment_amount: serviceAmount,
-          tax_year: currentYear,
-          stripe_payment_intent_id: serviceAmountPaymentIntent.id,
-          stripe_connect_account_id: stripeConnectAccountId,
-          booking_reference: booking.booking_reference || null,
-          transaction_description: `Service payment for booking ${booking.booking_reference || bookingId}`,
-        });
-      }
-    } else {
-      // If authorized but not charged, create scheduled payment record for remaining balance
-      const bookingDateTime = new Date(`${booking.booking_date}T${booking.start_time}`);
-      const scheduledCaptureTime = new Date(bookingDateTime.getTime() - (24 * 60 * 60 * 1000)); // 24 hours before
-
-      const { error: scheduleError } = await supabase
-        .from('booking_payment_schedules')
-        .insert({
-          booking_id: bookingId,
-          payment_type: 'remaining_balance',
-          scheduled_at: scheduledCaptureTime.toISOString(),
-          amount: serviceAmount,
-          status: 'scheduled',
-          stripe_payment_intent_id: serviceAmountPaymentIntent.id,
-        });
-
-      if (scheduleError) {
-        console.error('⚠️ Failed to create payment schedule:', scheduleError);
-      } else {
-        console.log('✅ Created payment schedule for remaining balance (24h capture):', {
-          bookingId,
-          scheduledAt: scheduledCaptureTime.toISOString(),
-          amount: serviceAmount,
-        });
-      }
+    // Create business_payment_transaction for immediate charge
+    if (businessId) {
+      await supabase.from('business_payment_transactions').insert({
+        booking_id: bookingId,
+        business_id: businessId,
+        payment_date: paymentDate,
+        gross_payment_amount: totalAmount,
+        platform_fee: serviceFeeAmount,
+        net_payment_amount: serviceAmount,
+        tax_year: currentYear,
+        stripe_payment_intent_id: serviceAmountPaymentIntent.id,
+        stripe_connect_account_id: stripeConnectAccountId,
+        booking_reference: booking.booking_reference || null,
+        transaction_description: `Service payment for booking ${booking.booking_reference || bookingId}`,
+      });
     }
 
     console.log('✅ Payment processed successfully:', {
@@ -418,15 +325,14 @@ export async function processBookingAcceptance(
       serviceFeePaymentIntentId: serviceFeePaymentIntent.id,
       serviceAmountPaymentIntentId: serviceAmountPaymentIntent.id,
       serviceFeeCharged: true,
-      serviceAmountCharged,
-      serviceAmountAuthorized: !serviceAmountCharged,
+      serviceAmountCharged: true,
     });
 
     return {
       success: true,
       serviceFeeCharged: true,
-      serviceAmountCharged,
-      serviceAmountAuthorized: !serviceAmountCharged,
+      serviceAmountCharged: true,
+      serviceAmountAuthorized: false,
       paymentIntentId: serviceFeePaymentIntent.id,
     };
   } catch (error: any) {
@@ -579,12 +485,13 @@ export async function handleBookingCancellation(
       reason,
     });
 
-    // Fetch booking details
+    // Fetch booking details including business info for transfer reversal
     const { data: booking, error: bookingError } = await supabase
       .from('bookings')
       .select(`
         id,
         stripe_payment_intent_id,
+        stripe_service_amount_payment_intent_id,
         total_amount,
         service_fee,
         service_fee_charged,
@@ -592,7 +499,12 @@ export async function handleBookingCancellation(
         booking_date,
         start_time,
         booking_status,
-        payment_status
+        payment_status,
+        business_id,
+        business_profiles!inner (
+          id,
+          stripe_connect_account_id
+        )
       `)
       .eq('id', bookingId)
       .single();
@@ -644,6 +556,21 @@ export async function handleBookingCancellation(
       serviceAmountCharged: booking.remaining_balance_charged,
     });
 
+    // Cancel any scheduled payments for this booking
+    if (booking.stripe_service_amount_payment_intent_id) {
+      await supabase
+        .from('booking_payment_schedules')
+        .update({
+          status: 'cancelled',
+          failure_reason: `Booking cancelled by ${cancelledBy}`,
+        })
+        .eq('booking_id', bookingId)
+        .eq('status', 'scheduled')
+        .eq('payment_type', 'remaining_balance');
+      
+      console.log('✅ Cancelled scheduled payment for cancelled booking');
+    }
+
     if (isWithin24Hours) {
       // No refunds for cancellations within 24 hours
       console.log('❌ No refund - cancellation within 24 hours');
@@ -674,16 +601,151 @@ export async function handleBookingCancellation(
       refundAmount,
     });
 
-    if (!booking.stripe_payment_intent_id) {
+    // Use service amount payment intent if available, otherwise try main payment intent
+    const paymentIntentIdToRefund = booking.stripe_service_amount_payment_intent_id || booking.stripe_payment_intent_id;
+
+    if (!paymentIntentIdToRefund) {
       return {
         success: false,
         error: 'No payment intent found for refund',
       };
     }
 
-    // Create partial refund for service amount only
+    // Check payment intent status
+    let paymentIntent;
+    try {
+      paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentIdToRefund);
+    } catch (error: any) {
+      return {
+        success: false,
+        error: `Failed to retrieve payment intent: ${error.message}`,
+      };
+    }
+
+    // If payment intent is authorized but not captured, just cancel it (no refund needed)
+    if (paymentIntent.status === 'requires_capture') {
+      try {
+        await stripe.paymentIntents.cancel(paymentIntent.id);
+        console.log('✅ Cancelled authorized payment intent (no refund needed):', paymentIntent.id);
+        
+        // Update booking
+        await supabase
+          .from('bookings')
+          .update({
+            cancellation_fee: serviceFeeAmount,
+            refund_amount: 0, // No refund needed - payment wasn't captured
+          })
+          .eq('id', bookingId);
+
+        return {
+          success: true,
+          refundAmount: 0, // No refund - payment was never captured
+        };
+      } catch (cancelError: any) {
+        console.error('⚠️ Error cancelling payment intent:', cancelError);
+        return {
+          success: false,
+          error: `Failed to cancel payment intent: ${cancelError.message}`,
+        };
+      }
+    }
+
+    // If payment intent was already captured, create refund
+    if (paymentIntent.status !== 'succeeded') {
+      return {
+        success: false,
+        error: `Payment intent not in succeeded status: ${paymentIntent.status}`,
+      };
+    }
+
+    // Check if business received a Stripe Connect transfer that needs to be reversed
+    const { data: businessPaymentTransaction, error: bptError } = await supabase
+      .from('business_payment_transactions')
+      .select('id, stripe_transfer_id, net_payment_amount, stripe_connect_account_id')
+      .eq('booking_id', bookingId)
+      .maybeSingle();
+
+    let transferReversed = false;
+    let transferReversalId: string | null = null;
+
+    // If business received a transfer and service amount was charged, reverse it
+    if (businessPaymentTransaction?.stripe_transfer_id && booking.remaining_balance_charged) {
+      const business = Array.isArray(booking.business_profiles) 
+        ? booking.business_profiles[0] 
+        : booking.business_profiles;
+      
+      const stripeConnectAccountId = businessPaymentTransaction.stripe_connect_account_id || business?.stripe_connect_account_id;
+
+      if (stripeConnectAccountId) {
+        try {
+          console.log('🔄 Reversing Stripe Connect transfer to business:', {
+            transferId: businessPaymentTransaction.stripe_transfer_id,
+            amount: businessPaymentTransaction.net_payment_amount,
+            connectAccountId: stripeConnectAccountId,
+          });
+
+          // Reverse the transfer
+          const reversal = await stripe.transfers.createReversal(
+            businessPaymentTransaction.stripe_transfer_id,
+            {
+              amount: Math.round(businessPaymentTransaction.net_payment_amount * 100), // Convert to cents
+              description: `Transfer reversal - booking ${bookingId} cancelled`,
+              metadata: {
+                booking_id: bookingId,
+                reason: 'customer_cancellation',
+                cancelled_by: cancelledBy,
+              },
+            }
+          );
+
+          transferReversed = true;
+          transferReversalId = reversal.id;
+
+          console.log('✅ Stripe Connect transfer reversed:', reversal.id);
+
+          // Update business_payment_transactions to record the reversal
+          await supabase
+            .from('business_payment_transactions')
+            .update({
+              stripe_tax_reported: false, // Mark as needing tax report update
+              stripe_tax_report_error: `Transfer reversed due to cancellation. Reversal ID: ${reversal.id}`,
+            })
+            .eq('id', businessPaymentTransaction.id);
+
+          // Record reversal transaction
+          await supabase.from('financial_transactions').insert({
+            booking_id: bookingId,
+            amount: businessPaymentTransaction.net_payment_amount,
+            currency: 'USD',
+            stripe_transaction_id: reversal.id,
+            payment_method: 'transfer_reversal',
+            description: `Transfer reversal - business service amount refunded due to cancellation`,
+            transaction_type: 'refund',
+            status: 'completed',
+            processed_at: new Date().toISOString(),
+            metadata: {
+              original_transfer_id: businessPaymentTransaction.stripe_transfer_id,
+              reversal_type: 'business_service_amount',
+              reason: 'customer_cancellation',
+              connect_account_id: stripeConnectAccountId,
+            },
+          });
+
+        } catch (reversalError: any) {
+          console.error('⚠️ Error reversing Stripe Connect transfer:', reversalError);
+          // Don't fail the refund if transfer reversal fails - log and continue
+          // The transfer reversal might fail if:
+          // - Transfer was already reversed
+          // - Transfer hasn't been paid out yet (can't reverse pending transfers)
+          // - Transfer is too old
+          console.warn('⚠️ Transfer reversal failed, but customer refund will proceed:', reversalError.message);
+        }
+      }
+    }
+
+    // Create partial refund for service amount only (to customer)
     const refund = await stripe.refunds.create({
-      payment_intent: booking.stripe_payment_intent_id,
+      payment_intent: paymentIntentIdToRefund,
       amount: Math.round(refundAmount * 100), // Convert to cents
       reason: 'requested_by_customer',
       metadata: {
@@ -692,6 +754,8 @@ export async function handleBookingCancellation(
         cancelled_by: cancelledBy,
         refund_type: 'service_amount_only',
         service_fee_kept: serviceFeeAmount.toString(),
+        transfer_reversed: transferReversed.toString(),
+        transfer_reversal_id: transferReversalId || '',
       },
     });
 
@@ -709,10 +773,12 @@ export async function handleBookingCancellation(
       status: 'completed',
       processed_at: new Date().toISOString(),
       metadata: {
-        original_payment_intent: booking.stripe_payment_intent_id,
+        original_payment_intent: paymentIntentIdToRefund,
         refund_amount: refundAmount,
         service_fee_kept: serviceFeeAmount,
         reason: 'customer_cancellation',
+        transfer_reversed,
+        transfer_reversal_id: transferReversalId,
       },
     });
 
