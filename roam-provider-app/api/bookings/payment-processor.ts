@@ -30,10 +30,9 @@ export interface PaymentProcessingResult {
  * Process payment when booking is accepted
  * 
  * Rules:
- * 1. Service fee (12%) is charged immediately (NON-REFUNDABLE)
- * 2. Service amount handling:
- *    - If booking is >24h away: Authorize (capture later at 24h mark)
- *    - If booking is ≤24h away: Charge immediately
+ * 1. Service fee (platform fee) is charged immediately (NON-REFUNDABLE)
+ * 2. Business service fee (service amount) is charged immediately
+ * 3. Both fees are charged immediately upon acceptance, regardless of booking date/time
  */
 export async function processBookingAcceptance(
   bookingId: string,
@@ -777,7 +776,7 @@ export async function handleBookingCancellation(
         refund_amount: refundAmount,
         service_fee_kept: serviceFeeAmount,
         reason: 'customer_cancellation',
-        transfer_reversed,
+        transfer_reversed: transferReversed.toString(),
         transfer_reversal_id: transferReversalId,
       },
     });

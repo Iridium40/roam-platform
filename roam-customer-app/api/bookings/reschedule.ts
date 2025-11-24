@@ -147,8 +147,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       wasAccepted,
       serviceFeeCharged: currentBooking?.service_fee_charged,
       remainingBalanceCharged: currentBooking?.remaining_balance_charged,
-      newRemainingBalanceCharged: shouldMarkRemainingBalanceCharged,
-      note: 'No charges or refunds occur during reschedule - only status updates',
+      note: 'All payments are charged immediately upon acceptance. No charges or refunds occur during reschedule - only status updates',
     });
 
     // Notify providers about the reschedule (non-blocking)
