@@ -64,7 +64,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           booking_date,
           start_time,
           booking_status,
-          remaining_balance_charged
+          remaining_balance_charged,
+          total_amount,
+          service_fee,
+          business_id,
+          booking_reference,
+          business_profiles!inner (
+            id,
+            stripe_connect_account_id
+          )
         )
       `)
       .eq('status', 'scheduled')
@@ -198,6 +206,47 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               processed_at: new Date().toISOString(),
             })
             .eq('stripe_transaction_id', paymentIntent.id);
+
+          // Create business_payment_transaction for the captured payment
+          const booking = Array.isArray(schedule.bookings) ? schedule.bookings[0] : schedule.bookings;
+          if (booking && booking.business_id) {
+            const business = Array.isArray(booking.business_profiles) 
+              ? booking.business_profiles[0] 
+              : booking.business_profiles;
+            
+            const totalAmount = booking.total_amount || 0;
+            const serviceFeeAmount = booking.service_fee || 0;
+            const serviceAmount = totalAmount - serviceFeeAmount;
+            const paymentDate = new Date().toISOString().split('T')[0];
+            const currentYear = new Date().getFullYear();
+
+            // Check if business_payment_transaction already exists (shouldn't, but check anyway)
+            const { data: existingTransaction } = await supabase
+              .from('business_payment_transactions')
+              .select('id')
+              .eq('booking_id', schedule.booking_id)
+              .maybeSingle();
+
+            if (!existingTransaction) {
+              await supabase.from('business_payment_transactions').insert({
+                booking_id: schedule.booking_id,
+                business_id: booking.business_id,
+                payment_date: paymentDate,
+                gross_payment_amount: totalAmount,
+                platform_fee: serviceFeeAmount,
+                net_payment_amount: serviceAmount,
+                tax_year: currentYear,
+                stripe_payment_intent_id: paymentIntent.id,
+                stripe_connect_account_id: business?.stripe_connect_account_id || null,
+                booking_reference: booking.booking_reference || null,
+                transaction_description: `Service payment for booking ${booking.booking_reference || schedule.booking_id}`,
+              });
+
+              console.log(`✅ Created business_payment_transaction for booking ${schedule.booking_id}`);
+            } else {
+              console.log(`ℹ️ business_payment_transaction already exists for booking ${schedule.booking_id}`);
+            }
+          }
 
           console.log(`✅ Successfully captured payment for schedule ${schedule.id}`);
           captured++;

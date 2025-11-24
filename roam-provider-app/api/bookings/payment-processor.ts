@@ -43,7 +43,7 @@ export async function processBookingAcceptance(
   try {
     console.log('💰 Processing payment for booking acceptance:', { bookingId, acceptedBy });
 
-    // Fetch booking details
+    // Fetch booking details including business info for Stripe Connect
     const { data: booking, error: bookingError } = await supabase
       .from('bookings')
       .select(`
@@ -57,7 +57,12 @@ export async function processBookingAcceptance(
         booking_status,
         payment_status,
         customer_id,
-        business_id
+        business_id,
+        booking_reference,
+        business_profiles!inner (
+          id,
+          stripe_connect_account_id
+        )
       `)
       .eq('id', bookingId)
       .single();
@@ -298,8 +303,17 @@ export async function processBookingAcceptance(
       })
       .eq('id', bookingId);
 
+    // Get business info for Stripe Connect
+    const business = Array.isArray(booking.business_profiles) 
+      ? booking.business_profiles[0] 
+      : booking.business_profiles;
+    const businessId = booking.business_id;
+    const stripeConnectAccountId = business?.stripe_connect_account_id || null;
+    const currentYear = new Date().getFullYear();
+    const paymentDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+
     // Record financial transactions
-    // Service fee transaction
+    // Service fee transaction (charged immediately)
     await supabase.from('financial_transactions').insert({
       booking_id: bookingId,
       amount: serviceFeeAmount,
@@ -336,13 +350,47 @@ export async function processBookingAcceptance(
       },
     });
 
-    // If service amount was authorized (not charged), create scheduled payment record
-    if (!serviceAmountCharged) {
-      // Calculate scheduled capture time (24 hours before booking)
+    // Create booking_payment_schedules entry ONLY for remaining balance (service amount)
+    // Service fee is charged immediately and doesn't need scheduling
+    if (serviceAmountCharged) {
+      // If charged immediately, mark as processed (for tracking purposes)
+      const { error: serviceAmountScheduleError } = await supabase
+        .from('booking_payment_schedules')
+        .insert({
+          booking_id: bookingId,
+          payment_type: 'remaining_balance',
+          scheduled_at: new Date().toISOString(),
+          amount: serviceAmount,
+          status: 'processed',
+          stripe_payment_intent_id: serviceAmountPaymentIntent.id,
+          processed_at: new Date().toISOString(),
+        });
+
+      if (serviceAmountScheduleError) {
+        console.error('⚠️ Failed to create service amount payment schedule:', serviceAmountScheduleError);
+      }
+
+      // Create business_payment_transaction for immediate charge
+      if (businessId) {
+        await supabase.from('business_payment_transactions').insert({
+          booking_id: bookingId,
+          business_id: businessId,
+          payment_date: paymentDate,
+          gross_payment_amount: totalAmount,
+          platform_fee: serviceFeeAmount,
+          net_payment_amount: serviceAmount,
+          tax_year: currentYear,
+          stripe_payment_intent_id: serviceAmountPaymentIntent.id,
+          stripe_connect_account_id: stripeConnectAccountId,
+          booking_reference: booking.booking_reference || null,
+          transaction_description: `Service payment for booking ${booking.booking_reference || bookingId}`,
+        });
+      }
+    } else {
+      // If authorized but not charged, create scheduled payment record for remaining balance
       const bookingDateTime = new Date(`${booking.booking_date}T${booking.start_time}`);
       const scheduledCaptureTime = new Date(bookingDateTime.getTime() - (24 * 60 * 60 * 1000)); // 24 hours before
 
-      // Create scheduled payment record
       const { error: scheduleError } = await supabase
         .from('booking_payment_schedules')
         .insert({
@@ -356,9 +404,8 @@ export async function processBookingAcceptance(
 
       if (scheduleError) {
         console.error('⚠️ Failed to create payment schedule:', scheduleError);
-        // Don't fail the whole process - the cron job can still work by querying bookings
       } else {
-        console.log('✅ Created payment schedule for 24h capture:', {
+        console.log('✅ Created payment schedule for remaining balance (24h capture):', {
           bookingId,
           scheduledAt: scheduledCaptureTime.toISOString(),
           amount: serviceAmount,

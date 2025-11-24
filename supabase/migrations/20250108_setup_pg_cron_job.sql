@@ -4,15 +4,16 @@
 -- First, ensure pg_cron extension is enabled
 CREATE EXTENSION IF NOT EXISTS pg_cron;
 
--- Enable http extension for making HTTP requests (if not already enabled)
--- Note: Supabase may use 'net' extension instead - check your Supabase version
-CREATE EXTENSION IF NOT EXISTS http;
+-- Enable pg_net extension for making HTTP requests (Supabase uses pg_net)
+-- Note: pg_net may not be available on all Supabase plans
+-- If pg_net is not available, use Supabase Dashboard to set up cron job instead
+CREATE EXTENSION IF NOT EXISTS pg_net;
 
 -- Schedule the job to run every hour at minute 0
 -- Format: minute hour day month day_of_week
 -- '0 * * * *' = every hour at minute 0
 -- 
--- IMPORTANT: Replace 'YOUR_API_URL' with your actual API URL
+-- IMPORTANT: Replace the URL with your actual API URL
 -- Example: 'https://roam-provider-app.vercel.app'
 --
 -- The cron job will call the API endpoint which queries booking_payment_schedules
@@ -22,14 +23,20 @@ SELECT cron.schedule(
   '0 * * * *', -- Every hour at minute 0
   $cron$
   SELECT
-    http_post(
-      url := current_setting('app.api_url', true) || '/api/bookings/capture-service-amount',
-      content := '{}'::text,
-      content_type := 'application/json',
+    net.http_post(
+      url := COALESCE(
+        current_setting('app.api_url', true),
+        'https://roam-provider-app.vercel.app'
+      ) || '/api/bookings/capture-service-amount',
       headers := jsonb_build_object(
-        'Authorization', 'Bearer ' || current_setting('app.cron_secret', true)
-      )::text
-    );
+        'Content-Type', 'application/json',
+        'Authorization', 'Bearer ' || COALESCE(
+          current_setting('app.cron_secret', true),
+          'your-cron-secret-here'
+        )
+      )::jsonb,
+      body := '{}'::jsonb
+    ) AS request_id;
   $cron$
 );
 
@@ -40,14 +47,20 @@ SELECT cron.schedule(
 --   '*/15 * * * *', -- Every 15 minutes
 --   $cron$
 --   SELECT
---     http_post(
---       url := current_setting('app.api_url', true) || '/api/bookings/capture-service-amount',
---       content := '{}'::text,
---       content_type := 'application/json',
+--     net.http_post(
+--       url := COALESCE(
+--         current_setting('app.api_url', true),
+--         'https://roam-provider-app.vercel.app'
+--       ) || '/api/bookings/capture-service-amount',
 --       headers := jsonb_build_object(
---         'Authorization', 'Bearer ' || current_setting('app.cron_secret', true)
---       )::text
---     );
+--         'Content-Type', 'application/json',
+--         'Authorization', 'Bearer ' || COALESCE(
+--           current_setting('app.cron_secret', true),
+--           'your-cron-secret-here'
+--         )
+--       )::text,
+--       body := '{}'::text
+--     ) AS request_id;
 --   $cron$
 -- );
 

@@ -9,25 +9,31 @@ The payment capture system uses Supabase `pg_cron` to call our API endpoint ever
 ### Option 1: Supabase Dashboard (Recommended)
 
 1. Go to your Supabase Dashboard
-2. Navigate to **Database** > **Cron Jobs**
-3. Click **Create New Cron Job**
-4. Configure:
-   - **Name**: `process-scheduled-payments`
-   - **Schedule**: `0 * * * *` (every hour at minute 0)
-   - **Command**: 
-     ```sql
-     SELECT net.http_post(
-       url := 'https://your-api-url.vercel.app/api/bookings/capture-service-amount',
-       headers := jsonb_build_object(
-         'Content-Type', 'application/json',
-         'Authorization', 'Bearer YOUR_CRON_SECRET'
-       )::text,
-       body := '{}'::text
-     );
-     ```
-   - **Database**: `postgres`
+2. Navigate to **Database** > **Extensions**
+3. Enable `pg_cron` and `pg_net` extensions if not already enabled
+4. Navigate to **Database** > **Cron Jobs** (or use SQL Editor)
+5. Run the migration: `20250108_setup_pg_cron_job.sql`
 
-### Option 2: SQL Editor
+**OR** Set up manually via SQL Editor:
+```sql
+SELECT cron.schedule(
+  'process-scheduled-payments',
+  '0 * * * *',
+  $$
+  SELECT
+    net.http_post(
+      url := 'https://your-api-url.vercel.app/api/bookings/capture-service-amount',
+      headers := jsonb_build_object(
+        'Content-Type', 'application/json',
+        'Authorization', 'Bearer YOUR_CRON_SECRET'
+      )::jsonb,
+      body := '{}'::jsonb
+    ) AS request_id;
+  $$
+);
+```
+
+### Option 2: SQL Editor (Correct Syntax)
 
 Run this in Supabase SQL Editor:
 
@@ -36,25 +42,38 @@ Run this in Supabase SQL Editor:
 CREATE EXTENSION IF NOT EXISTS pg_cron;
 CREATE EXTENSION IF NOT EXISTS pg_net;
 
+-- Set the cron secret and API URL (run once)
+ALTER DATABASE postgres SET app.api_url = 'https://roam-provider-app.vercel.app';
+ALTER DATABASE postgres SET app.cron_secret = 'your-strong-secret-token-here';
+
 -- Schedule the job
 SELECT cron.schedule(
   'process-scheduled-payments',
   '0 * * * *', -- Every hour
   $$
-  SELECT net.http_post(
-    url := 'https://roam-provider-app.vercel.app/api/bookings/capture-service-amount',
-    headers := jsonb_build_object(
-      'Content-Type', 'application/json',
-      'Authorization', 'Bearer ' || current_setting('app.cron_secret', true)
-    )::text,
-    body := '{}'::text
-  );
+  SELECT
+    net.http_post(
+      url := COALESCE(
+        current_setting('app.api_url', true),
+        'https://roam-provider-app.vercel.app'
+      ) || '/api/bookings/capture-service-amount',
+      headers := jsonb_build_object(
+        'Content-Type', 'application/json',
+        'Authorization', 'Bearer ' || COALESCE(
+          current_setting('app.cron_secret', true),
+          'your-cron-secret-here'
+        )
+      )::jsonb,
+      body := '{}'::jsonb
+    ) AS request_id;
   $$
 );
-
--- Set the cron secret (run once)
-ALTER DATABASE postgres SET app.cron_secret = 'your-strong-secret-token-here';
 ```
+
+**Important Notes:**
+- `net.http_post` requires `pg_net` extension (not `http`)
+- Headers and body must be `jsonb` type (not `text`)
+- Use `::jsonb` cast for headers
 
 ### Option 3: Supabase Edge Function
 
