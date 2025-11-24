@@ -316,7 +316,8 @@ export async function processBookingAcceptance(
         stripe_connect_account_id: stripeConnectAccountId,
         booking_reference: booking.booking_reference || null,
         transaction_description: `Service payment for booking ${booking.booking_reference || bookingId}`,
-      });
+        transaction_type: 'initial_booking', // Will be added after migration
+      } as any); // Type assertion needed until migration adds column
     }
 
     console.log('✅ Payment processed successfully:', {

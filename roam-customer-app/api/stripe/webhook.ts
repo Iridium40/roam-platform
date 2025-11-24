@@ -887,69 +887,57 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
       .eq('id', booking.business_id)
       .single();
 
-    // Check if business_payment_transactions record already exists (for "add more service" payments)
+    // Check if business_payment_transactions record already exists (to determine transaction type)
     const { data: existingBusinessTransaction } = await supabase
       .from('business_payment_transactions')
-      .select('id, gross_payment_amount, platform_fee, net_payment_amount')
+      .select('id')
       .eq('booking_id', bookingId)
+      .limit(1)
       .maybeSingle();
 
-    if (existingBusinessTransaction) {
-      // Update existing record (for "add more service" payments)
-      console.log('🔄 Updating existing business_payment_transactions record for add more service');
-      const updatedGrossAmount = (existingBusinessTransaction.gross_payment_amount || 0) + totalAmount;
-      const updatedPlatformFee = (existingBusinessTransaction.platform_fee || 0) + platformFee;
-      const updatedNetAmount = (existingBusinessTransaction.net_payment_amount || 0) + netPaymentAmount;
+    // Determine transaction type: 'initial_booking' for first payment, 'additional_service' for add more service
+    const transactionType = existingBusinessTransaction ? 'additional_service' : 'initial_booking';
+    
+    console.log(`📝 Creating business_payment_transactions record with type: ${transactionType}`);
 
-      const { data: updatedTransaction, error: updateError } = await supabase
-        .from('business_payment_transactions')
-        .update({
-          gross_payment_amount: updatedGrossAmount,
-          platform_fee: updatedPlatformFee,
-          net_payment_amount: updatedNetAmount,
-          stripe_payment_intent_id: paymentIntent.id, // Update to latest payment intent
-          transaction_description: `Platform service payment (includes additional services)`,
-        })
-        .eq('id', existingBusinessTransaction.id)
-        .select()
-        .single();
+    // Always create a new record (maintains audit trail for multiple payments)
+    // Note: After migration removes unique constraint and adds transaction_type column,
+    // this will work correctly. Until then, it may fail on unique constraint for "add more service"
+    const businessPaymentTransactionData: any = {
+      booking_id: bookingId,
+      business_id: booking.business_id,
+      payment_date: paymentDate,
+      gross_payment_amount: totalAmount,
+      platform_fee: platformFee,
+      net_payment_amount: netPaymentAmount,
+      tax_year: taxYear,
+      stripe_payment_intent_id: paymentIntent.id,
+      stripe_connect_account_id: businessProfile?.stripe_connect_account_id || null,
+      transaction_description: transactionType === 'additional_service' 
+        ? 'Additional service payment' 
+        : 'Platform service payment',
+      booking_reference: booking.booking_reference || null,
+      transaction_type: transactionType, // Will be added after migration
+    };
 
-      if (updateError) {
-        console.error('❌ Error updating business_payment_transactions record:', updateError);
-        console.warn('⚠️ Business payment transaction update failed, but payment was processed');
+    const { data: businessPaymentTransaction, error: businessPaymentError } = await supabase
+      .from('business_payment_transactions')
+      .insert(businessPaymentTransactionData)
+      .select()
+      .single();
+
+    if (businessPaymentError) {
+      // If error is due to unique constraint, log warning (migration needed)
+      if (businessPaymentError.code === '23505' || businessPaymentError.message?.includes('unique')) {
+        console.warn('⚠️ Unique constraint violation - migration needed to remove constraint and add transaction_type column');
+        console.warn('⚠️ See BUSINESS_FINANCIAL_TABLES_ANALYSIS.md for migration steps');
+        console.warn('⚠️ Business payment transaction creation failed, but payment was processed');
       } else {
-        console.log('✅ Business payment transaction updated:', updatedTransaction.id);
-        console.log(`💰 Updated amounts - Gross: $${updatedGrossAmount.toFixed(2)}, Platform Fee: $${updatedPlatformFee.toFixed(2)}, Net: $${updatedNetAmount.toFixed(2)}`);
+        console.error('❌ Error creating business_payment_transactions record:', businessPaymentError);
+        console.warn('⚠️ Business payment transaction creation failed, but booking was confirmed');
       }
     } else {
-      // Create new record (for initial booking payments)
-      const businessPaymentTransactionData = {
-        booking_id: bookingId,
-        business_id: booking.business_id,
-        payment_date: paymentDate,
-        gross_payment_amount: totalAmount,
-        platform_fee: platformFee,
-        net_payment_amount: netPaymentAmount,
-        tax_year: taxYear,
-        stripe_payment_intent_id: paymentIntent.id,
-        stripe_connect_account_id: businessProfile?.stripe_connect_account_id || null,
-        transaction_description: 'Platform service payment',
-        booking_reference: booking.booking_reference || null,
-      };
-
-      const { data: businessPaymentTransaction, error: businessPaymentError } = await supabase
-        .from('business_payment_transactions')
-        .insert(businessPaymentTransactionData)
-        .select()
-        .single();
-
-      if (businessPaymentError) {
-        console.error('❌ Error creating business_payment_transactions record:', businessPaymentError);
-        // Don't throw - this is not critical for the booking confirmation
-        console.warn('⚠️ Business payment transaction creation failed, but booking was confirmed');
-      } else {
-        console.log('✅ Business payment transaction created:', businessPaymentTransaction.id);
-      }
+      console.log(`✅ Business payment transaction created (${transactionType}):`, businessPaymentTransaction.id);
     }
 
     // Save payment method to database if it's attached to a customer

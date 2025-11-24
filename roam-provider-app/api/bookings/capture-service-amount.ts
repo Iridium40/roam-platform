@@ -240,7 +240,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 stripe_connect_account_id: business?.stripe_connect_account_id || null,
                 booking_reference: booking.booking_reference || null,
                 transaction_description: `Service payment for booking ${booking.booking_reference || schedule.booking_id}`,
-              });
+                transaction_type: 'initial_booking', // Will be added after migration
+              } as any); // Type assertion needed until migration adds column
 
               console.log(`✅ Created business_payment_transaction for booking ${schedule.booking_id}`);
             } else {
