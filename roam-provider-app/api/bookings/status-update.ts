@@ -4,7 +4,7 @@ import { Resend } from 'resend';
 import {
   processBookingAcceptance,
   processBookingDecline,
-} from './payment-processor';
+} from './payment-processor.js';
 
 // Initialize Resend for email sending
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -822,7 +822,7 @@ async function sendStatusNotifications(
           // Send direct email with calendar attachment
           if (customerEmail && icalContent) {
             try {
-              const { ROAM_EMAIL_TEMPLATES } = await import('../../shared/emailTemplates');
+              const { ROAM_EMAIL_TEMPLATES } = await import('../../shared/emailTemplates.js');
               const emailHtml = ROAM_EMAIL_TEMPLATES.bookingConfirmed(
                 customerName,
                 serviceName,
