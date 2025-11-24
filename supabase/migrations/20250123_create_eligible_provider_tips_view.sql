@@ -40,7 +40,7 @@ SELECT
 FROM tips t
 INNER JOIN providers p ON t.provider_id = p.id
 INNER JOIN bookings b ON t.booking_id = b.id
-LEFT JOIN customer_profiles cp ON t.customer_id = cp.user_id
+LEFT JOIN customer_profiles cp ON t.customer_id = cp.id
 LEFT JOIN services s ON b.service_id = s.id
 WHERE 
     p.is_active = true 
