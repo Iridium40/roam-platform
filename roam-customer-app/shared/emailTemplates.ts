@@ -174,6 +174,39 @@ export const ROAM_EMAIL_TEMPLATES = {
       <p>Best regards,<br><strong>The ROAM Team</strong></p>
     `;
     return getROAMEmailTemplate(content);
+  },
+
+  bookingReminder: (customerName: string, serviceName: string, providerName: string, bookingDate: string, bookingTime: string, location: string) => {
+    const content = `
+      <h1>⏰ Reminder: Your Appointment is Tomorrow!</h1>
+      <p>Hi ${customerName},</p>
+      <p>This is a friendly reminder about your upcoming appointment.</p>
+      
+      <div class="info-box">
+        <h2 style="margin-top: 0;">Tomorrow's Appointment</h2>
+        <p style="margin: 10px 0;"><strong>Service:</strong> ${serviceName}</p>
+        <p style="margin: 10px 0;"><strong>Provider:</strong> ${providerName}</p>
+        <p style="margin: 10px 0;"><strong>Date:</strong> ${bookingDate}</p>
+        <p style="margin: 10px 0;"><strong>Time:</strong> ${bookingTime}</p>
+        <p style="margin: 10px 0;"><strong>Location:</strong> ${location}</p>
+      </div>
+      
+      <div class="highlight">
+        <h3>Before Your Appointment:</h3>
+        <ul style="margin: 10px 0; padding-left: 20px;">
+          <li>Arrive 5-10 minutes early</li>
+          <li>Bring any required items</li>
+          <li>Contact provider if you need to reschedule</li>
+        </ul>
+      </div>
+      
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="https://roamyourbestlife.com/my-bookings" class="button">View Booking Details</a>
+      </div>
+      
+      <p>See you soon!<br><strong>The ROAM Team</strong></p>
+    `;
+    return getROAMEmailTemplate(content);
   }
 };
 
