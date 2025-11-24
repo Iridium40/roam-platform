@@ -523,7 +523,7 @@ export default function FinancialsTab({
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Financials</h1>
-          <p className="text-sm text-gray-600">Manage your earnings, payouts, and tax information</p>
+          <p className="text-sm text-gray-600">View your earnings and payouts. Update tax and banking information. For payout options like instant payouts, use the Stripe Dashboard.</p>
         </div>
         <div className="flex items-center space-x-2">
           <Button 
@@ -535,7 +535,7 @@ export default function FinancialsTab({
             Refresh
           </Button>
           <Button 
-            variant="outline" 
+            variant="default" 
             onClick={openStripeDashboard}
             disabled={stripeLoading}
           >
@@ -1289,7 +1289,7 @@ export default function FinancialsTab({
                 <span>Manage your Connected Stripe Account</span>
               </CardTitle>
               <CardDescription>
-                Manage your Stripe Connect account for payments and payouts
+                Update your banking information here. For payout options like instant payouts and other account settings, click "Open Stripe Dashboard" above.
               </CardDescription>
             </CardHeader>
             <CardContent>
