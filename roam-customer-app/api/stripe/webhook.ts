@@ -477,7 +477,7 @@ async function handleBookingPayment(session: Stripe.Checkout.Session) {
     .from('bookings')
     .update({
       booking_status: 'confirmed',
-      payment_status: 'completed',
+      payment_status: 'paid',
     })
     .eq('id', booking.id);
 
@@ -652,7 +652,7 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
           .select('id, booking_status, payment_status')
           .eq('customer_id', customerId)
           .eq('service_id', serviceId)
-          .in('booking_status', ['pending_payment', 'confirmed'])
+          .in('booking_status', ['pending', 'pending_payment', 'confirmed'])
           .order('created_at', { ascending: false })
           .limit(1)
           .single();
@@ -747,7 +747,7 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
       .from('bookings')
       .update({
         booking_status: 'confirmed',
-        payment_status: 'completed',
+        payment_status: 'paid',
       })
       .eq('id', bookingId);
 
@@ -871,7 +871,7 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
 
     console.log(`💰 Payment splits calculated: Platform $${platformFee.toFixed(2)}, Provider $${providerAmount.toFixed(2)}`);
 
-    // Create business_payment_transactions record
+    // Create or update business_payment_transactions record
     // Use the platformFee already calculated above
     const netPaymentAmount = totalAmount - platformFee;
     
@@ -887,32 +887,69 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
       .eq('id', booking.business_id)
       .single();
 
-    const businessPaymentTransactionData = {
-      booking_id: bookingId,
-      business_id: booking.business_id,
-      payment_date: paymentDate,
-      gross_payment_amount: totalAmount,
-      platform_fee: platformFee,
-      net_payment_amount: netPaymentAmount,
-      tax_year: taxYear,
-      stripe_payment_intent_id: paymentIntent.id,
-      stripe_connect_account_id: businessProfile?.stripe_connect_account_id || null,
-      transaction_description: 'Platform service payment',
-      booking_reference: booking.booking_reference || null,
-    };
-
-    const { data: businessPaymentTransaction, error: businessPaymentError } = await supabase
+    // Check if business_payment_transactions record already exists (for "add more service" payments)
+    const { data: existingBusinessTransaction } = await supabase
       .from('business_payment_transactions')
-      .insert(businessPaymentTransactionData)
-      .select()
-      .single();
+      .select('id, gross_payment_amount, platform_fee, net_payment_amount')
+      .eq('booking_id', bookingId)
+      .maybeSingle();
 
-    if (businessPaymentError) {
-      console.error('❌ Error creating business_payment_transactions record:', businessPaymentError);
-      // Don't throw - this is not critical for the booking confirmation
-      console.warn('⚠️ Business payment transaction creation failed, but booking was confirmed');
+    if (existingBusinessTransaction) {
+      // Update existing record (for "add more service" payments)
+      console.log('🔄 Updating existing business_payment_transactions record for add more service');
+      const updatedGrossAmount = (existingBusinessTransaction.gross_payment_amount || 0) + totalAmount;
+      const updatedPlatformFee = (existingBusinessTransaction.platform_fee || 0) + platformFee;
+      const updatedNetAmount = (existingBusinessTransaction.net_payment_amount || 0) + netPaymentAmount;
+
+      const { data: updatedTransaction, error: updateError } = await supabase
+        .from('business_payment_transactions')
+        .update({
+          gross_payment_amount: updatedGrossAmount,
+          platform_fee: updatedPlatformFee,
+          net_payment_amount: updatedNetAmount,
+          stripe_payment_intent_id: paymentIntent.id, // Update to latest payment intent
+          transaction_description: `Platform service payment (includes additional services)`,
+        })
+        .eq('id', existingBusinessTransaction.id)
+        .select()
+        .single();
+
+      if (updateError) {
+        console.error('❌ Error updating business_payment_transactions record:', updateError);
+        console.warn('⚠️ Business payment transaction update failed, but payment was processed');
+      } else {
+        console.log('✅ Business payment transaction updated:', updatedTransaction.id);
+        console.log(`💰 Updated amounts - Gross: $${updatedGrossAmount.toFixed(2)}, Platform Fee: $${updatedPlatformFee.toFixed(2)}, Net: $${updatedNetAmount.toFixed(2)}`);
+      }
     } else {
-      console.log('✅ Business payment transaction created:', businessPaymentTransaction.id);
+      // Create new record (for initial booking payments)
+      const businessPaymentTransactionData = {
+        booking_id: bookingId,
+        business_id: booking.business_id,
+        payment_date: paymentDate,
+        gross_payment_amount: totalAmount,
+        platform_fee: platformFee,
+        net_payment_amount: netPaymentAmount,
+        tax_year: taxYear,
+        stripe_payment_intent_id: paymentIntent.id,
+        stripe_connect_account_id: businessProfile?.stripe_connect_account_id || null,
+        transaction_description: 'Platform service payment',
+        booking_reference: booking.booking_reference || null,
+      };
+
+      const { data: businessPaymentTransaction, error: businessPaymentError } = await supabase
+        .from('business_payment_transactions')
+        .insert(businessPaymentTransactionData)
+        .select()
+        .single();
+
+      if (businessPaymentError) {
+        console.error('❌ Error creating business_payment_transactions record:', businessPaymentError);
+        // Don't throw - this is not critical for the booking confirmation
+        console.warn('⚠️ Business payment transaction creation failed, but booking was confirmed');
+      } else {
+        console.log('✅ Business payment transaction created:', businessPaymentTransaction.id);
+      }
     }
 
     // Save payment method to database if it's attached to a customer

@@ -46,22 +46,13 @@ export default function TermsAndConditions() {
                   
                   <h3 className="text-xl font-semibold mb-3">1.1 Payment Authorization</h3>
                   <p className="mb-4">
-                    By submitting a booking request, you agree to our terms and conditions. You will not be charged unless your booking is accepted by the business.
+                    By submitting a booking request, you agree to our terms and conditions. Upon booking acceptance by the business, both service fees (platform fees) and business service fees will be charged immediately.
                   </p>
 
                   <h3 className="text-xl font-semibold mb-3">1.2 Service Fees</h3>
                   <p className="mb-4">
-                    Upon booking acceptance by the business, both service fees (platform fees) and business service fees will be charged immediately. Service fees (platform fees) are <strong>non-refundable</strong> and will be charged upon acceptance of your booking, regardless of any subsequent cancellations or changes. Business service fees are refundable if you cancel your booking 24 hours or more before the scheduled booking date and time.
+                    Both service fees (platform fees) and business service fees are charged immediately upon booking acceptance. Service fees (platform fees) are <strong>non-refundable</strong> and will be charged upon acceptance of your booking, regardless of any subsequent cancellations or changes. Business service fees are refundable if you cancel your booking 24 hours or more before the scheduled booking date and time.
                   </p>
-
-                  <h3 className="text-xl font-semibold mb-3">1.3 Service Amount Payment</h3>
-                  <p className="mb-4">
-                    The service amount (remaining balance) will be charged automatically:
-                  </p>
-                  <ul className="list-disc list-inside mb-4 space-y-2 ml-4">
-                    <li>If your booking is more than 24 hours away: The payment will be authorized immediately and captured automatically 24 hours prior to your scheduled booking date and time.</li>
-                    <li>If your booking is 24 hours or less away: The full service amount will be charged immediately upon booking acceptance.</li>
-                  </ul>
                 </section>
 
                 <section>
@@ -74,13 +65,15 @@ export default function TermsAndConditions() {
                   <ul className="list-disc list-inside mb-4 space-y-2 ml-4">
                     <li>The <strong>service fee (platform fee) is non-refundable</strong> and will be retained by ROAM.</li>
                     <li><strong>Business service fees will be refunded</strong> to you in full.</li>
-                    <li>If the service amount has been authorized but not yet captured, the authorization will be cancelled and you will not be charged for the service amount.</li>
-                    <li>If the service amount has already been charged, you will receive a refund of the service amount only (the service fee remains non-refundable).</li>
+                    <li>The service amount will be refunded in full.</li>
                   </ul>
 
                   <h3 className="text-xl font-semibold mb-3">2.2 Cancellation Within 24 Hours</h3>
                   <p className="mb-4">
                     If you cancel your booking within 24 hours of the scheduled booking date and time, you will incur a <strong>100% loss</strong> with no refund provided. This includes both the service fee and the full service amount. No refunds will be issued for cancellations made within 24 hours of the scheduled booking time.
+                  </p>
+                  <p className="mb-4">
+                    <strong>Rescheduling Option:</strong> To prevent loss of funds, you may reschedule your booking instead of cancelling. Rescheduling allows you to move your booking to a different date and time without losing your payment.
                   </p>
                 </section>
 
