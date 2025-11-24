@@ -51,7 +51,7 @@ export default function TermsAndConditions() {
 
                   <h3 className="text-xl font-semibold mb-3">1.2 Service Fees</h3>
                   <p className="mb-4">
-                    Upon booking acceptance by the business, only the service fees (platform fees) will be charged immediately. These service fees are <strong>non-refundable</strong> and will be charged upon acceptance of your booking, regardless of any subsequent cancellations or changes.
+                    Upon booking acceptance by the business, both service fees (platform fees) and business service fees will be charged immediately. Service fees (platform fees) are <strong>non-refundable</strong> and will be charged upon acceptance of your booking, regardless of any subsequent cancellations or changes. Business service fees are refundable if you cancel your booking 24 hours or more before the scheduled booking date and time.
                   </p>
 
                   <h3 className="text-xl font-semibold mb-3">1.3 Service Amount Payment</h3>
@@ -69,10 +69,11 @@ export default function TermsAndConditions() {
                   
                   <h3 className="text-xl font-semibold mb-3">2.1 Cancellation Prior to 24 Hours</h3>
                   <p className="mb-4">
-                    If you cancel your booking more than 24 hours before the scheduled booking date and time:
+                    If you cancel your booking 24 hours or more before the scheduled booking date and time:
                   </p>
                   <ul className="list-disc list-inside mb-4 space-y-2 ml-4">
-                    <li>The <strong>service fee is non-refundable</strong> and will be retained by ROAM.</li>
+                    <li>The <strong>service fee (platform fee) is non-refundable</strong> and will be retained by ROAM.</li>
+                    <li><strong>Business service fees will be refunded</strong> to you in full.</li>
                     <li>If the service amount has been authorized but not yet captured, the authorization will be cancelled and you will not be charged for the service amount.</li>
                     <li>If the service amount has already been charged, you will receive a refund of the service amount only (the service fee remains non-refundable).</li>
                   </ul>

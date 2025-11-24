@@ -598,7 +598,7 @@ export function CheckoutForm({ bookingDetails, clientSecret, onSuccess, onError 
                 >
                   Terms and Conditions
                 </Link>
-                . I understand that I will not be charged unless the booking is accepted by the business. Service fees (non-refundable) will be charged upon booking acceptance, and the remaining balance will be charged 24 hours prior to the scheduled booking date. Cancellation prior to 24 hours will result in no refund of the service fee. Cancellation within 24 hours will result in 100% loss with no refund.
+                . I understand that I will not be charged unless the booking is accepted by the business. Both service fees (platform fees, non-refundable) and business service fees will be charged upon booking acceptance. The remaining balance will be charged 24 hours prior to the scheduled booking date. Cancellation 24 hours or more before the booking date will result in a refund of business service fees only (service fees remain non-refundable). Cancellation within 24 hours will result in 100% loss with no refund.
               </Label>
             </div>
 
