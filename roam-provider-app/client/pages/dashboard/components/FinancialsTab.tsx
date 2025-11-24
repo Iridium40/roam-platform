@@ -780,7 +780,9 @@ export default function FinancialsTab({
                 <Wallet className="w-5 h-5" />
                 <span>Stripe Payouts</span>
               </CardTitle>
-              <CardDescription>Direct payouts from Stripe to your bank account</CardDescription>
+              <CardDescription>
+                Payouts are controlled by ROAM Platform and are automatically scheduled to be paid out once a week on Thursday to your connected bank account.
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
@@ -834,7 +836,7 @@ export default function FinancialsTab({
                   <div className="text-center py-8">
                     <Wallet className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                     <p className="text-sm text-gray-500">No Stripe payouts yet</p>
-                    <p className="text-xs text-gray-400 mt-1">Request your first payout above</p>
+                    <p className="text-xs text-gray-400 mt-1">Payouts are automatically processed weekly on Thursdays by ROAM Platform</p>
                   </div>
                 )}
               </div>
