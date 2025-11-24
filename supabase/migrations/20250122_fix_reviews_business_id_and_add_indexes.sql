@@ -88,3 +88,4 @@ COMMENT ON COLUMN public.reviews.business_id IS 'Direct reference to the busines
 COMMENT ON COLUMN public.reviews.provider_id IS 'Direct reference to the provider being reviewed';
 
 
+
