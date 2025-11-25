@@ -829,9 +829,20 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
       throw new Error(`Cannot process payment: No booking ID found for payment intent ${paymentIntent.id}`);
     }
 
-    console.log(`📋 Confirming booking: ${bookingId}`);
+    console.log(`📋 Processing booking: ${bookingId}`);
     console.log(`💳 Payment Intent ID: ${paymentIntent.id}`);
+    console.log(`💳 Payment Intent Status: ${paymentIntent.status}`);
     console.log(`💰 Payment Amount: $${(paymentIntent.amount / 100).toFixed(2)}`);
+
+    // Check payment intent status - if manual capture, it will be 'requires_capture', not 'succeeded'
+    const isAuthorized = paymentIntent.status === 'requires_capture';
+    const isCharged = paymentIntent.status === 'succeeded';
+    
+    if (isAuthorized) {
+      console.log('✅ Payment authorized but not yet charged - will be captured when booking is accepted');
+    } else if (isCharged) {
+      console.log('✅ Payment already charged');
+    }
 
     // Get booking details for transaction recording and notifications
     const { data: booking, error: bookingError } = await supabase
@@ -896,17 +907,21 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
       payment_status: booking.payment_status
     });
 
-    // Update booking status to confirmed (without stripe_payment_intent_id - that column doesn't exist)
+    // Update booking status based on payment status
+    // If payment is authorized but not captured (requires_capture), set status to 'pending' (waiting for acceptance)
+    // If payment is already charged, set status to 'confirmed' and 'paid'
     // Check if booking is already confirmed to avoid race conditions
     if (booking.booking_status === 'confirmed' && booking.payment_status === 'paid') {
       console.log(`ℹ️ Booking ${bookingId} is already confirmed and paid - skipping update`);
     } else {
+      const updateData: any = {
+        booking_status: isCharged ? 'confirmed' : 'pending', // Only confirm if already charged
+        payment_status: isCharged ? 'paid' : 'pending', // Only mark as paid if already charged
+      };
+      
       const { error: updateError } = await supabase
         .from('bookings')
-        .update({
-          booking_status: 'confirmed',
-          payment_status: 'paid',
-        })
+        .update(updateData)
         .eq('id', bookingId);
 
       if (updateError) {
@@ -985,6 +1000,15 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
     } catch (notificationError) {
       console.error('⚠️ Error sending provider notifications (non-fatal):', notificationError);
       // Continue - don't fail the webhook if notifications fail
+    }
+
+    // Only record financial transactions if payment is actually charged (succeeded)
+    // If payment is only authorized (requires_capture), skip transaction recording
+    // Transactions will be recorded when payment is captured on booking acceptance
+    if (!isCharged) {
+      console.log('ℹ️ Payment is authorized but not charged - skipping financial transaction recording');
+      console.log('ℹ️ Financial transactions will be recorded when payment is captured on booking acceptance');
+      return; // Exit early - don't create transactions for authorized-only payments
     }
 
     // Record in financial_transactions (overall payment ledger)
@@ -1069,6 +1093,15 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
       .select('stripe_connect_account_id')
       .eq('id', booking.business_id)
       .single();
+
+    // Only create business_payment_transactions if payment is actually charged (succeeded)
+    // If payment is only authorized (requires_capture), skip transaction recording
+    // Transactions will be recorded when payment is captured on booking acceptance
+    if (!isCharged) {
+      console.log('ℹ️ Payment is authorized but not charged - skipping business_payment_transactions recording');
+      console.log('ℹ️ Business payment transactions will be recorded when payment is captured on booking acceptance');
+      return; // Exit early - don't create transactions for authorized-only payments
+    }
 
     // Check if business_payment_transactions record already exists for this booking (to determine transaction type)
     const { data: existingBookingTransaction } = await supabase
