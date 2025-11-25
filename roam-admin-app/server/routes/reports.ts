@@ -98,25 +98,25 @@ export async function handleReportMetrics(req: Request, res: Response) {
     // Calculate average rating
     const { data: reviews, error: reviewsError } = await supabase
       .from('reviews')
-      .select('rating, created_at')
+      .select('overall_rating, created_at')
       .gte('created_at', startDate.toISOString());
     
     if (reviewsError) throw reviewsError;
     
     const avgRating = reviews && reviews.length > 0 
-      ? reviews.reduce((sum, review) => sum + (review.rating || 0), 0) / reviews.length 
+      ? reviews.reduce((sum, review) => sum + (review.overall_rating || 0), 0) / reviews.length 
       : 0;
     
     const { data: prevReviews, error: prevReviewsError } = await supabase
       .from('reviews')
-      .select('rating, created_at')
+      .select('overall_rating, created_at')
       .gte('created_at', prevStartDate.toISOString())
       .lt('created_at', startDate.toISOString());
     
     if (prevReviewsError) throw prevReviewsError;
     
     const prevAvgRating = prevReviews && prevReviews.length > 0 
-      ? prevReviews.reduce((sum, review) => sum + (review.rating || 0), 0) / prevReviews.length 
+      ? prevReviews.reduce((sum, review) => sum + (review.overall_rating || 0), 0) / prevReviews.length 
       : 0;
     
     const ratingChange = prevAvgRating > 0 ? ((avgRating - prevAvgRating) / prevAvgRating) * 100 : 0;
