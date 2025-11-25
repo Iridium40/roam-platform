@@ -50,6 +50,7 @@ import {
   handleCustomerBookings,
   handleUpdateCustomerStatus
 } from "./routes/customers.js";
+import { handleServices } from "./routes/services.js";
 
 export function createServer() {
   const app = express();
@@ -76,6 +77,9 @@ export function createServer() {
 
   app.get("/api/demo", handleDemo);
   app.get("/api/system-config", handleSystemConfig);
+  app.post("/api/system-config", handleSystemConfig);
+  app.put("/api/system-config/:id", handleSystemConfig);
+  app.delete("/api/system-config/:id", handleSystemConfig);
   app.post("/api/send-approval-email", handleSendApprovalEmail);
   app.post("/api/send-rejection-email", handleSendRejectionEmail);
   app.post("/api/send-contact-reply", handleSendContactReply);
@@ -108,6 +112,12 @@ export function createServer() {
   app.get("/api/customers/locations", handleCustomerLocations);
   app.get("/api/customers/bookings", handleCustomerBookings);
   app.post("/api/customers/update-status", handleUpdateCustomerStatus);
+  
+  // Service management routes
+  app.get("/api/services", handleServices);
+  app.post("/api/services", handleServices);
+  app.put("/api/services/:id", handleServices);
+  app.delete("/api/services/:id", handleServices);
   
   // Booking management routes (monitoring only)
   app.get("/api/bookings", handleBookings);

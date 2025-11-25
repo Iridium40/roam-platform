@@ -46,7 +46,6 @@ import {
   CheckCircle,
   XCircle,
 } from "lucide-react";
-import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 
 type AnnouncementAudience = "customer" | "provider" | "all" | "staff" | "business";
@@ -212,25 +211,31 @@ export default function AdminAnnouncements() {
 
     try {
       if (editingAnnouncement) {
-        // Update existing announcement
-        const { error } = await supabase
-          .from("announcements")
-          .update({
+        // Update existing announcement via API
+        const response = await fetch(`/api/announcements/${editingAnnouncement.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            id: editingAnnouncement.id,
             title: formData.title,
             content: formData.content,
             start_date: formData.start_date || null,
             end_date: formData.end_date || null,
-            announcement_audience: formData.announcement_audience,
-            announcement_type: formData.announcement_type,
+            target_audience: formData.announcement_audience,
+            priority: formData.announcement_type || 'medium',
             is_active: formData.is_active,
-          })
-          .eq("id", editingAnnouncement.id);
+          }),
+        });
 
-        if (error) {
-          console.error("Error updating announcement:", error);
+        const result = await response.json();
+
+        if (!response.ok) {
+          console.error("Error updating announcement:", result.error);
           toast({
             title: "Error",
-            description: `Failed to update announcement: ${error?.message || "Unknown error"}`,
+            description: `Failed to update announcement: ${result.error || "Unknown error"}`,
             variant: "destructive",
           });
           return;
@@ -242,24 +247,30 @@ export default function AdminAnnouncements() {
           variant: "default",
         });
       } else {
-        // Create new announcement
-        const { error } = await supabase.from("announcements").insert([
-          {
+        // Create new announcement via API
+        const response = await fetch('/api/announcements', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
             title: formData.title,
             content: formData.content,
             start_date: formData.start_date || null,
             end_date: formData.end_date || null,
-            announcement_audience: formData.announcement_audience,
-            announcement_type: formData.announcement_type,
+            target_audience: formData.announcement_audience,
+            priority: formData.announcement_type || 'medium',
             is_active: formData.is_active,
-          },
-        ]);
+          }),
+        });
 
-        if (error) {
-          console.error("Error creating announcement:", error);
+        const result = await response.json();
+
+        if (!response.ok) {
+          console.error("Error creating announcement:", result.error);
           toast({
             title: "Error",
-            description: `Failed to create announcement: ${error?.message || "Unknown error"}`,
+            description: `Failed to create announcement: ${result.error || "Unknown error"}`,
             variant: "destructive",
           });
           return;

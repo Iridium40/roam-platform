@@ -47,7 +47,6 @@ import {
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
-import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { DocumentReviewModal } from "@/components/verification/DocumentReviewModal";
@@ -294,42 +293,37 @@ export default function AdminVerification() {
       setLoading(true);
       setError(null);
 
-      console.log("Fetching business profiles...");
-      // Fetch businesses with all fields
-      const { data: businessData, error: businessError } = await supabase
-        .from("business_profiles")
-        .select("*")
-        .order("created_at", { ascending: false });
+      console.log("Fetching business profiles from API...");
+      // Fetch businesses via API
+      const businessResponse = await fetch('/api/businesses');
+      const businessResult = await businessResponse.json();
 
+      if (!businessResponse.ok) {
+        console.error("Business profiles error:", businessResult.error);
+        throw new Error(businessResult.error || 'Failed to fetch businesses');
+      }
+
+      const businessData = businessResult.data || [];
       console.log("Business profiles result:", {
-        count: businessData?.length,
-        error: businessError,
-        sample: businessData?.[0],
+        count: businessData.length,
+        sample: businessData[0],
       });
 
-      if (businessError) {
-        console.error("Business profiles error:", businessError);
-        throw businessError;
+      console.log("Fetching business documents for count aggregation from API...");
+      // Fetch all documents via API (no business_id parameter = get all)
+      const documentsResponse = await fetch('/api/business-documents');
+      const documentsResult = await documentsResponse.json();
+
+      if (!documentsResponse.ok) {
+        console.error("Business documents error:", documentsResult.error);
+        throw new Error(documentsResult.error || 'Failed to fetch documents');
       }
 
-      console.log("Fetching business documents for count aggregation...");
-      // Fetch document counts for each business
-      const { data: documentCounts, error: documentsError } =
-        await supabase.from("business_documents").select(`
-          business_id,
-          verification_status
-        `);
-
+      const documentCounts = documentsResult.data || [];
       console.log("Business documents result:", {
-        count: documentCounts?.length,
-        error: documentsError,
-        sample: documentCounts?.[0],
+        count: documentCounts.length,
+        sample: documentCounts[0],
       });
-
-      if (documentsError) {
-        console.error("Business documents error:", documentsError);
-        throw documentsError;
-      }
 
       console.log("Processing document counts...");
       // Calculate document counts by business

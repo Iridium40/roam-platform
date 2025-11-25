@@ -43,7 +43,6 @@ import {
   AlertTriangle,
   CheckCircle,
 } from "lucide-react";
-import { supabase } from "@/lib/supabase";
 
 interface SystemConfig {
   id: string;
@@ -175,24 +174,35 @@ export default function AdminSystemConfig() {
 
     try {
       if (editingConfig) {
-        const { error } = await supabase
-          .from("system_config")
-          .update({
+        const response = await fetch(`/api/system-config/${editingConfig.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            id: editingConfig.id,
             config_value: formData.config_value,
             description: formData.description,
             data_type: formData.data_type,
             is_public: formData.is_public,
             config_group: formData.config_group,
             is_encrypted: formData.is_encrypted,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", editingConfig.id);
+          }),
+        });
 
-        if (error) throw error;
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error || 'Failed to update config');
+        }
         alert("Configuration updated successfully!");
       } else {
-        const { error } = await supabase.from("system_config").insert([
-          {
+        const response = await fetch('/api/system-config', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
             config_key: formData.config_key,
             config_value: formData.config_value,
             description: formData.description,
@@ -200,10 +210,14 @@ export default function AdminSystemConfig() {
             is_public: formData.is_public,
             config_group: formData.config_group,
             is_encrypted: formData.is_encrypted,
-          },
-        ]);
+          }),
+        });
 
-        if (error) throw error;
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error || 'Failed to create config');
+        }
         alert("Configuration created successfully!");
       }
 

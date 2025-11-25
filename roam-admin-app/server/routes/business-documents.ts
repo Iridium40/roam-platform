@@ -14,10 +14,33 @@ export async function handleBusinessDocuments(req: Request, res: Response) {
     console.log('[Business Documents API] business_id extracted:', business_id);
     console.log('[Business Documents API] business_id type:', typeof business_id);
 
-    if (!business_id || typeof business_id !== 'string') {
-      console.error('[Business Documents API] Missing or invalid business_id');
+    // If no business_id provided, return all documents (for admin aggregation)
+    if (!business_id) {
+      console.log('[Business Documents API] No business_id - fetching all documents for admin');
+      const { data: allDocuments, error: documentsError } = await supabase
+        .from('business_documents')
+        .select('business_id, verification_status, id, document_type, created_at')
+        .order('created_at', { ascending: false });
+
+      if (documentsError) {
+        console.error('[Business Documents API] All documents fetch error:', documentsError);
+        return res.status(500).json({ 
+          error: documentsError.message,
+          details: documentsError.details
+        });
+      }
+
+      console.log('[Business Documents API] All documents fetched successfully:', allDocuments?.length || 0);
+      return res.status(200).json({ 
+        data: allDocuments || [],
+        count: allDocuments?.length || 0
+      });
+    }
+
+    if (typeof business_id !== 'string') {
+      console.error('[Business Documents API] Invalid business_id type');
       return res.status(400).json({ 
-        error: 'business_id query parameter is required' 
+        error: 'business_id must be a string' 
       });
     }
 

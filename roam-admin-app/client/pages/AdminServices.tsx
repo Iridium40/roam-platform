@@ -57,7 +57,6 @@ import {
   X,
   Image as ImageIcon,
 } from "lucide-react";
-import { supabase } from "@/lib/supabase";
 
 type ServiceCategoryType = string;
 
@@ -1498,15 +1497,23 @@ export default function AdminServices() {
   const createService = async () => {
     try {
       setSaving(true);
-      const { error } = await supabase.from("services").insert([
-        {
+      const response = await fetch('/api/services', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           ...newService,
           min_price: parseFloat(newService.min_price),
           duration_minutes: parseInt(newService.duration_minutes),
-        },
-      ]);
+        }),
+      });
 
-      if (error) throw error;
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to create service');
+      }
 
       setNewService({
         name: "",
