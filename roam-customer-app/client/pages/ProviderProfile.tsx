@@ -46,6 +46,7 @@ interface Review {
   communication_rating: number | null;
   punctuality_rating: number | null;
   review_text: string | null;
+  is_featured: boolean;
   created_at: string;
   customer_profiles?: {
     first_name: string;
@@ -128,7 +129,7 @@ export default function ProviderProfile() {
           setServices(providerServices);
         }
 
-        // Load featured reviews for this provider
+        // Load reviews for this provider (approved reviews, with featured ones first)
         const { data: reviewsData, error: reviewsError } = await supabase
           .from('reviews')
           .select(`
@@ -139,6 +140,7 @@ export default function ProviderProfile() {
             communication_rating,
             punctuality_rating,
             review_text,
+            is_featured,
             created_at,
             bookings (
               service_id,
@@ -153,8 +155,8 @@ export default function ProviderProfile() {
             )
           `)
           .eq('provider_id', providerData.id)
-          .eq('is_featured', true)
           .eq('is_approved', true)
+          .order('is_featured', { ascending: false })
           .order('created_at', { ascending: false });
 
         if (!reviewsError && reviewsData) {
@@ -469,8 +471,15 @@ export default function ProviderProfile() {
                                   <div className="w-10 h-10 bg-roam-blue/10 rounded-full flex items-center justify-center">
                                     <User className="w-5 h-5 text-roam-blue" />
                                   </div>
-                                  <div>
-                                    <h4 className="font-semibold text-lg">{customerName}</h4>
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2">
+                                      <h4 className="font-semibold text-lg">{customerName}</h4>
+                                      {review.is_featured && (
+                                        <Badge className="bg-roam-yellow text-roam-blue border-roam-yellow">
+                                          Featured
+                                        </Badge>
+                                      )}
+                                    </div>
                                     <p className="text-sm text-gray-500">
                                       {serviceName} • {format(new Date(review.created_at), 'MMMM d, yyyy')}
                                     </p>
@@ -532,10 +541,10 @@ export default function ProviderProfile() {
                   <div className="text-center py-12">
                     <MessageSquare className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                     <h3 className="text-lg font-semibold text-gray-600 mb-2">
-                      No Featured Reviews Yet
+                      No Reviews Yet
                     </h3>
                     <p className="text-gray-500">
-                      This provider doesn't have any featured reviews at the moment.
+                      This provider doesn't have any reviews at the moment.
                     </p>
                   </div>
                 )}
