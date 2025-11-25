@@ -39,24 +39,22 @@ async function getReviews(req: Request, res: Response) {
       .select(`
         id,
         booking_id,
+        business_id,
+        provider_id,
         overall_rating,
         service_rating,
         communication_rating,
-        cleanliness_rating,
-        timeliness_rating,
+        punctuality_rating,
         review_text,
-        is_flagged,
+        is_approved,
         is_featured,
-        admin_response,
+        moderated_by,
+        moderated_at,
+        moderation_notes,
         created_at,
-        updated_at,
-        customer_profiles!inner (
-          id,
-          first_name,
-          last_name
-        ),
         bookings!inner (
           id,
+          customer_id,
           services!inner (
             id,
             name
@@ -69,8 +67,10 @@ async function getReviews(req: Request, res: Response) {
       `);
 
     // Apply filters
-    if (status === 'flagged') {
-      query = query.eq('is_flagged', true);
+    if (status === 'approved') {
+      query = query.eq('is_approved', true);
+    } else if (status === 'unapproved') {
+      query = query.eq('is_approved', false);
     } else if (status === 'featured') {
       query = query.eq('is_featured', true);
     }
@@ -80,7 +80,7 @@ async function getReviews(req: Request, res: Response) {
     }
 
     if (search) {
-      query = query.or(`review_text.ilike.%${search}%,admin_response.ilike.%${search}%`);
+      query = query.or(`review_text.ilike.%${search}%,moderation_notes.ilike.%${search}%`);
     }
 
     // Apply sorting
@@ -105,10 +105,27 @@ async function getReviews(req: Request, res: Response) {
       });
     }
 
+    // Fetch customer names for the reviews
+    const customerIds = [...new Set((reviews || []).map((r: any) => r.bookings?.customer_id).filter(Boolean))];
+    let customerMap: Record<string, string> = {};
+    
+    if (customerIds.length > 0) {
+      const { data: customers } = await supabase
+        .from('customer_profiles')
+        .select('id, user_id, first_name, last_name')
+        .in('user_id', customerIds);
+      
+      if (customers) {
+        customerMap = Object.fromEntries(
+          customers.map((c: any) => [c.user_id, `${c.first_name || ''} ${c.last_name || ''}`.trim()])
+        );
+      }
+    }
+
     // Transform the data for better frontend consumption
     const transformedReviews = reviews?.map((review: any) => ({
       ...review,
-      customer_name: `${review.customer_profiles?.first_name || ''} ${review.customer_profiles?.last_name || ''}`.trim(),
+      customer_name: customerMap[review.bookings?.customer_id] || 'Unknown Customer',
       service_name: review.bookings?.services?.name || 'Unknown Service',
       business_name: review.bookings?.business_profiles?.business_name || 'Unknown Business',
       // Calculate average of all ratings
@@ -116,8 +133,7 @@ async function getReviews(req: Request, res: Response) {
         (review.overall_rating + 
          (review.service_rating || review.overall_rating) + 
          (review.communication_rating || review.overall_rating) + 
-         (review.cleanliness_rating || review.overall_rating) + 
-         (review.timeliness_rating || review.overall_rating)) / 5
+         (review.punctuality_rating || review.overall_rating)) / 4
       ).toFixed(1) : null
     })) || [];
 
@@ -144,8 +160,7 @@ async function createReview(req: Request, res: Response) {
       overall_rating,
       service_rating,
       communication_rating,
-      cleanliness_rating,
-      timeliness_rating,
+      punctuality_rating,
       review_text,
       is_featured = false
     } = req.body;
@@ -158,7 +173,7 @@ async function createReview(req: Request, res: Response) {
     }
 
     // Validate rating values (1-5)
-    const ratings = [overall_rating, service_rating, communication_rating, cleanliness_rating, timeliness_rating];
+    const ratings = [overall_rating, service_rating, communication_rating, punctuality_rating];
     for (const rating of ratings) {
       if (rating && (rating < 1 || rating > 5)) {
         return res.status(400).json({ 
@@ -189,11 +204,10 @@ async function createReview(req: Request, res: Response) {
         overall_rating,
         service_rating,
         communication_rating,
-        cleanliness_rating,
-        timeliness_rating,
+        punctuality_rating,
         review_text,
         is_featured,
-        is_flagged: false,
+        is_approved: false,
         business_id: booking.business_id || null,
         provider_id: booking.provider_id || null,
       }])
@@ -227,12 +241,12 @@ async function updateReview(req: Request, res: Response) {
       overall_rating,
       service_rating,
       communication_rating,
-      cleanliness_rating,
-      timeliness_rating,
+      punctuality_rating,
       review_text,
-      is_flagged,
+      is_approved,
       is_featured,
-      admin_response
+      moderated_by,
+      moderation_notes
     } = req.body;
 
     // Build update object with only provided fields
@@ -241,14 +255,18 @@ async function updateReview(req: Request, res: Response) {
     if (overall_rating !== undefined) updateData.overall_rating = overall_rating;
     if (service_rating !== undefined) updateData.service_rating = service_rating;
     if (communication_rating !== undefined) updateData.communication_rating = communication_rating;
-    if (cleanliness_rating !== undefined) updateData.cleanliness_rating = cleanliness_rating;
-    if (timeliness_rating !== undefined) updateData.timeliness_rating = timeliness_rating;
+    if (punctuality_rating !== undefined) updateData.punctuality_rating = punctuality_rating;
     if (review_text !== undefined) updateData.review_text = review_text;
-    if (is_flagged !== undefined) updateData.is_flagged = is_flagged;
+    if (is_approved !== undefined) {
+      updateData.is_approved = is_approved;
+      // If approving/moderating, set moderated_at
+      if (is_approved !== null) {
+        updateData.moderated_at = new Date().toISOString();
+      }
+    }
     if (is_featured !== undefined) updateData.is_featured = is_featured;
-    if (admin_response !== undefined) updateData.admin_response = admin_response;
-
-    updateData.updated_at = new Date().toISOString();
+    if (moderated_by !== undefined) updateData.moderated_by = moderated_by;
+    if (moderation_notes !== undefined) updateData.moderation_notes = moderation_notes;
 
     const { data: review, error: updateError } = await supabase
       .from('reviews')
@@ -304,34 +322,38 @@ async function deleteReview(req: Request, res: Response) {
   }
 }
 
-// Moderate review (flag/unflag)
+// Moderate review (approve/reject/feature/unfeature)
 export async function handleReviewModeration(req: Request, res: Response) {
   try {
     const { id } = req.params;
-    const { action, admin_response } = req.body;
+    const { action, moderation_notes, moderated_by } = req.body;
 
-    if (!['flag', 'unflag', 'feature', 'unfeature'].includes(action)) {
+    if (!['approve', 'reject', 'feature', 'unfeature'].includes(action)) {
       return res.status(400).json({ 
-        error: 'Invalid action. Must be: flag, unflag, feature, or unfeature' 
+        error: 'Invalid action. Must be: approve, reject, feature, or unfeature' 
       });
     }
 
     const updateData: any = {
-      updated_at: new Date().toISOString()
+      moderated_at: new Date().toISOString()
     };
 
-    if (action === 'flag') {
-      updateData.is_flagged = true;
-    } else if (action === 'unflag') {
-      updateData.is_flagged = false;
+    if (action === 'approve') {
+      updateData.is_approved = true;
+    } else if (action === 'reject') {
+      updateData.is_approved = false;
     } else if (action === 'feature') {
       updateData.is_featured = true;
     } else if (action === 'unfeature') {
       updateData.is_featured = false;
     }
 
-    if (admin_response) {
-      updateData.admin_response = admin_response;
+    if (moderation_notes) {
+      updateData.moderation_notes = moderation_notes;
+    }
+
+    if (moderated_by) {
+      updateData.moderated_by = moderated_by;
     }
 
     const { data: review, error: updateError } = await supabase
@@ -360,7 +382,7 @@ export async function handleReviewModeration(req: Request, res: Response) {
   }
 }
 
-// Get flagged reviews
+// Get unapproved reviews (pending moderation)
 export async function handleFlaggedReviews(req: Request, res: Response) {
   try {
     const { data: reviews, error: fetchError } = await supabase
@@ -368,18 +390,15 @@ export async function handleFlaggedReviews(req: Request, res: Response) {
       .select(`
         id,
         booking_id,
+        business_id,
+        provider_id,
         overall_rating,
         review_text,
-        admin_response,
+        moderation_notes,
         created_at,
-        updated_at,
-        customer_profiles!inner (
-          id,
-          first_name,
-          last_name
-        ),
         bookings!inner (
           id,
+          customer_id,
           services!inner (
             id,
             name
@@ -390,20 +409,37 @@ export async function handleFlaggedReviews(req: Request, res: Response) {
           )
         )
       `)
-      .eq('is_flagged', true)
+      .eq('is_approved', false)
       .order('created_at', { ascending: false });
 
     if (fetchError) {
-      console.error('Error fetching flagged reviews:', fetchError);
+      console.error('Error fetching unapproved reviews:', fetchError);
       return res.status(500).json({ 
         error: fetchError.message,
         details: fetchError.details 
       });
     }
 
+    // Fetch customer names
+    const customerIds = [...new Set((reviews || []).map((r: any) => r.bookings?.customer_id).filter(Boolean))];
+    let customerMap: Record<string, string> = {};
+    
+    if (customerIds.length > 0) {
+      const { data: customers } = await supabase
+        .from('customer_profiles')
+        .select('id, user_id, first_name, last_name')
+        .in('user_id', customerIds);
+      
+      if (customers) {
+        customerMap = Object.fromEntries(
+          customers.map((c: any) => [c.user_id, `${c.first_name || ''} ${c.last_name || ''}`.trim()])
+        );
+      }
+    }
+
     const transformedReviews = reviews?.map((review: any) => ({
       ...review,
-      customer_name: `${review.customer_profiles?.first_name || ''} ${review.customer_profiles?.last_name || ''}`.trim(),
+      customer_name: customerMap[review.bookings?.customer_id] || 'Unknown Customer',
       service_name: review.bookings?.services?.name || 'Unknown Service',
       business_name: review.bookings?.business_profiles?.business_name || 'Unknown Business'
     })) || [];
@@ -412,6 +448,6 @@ export async function handleFlaggedReviews(req: Request, res: Response) {
 
   } catch (error) {
     console.error('Error in handleFlaggedReviews:', error);
-    return res.status(500).json({ error: 'Failed to fetch flagged reviews' });
+    return res.status(500).json({ error: 'Failed to fetch unapproved reviews' });
   }
 }

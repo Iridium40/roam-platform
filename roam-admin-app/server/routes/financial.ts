@@ -43,15 +43,8 @@ export async function handleFinancialStats(req: Request, res: Response) {
     const pendingPayouts = 0;
     const payoutsCount = 0;
     
-    // Fetch active subscriptions
-    const { data: subscriptions, error: subscriptionsError } = await supabase
-      .from('business_profiles')
-      .select('subscription_status')
-      .eq('subscription_status', 'active');
-    
-    if (subscriptionsError) throw subscriptionsError;
-    
-    const activeSubscriptions = subscriptions?.length || 0;
+    // Active subscriptions - not yet implemented
+    const activeSubscriptions = 0;
     
     const stats = {
       totalRevenue: {
