@@ -3,6 +3,7 @@ import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api/endpoints";
 import { useAuth } from "@/contexts/auth/AuthProvider";
 import { supabase } from "@/lib/supabase";
+import { PAGINATION_CONFIG, getPageSize, getDateRange } from "../config/pagination.config";
 
 interface BookingStats {
   totalBookings: number;
@@ -42,23 +43,60 @@ export function useBookings(providerData: any, business: any) {
   const [futurePage, setFuturePage] = useState(1);
   const [pastPage, setPastPage] = useState(1);
   
-  const pageSize = 20;
+  // Date range state
+  const [dateRangeDays, setDateRangeDays] = useState(PAGINATION_CONFIG.defaultDateRange);
+  
+  // Dynamic page size based on device (responsive)
+  const [pageSize, setPageSize] = useState(getPageSize());
+  
+  // Update page size on window resize
+  useEffect(() => {
+    const handleResize = () => {
+      setPageSize(getPageSize());
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
-  // Load bookings data
+  // Load bookings data with date range filtering
   const loadBookings = async () => {
     if (!business?.id) return;
 
     setLoading(true);
     try {
-      // Use API endpoint - no fallback to avoid circular dependency issues
+      // Calculate date range for query
+      const { start, end } = getDateRange(dateRangeDays);
+      const startDateStr = start.toISOString().split('T')[0];
+      const endDateStr = end.toISOString().split('T')[0];
+      
+      console.log('📅 Loading bookings with date range:', {
+        days: dateRangeDays,
+        start: startDateStr,
+        end: endDateStr,
+        limit: PAGINATION_CONFIG.databaseQueryLimit
+      });
+
+      // Use API endpoint with date range and limit
       const response = await api.bookings.getBookings({
         business_id: business.id,
-        limit: 1000 // Load all bookings for now
+        limit: PAGINATION_CONFIG.databaseQueryLimit,
+        // Note: API may need to be updated to support date filtering
+        // For now, we'll filter client-side if API doesn't support it
       });
 
       if (response.data && typeof response.data === 'object' && 'bookings' in response.data) {
         const apiData = response.data as { bookings: any[]; stats?: any };
-        setBookings(apiData.bookings || []);
+        let bookingsData = apiData.bookings || [];
+        
+        // Filter by date range client-side if API doesn't support it
+        bookingsData = bookingsData.filter((booking: any) => {
+          if (!booking.booking_date) return false;
+          return booking.booking_date >= startDateStr && booking.booking_date <= endDateStr;
+        });
+        
+        console.log(`✅ Loaded ${bookingsData.length} bookings within date range`);
+        setBookings(bookingsData);
       } else {
         throw new Error('No data received from API');
       }
@@ -76,10 +114,10 @@ export function useBookings(providerData: any, business: any) {
     }
   };
 
-  // Load bookings on mount and when business changes
+  // Load bookings on mount and when business or date range changes
   useEffect(() => {
     loadBookings();
-  }, [business?.id]);
+  }, [business?.id, dateRangeDays]);
 
   // Fetch unread message counts for all bookings
   useEffect(() => {
@@ -292,6 +330,8 @@ export function useBookings(providerData: any, business: any) {
   }, [filteredBookings]);
 
   // Calculate pagination data
+  // Note: For lists exceeding PAGINATION_CONFIG.maxItemsBeforeVirtualScroll (100 items),
+  // consider implementing virtual scrolling for better performance
   const paginatedData = useMemo(() => {
     const calculatePagination = (items: any[], currentPage: number) => {
       const startIndex = (currentPage - 1) * pageSize;
@@ -299,10 +339,16 @@ export function useBookings(providerData: any, business: any) {
       const paginatedItems = items.slice(startIndex, endIndex);
       const totalPages = Math.ceil(items.length / pageSize);
 
+      // Log warning if approaching virtual scroll threshold
+      if (items.length > PAGINATION_CONFIG.maxItemsBeforeVirtualScroll) {
+        console.warn(`⚠️ Large list detected (${items.length} items). Consider implementing virtual scrolling for better performance.`);
+      }
+
       return {
         items: paginatedItems,
         totalPages,
         currentPage,
+        totalItems: items.length,
       };
     };
 
