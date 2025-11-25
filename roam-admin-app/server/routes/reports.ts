@@ -10,13 +10,30 @@ export async function handleReportMetrics(req: Request, res: Response) {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - parseInt(dateRange as string));
     
-    // Fetch user metrics
-    const { data: users, error: usersError } = await supabase
-      .from('users')
-      .select('created_at, last_sign_in_at')
+    // Fetch customer metrics (customer_profiles table instead of auth.users)
+    const { data: customers, error: customersError } = await supabase
+      .from('customer_profiles')
+      .select('created_at')
       .gte('created_at', startDate.toISOString());
     
-    if (usersError) throw usersError;
+    if (customersError) {
+      console.error('Error fetching customer metrics:', customersError);
+      // Don't throw - continue with empty data
+    }
+    
+    // Fetch provider metrics
+    const { data: providers, error: providersError } = await supabase
+      .from('providers')
+      .select('created_at')
+      .gte('created_at', startDate.toISOString());
+    
+    if (providersError) {
+      console.error('Error fetching provider metrics:', providersError);
+      // Don't throw - continue with empty data
+    }
+    
+    // Combine customers and providers for total user count
+    const users = [...(customers || []), ...(providers || [])];
     
     // Fetch booking metrics
     const { data: bookings, error: bookingsError } = await supabase
@@ -30,13 +47,30 @@ export async function handleReportMetrics(req: Request, res: Response) {
     const prevStartDate = new Date(startDate);
     prevStartDate.setDate(prevStartDate.getDate() - parseInt(dateRange as string));
     
-    const { data: prevUsers, error: prevUsersError } = await supabase
-      .from('users')
+    // Fetch previous period customers
+    const { data: prevCustomers, error: prevCustomersError } = await supabase
+      .from('customer_profiles')
       .select('created_at')
       .gte('created_at', prevStartDate.toISOString())
       .lt('created_at', startDate.toISOString());
     
-    if (prevUsersError) throw prevUsersError;
+    if (prevCustomersError) {
+      console.error('Error fetching previous customer metrics:', prevCustomersError);
+    }
+    
+    // Fetch previous period providers
+    const { data: prevProviders, error: prevProvidersError } = await supabase
+      .from('providers')
+      .select('created_at')
+      .gte('created_at', prevStartDate.toISOString())
+      .lt('created_at', startDate.toISOString());
+    
+    if (prevProvidersError) {
+      console.error('Error fetching previous provider metrics:', prevProvidersError);
+    }
+    
+    // Combine for previous period total
+    const prevUsers = [...(prevCustomers || []), ...(prevProviders || [])];
     
     const { data: prevBookings, error: prevBookingsError } = await supabase
       .from('bookings')

@@ -81,7 +81,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     console.log("Business profile found:", businessProfile.business_name);
 
-    // Note: provider_applications table removed - approval is based on business_profiles verification_status only
+    // Check if there's a provider_application for this business (for backward compatibility)
+    const { data: applicationData } = await supabase
+      .from("provider_applications")
+      .select("id")
+      .eq("business_id", businessId)
+      .maybeSingle();
+    
+    const application = applicationData;
+    const applicationId = application?.id || businessId;
+    console.log("Application record:", application ? `Found (${application.id})` : "None found");
 
     console.log("Updating business profile...");
     // Update business profile to approved
@@ -174,8 +183,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const userId = ownerProvider.user_id;
     console.log("Found owner provider user_id:", userId);
 
-    // Use application ID if available, otherwise use business ID as fallback
-    const applicationId = application ? application.id : businessId;
+    // Use applicationId that was already determined above
     
     const approvalToken = TokenService.generatePhase2Token(
       businessId,
@@ -183,7 +191,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       applicationId
     );
     const approvalUrl = TokenService.generatePhase2URL(
-      businessId,
+            businessId,
       userId,
       applicationId
     );
@@ -234,7 +242,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Continue anyway
     } else {
       console.log("Setup progress updated successfully");
-    }
+      }
 
     // Send approval email with Phase 2 onboarding link (if enabled)
     if (sendEmail) {
@@ -328,7 +336,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 "Content-Type": "application/json",
               },
               body: JSON.stringify(emailPayload),
-            });
+      });
 
             if (resendResponse.ok) {
               const emailResult = await resendResponse.json();

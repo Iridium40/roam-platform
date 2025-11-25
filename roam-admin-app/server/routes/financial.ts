@@ -39,15 +39,25 @@ export async function handleFinancialStats(req: Request, res: Response) {
     const prevRevenue = prevSummary?.reduce((sum, s) => sum + (s.total_revenue || 0), 0) || 0;
     const revenueChange = prevRevenue > 0 ? ((totalRevenue - prevRevenue) / prevRevenue) * 100 : 0;
     
-    // Fetch pending payouts
-    const { data: payouts, error: payoutsError } = await supabase
-      .from('payout_requests')
-      .select('amount, status')
-      .eq('status', 'pending');
-    
-    if (payoutsError) throw payoutsError;
-    
-    const pendingPayouts = payouts?.reduce((sum, payout) => sum + (payout.amount || 0), 0) || 0;
+    // Fetch pending payouts (payout_requests table may not exist yet)
+    let payouts: any[] = [];
+    let pendingPayouts = 0;
+    try {
+      const { data, error: payoutsError } = await supabase
+        .from('payout_requests')
+        .select('amount, status')
+        .eq('status', 'pending');
+      
+      if (payoutsError) {
+        console.error('Error fetching payout requests (table may not exist):', payoutsError);
+        // Don't throw - continue with empty data
+      } else {
+        payouts = data || [];
+        pendingPayouts = payouts.reduce((sum, payout) => sum + (payout.amount || 0), 0);
+      }
+    } catch (err) {
+      console.warn('payout_requests table not available');
+    }
     
     // Fetch active subscriptions
     const { data: subscriptions, error: subscriptionsError } = await supabase
@@ -185,16 +195,17 @@ export async function handlePayoutRequests(req: Request, res: Response) {
   try {
     const { status = "all" } = req.query;
     
+    // Query payout_requests without join - we'll fetch business names separately if needed
     let query = supabase
       .from('payout_requests')
       .select(`
         id,
+        business_id,
         amount,
         status,
         requested_at,
         processed_at,
-        notes,
-        business_profiles!inner(business_name)
+        notes
       `)
       .order('requested_at', { ascending: false });
     
@@ -204,7 +215,29 @@ export async function handlePayoutRequests(req: Request, res: Response) {
     
     const { data, error } = await query;
     
-    if (error) throw error;
+    if (error) {
+      // Table might not exist or relationship issue
+      if (error.code === '42P01' || error.message?.includes('does not exist') || error.code === 'PGRST200') {
+        console.warn('payout_requests table issue - returning empty data:', error.message);
+        return res.json({ success: true, data: [], message: 'Payout requests feature not yet configured' });
+      }
+      throw error;
+    }
+    
+    // Fetch business names for the payouts
+    const businessIds = [...new Set((data || []).map((p: any) => p.business_id).filter(Boolean))];
+    let businessMap: Record<string, string> = {};
+    
+    if (businessIds.length > 0) {
+      const { data: businesses } = await supabase
+        .from('business_profiles')
+        .select('id, business_name')
+        .in('id', businessIds);
+      
+      if (businesses) {
+        businessMap = Object.fromEntries(businesses.map((b: any) => [b.id, b.business_name]));
+      }
+    }
     
     // Helper to format snake_case to Title Case
     const formatToTitleCase = (str: string | null): string => {
@@ -234,10 +267,10 @@ export async function handlePayoutRequests(req: Request, res: Response) {
     };
     
     // Transform data to match frontend interface
-    const payouts = data?.map(payout => ({
+    const payouts = data?.map((payout: any) => ({
       id: payout.id,
-      business_id: payout.business_profiles?.id || '',
-      business_name: payout.business_profiles?.business_name || 'Unknown',
+      business_id: payout.business_id || '',
+      business_name: businessMap[payout.business_id] || 'Unknown',
       amount: payout.amount || 0,
       status: formatToTitleCase(payout.status),
       status_raw: payout.status, // Keep raw for action logic
@@ -279,7 +312,16 @@ export async function handleUpdatePayoutStatus(req: Request, res: Response) {
       })
       .eq('id', payoutId);
     
-    if (error) throw error;
+    if (error) {
+      // Table might not exist yet
+      if (error.code === '42P01' || error.message?.includes('does not exist')) {
+        return res.status(400).json({
+          success: false,
+          error: 'Payout requests feature not yet configured'
+        });
+      }
+      throw error;
+    }
     
     res.json({ 
       success: true, 

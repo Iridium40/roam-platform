@@ -40,7 +40,8 @@ export async function processBookingAcceptance(
   providerStripeId?: string
 ): Promise<PaymentProcessingResult> {
   try {
-    console.log('💰 Processing payment for booking acceptance:', { bookingId, acceptedBy });
+    console.log('💰 ======= PAYMENT PROCESSING START =======');
+    console.log('💰 Processing payment for booking acceptance:', { bookingId, acceptedBy, timestamp: new Date().toISOString() });
 
     // Fetch booking details including business info for Stripe Connect
     const { data: booking, error: bookingError } = await supabase
@@ -67,17 +68,31 @@ export async function processBookingAcceptance(
       .single();
 
     if (bookingError || !booking) {
+      console.error('❌ PAYMENT PROCESSING ERROR: Booking not found', { bookingId, error: bookingError });
       return {
         success: false,
         error: `Booking not found: ${bookingError?.message || 'Unknown error'}`,
       };
     }
 
+    // Log booking payment details
+    console.log('📋 Booking payment details:', {
+      bookingId: booking.id,
+      stripe_payment_intent_id: booking.stripe_payment_intent_id || 'NOT SET',
+      stripe_service_amount_payment_intent_id: booking.stripe_service_amount_payment_intent_id || 'NOT SET',
+      total_amount: booking.total_amount,
+      service_fee: booking.service_fee,
+      payment_status: booking.payment_status,
+      booking_status: booking.booking_status,
+    });
+
     // Check if payment intent exists
     if (!booking.stripe_payment_intent_id) {
+      console.error('❌ PAYMENT PROCESSING ERROR: No stripe_payment_intent_id on booking');
+      console.error('❌ This booking was created without a payment intent - customer may not have completed checkout');
       return {
         success: false,
-        error: 'No payment intent found for this booking',
+        error: 'No payment intent found for this booking. Customer may not have completed checkout.',
       };
     }
 

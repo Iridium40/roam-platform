@@ -478,19 +478,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.log('📧 Notification settings:', { notifyCustomer, notifyProvider, willNotify: notifyCustomer || notifyProvider });
 
     // Process payments based on status change
+    let paymentProcessingResult: any = null;
     if (newStatus === 'confirmed') {
       console.log('💰 Processing payment for booking confirmation...');
       const paymentResult = await processBookingAcceptance(bookingId, updatedBy);
+      paymentProcessingResult = paymentResult;
       
       if (!paymentResult.success) {
-        console.error('⚠️ Payment processing failed:', paymentResult.error);
+        console.error('⚠️ ======= PAYMENT PROCESSING FAILED =======');
+        console.error('⚠️ Booking ID:', bookingId);
+        console.error('⚠️ Error:', paymentResult.error);
+        console.error('⚠️ Status update succeeded but payment was NOT charged');
+        console.error('⚠️ Manual intervention may be required');
         // Don't fail the status update - payment can be retried
         // But log the error for monitoring
       } else {
+        console.log('✅ ======= PAYMENT PROCESSING SUCCEEDED =======');
         console.log('✅ Payment processed successfully:', {
+          bookingId,
           serviceFeeCharged: paymentResult.serviceFeeCharged,
           serviceAmountCharged: paymentResult.serviceAmountCharged,
           serviceAmountAuthorized: paymentResult.serviceAmountAuthorized,
+          paymentIntentId: paymentResult.paymentIntentId,
         });
       }
     } else if (newStatus === 'declined') {
@@ -526,7 +535,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json({ 
       success: true, 
       booking,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      // Include payment processing result for transparency
+      paymentProcessing: paymentProcessingResult ? {
+        success: paymentProcessingResult.success,
+        error: paymentProcessingResult.error || null,
+        serviceFeeCharged: paymentProcessingResult.serviceFeeCharged || false,
+        serviceAmountCharged: paymentProcessingResult.serviceAmountCharged || false,
+      } : null
     });
 
   } catch (error) {
@@ -1134,27 +1150,58 @@ The ROAM Team
     }
     
     // Notify customer when booking is declined
-    if (newStatus === 'declined' && options.notifyCustomer && customer?.user_id) {
-      console.log('📧 Sending customer_booking_declined notification to user:', customer.user_id);
-      await sendNotificationViaService(
-        customer.user_id,
-        'customer_booking_declined',
-        {
-          customer_name: customerName,
-          service_name: serviceName,
-          provider_name: provider ? `${provider.first_name} ${provider.last_name}` : 'Provider',
-          booking_date: bookingDate,
-          booking_time: bookingTime,
-          booking_location: locationAddress,
-          decline_reason: booking.decline_reason || 'The provider is unavailable at the requested time.',
-          booking_id: booking.id,
-        },
-        {
-          booking_id: booking.id,
-          event_type: 'booking_declined',
+    if (newStatus === 'declined') {
+      console.log('📧 Checking declined notification conditions:', {
+        newStatus,
+        notifyCustomer: options.notifyCustomer,
+        hasCustomer: !!customer,
+        customerUserId: customer?.user_id,
+        customerId: customer?.id,
+        customerEmail: customer?.email,
+        customerName,
+        declineReason: booking.decline_reason,
+        bookingId: booking.id,
+      });
+      
+      if (!options.notifyCustomer) {
+        console.log('⚠️ Skipping declined notification: notifyCustomer is false');
+      } else if (!customer?.user_id) {
+        console.error('❌ Cannot send declined notification: customer.user_id is missing', {
+          bookingId: booking.id,
+          customerId: customer?.id,
+          customerEmail: customer?.email,
+          customerData: customer,
+        });
+      } else {
+        console.log('📧 Sending customer_booking_declined notification to user:', customer.user_id);
+        try {
+          await sendNotificationViaService(
+            customer.user_id,
+            'customer_booking_declined',
+            {
+              customer_name: customerName,
+              service_name: serviceName,
+              provider_name: provider ? `${provider.first_name} ${provider.last_name}` : 'Provider',
+              booking_date: bookingDate,
+              booking_time: bookingTime,
+              booking_location: locationAddress,
+              decline_reason: booking.decline_reason || 'The provider is unavailable at the requested time.',
+              booking_id: booking.id,
+            },
+            {
+              booking_id: booking.id,
+              event_type: 'booking_declined',
+            }
+          );
+          console.log('✅ Declined notification sent successfully');
+        } catch (declineError) {
+          console.error('❌ Error sending declined notification:', {
+            error: declineError,
+            message: declineError instanceof Error ? declineError.message : String(declineError),
+            stack: declineError instanceof Error ? declineError.stack : undefined,
+          });
         }
-      );
-      console.log('✅ Declined notification sent successfully');
+      }
     }
     
     // Notify providers when booking is cancelled by customer

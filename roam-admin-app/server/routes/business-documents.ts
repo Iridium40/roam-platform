@@ -125,7 +125,7 @@ export async function handleBusinessDocuments(req: Request, res: Response) {
 
     console.log('[Business Documents API] ===== SUCCESS =====');
     console.log('[Business Documents API] Returning response with', documents?.length || 0, 'documents');
-    
+
     return res.status(200).json({ 
       data: documents || [],
       business: {

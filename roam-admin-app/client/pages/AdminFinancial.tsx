@@ -427,7 +427,7 @@ export default function AdminFinancial() {
         return (
           <ROAMBadge variant={typeVariant}>
             {row.original.type}
-          </ROAMBadge>
+        </ROAMBadge>
         );
       },
     },
@@ -541,12 +541,12 @@ export default function AdminFinancial() {
       cell: ({ row }: any) => {
         const statusLower = row.original.status_raw || row.original.status?.toLowerCase();
         return (
-          <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2">
             {getStatusIcon(statusLower)}
             <ROAMBadge variant={getStatusColor(statusLower) as any}>
-              {row.original.status}
-            </ROAMBadge>
-          </div>
+            {row.original.status}
+          </ROAMBadge>
+        </div>
         );
       },
     },
@@ -585,29 +585,29 @@ export default function AdminFinancial() {
       cell: ({ row }: any) => {
         const statusRaw = row.original.status_raw || row.original.status?.toLowerCase();
         return (
-          <div className="flex gap-2">
+        <div className="flex gap-2">
             {statusRaw === 'pending' && (
-              <>
-                <Button
-                  size="sm"
+            <>
+              <Button
+                size="sm"
                   className="bg-green-600 hover:bg-green-700 text-white"
-                  onClick={() => handlePayoutAction(row.original.id, 'approve')}
-                >
-                  Approve
-                </Button>
-                <Button
-                  size="sm"
+                onClick={() => handlePayoutAction(row.original.id, 'approve')}
+              >
+                Approve
+              </Button>
+              <Button
+                size="sm"
                   variant="destructive"
-                  onClick={() => handlePayoutAction(row.original.id, 'reject')}
-                >
-                  Reject
-                </Button>
-              </>
-            )}
-            <Button size="sm" variant="ghost">
-              <Eye className="w-4 h-4" />
-            </Button>
-          </div>
+                onClick={() => handlePayoutAction(row.original.id, 'reject')}
+              >
+                Reject
+              </Button>
+            </>
+          )}
+          <Button size="sm" variant="ghost">
+            <Eye className="w-4 h-4" />
+          </Button>
+        </div>
         );
       },
     },

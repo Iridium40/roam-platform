@@ -470,8 +470,8 @@ export default function AdminReports() {
         return (
           <div className="flex flex-col gap-1">
             <ROAMBadge variant={variant}>
-              {row.original.user_type.toUpperCase()}
-            </ROAMBadge>
+          {row.original.user_type.toUpperCase()}
+        </ROAMBadge>
             {row.original.provider_role && (
               <span className="text-xs text-muted-foreground">
                 {row.original.provider_role}
@@ -571,7 +571,7 @@ export default function AdminReports() {
           <div className="flex flex-col">
             <span className="font-mono font-semibold">
               ${amount.toFixed(2)}
-            </span>
+        </span>
             <span className="text-xs text-muted-foreground">{label}</span>
           </div>
         );
@@ -583,15 +583,15 @@ export default function AdminReports() {
       header: "Rating",
       cell: ({ row }: any) => (
         row.original.avg_rating > 0 ? (
-          <div className="flex items-center gap-1">
-            <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+        <div className="flex items-center gap-1">
+          <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
             <span className="font-semibold">{row.original.avg_rating.toFixed(1)}</span>
             {row.original.total_reviews > 0 && (
               <span className="text-xs text-muted-foreground">
                 ({row.original.total_reviews})
               </span>
             )}
-          </div>
+        </div>
         ) : (
           <span className="text-muted-foreground text-sm">No rating</span>
         )
@@ -677,7 +677,7 @@ export default function AdminReports() {
         return (
           <ROAMBadge variant={variant}>
             {row.original.status || 'Unknown'}
-          </ROAMBadge>
+        </ROAMBadge>
         );
       },
     },
@@ -762,8 +762,8 @@ export default function AdminReports() {
         return (
           <div className="flex flex-col gap-1">
             <ROAMBadge variant={variant}>
-              {row.original.verification_status}
-            </ROAMBadge>
+          {row.original.verification_status}
+        </ROAMBadge>
             {row.original.is_active === false && (
               <span className="text-xs text-destructive">Inactive</span>
             )}
@@ -820,7 +820,7 @@ export default function AdminReports() {
         <div className="flex flex-col">
           <span className="font-mono font-semibold">
             ${(row.original.total_revenue || 0).toLocaleString()}
-          </span>
+        </span>
           <span className="text-xs text-muted-foreground">
             ${(row.original.completed_revenue || 0).toLocaleString()} completed
           </span>
@@ -833,13 +833,13 @@ export default function AdminReports() {
       header: "Rating",
       cell: ({ row }: any) => (
         row.original.avg_rating > 0 ? (
-          <div className="flex items-center gap-1">
-            <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+        <div className="flex items-center gap-1">
+          <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
             <span className="font-semibold">{row.original.avg_rating.toFixed(1)}</span>
             {row.original.total_reviews > 0 && (
               <span className="text-xs text-muted-foreground">({row.original.total_reviews})</span>
             )}
-          </div>
+        </div>
         ) : (
           <span className="text-muted-foreground text-sm">No rating</span>
         )
@@ -874,8 +874,8 @@ export default function AdminReports() {
       cell: ({ row }: any) => (
         <div className="flex flex-col gap-1">
           <ROAMBadge variant="default" className="text-xs">
-            {row.original.category}
-          </ROAMBadge>
+          {row.original.category}
+        </ROAMBadge>
           <span className="text-xs text-muted-foreground">{row.original.subcategory}</span>
         </div>
       ),
@@ -931,13 +931,13 @@ export default function AdminReports() {
       header: "Rating",
       cell: ({ row }: any) => (
         row.original.avg_rating > 0 ? (
-          <div className="flex items-center gap-1">
-            <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+        <div className="flex items-center gap-1">
+          <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
             <span className="font-semibold">{row.original.avg_rating.toFixed(1)}</span>
             {row.original.total_reviews > 0 && (
               <span className="text-xs text-muted-foreground">({row.original.total_reviews})</span>
             )}
-          </div>
+        </div>
         ) : (
           <span className="text-muted-foreground text-sm">No rating</span>
         )
