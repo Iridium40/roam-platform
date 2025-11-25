@@ -606,7 +606,8 @@ export default function BusinessProfile() {
                         This business doesn't have any services listed yet.
                       </p>
                     </div>
-                  )}
+                  );
+                  })()}
                 </div>
               )}
 
