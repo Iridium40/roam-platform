@@ -322,6 +322,9 @@ export function TipCheckoutForm({ tipAmount, providerName, clientSecret, onSucce
                       options={{
                         mode: 'billing',
                         allowedCountries: ['US'],
+                        fields: {
+                          phone: billingAddress?.phone ? 'always' : 'auto',
+                        },
                         ...(billingAddress && {
                           defaultValues: {
                             name: billingAddress.name,

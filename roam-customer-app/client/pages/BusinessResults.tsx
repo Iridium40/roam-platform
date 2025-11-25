@@ -110,7 +110,8 @@ export default function BusinessResults() {
   const navigate = useNavigate();
   const subcategoryId = searchParams.get("subcategory");
   const subcategoryName = searchParams.get("name") || "Services";
-  const searchQuery = searchParams.get("q") || "";
+  // Support both 'q' (general search) and 'service' (service type search) parameters
+  const searchQuery = searchParams.get("q") || searchParams.get("service") || "";
   const locationParam = searchParams.get("location") || "30.3226432,-86.1447833"; // Default to Seaside, FL
 
   const [businesses, setBusinesses] = useState<Business[]>([]);
@@ -202,12 +203,12 @@ export default function BusinessResults() {
           }
         }
 
-        // Handle services data
-        if (subcategoryId && servicesData && Array.isArray(servicesData)) {
+        // Handle services data - both for subcategory and text search
+        if (servicesData && Array.isArray(servicesData) && servicesData.length > 0) {
             const servicesList = servicesData as Service[];
             setServices(servicesList);
-            // Select all services by default
-            if (servicesList.length > 0) {
+            // Select all services by default when searching by subcategory
+            if (subcategoryId && servicesList.length > 0) {
             const serviceIds = servicesList
               .filter(s => s && s.id)
               .map(s => s.id);
@@ -216,7 +217,7 @@ export default function BusinessResults() {
             }
           }
         } else {
-          // If no subcategory, clear services
+          // Clear services if none returned
           setServices([]);
           setSelectedServices(new Set());
         }
@@ -236,7 +237,8 @@ export default function BusinessResults() {
 
   useEffect(() => {
     const fetchBusinessServices = async () => {
-      if (!subcategoryId || !services || !Array.isArray(services) || services.length === 0) return;
+      // Fetch business services mapping when we have services (from subcategory OR text search)
+      if (!services || !Array.isArray(services) || services.length === 0) return;
 
       try {
         // Get all business_services for the selected services

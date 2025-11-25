@@ -194,9 +194,9 @@ export default function ProviderDashboard() {
     }
     
     if (isProvider) {
-      // Providers can access: My Bookings, Messages, My Profile, My Services (read-only), Settings
-      // NO access to: Dashboard, Staff, Financials, Business Settings
-      return ['bookings', 'messages', 'profile', 'services', 'settings'].includes(feature);
+      // Providers can access: My Bookings, Messages, My Profile, Settings
+      // NO access to: Dashboard, Staff, Financials, Business Settings, Services
+      return ['bookings', 'messages', 'profile', 'settings'].includes(feature);
     }
     
     return false;
@@ -244,10 +244,14 @@ export default function ProviderDashboard() {
 
   const basePath = getBasePath();
 
-  // Redirect providers away from dashboard if they somehow access it
+  // Redirect providers away from dashboard and services if they somehow access them
   useEffect(() => {
-    if (isProvider && !isOwner && !isDispatcher && activeTab === 'dashboard') {
-      navigate(`${basePath}/bookings`, { replace: true });
+    if (isProvider && !isOwner && !isDispatcher) {
+      if (activeTab === 'dashboard') {
+        navigate(`${basePath}/bookings`, { replace: true });
+      } else if (activeTab === 'services') {
+        navigate(`${basePath}/bookings`, { replace: true });
+      }
     }
   }, [isProvider, isOwner, isDispatcher, activeTab, basePath, navigate]);
 
@@ -1075,8 +1079,8 @@ export default function ProviderDashboard() {
           />
         )}
 
-        {/* Services Tab */}
-        {activeTab === "services" && (
+        {/* Services Tab - Hidden for providers */}
+        {activeTab === "services" && hasAccess('services') && (
           <ServicesTab
             providerData={providerData}
             business={business}

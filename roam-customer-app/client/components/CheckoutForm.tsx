@@ -568,6 +568,9 @@ export function CheckoutForm({ bookingDetails, clientSecret, onSuccess, onError 
                   options={{ 
                     mode: 'billing',
                     allowedCountries: ['US'],
+                    fields: {
+                      phone: billingAddress?.phone ? 'always' : 'auto',
+                    },
                     ...(billingAddress && {
                       defaultValues: {
                         name: billingAddress.name,

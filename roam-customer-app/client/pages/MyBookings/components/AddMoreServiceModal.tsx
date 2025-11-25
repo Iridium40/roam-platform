@@ -284,7 +284,7 @@ export const AddMoreServiceModal: React.FC<AddMoreServiceModalProps> = ({
             <Button
               type="button"
               variant="outline"
-              onClick={handleClose}
+              onClick={() => handleClose(false)}
               disabled={isSubmitting}
             >
               Cancel

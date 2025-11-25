@@ -276,7 +276,7 @@ const App = () => (
               path="/provider/services"
               element={
                 <ProtectedRoute
-                  allowedRoles={["owner", "dispatcher", "provider"]}
+                  allowedRoles={["owner", "dispatcher"]}
                 >
                   <ProviderDashboard />
                 </ProtectedRoute>
