@@ -461,7 +461,8 @@ export default function ProviderProfile() {
                   This provider doesn't have any services listed yet.
                 </p>
               </div>
-            )}
+            );
+            })()}
               </TabsContent>
 
               {/* Reviews Tab */}
