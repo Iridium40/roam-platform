@@ -708,6 +708,22 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
       return;
     }
 
+    // Check if this payment intent was already processed by handleBookingPayment
+    // (checkout.session.completed also processes payment_intent.succeeded events)
+    // This prevents duplicate processing for new bookings
+    const { data: existingBusinessTransaction } = await supabase
+      .from('business_payment_transactions')
+      .select('id, booking_id')
+      .eq('stripe_payment_intent_id', paymentIntent.id)
+      .limit(1)
+      .maybeSingle();
+
+    if (existingBusinessTransaction) {
+      console.log('ℹ️ Payment intent already processed by checkout.session.completed webhook');
+      console.log('ℹ️ Skipping duplicate processing - business_payment_transactions record exists:', existingBusinessTransaction.id);
+      return;
+    }
+
     let bookingId = paymentIntent.metadata.bookingId;
     
     // If bookingId is missing, try to find booking by customer_id and service_id
@@ -978,44 +994,88 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
     
     console.log(`📝 Creating business_payment_transactions record with type: ${transactionType}`);
 
-    // Always create a new record (maintains audit trail for multiple payments)
-    // Note: After migration removes unique constraint and adds transaction_type column,
-    // this will work correctly. Until then, it may fail on unique constraint for "add more service"
-    const businessPaymentTransactionData: any = {
-      booking_id: bookingId,
-      business_id: booking.business_id,
-      payment_date: paymentDate,
-      gross_payment_amount: totalAmount, // Total amount customer paid
-      platform_fee: platformFee, // 20% of service amount
-      net_payment_amount: netPaymentAmount, // Full service amount (what business receives)
-      tax_year: taxYear,
-      stripe_payment_intent_id: paymentIntent.id,
-      stripe_connect_account_id: businessProfile?.stripe_connect_account_id || null,
-      transaction_description: transactionType === 'additional_service' 
-        ? 'Additional service payment' 
-        : 'Platform service payment',
-      booking_reference: booking.booking_reference || null,
-      transaction_type: transactionType, // Will be added after migration
-    };
-
-    const { data: businessPaymentTransaction, error: businessPaymentError } = await supabase
+    // Check if record already exists for this payment intent (avoid duplicates)
+    const { data: existingByPaymentIntent } = await supabase
       .from('business_payment_transactions')
-      .insert(businessPaymentTransactionData)
-      .select()
-      .single();
+      .select('id')
+      .eq('stripe_payment_intent_id', paymentIntent.id)
+      .limit(1)
+      .maybeSingle();
 
-    if (businessPaymentError) {
-      // If error is due to unique constraint, log warning (migration needed)
-      if (businessPaymentError.code === '23505' || businessPaymentError.message?.includes('unique')) {
-        console.warn('⚠️ Unique constraint violation - migration needed to remove constraint and add transaction_type column');
-        console.warn('⚠️ See BUSINESS_FINANCIAL_TABLES_ANALYSIS.md for migration steps');
-        console.warn('⚠️ Business payment transaction creation failed, but payment was processed');
-      } else {
-        console.error('❌ Error creating business_payment_transactions record:', businessPaymentError);
-        console.warn('⚠️ Business payment transaction creation failed, but booking was confirmed');
-      }
+    if (existingByPaymentIntent) {
+      console.log('ℹ️ Business payment transaction already exists for this payment intent:', existingByPaymentIntent.id);
+      console.log('ℹ️ Skipping duplicate insert - payment was already recorded');
     } else {
-      console.log(`✅ Business payment transaction created (${transactionType}):`, businessPaymentTransaction.id);
+      // Always create a new record (maintains audit trail for multiple payments)
+      // Note: After migration removes unique constraint and adds transaction_type column,
+      // this will work correctly. Until then, it may fail on unique constraint for "add more service"
+      const businessPaymentTransactionData: any = {
+        booking_id: bookingId,
+        business_id: booking.business_id,
+        payment_date: paymentDate,
+        gross_payment_amount: totalAmount, // Total amount customer paid
+        platform_fee: platformFee, // 20% of service amount
+        net_payment_amount: netPaymentAmount, // Full service amount (what business receives)
+        tax_year: taxYear,
+        stripe_payment_intent_id: paymentIntent.id,
+        stripe_connect_account_id: businessProfile?.stripe_connect_account_id || null,
+        transaction_description: transactionType === 'additional_service' 
+          ? 'Additional service payment' 
+          : 'Platform service payment',
+        booking_reference: booking.booking_reference || null,
+        transaction_type: transactionType, // Will be added after migration
+      };
+
+      let businessPaymentTransaction: any = null;
+      let businessPaymentError: any = null;
+
+      const { data: insertResult, error: insertError } = await supabase
+        .from('business_payment_transactions')
+        .insert(businessPaymentTransactionData)
+        .select()
+        .single();
+
+      businessPaymentTransaction = insertResult;
+      businessPaymentError = insertError;
+
+      // If error is due to missing transaction_type column, retry without it
+      if (businessPaymentError && (
+        businessPaymentError.message?.includes('transaction_type') || 
+        businessPaymentError.message?.includes('column') ||
+        businessPaymentError.message?.includes('does not exist')
+      )) {
+        console.warn('⚠️ transaction_type column may not exist yet - retrying without it');
+        delete businessPaymentTransactionData.transaction_type;
+        
+        const { data: retryResult, error: retryError } = await supabase
+          .from('business_payment_transactions')
+          .insert(businessPaymentTransactionData)
+          .select()
+          .single();
+        
+        businessPaymentTransaction = retryResult;
+        businessPaymentError = retryError;
+      }
+
+      if (businessPaymentError) {
+        // If error is due to unique constraint, log warning but don't fail
+        if (businessPaymentError.code === '23505' || businessPaymentError.message?.includes('unique')) {
+          console.warn('⚠️ Unique constraint violation - record may already exist');
+          console.warn('⚠️ If migration has not been run, see migrations/remove_booking_id_unique_add_transaction_type.sql');
+        } else if (businessPaymentError.message?.includes('ON CONFLICT')) {
+          console.warn('⚠️ ON CONFLICT error - migration may need to be run');
+          console.warn('⚠️ See migrations/remove_booking_id_unique_add_transaction_type.sql');
+          console.warn('⚠️ This error suggests a database constraint issue - check if migration has been applied');
+        } else {
+          console.error('❌ Error creating business_payment_transactions record:', businessPaymentError);
+          console.error('❌ Error code:', businessPaymentError.code);
+          console.error('❌ Error message:', businessPaymentError.message);
+          console.error('❌ Error details:', JSON.stringify(businessPaymentError, null, 2));
+        }
+        console.warn('⚠️ Business payment transaction creation failed, but booking was confirmed');
+      } else {
+        console.log(`✅ Business payment transaction created (${transactionType}):`, businessPaymentTransaction?.id);
+      }
     }
 
     // Save payment method to database if it's attached to a customer

@@ -1,5 +1,6 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import type { BookingWithDetails } from "@/types/index";
+import { PAGINATION_CONFIG, getPageSize } from "../config/pagination.config";
 
 export const useBookingFilters = (bookings: BookingWithDetails[]) => {
   const [currentPage, setCurrentPage] = useState({
@@ -7,7 +8,21 @@ export const useBookingFilters = (bookings: BookingWithDetails[]) => {
     future: 1,
     past: 1,
   });
-  const ITEMS_PER_PAGE = 10;
+  
+  // Use dynamic page size based on device (mobile vs desktop)
+  const [itemsPerPage, setItemsPerPage] = useState(getPageSize());
+  
+  // Update page size on window resize
+  useEffect(() => {
+    const handleResize = () => {
+      setItemsPerPage(getPageSize());
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+  
+  const ITEMS_PER_PAGE = itemsPerPage;
 
   // Filter bookings by status - Updated to match provider app logic
   const filteredBookings = useMemo(() => {

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import type { BookingWithDetails } from "@/types/index";
 import useRealtimeBookings from "@/hooks/useRealtimeBookings";
+import { PAGINATION_CONFIG, getDateRange } from "../config/pagination.config";
 
 export const useBookingsData = (currentUser: any) => {
   const [bookings, setBookings] = useState<BookingWithDetails[]>([]);
@@ -37,6 +38,11 @@ export const useBookingsData = (currentUser: any) => {
       setError(null);
 
       console.log("🔄 REFRESH DEBUG: Manually refreshing bookings for user:", currentUser.id);
+      
+      // Calculate date range for refresh
+      const { start: dateStart, end: dateEnd } = getDateRange(PAGINATION_CONFIG.defaultDateRange);
+      const dateStartStr = dateStart.toISOString().split('T')[0];
+      const dateEndStr = dateEnd.toISOString().split('T')[0];
       
       const { data, error } = await supabase
         .from("bookings")
@@ -120,7 +126,10 @@ export const useBookingsData = (currentUser: any) => {
           )
         `)
         .eq("customer_id", currentUser.id)
-        .order("booking_date", { ascending: false });
+        .gte("booking_date", dateStartStr)
+        .lte("booking_date", dateEndStr)
+        .order("booking_date", { ascending: false })
+        .limit(PAGINATION_CONFIG.databaseQueryLimit);
 
       if (error) {
         console.error("❌ REFRESH DEBUG: Error refreshing bookings:", error);
@@ -210,12 +219,21 @@ export const useBookingsData = (currentUser: any) => {
           full_customer_object: currentUser
         });
         
+        // Calculate date range for initial load
+        const { start: dateStart, end: dateEnd } = getDateRange(PAGINATION_CONFIG.defaultDateRange);
+        const dateStartStr = dateStart.toISOString().split('T')[0];
+        const dateEndStr = dateEnd.toISOString().split('T')[0];
+        
         // First, try a simple query to just get bookings without joins
+        // Apply date range filter and limit to prevent excessive data loading
         const { data: simpleData, error: simpleError } = await supabase
           .from("bookings")
           .select("*")
           .eq("customer_id", currentUser.id)
-          .order("booking_date", { ascending: false });
+          .gte("booking_date", dateStartStr)
+          .lte("booking_date", dateEndStr)
+          .order("booking_date", { ascending: false })
+          .limit(PAGINATION_CONFIG.databaseQueryLimit);
 
         console.log("📊 MY BOOKINGS DEBUG: Simple query result:", { 
           bookings_count: simpleData?.length || 0,
@@ -236,6 +254,7 @@ export const useBookingsData = (currentUser: any) => {
         }
 
         // Use a simpler Supabase query approach that should work
+        // Apply date range filter and limit for performance
         const { data, error } = await supabase
           .from("bookings")
           .select(`
@@ -318,7 +337,10 @@ export const useBookingsData = (currentUser: any) => {
             )
           `)
           .eq("customer_id", currentUser.id)
-          .order("booking_date", { ascending: false });
+          .gte("booking_date", dateStartStr)
+          .lte("booking_date", dateEndStr)
+          .order("booking_date", { ascending: false })
+          .limit(PAGINATION_CONFIG.databaseQueryLimit);
 
         console.log("📋 MY BOOKINGS DEBUG: Full query with joins result:", { 
           bookings_count: data?.length || 0,
