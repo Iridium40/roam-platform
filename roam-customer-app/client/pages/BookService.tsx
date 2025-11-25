@@ -1227,6 +1227,19 @@ export default function BookService() {
       customer_location_id = selectedCustomerLocation?.id && !selectedCustomerLocation.id.startsWith('temp-') ? selectedCustomerLocation.id : null;
     }
 
+    // Calculate service amount (base price after discounts)
+    const serviceAmount = calculateTotalAmount();
+    
+    // Calculate service fee (20% of service amount)
+    const serviceFeePercentage = 0.2; // Fixed 20% service fee
+    const serviceFee = serviceAmount * serviceFeePercentage;
+    
+    // Calculate total amount (service amount + service fee)
+    const totalAmount = serviceAmount + serviceFee;
+    
+    // Remaining balance is the service amount (what the business receives)
+    const remainingBalance = serviceAmount;
+
     const bookingDetails = {
       service_id: service.id,
       business_id: selectedBusiness.id,
@@ -1243,7 +1256,9 @@ export default function BookService() {
       special_instructions: selectedCustomerLocation?.id && selectedCustomerLocation.id.startsWith('temp-')
         ? `Service Address: ${selectedCustomerLocation.street_address}${selectedCustomerLocation.unit_number ? `, ${selectedCustomerLocation.unit_number}` : ''}, ${selectedCustomerLocation.city}, ${selectedCustomerLocation.state} ${selectedCustomerLocation.zip_code}`
         : '',
-      total_amount: calculateTotalAmount(),
+      total_amount: totalAmount,
+      service_fee: serviceFee,
+      remaining_balance: remainingBalance,
     };
 
     console.log('💳 Creating booking with pending status (payment to follow):', bookingDetails);

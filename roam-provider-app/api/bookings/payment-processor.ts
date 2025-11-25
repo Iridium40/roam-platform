@@ -73,16 +73,6 @@ export async function processBookingAcceptance(
       };
     }
 
-    // Check if booking is already confirmed
-    if (booking.booking_status === 'confirmed') {
-      console.log('⚠️ Booking already confirmed, skipping payment processing');
-      return {
-        success: true,
-        serviceFeeCharged: booking.service_fee_charged || false,
-        serviceAmountCharged: booking.remaining_balance_charged || false,
-      };
-    }
-
     // Check if payment intent exists
     if (!booking.stripe_payment_intent_id) {
       return {
@@ -95,6 +85,16 @@ export async function processBookingAcceptance(
     const paymentIntent = await stripe.paymentIntents.retrieve(booking.stripe_payment_intent_id);
 
     console.log('💳 Payment Intent Status:', paymentIntent.status);
+
+    // Check if booking is already confirmed AND payment is already captured
+    if (booking.booking_status === 'confirmed' && paymentIntent.status === 'succeeded') {
+      console.log('⚠️ Booking already confirmed and payment already captured, skipping payment processing');
+      return {
+        success: true,
+        serviceFeeCharged: booking.service_fee_charged || false,
+        serviceAmountCharged: booking.remaining_balance_charged || false,
+      };
+    }
 
     // Check if payment intent is already succeeded (e.g., from initial acceptance or rescheduled booking)
     if (paymentIntent.status === 'succeeded') {
@@ -161,7 +161,28 @@ export async function processBookingAcceptance(
           
           // Calculate amounts
           const totalAmount = booking.total_amount || 0;
-          const serviceFeeAmount = booking.service_fee || 0;
+          let serviceFeeAmount = booking.service_fee || 0;
+          
+          // If service_fee is not set, calculate it (20% of service amount)
+          // total_amount = serviceAmount + serviceFee = serviceAmount + (serviceAmount * 0.2) = serviceAmount * 1.2
+          // So: serviceAmount = totalAmount / 1.2, serviceFee = serviceAmount * 0.2
+          if (!serviceFeeAmount || serviceFeeAmount === 0) {
+            const platformFeePercentage = 0.2; // Fixed 20% service fee
+            const serviceAmount = totalAmount / (1 + platformFeePercentage);
+            serviceFeeAmount = serviceAmount * platformFeePercentage;
+            
+            // Update booking with calculated service_fee
+            await supabase
+              .from('bookings')
+              .update({
+                service_fee: serviceFeeAmount,
+                remaining_balance: serviceAmount,
+              })
+              .eq('id', bookingId);
+            
+            console.log(`💰 Calculated and updated service_fee: $${serviceFeeAmount.toFixed(2)}, remaining_balance: $${serviceAmount.toFixed(2)}`);
+          }
+          
           const serviceAmount = totalAmount - serviceFeeAmount;
           
           // Update booking to mark as charged

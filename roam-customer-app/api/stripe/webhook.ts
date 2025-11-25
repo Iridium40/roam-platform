@@ -421,6 +421,8 @@ async function handleBookingPayment(session: Stripe.Checkout.Session) {
       business_id,
       provider_id,
       total_amount,
+      service_fee,
+      remaining_balance,
       booking_date,
       start_time,
       booking_reference,
@@ -485,6 +487,32 @@ async function handleBookingPayment(session: Stripe.Checkout.Session) {
     console.log('✅ Payment already charged at checkout');
   }
 
+  // Calculate service fee if not already set (20% of service amount)
+  // Service amount = total_amount - service_fee, or total_amount / 1.2 if service_fee not set
+  let serviceFee = booking.service_fee || 0;
+  let remainingBalance = booking.remaining_balance || 0;
+  
+  if (!serviceFee || serviceFee === 0) {
+    // Calculate service fee from metadata or calculate from total
+    const platformFeePercentage = parseFloat(paymentIntent.metadata?.platformFee || '0.2'); // Default 20%
+    const serviceAmountFromMetadata = parseFloat(paymentIntent.metadata?.serviceAmount || '0');
+    
+    if (serviceAmountFromMetadata > 0) {
+      // Use service amount from metadata
+      const serviceAmount = serviceAmountFromMetadata;
+      serviceFee = serviceAmount * platformFeePercentage;
+      remainingBalance = serviceAmount;
+    } else {
+      // Calculate from total_amount: total = serviceAmount + (serviceAmount * 0.2) = serviceAmount * 1.2
+      const totalAmount = booking.total_amount || 0;
+      const serviceAmount = totalAmount / (1 + platformFeePercentage);
+      serviceFee = serviceAmount * platformFeePercentage;
+      remainingBalance = serviceAmount;
+    }
+    
+    console.log(`💰 Calculated service fee: $${serviceFee.toFixed(2)}, remaining balance: $${remainingBalance.toFixed(2)}`);
+  }
+
   // Process the payment using the same logic as handlePaymentIntentSucceeded
   // Update booking status based on payment status
   // If payment is authorized but not captured, set status to 'pending' (waiting for acceptance)
@@ -497,6 +525,12 @@ async function handleBookingPayment(session: Stripe.Checkout.Session) {
       booking_status: isCharged ? 'confirmed' : 'pending', // Only confirm if already charged
       payment_status: isCharged ? 'paid' : 'pending', // Only mark as paid if already charged
     };
+    
+    // Update service_fee and remaining_balance if they weren't set
+    if (!booking.service_fee || booking.service_fee === 0) {
+      updateData.service_fee = serviceFee;
+      updateData.remaining_balance = remainingBalance;
+    }
     
     // Store payment intent ID if not already stored
     if (paymentIntentId && !(booking as any).stripe_payment_intent_id) {
@@ -853,6 +887,8 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
         business_id,
         provider_id,
         total_amount,
+        service_fee,
+        remaining_balance,
         booking_date,
         start_time,
         booking_reference,
@@ -903,9 +939,36 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
       customer_id: booking.customer_id,
       business_id: booking.business_id,
       total_amount: booking.total_amount,
+      service_fee: booking.service_fee,
+      remaining_balance: booking.remaining_balance,
       booking_status: booking.booking_status,
       payment_status: booking.payment_status
     });
+
+    // Calculate service fee if not already set (20% of service amount)
+    let serviceFee = booking.service_fee || 0;
+    let remainingBalance = booking.remaining_balance || 0;
+    
+    if (!serviceFee || serviceFee === 0) {
+      // Calculate service fee from metadata or calculate from total
+      const platformFeePercentage = parseFloat(paymentIntent.metadata?.platformFee || '0.2'); // Default 20%
+      const serviceAmountFromMetadata = parseFloat(paymentIntent.metadata?.serviceAmount || '0');
+      
+      if (serviceAmountFromMetadata > 0) {
+        // Use service amount from metadata
+        const serviceAmount = serviceAmountFromMetadata;
+        serviceFee = serviceAmount * platformFeePercentage;
+        remainingBalance = serviceAmount;
+      } else {
+        // Calculate from total_amount: total = serviceAmount + (serviceAmount * 0.2) = serviceAmount * 1.2
+        const totalAmount = booking.total_amount || 0;
+        const serviceAmount = totalAmount / (1 + platformFeePercentage);
+        serviceFee = serviceAmount * platformFeePercentage;
+        remainingBalance = serviceAmount;
+      }
+      
+      console.log(`💰 Calculated service fee: $${serviceFee.toFixed(2)}, remaining balance: $${remainingBalance.toFixed(2)}`);
+    }
 
     // Update booking status based on payment status
     // If payment is authorized but not captured (requires_capture), set status to 'pending' (waiting for acceptance)
@@ -918,6 +981,12 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
         booking_status: isCharged ? 'confirmed' : 'pending', // Only confirm if already charged
         payment_status: isCharged ? 'paid' : 'pending', // Only mark as paid if already charged
       };
+      
+      // Update service_fee and remaining_balance if they weren't set
+      if (!booking.service_fee || booking.service_fee === 0) {
+        updateData.service_fee = serviceFee;
+        updateData.remaining_balance = remainingBalance;
+      }
       
       const { error: updateError } = await supabase
         .from('bookings')
