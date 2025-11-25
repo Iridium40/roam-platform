@@ -37,7 +37,6 @@ import {
   User,
   CalendarDays,
 } from "lucide-react";
-import { supabase } from "@/lib/supabase";
 
 interface CustomerProfile {
   id: string;
@@ -263,54 +262,30 @@ export default function AdminCustomers() {
       setLoading(true);
       setError(null);
 
-      console.log("Fetching customers from Supabase...");
+      console.log("Fetching customers from API...");
 
-      // First try a simple count to test permissions
-      const { count, error: countError } = await supabase
-        .from("customer_profiles")
-        .select("*", { count: "exact", head: true });
+      const response = await fetch(`/api/customers?status=${statusFilter}`);
+      const result = await response.json();
 
-      if (countError) {
-        console.error("Count error:", countError);
-        setError(
-          `Permission Error: ${countError.message} (Code: ${countError.code}). You may need to check Row Level Security policies.`,
-        );
-        setCustomers([]);
-        return;
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to fetch customers');
       }
 
-      console.log("Count successful:", count);
+      if (!result.success) {
+        throw new Error(result.error || 'API returned unsuccessful response');
+      }
 
-      // Now try the actual query
-      const { data, error } = await supabase
-        .from("customer_profiles")
-        .select(
-          "id, user_id, first_name, last_name, email, phone, is_active, created_at, date_of_birth, image_url, bio, email_notifications, sms_notifications, push_notifications, marketing_emails, email_verified, phone_verified",
-        )
-        .order("created_at", { ascending: false });
-
-      console.log("Full query response:", { data, error, count });
-
-      if (error) {
-        console.error("Query error:", error);
-        setError(`Query Error: ${error.message} (Code: ${error.code})`);
-        setCustomers([]);
-      } else {
-        console.log(
-          `Successfully fetched ${data?.length || 0} customers from database`,
-        );
-        setCustomers(data || []);
-        if (data?.length === 0) {
-          setError(
-            "Database connected successfully but no customer records found.",
-          );
-        }
+      console.log(`Successfully fetched ${result.data?.length || 0} customers`);
+      setCustomers(result.data || []);
+      
+      if (result.data?.length === 0) {
+        setError("No customer records found.");
       }
     } catch (err) {
-      console.error("Unexpected error:", err);
+      console.error("Error fetching customers:", err);
       const errorMessage =
         err instanceof Error ? err.message : "Unknown error occurred";
-      setError(`Connection Error: ${errorMessage}`);
+      setError(`Failed to load customers: ${errorMessage}`);
       setCustomers([]);
     } finally {
       setLoading(false);
@@ -319,90 +294,49 @@ export default function AdminCustomers() {
 
   const fetchCustomerLocations = async () => {
     try {
-      console.log("Fetching customer locations from Supabase...");
+      console.log("Fetching customer locations from API...");
 
-      const { data, error } = await supabase
-        .from("customer_locations")
-        .select("*")
-        .order("created_at", { ascending: false });
+      const response = await fetch('/api/customers/locations');
+      const result = await response.json();
 
-      console.log("Customer locations query response:", { data, error });
-
-      if (error) {
-        console.error("Customer locations query error:", error);
-        setError(
-          `Customer Locations Query Error: ${error.message} (Code: ${error.code})`,
-        );
-        setCustomerLocations([]);
-      } else {
-        console.log(
-          `Successfully fetched ${data?.length || 0} customer locations from database`,
-        );
-        setCustomerLocations(data || []);
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to fetch customer locations');
       }
+
+      if (!result.success) {
+        throw new Error(result.error || 'API returned unsuccessful response');
+      }
+
+      console.log(`Successfully fetched ${result.data?.length || 0} customer locations`);
+      setCustomerLocations(result.data || []);
     } catch (err) {
-      console.error("Unexpected error fetching customer locations:", err);
+      console.error("Error fetching customer locations:", err);
       const errorMessage =
         err instanceof Error ? err.message : "Unknown error occurred";
-      setError(`Customer Locations Connection Error: ${errorMessage}`);
+      console.warn(`Customer Locations Error: ${errorMessage}`);
       setCustomerLocations([]);
     }
   };
 
   const fetchCustomerBookings = async () => {
     try {
-      console.log("Fetching customer bookings from Supabase...");
+      console.log("Fetching customer bookings from API...");
 
-      const { data, error } = await supabase
-        .from("bookings")
-        .select(
-          `
-          id,
-          customer_id,
-          provider_id,
-          service_id,
-          booking_date,
-          start_time,
-          total_amount,
-          created_at,
-          booking_status,
-          payment_status,
-          delivery_type,
-          guest_name,
-          cancelled_at,
-          booking_reference,
-          providers (
-            id,
-            first_name,
-            last_name,
-            business_profiles (
-              id,
-              business_name
-            )
-          ),
-          services (
-            id,
-            name,
-            duration_minutes,
-            min_price
-          )
-        `,
-        )
-        .order("created_at", { ascending: false });
+      const response = await fetch('/api/customers/bookings');
+      const result = await response.json();
 
-      console.log("Customer bookings query response:", { data, error });
-
-      if (error) {
-        console.error("Customer bookings query error:", error);
-        setCustomerBookings([]);
-      } else {
-        console.log(
-          `Successfully fetched ${data?.length || 0} customer bookings from database`,
-        );
-        setCustomerBookings(data || []);
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to fetch customer bookings');
       }
+
+      if (!result.success) {
+        throw new Error(result.error || 'API returned unsuccessful response');
+      }
+
+      console.log(`Successfully fetched ${result.data?.length || 0} customer bookings`);
+      setCustomerBookings(result.data || []);
     } catch (err) {
-      console.error("Unexpected error fetching customer bookings:", err);
+      console.error("Error fetching customer bookings:", err);
       setCustomerBookings([]);
     }
   };
@@ -413,25 +347,33 @@ export default function AdminCustomers() {
     newStatus: boolean,
   ) => {
     try {
-      const { error } = await supabase
-        .from("customer_profiles")
-        .update({ is_active: newStatus })
-        .eq("id", customerId);
+      const response = await fetch('/api/customers/update-status', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          customerId,
+          isActive: newStatus,
+        }),
+      });
 
-      if (error) {
-        console.error("Error updating customer status:", error);
-        alert(
-          `Error updating customer status: ${error?.message || error?.error?.message || JSON.stringify(error)}`,
-        );
-      } else {
-        console.log(
-          `Customer ${customerId} status updated to ${newStatus ? "active" : "inactive"}`,
-        );
-        await fetchCustomers(); // Refresh the customers list
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to update customer status');
       }
+
+      if (!result.success) {
+        throw new Error(result.error || 'API returned unsuccessful response');
+      }
+
+      console.log(`Customer ${customerId} status updated to ${newStatus ? "active" : "inactive"}`);
+      await fetchCustomers(); // Refresh the customers list
     } catch (err) {
-      console.error("Unexpected error:", err);
-      alert(`Unexpected error: ${err}`);
+      console.error("Error updating customer status:", err);
+      const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
+      alert(`Error updating customer status: ${errorMessage}`);
     }
   };
 

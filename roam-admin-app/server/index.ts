@@ -44,6 +44,12 @@ import {
   handleAnnouncementPublication, 
   handleActiveAnnouncements 
 } from "./routes/announcements.js";
+import {
+  handleCustomers,
+  handleCustomerLocations,
+  handleCustomerBookings,
+  handleUpdateCustomerStatus
+} from "./routes/customers.js";
 
 export function createServer() {
   const app = express();
@@ -96,6 +102,12 @@ export function createServer() {
   // User management routes (monitoring only)
   app.get("/api/users", handleUsers);
   app.get("/api/users/activity", handleUserActivity);
+  
+  // Customer management routes
+  app.get("/api/customers", handleCustomers);
+  app.get("/api/customers/locations", handleCustomerLocations);
+  app.get("/api/customers/bookings", handleCustomerBookings);
+  app.post("/api/customers/update-status", handleUpdateCustomerStatus);
   
   // Booking management routes (monitoring only)
   app.get("/api/bookings", handleBookings);

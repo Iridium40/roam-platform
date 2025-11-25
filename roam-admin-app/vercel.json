@@ -183,6 +183,22 @@
       "destination": "/api/index.ts"
     },
     {
+      "source": "/api/customers",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/api/customers/locations",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/api/customers/bookings",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/api/customers/update-status",
+      "destination": "/api/index.ts"
+    },
+    {
       "source": "/api/bookings",
       "destination": "/api/index.ts"
     },
