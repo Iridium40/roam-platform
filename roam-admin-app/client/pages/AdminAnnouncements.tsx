@@ -167,21 +167,19 @@ export default function AdminAnnouncements() {
       setLoading(true);
       setError(null);
 
-      const { data, error } = await supabase
-        .from("announcements")
-        .select("*")
-        .order("created_at", { ascending: false });
+      const response = await fetch('/api/announcements');
+      const result = await response.json();
 
-      if (error) {
-        console.error("Error fetching announcements:", error);
+      if (!response.ok) {
+        console.error("Error fetching announcements:", result.error);
         setError(
-          `Announcements Query Error: ${error.message}. You may need to create RLS policy: CREATE POLICY "Allow anon read access" ON public.announcements FOR SELECT USING (true);`,
+          `Announcements Query Error: ${result.error || 'Failed to fetch announcements'}`,
         );
         return;
       }
 
-      console.log(`Fetched ${data?.length || 0} announcements`);
-      setAnnouncements(data || []);
+      console.log(`Fetched ${result.data?.length || 0} announcements`);
+      setAnnouncements(result.data || []);
     } catch (error) {
       console.error("Error in fetchAnnouncements:", error);
       setError("Failed to fetch announcements data");
@@ -340,12 +338,21 @@ export default function AdminAnnouncements() {
     if (!announcementToDelete) return;
 
     try {
-      const { error } = await supabase
-        .from("announcements")
-        .delete()
-        .eq("id", announcementToDelete.id);
+      const response = await fetch(`/api/announcements/${announcementToDelete.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: announcementToDelete.id,
+        }),
+      });
 
-      if (error) throw error;
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to delete announcement');
+      }
 
       toast({
         title: "Success",

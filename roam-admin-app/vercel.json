@@ -279,6 +279,10 @@
       "destination": "/api/index.ts"
     },
     {
+      "source": "/api/announcements/:id",
+      "destination": "/api/index.ts"
+    },
+    {
       "source": "/api/send-approval-email",
       "destination": "/api/index.ts"
     },
