@@ -67,23 +67,37 @@ interface ReportMetrics {
 
 interface UserReport {
   id: string;
+  email?: string;
+  name?: string;
+  phone?: string | null;
   user_type: 'customer' | 'provider' | 'business';
+  provider_role?: string | null;
+  business_name?: string | null;
   status: 'active' | 'inactive' | 'suspended';
   registration_date: string;
+  registration_date_formatted?: string;
   last_activity: string;
+  last_activity_formatted?: string;
   total_bookings: number;
   total_spent: number;
+  total_earned?: number | null;
   avg_rating: number;
+  total_reviews?: number;
   location: string;
 }
 
 interface BookingReport {
   id: string;
+  booking_reference?: string;
   service_name: string;
   business_name: string;
   customer_name: string;
+  provider_name?: string;
   booking_date: string;
-  status: 'completed' | 'cancelled' | 'no_show';
+  booking_date_formatted?: string;
+  start_time?: string | null;
+  status: 'completed' | 'cancelled' | 'no_show' | 'confirmed' | 'pending' | string;
+  payment_status?: string;
   amount: number;
   rating?: number;
   review?: string;
@@ -93,12 +107,23 @@ interface BusinessReport {
   id: string;
   business_name: string;
   business_type: string;
+  contact_email?: string | null;
+  phone?: string | null;
   verification_status: string;
+  is_active?: boolean;
+  onboarded_date?: string;
+  onboarded_date_formatted?: string;
   total_providers: number;
+  active_providers?: number;
   total_services: number;
+  active_services?: number;
   total_bookings: number;
+  completed_bookings?: number;
+  cancelled_bookings?: number;
   total_revenue: number;
+  completed_revenue?: number;
   avg_rating: number;
+  total_reviews?: number;
   location: string;
 }
 
@@ -108,9 +133,17 @@ interface ServiceReport {
   category: string;
   subcategory: string;
   business_name: string;
+  price?: number;
+  duration_minutes?: number;
+  delivery_type?: string;
   total_bookings: number;
+  completed_bookings?: number;
   total_revenue: number;
+  completed_revenue?: number;
+  avg_booking_amount?: number;
   avg_rating: number;
+  total_reviews?: number;
+  is_active?: boolean;
   is_featured: boolean;
   is_popular: boolean;
 }
@@ -416,13 +449,51 @@ export default function AdminReports() {
 
   const userColumns = [
     {
+      key: "name",
+      accessorKey: "name",
+      header: "Name",
+      cell: ({ row }: any) => (
+        <div className="flex flex-col">
+          <span className="font-medium">{row.original.name || 'N/A'}</span>
+          <span className="text-xs text-muted-foreground">{row.original.email || ''}</span>
+        </div>
+      ),
+    },
+    {
       key: "user_type",
       accessorKey: "user_type",
-      header: "User Type",
+      header: "Type",
+      cell: ({ row }: any) => {
+        const variant = row.original.user_type === 'customer' ? 'success' 
+          : row.original.user_type === 'business' ? 'default'
+          : 'neutral';
+        return (
+          <div className="flex flex-col gap-1">
+            <ROAMBadge variant={variant}>
+              {row.original.user_type.toUpperCase()}
+            </ROAMBadge>
+            {row.original.provider_role && (
+              <span className="text-xs text-muted-foreground">
+                {row.original.provider_role}
+              </span>
+            )}
+            {row.original.business_name && (
+              <span className="text-xs text-muted-foreground truncate max-w-[150px]">
+                {row.original.business_name}
+              </span>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      key: "phone",
+      accessorKey: "phone",
+      header: "Contact",
       cell: ({ row }: any) => (
-        <ROAMBadge variant={row.original.user_type === 'customer' ? 'success' : 'neutral'}>
-          {row.original.user_type.toUpperCase()}
-        </ROAMBadge>
+        <span className="text-sm">
+          {row.original.phone || <span className="text-muted-foreground">N/A</span>}
+        </span>
       ),
     },
     {
@@ -438,9 +509,23 @@ export default function AdminReports() {
     {
       key: "registration_date",
       accessorKey: "registration_date",
-      header: "Registration Date",
+      header: "Registered",
       cell: ({ row }: any) => (
-        <span>{new Date(row.original.registration_date).toLocaleDateString()}</span>
+        <div className="flex flex-col">
+          {row.original.registration_date_formatted ? (
+            <span className="text-sm">{row.original.registration_date_formatted}</span>
+          ) : (
+            <span className="text-sm">
+              {row.original.registration_date 
+                ? new Date(row.original.registration_date).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                  })
+                : 'Never'}
+            </span>
+          )}
+        </div>
       ),
     },
     {
@@ -448,43 +533,113 @@ export default function AdminReports() {
       accessorKey: "last_activity",
       header: "Last Activity",
       cell: ({ row }: any) => (
-        <span>{new Date(row.original.last_activity).toLocaleDateString()}</span>
+        <div className="flex flex-col">
+          {row.original.last_activity_formatted ? (
+            <span className="text-sm">{row.original.last_activity_formatted}</span>
+          ) : (
+            <span className="text-sm">
+              {row.original.last_activity 
+                ? new Date(row.original.last_activity).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                  })
+                : 'Never'}
+            </span>
+          )}
+        </div>
       ),
     },
     {
       key: "total_bookings",
       accessorKey: "total_bookings",
-      header: "Total Bookings",
+      header: "Bookings",
+      cell: ({ row }: any) => (
+        <span className="font-semibold">{row.original.total_bookings || 0}</span>
+      ),
     },
     {
       key: "total_spent",
       accessorKey: "total_spent",
-      header: "Total Spent",
-      cell: ({ row }: any) => (
-        <span className="font-mono">
-          ${row.original.total_spent.toFixed(2)}
-        </span>
-      ),
+      header: "Spent / Earned",
+      cell: ({ row }: any) => {
+        const amount = row.original.user_type === 'customer' 
+          ? row.original.total_spent 
+          : (row.original.total_earned || row.original.total_spent || 0);
+        const label = row.original.user_type === 'customer' ? 'Spent' : 'Earned';
+        return (
+          <div className="flex flex-col">
+            <span className="font-mono font-semibold">
+              ${amount.toFixed(2)}
+            </span>
+            <span className="text-xs text-muted-foreground">{label}</span>
+          </div>
+        );
+      },
     },
     {
       key: "avg_rating",
       accessorKey: "avg_rating",
-      header: "Avg Rating",
+      header: "Rating",
       cell: ({ row }: any) => (
-        <div className="flex items-center gap-1">
-          <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-          <span>{row.original.avg_rating.toFixed(1)}</span>
-        </div>
+        row.original.avg_rating > 0 ? (
+          <div className="flex items-center gap-1">
+            <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+            <span className="font-semibold">{row.original.avg_rating.toFixed(1)}</span>
+            {row.original.total_reviews > 0 && (
+              <span className="text-xs text-muted-foreground">
+                ({row.original.total_reviews})
+              </span>
+            )}
+          </div>
+        ) : (
+          <span className="text-muted-foreground text-sm">No rating</span>
+        )
       ),
     },
     {
       key: "location",
       accessorKey: "location",
       header: "Location",
+      cell: ({ row }: any) => (
+        <span className="text-sm">{row.original.location || 'Unknown'}</span>
+      ),
     },
   ];
 
   const bookingColumns = [
+    {
+      key: "booking_reference",
+      accessorKey: "booking_reference",
+      header: "Reference",
+      cell: ({ row }: any) => (
+        <span className="font-mono text-xs text-muted-foreground">
+          {row.original.booking_reference || `#${row.original.id.slice(0, 8)}`}
+        </span>
+      ),
+    },
+    {
+      key: "booking_date",
+      accessorKey: "booking_date",
+      header: "Booking Date & Time",
+      cell: ({ row }: any) => (
+        <div className="flex flex-col">
+          {row.original.booking_date_formatted ? (
+            <span className="text-sm">{row.original.booking_date_formatted}</span>
+          ) : (
+            <span className="text-sm">
+              {row.original.booking_date 
+                ? new Date(row.original.booking_date).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                  })
+                : 'Not scheduled'}
+            </span>
+          )}
+        </div>
+      ),
+    },
     {
       key: "service_name",
       accessorKey: "service_name",
@@ -501,30 +656,55 @@ export default function AdminReports() {
       header: "Customer",
     },
     {
-      key: "booking_date",
-      accessorKey: "booking_date",
-      header: "Booking Date",
+      key: "provider_name",
+      accessorKey: "provider_name",
+      header: "Provider",
       cell: ({ row }: any) => (
-        <span>{new Date(row.original.booking_date).toLocaleDateString()}</span>
+        <span className={row.original.provider_name ? '' : 'text-muted-foreground'}>
+          {row.original.provider_name || 'Not assigned'}
+        </span>
       ),
     },
     {
       key: "status",
       accessorKey: "status",
       header: "Status",
-      cell: ({ row }: any) => (
-        <ROAMBadge variant={row.original.status === 'completed' ? 'success' : 'warning'}>
-          {row.original.status}
-        </ROAMBadge>
-      ),
+      cell: ({ row }: any) => {
+        const status = row.original.status?.toLowerCase();
+        const variant = status === 'completed' ? 'success' 
+          : status === 'cancelled' || status === 'no_show' ? 'destructive'
+          : 'warning';
+        return (
+          <ROAMBadge variant={variant}>
+            {row.original.status || 'Unknown'}
+          </ROAMBadge>
+        );
+      },
+    },
+    {
+      key: "payment_status",
+      accessorKey: "payment_status",
+      header: "Payment",
+      cell: ({ row }: any) => {
+        const paymentStatus = row.original.payment_status?.toLowerCase();
+        const variant = paymentStatus === 'paid' || paymentStatus === 'completed' ? 'success'
+          : paymentStatus === 'pending' ? 'warning'
+          : paymentStatus === 'failed' || paymentStatus === 'refunded' ? 'destructive'
+          : 'outline';
+        return (
+          <ROAMBadge variant={variant} className="text-xs">
+            {row.original.payment_status || 'Unknown'}
+          </ROAMBadge>
+        );
+      },
     },
     {
       key: "amount",
       accessorKey: "amount",
       header: "Amount",
       cell: ({ row }: any) => (
-        <span className="font-mono">
-          ${row.original.amount.toFixed(2)}
+        <span className="font-mono font-semibold">
+          ${(row.original.amount || 0).toFixed(2)}
         </span>
       ),
     },
@@ -536,10 +716,10 @@ export default function AdminReports() {
         row.original.rating ? (
           <div className="flex items-center gap-1">
             <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-            <span>{row.original.rating}</span>
+            <span className="font-semibold">{row.original.rating.toFixed(1)}</span>
           </div>
         ) : (
-          <span className="text-muted-foreground">No rating</span>
+          <span className="text-muted-foreground text-sm">No rating</span>
         )
       ),
     },
@@ -549,7 +729,15 @@ export default function AdminReports() {
     {
       key: "business_name",
       accessorKey: "business_name",
-      header: "Business Name",
+      header: "Business",
+      cell: ({ row }: any) => (
+        <div className="flex flex-col">
+          <span className="font-medium">{row.original.business_name}</span>
+          {row.original.contact_email && (
+            <span className="text-xs text-muted-foreground">{row.original.contact_email}</span>
+          )}
+        </div>
+      ),
     },
     {
       key: "business_type",
@@ -557,7 +745,7 @@ export default function AdminReports() {
       header: "Type",
       cell: ({ row }: any) => (
         <ROAMBadge variant="outline">
-          {row.original.business_type.replace('_', ' ')}
+          {row.original.business_type}
         </ROAMBadge>
       ),
     },
@@ -565,35 +753,78 @@ export default function AdminReports() {
       key: "verification_status",
       accessorKey: "verification_status",
       header: "Status",
+      cell: ({ row }: any) => {
+        const status = row.original.verification_status?.toLowerCase();
+        const variant = status === 'approved' || status === 'verified' ? 'success' 
+          : status === 'pending' ? 'warning'
+          : status === 'rejected' ? 'destructive'
+          : 'outline';
+        return (
+          <div className="flex flex-col gap-1">
+            <ROAMBadge variant={variant}>
+              {row.original.verification_status}
+            </ROAMBadge>
+            {row.original.is_active === false && (
+              <span className="text-xs text-destructive">Inactive</span>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      key: "onboarded_date",
+      accessorKey: "onboarded_date",
+      header: "Onboarded",
       cell: ({ row }: any) => (
-        <ROAMBadge variant={row.original.verification_status === 'approved' ? 'success' : 'warning'}>
-          {row.original.verification_status}
-        </ROAMBadge>
+        <span className="text-sm">{row.original.onboarded_date_formatted || 'N/A'}</span>
       ),
     },
     {
       key: "total_providers",
       accessorKey: "total_providers",
       header: "Providers",
+      cell: ({ row }: any) => (
+        <div className="flex flex-col">
+          <span className="font-semibold">{row.original.total_providers || 0}</span>
+          <span className="text-xs text-muted-foreground">{row.original.active_providers || 0} active</span>
+        </div>
+      ),
     },
     {
       key: "total_services",
       accessorKey: "total_services",
       header: "Services",
+      cell: ({ row }: any) => (
+        <div className="flex flex-col">
+          <span className="font-semibold">{row.original.total_services || 0}</span>
+          <span className="text-xs text-muted-foreground">{row.original.active_services || 0} active</span>
+        </div>
+      ),
     },
     {
       key: "total_bookings",
       accessorKey: "total_bookings",
       header: "Bookings",
+      cell: ({ row }: any) => (
+        <div className="flex flex-col">
+          <span className="font-semibold">{row.original.total_bookings || 0}</span>
+          <span className="text-xs text-muted-foreground">{row.original.completed_bookings || 0} completed</span>
+        </div>
+      ),
     },
     {
       key: "total_revenue",
       accessorKey: "total_revenue",
       header: "Revenue",
       cell: ({ row }: any) => (
-        <span className="font-mono">
-          ${row.original.total_revenue.toLocaleString()}
-        </span>
+        <div className="flex flex-col">
+          <span className="font-mono font-semibold">
+            ${(row.original.total_revenue || 0).toLocaleString()}
+          </span>
+          <span className="text-xs text-muted-foreground">
+            ${(row.original.completed_revenue || 0).toLocaleString()} completed
+          </span>
+        </div>
       ),
     },
     {
@@ -601,16 +832,26 @@ export default function AdminReports() {
       accessorKey: "avg_rating",
       header: "Rating",
       cell: ({ row }: any) => (
-        <div className="flex items-center gap-1">
-          <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-          <span>{row.original.avg_rating.toFixed(1)}</span>
-        </div>
+        row.original.avg_rating > 0 ? (
+          <div className="flex items-center gap-1">
+            <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+            <span className="font-semibold">{row.original.avg_rating.toFixed(1)}</span>
+            {row.original.total_reviews > 0 && (
+              <span className="text-xs text-muted-foreground">({row.original.total_reviews})</span>
+            )}
+          </div>
+        ) : (
+          <span className="text-muted-foreground text-sm">No rating</span>
+        )
       ),
     },
     {
       key: "location",
       accessorKey: "location",
       header: "Location",
+      cell: ({ row }: any) => (
+        <span className="text-sm">{row.original.location || 'Unknown'}</span>
+      ),
     },
   ];
 
@@ -618,46 +859,70 @@ export default function AdminReports() {
     {
       key: "service_name",
       accessorKey: "service_name",
-      header: "Service Name",
+      header: "Service",
+      cell: ({ row }: any) => (
+        <div className="flex flex-col">
+          <span className="font-medium">{row.original.service_name}</span>
+          <span className="text-xs text-muted-foreground">{row.original.business_name}</span>
+        </div>
+      ),
     },
     {
       key: "category",
       accessorKey: "category",
       header: "Category",
       cell: ({ row }: any) => (
-        <ROAMBadge variant="outline">
-          {row.original.category}
-        </ROAMBadge>
+        <div className="flex flex-col gap-1">
+          <ROAMBadge variant="default" className="text-xs">
+            {row.original.category}
+          </ROAMBadge>
+          <span className="text-xs text-muted-foreground">{row.original.subcategory}</span>
+        </div>
       ),
     },
     {
-      key: "subcategory",
-      accessorKey: "subcategory",
-      header: "Subcategory",
+      key: "price",
+      accessorKey: "price",
+      header: "Price",
       cell: ({ row }: any) => (
-        <ROAMBadge variant="outline">
-          {row.original.subcategory.replace('_', ' ')}
-        </ROAMBadge>
+        <div className="flex flex-col">
+          <span className="font-mono font-semibold">${(row.original.price || 0).toFixed(2)}</span>
+          {row.original.duration_minutes > 0 && (
+            <span className="text-xs text-muted-foreground">{row.original.duration_minutes} min</span>
+          )}
+        </div>
       ),
     },
     {
-      key: "business_name",
-      accessorKey: "business_name",
-      header: "Business",
+      key: "delivery_type",
+      accessorKey: "delivery_type",
+      header: "Delivery",
+      cell: ({ row }: any) => (
+        <span className="text-sm">{row.original.delivery_type || 'N/A'}</span>
+      ),
     },
     {
       key: "total_bookings",
       accessorKey: "total_bookings",
       header: "Bookings",
+      cell: ({ row }: any) => (
+        <div className="flex flex-col">
+          <span className="font-semibold">{row.original.total_bookings || 0}</span>
+          <span className="text-xs text-muted-foreground">{row.original.completed_bookings || 0} completed</span>
+        </div>
+      ),
     },
     {
       key: "total_revenue",
       accessorKey: "total_revenue",
       header: "Revenue",
       cell: ({ row }: any) => (
-        <span className="font-mono">
-          ${row.original.total_revenue.toLocaleString()}
-        </span>
+        <div className="flex flex-col">
+          <span className="font-mono font-semibold">${(row.original.total_revenue || 0).toLocaleString()}</span>
+          {row.original.avg_booking_amount > 0 && (
+            <span className="text-xs text-muted-foreground">Avg ${row.original.avg_booking_amount.toFixed(0)}</span>
+          )}
+        </div>
       ),
     },
     {
@@ -665,20 +930,32 @@ export default function AdminReports() {
       accessorKey: "avg_rating",
       header: "Rating",
       cell: ({ row }: any) => (
-        <div className="flex items-center gap-1">
-          <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-          <span>{row.original.avg_rating.toFixed(1)}</span>
-        </div>
+        row.original.avg_rating > 0 ? (
+          <div className="flex items-center gap-1">
+            <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+            <span className="font-semibold">{row.original.avg_rating.toFixed(1)}</span>
+            {row.original.total_reviews > 0 && (
+              <span className="text-xs text-muted-foreground">({row.original.total_reviews})</span>
+            )}
+          </div>
+        ) : (
+          <span className="text-muted-foreground text-sm">No rating</span>
+        )
       ),
     },
     {
-      key: "features",
-      accessorKey: "features",
-      header: "Features",
+      key: "status",
+      accessorKey: "status",
+      header: "Status",
       cell: ({ row }: any) => (
-        <div className="flex gap-1">
+        <div className="flex flex-wrap gap-1">
+          {row.original.is_active ? (
+            <ROAMBadge variant="success" className="text-xs">Active</ROAMBadge>
+          ) : (
+            <ROAMBadge variant="destructive" className="text-xs">Inactive</ROAMBadge>
+          )}
           {row.original.is_featured && (
-            <ROAMBadge variant="success" className="text-xs">Featured</ROAMBadge>
+            <ROAMBadge variant="default" className="text-xs">Featured</ROAMBadge>
           )}
           {row.original.is_popular && (
             <ROAMBadge variant="warning" className="text-xs">Popular</ROAMBadge>
@@ -806,7 +1083,8 @@ export default function AdminReports() {
                 <ROAMDataTable
                   columns={userColumns}
                   data={filteredData}
-                  searchPlaceholder="Search users..."
+                  filterable={false}
+                  addable={false}
                 />
               </ROAMCardContent>
             </ROAMCard>
@@ -824,7 +1102,8 @@ export default function AdminReports() {
                 <ROAMDataTable
                   columns={bookingColumns}
                   data={filteredData}
-                  searchPlaceholder="Search bookings..."
+                  filterable={false}
+                  addable={false}
                 />
               </ROAMCardContent>
             </ROAMCard>
@@ -842,7 +1121,8 @@ export default function AdminReports() {
                 <ROAMDataTable
                   columns={businessColumns}
                   data={filteredData}
-                  searchPlaceholder="Search businesses..."
+                  filterable={false}
+                  addable={false}
                 />
               </ROAMCardContent>
             </ROAMCard>
@@ -860,7 +1140,8 @@ export default function AdminReports() {
                 <ROAMDataTable
                   columns={serviceColumns}
                   data={filteredData}
-                  searchPlaceholder="Search services..."
+                  filterable={false}
+                  addable={false}
                 />
               </ROAMCardContent>
             </ROAMCard>

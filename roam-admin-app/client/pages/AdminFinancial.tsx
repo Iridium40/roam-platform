@@ -66,16 +66,25 @@ interface FinancialStats {
 
 interface Transaction {
   id: string;
-  type: 'payment' | 'payout' | 'refund' | 'fee' | 'adjustment';
+  booking_reference?: string | null;
+  type: string;
   amount: number;
-  status: 'pending' | 'completed' | 'failed' | 'cancelled' | 'processing';
+  status: string;
+  payment_method?: string;
+  currency?: string;
   description: string;
+  service_name?: string | null;
   business_name: string;
   customer_name: string;
+  customer_email?: string | null;
   created_at: string;
+  created_at_formatted?: string;
   processed_at?: string;
+  processed_at_formatted?: string;
   fee_amount?: number;
   net_amount?: number;
+  tip_amount?: number | null;
+  tip_provider_name?: string | null;
 }
 
 interface PayoutRequest {
@@ -83,9 +92,12 @@ interface PayoutRequest {
   business_id: string;
   business_name: string;
   amount: number;
-  status: 'pending' | 'approved' | 'rejected' | 'processing';
+  status: string;
+  status_raw?: string;
   requested_at: string;
+  requested_at_formatted?: string;
   processed_at?: string;
+  processed_at_formatted?: string;
   notes?: string;
 }
 
@@ -391,35 +403,44 @@ export default function AdminFinancial() {
 
   const transactionColumns = [
     {
+      key: "created_at",
+      accessorKey: "created_at",
+      header: "Date",
+      cell: ({ row }: any) => (
+        <div className="flex flex-col">
+          <span className="text-sm">{row.original.created_at_formatted || new Date(row.original.created_at).toLocaleDateString()}</span>
+          {row.original.booking_reference && (
+            <span className="text-xs text-muted-foreground font-mono">{row.original.booking_reference}</span>
+          )}
+        </div>
+      ),
+    },
+    {
       key: "type",
       accessorKey: "type",
       header: "Type",
-      cell: ({ row }: any) => (
-        <ROAMBadge variant={row.original.type === 'payment' ? 'success' : 'neutral'}>
-          {row.original.type.toUpperCase()}
-        </ROAMBadge>
-      ),
-    },
-    {
-      key: "amount",
-      accessorKey: "amount",
-      header: "Amount",
-      cell: ({ row }: any) => (
-        <span className="font-mono">
-          ${row.original.amount.toFixed(2)}
-        </span>
-      ),
-    },
-    {
-      key: "status",
-      accessorKey: "status",
-      header: "Status",
-      cell: ({ row }: any) => (
-        <div className="flex items-center gap-2">
-          {getStatusIcon(row.original.status)}
-          <ROAMBadge variant={getStatusColor(row.original.status) as any}>
-            {row.original.status}
+      cell: ({ row }: any) => {
+        const typeVariant = row.original.type?.toLowerCase() === 'payment' ? 'success' 
+          : row.original.type?.toLowerCase() === 'refund' ? 'destructive'
+          : row.original.type?.toLowerCase() === 'tip' ? 'default'
+          : 'neutral';
+        return (
+          <ROAMBadge variant={typeVariant}>
+            {row.original.type}
           </ROAMBadge>
+        );
+      },
+    },
+    {
+      key: "description",
+      accessorKey: "description",
+      header: "Details",
+      cell: ({ row }: any) => (
+        <div className="flex flex-col">
+          <span className="text-sm">{row.original.service_name || row.original.description}</span>
+          {row.original.payment_method && (
+            <span className="text-xs text-muted-foreground">{row.original.payment_method}</span>
+          )}
         </div>
       ),
     },
@@ -432,13 +453,28 @@ export default function AdminFinancial() {
       key: "customer_name",
       accessorKey: "customer_name",
       header: "Customer",
+      cell: ({ row }: any) => (
+        <div className="flex flex-col">
+          <span>{row.original.customer_name}</span>
+          {row.original.customer_email && (
+            <span className="text-xs text-muted-foreground">{row.original.customer_email}</span>
+          )}
+        </div>
+      ),
     },
     {
-      key: "created_at",
-      accessorKey: "created_at",
-      header: "Date",
+      key: "amount",
+      accessorKey: "amount",
+      header: "Amount",
       cell: ({ row }: any) => (
-        <span>{new Date(row.original.created_at).toLocaleDateString()}</span>
+        <div className="flex flex-col">
+          <span className="font-mono font-semibold">
+            ${row.original.amount.toFixed(2)}
+          </span>
+          {row.original.tip_amount > 0 && (
+            <span className="text-xs text-green-600">+${row.original.tip_amount.toFixed(2)} tip</span>
+          )}
+        </div>
       ),
     },
     {
@@ -446,10 +482,36 @@ export default function AdminFinancial() {
       accessorKey: "fee_amount",
       header: "Platform Fee",
       cell: ({ row }: any) => (
-        <span className="font-mono text-sm text-muted-foreground">
+        <span className="font-mono text-sm">
           ${row.original.fee_amount?.toFixed(2) || '0.00'}
         </span>
       ),
+    },
+    {
+      key: "net_amount",
+      accessorKey: "net_amount",
+      header: "Net",
+      cell: ({ row }: any) => (
+        <span className="font-mono font-semibold text-green-600">
+          ${row.original.net_amount?.toFixed(2) || '0.00'}
+        </span>
+      ),
+    },
+    {
+      key: "status",
+      accessorKey: "status",
+      header: "Status",
+      cell: ({ row }: any) => {
+        const statusLower = row.original.status?.toLowerCase();
+        return (
+          <div className="flex items-center gap-2">
+            {getStatusIcon(statusLower)}
+            <ROAMBadge variant={getStatusColor(statusLower) as any}>
+              {row.original.status}
+            </ROAMBadge>
+          </div>
+        );
+      },
     },
   ];
 
@@ -458,13 +520,16 @@ export default function AdminFinancial() {
       key: "business_name",
       accessorKey: "business_name",
       header: "Business",
+      cell: ({ row }: any) => (
+        <span className="font-medium">{row.original.business_name}</span>
+      ),
     },
     {
       key: "amount",
       accessorKey: "amount",
       header: "Amount",
       cell: ({ row }: any) => (
-        <span className="font-mono font-semibold">
+        <span className="font-mono font-semibold text-lg">
           ${row.original.amount.toFixed(2)}
         </span>
       ),
@@ -473,52 +538,78 @@ export default function AdminFinancial() {
       key: "status",
       accessorKey: "status",
       header: "Status",
-      cell: ({ row }: any) => (
-        <div className="flex items-center gap-2">
-          {getStatusIcon(row.original.status)}
-          <ROAMBadge variant={getStatusColor(row.original.status) as any}>
-            {row.original.status}
-          </ROAMBadge>
-        </div>
-      ),
+      cell: ({ row }: any) => {
+        const statusLower = row.original.status_raw || row.original.status?.toLowerCase();
+        return (
+          <div className="flex items-center gap-2">
+            {getStatusIcon(statusLower)}
+            <ROAMBadge variant={getStatusColor(statusLower) as any}>
+              {row.original.status}
+            </ROAMBadge>
+          </div>
+        );
+      },
     },
     {
       key: "requested_at",
       accessorKey: "requested_at",
       header: "Requested",
       cell: ({ row }: any) => (
-        <span>{new Date(row.original.requested_at).toLocaleDateString()}</span>
+        <span className="text-sm">{row.original.requested_at_formatted || new Date(row.original.requested_at).toLocaleDateString()}</span>
+      ),
+    },
+    {
+      key: "processed_at",
+      accessorKey: "processed_at",
+      header: "Processed",
+      cell: ({ row }: any) => (
+        <span className="text-sm">
+          {row.original.processed_at_formatted || (row.original.processed_at ? new Date(row.original.processed_at).toLocaleDateString() : 'Pending')}
+        </span>
+      ),
+    },
+    {
+      key: "notes",
+      accessorKey: "notes",
+      header: "Notes",
+      cell: ({ row }: any) => (
+        <span className="text-sm text-muted-foreground truncate max-w-[150px]">
+          {row.original.notes || '-'}
+        </span>
       ),
     },
     {
       key: "actions",
       accessorKey: "actions",
       header: "Actions",
-      cell: ({ row }: any) => (
-        <div className="flex gap-2">
-          {row.original.status === 'pending' && (
-            <>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => handlePayoutAction(row.original.id, 'approve')}
-              >
-                Approve
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => handlePayoutAction(row.original.id, 'reject')}
-              >
-                Reject
-              </Button>
-            </>
-          )}
-          <Button size="sm" variant="ghost">
-            <Eye className="w-4 h-4" />
-          </Button>
-        </div>
-      ),
+      cell: ({ row }: any) => {
+        const statusRaw = row.original.status_raw || row.original.status?.toLowerCase();
+        return (
+          <div className="flex gap-2">
+            {statusRaw === 'pending' && (
+              <>
+                <Button
+                  size="sm"
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                  onClick={() => handlePayoutAction(row.original.id, 'approve')}
+                >
+                  Approve
+                </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={() => handlePayoutAction(row.original.id, 'reject')}
+                >
+                  Reject
+                </Button>
+              </>
+            )}
+            <Button size="sm" variant="ghost">
+              <Eye className="w-4 h-4" />
+            </Button>
+          </div>
+        );
+      },
     },
   ];
 
@@ -672,7 +763,8 @@ export default function AdminFinancial() {
                 <ROAMDataTable
                   columns={transactionColumns}
                   data={filteredTransactions}
-                  searchPlaceholder="Search transactions..."
+                  filterable={false}
+                  addable={false}
                 />
               </ROAMCardContent>
             </ROAMCard>
@@ -690,7 +782,8 @@ export default function AdminFinancial() {
                 <ROAMDataTable
                   columns={payoutColumns}
                   data={payoutRequests}
-                  searchPlaceholder="Search payouts..."
+                  filterable={false}
+                  addable={false}
                 />
               </ROAMCardContent>
             </ROAMCard>

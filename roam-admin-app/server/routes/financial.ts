@@ -119,18 +119,56 @@ export async function handleTransactions(req: Request, res: Response) {
     
     if (error) throw error;
     
+    // Helper to format snake_case to Title Case
+    const formatToTitleCase = (str: string | null): string => {
+      if (!str) return 'Unknown';
+      return str
+        .split('_')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ');
+    };
+    
+    // Helper to format date
+    const formatDate = (dateStr: string | null): string => {
+      if (!dateStr) return 'N/A';
+      try {
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('en-US', { 
+          year: 'numeric', 
+          month: 'short', 
+          day: 'numeric',
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        });
+      } catch {
+        return dateStr;
+      }
+    };
+    
     // Transform data to match frontend interface
     const transactions = data?.map(transaction => ({
       id: transaction.transaction_id,
-      type: transaction.transaction_type === 'booking_payment' ? 'payment' as const : transaction.transaction_type as const,
+      booking_reference: transaction.booking_reference || null,
+      type: formatToTitleCase(transaction.transaction_type === 'booking_payment' ? 'payment' : transaction.transaction_type),
       amount: transaction.transaction_amount || 0,
-      status: transaction.transaction_status,
-      description: transaction.description || `Booking #${transaction.booking_id || 'N/A'}`,
+      status: formatToTitleCase(transaction.transaction_status),
+      payment_method: formatToTitleCase(transaction.payment_method),
+      currency: transaction.currency?.toUpperCase() || 'USD',
+      description: transaction.description || (transaction.booking_reference ? `Booking ${transaction.booking_reference}` : 'N/A'),
+      service_name: transaction.service_name || null,
       business_name: transaction.business_name || 'Unknown',
       customer_name: transaction.customer_name || 'Unknown',
+      customer_email: transaction.customer_email || null,
       created_at: transaction.transaction_date,
+      created_at_formatted: formatDate(transaction.transaction_date),
+      processed_at: transaction.processed_at,
+      processed_at_formatted: formatDate(transaction.processed_at),
       fee_amount: transaction.platform_fee_amount || 0,
       net_amount: transaction.net_amount || 0,
+      // Tip details if applicable
+      tip_amount: transaction.tip_amount || null,
+      tip_provider_name: transaction.provider_name || null,
     })) || [];
     
     res.json({ success: true, data: transactions });
@@ -168,15 +206,45 @@ export async function handlePayoutRequests(req: Request, res: Response) {
     
     if (error) throw error;
     
+    // Helper to format snake_case to Title Case
+    const formatToTitleCase = (str: string | null): string => {
+      if (!str) return 'Unknown';
+      return str
+        .split('_')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ');
+    };
+    
+    // Helper to format date
+    const formatDate = (dateStr: string | null): string => {
+      if (!dateStr) return 'N/A';
+      try {
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('en-US', { 
+          year: 'numeric', 
+          month: 'short', 
+          day: 'numeric',
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        });
+      } catch {
+        return dateStr;
+      }
+    };
+    
     // Transform data to match frontend interface
     const payouts = data?.map(payout => ({
       id: payout.id,
       business_id: payout.business_profiles?.id || '',
       business_name: payout.business_profiles?.business_name || 'Unknown',
       amount: payout.amount || 0,
-      status: payout.status,
+      status: formatToTitleCase(payout.status),
+      status_raw: payout.status, // Keep raw for action logic
       requested_at: payout.requested_at,
+      requested_at_formatted: formatDate(payout.requested_at),
       processed_at: payout.processed_at,
+      processed_at_formatted: formatDate(payout.processed_at),
       notes: payout.notes,
     })) || [];
     

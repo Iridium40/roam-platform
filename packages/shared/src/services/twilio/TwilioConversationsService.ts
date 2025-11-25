@@ -545,11 +545,17 @@ export class TwilioConversationsService {
   ): Promise<ConversationSummary[]> {
     console.log('🔍 getConversationsForUser called:', { userId, userType, businessId, providerId });
     
+    // Provider-side users (owner, dispatcher, provider) may have been stored with any of these user_types
+    // depending on when the conversation was created and their role at that time
+    const isProviderSide = ['provider', 'owner', 'dispatcher'].includes(userType);
+    const providerSideTypes = ['provider', 'owner', 'dispatcher'];
+    
     let query = this.supabase
       .from('conversation_participants')
       .select(`
         conversation_id,
         last_read_at,
+        user_type,
         conversation_metadata (
           id,
           booking_id,
@@ -590,8 +596,15 @@ export class TwilioConversationsService {
         )
       `)
       .eq('user_id', userId)
-      .eq('user_type', userType)
       .eq('is_active', true);
+    
+    // For provider-side users, match any provider role type
+    // This handles cases where user_type was stored as 'provider', 'owner', or 'dispatcher'
+    if (isProviderSide) {
+      query = query.in('user_type', providerSideTypes);
+    } else {
+      query = query.eq('user_type', userType);
+    }
     
     const { data: participantData, error } = await query;
 
