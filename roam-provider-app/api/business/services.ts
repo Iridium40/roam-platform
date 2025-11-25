@@ -290,6 +290,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         updatesKeys: Object.keys(updates)
       });
 
+      // First, check if the business_service record exists
+      const { data: existingService, error: checkError } = await supabase
+        .from('business_services')
+        .select('id')
+        .eq('business_id', business_id)
+        .eq('service_id', service_id)
+        .maybeSingle();
+
+      if (checkError) {
+        console.error('Error checking business service existence:', checkError);
+        return res.status(500).json({ error: 'Failed to check service', details: checkError.message });
+      }
+
+      if (!existingService) {
+        console.warn('⚠️ Business service not found:', { business_id, service_id });
+        return res.status(404).json({ 
+          error: 'Business service not found',
+          details: 'This service is not associated with this business. Please add it first.'
+        });
+      }
+
+      // Perform the update
       const { data: updatedService, error: updateError } = await supabase
         .from('business_services')
         .update(updates)
@@ -313,7 +335,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             image_url
           )
         `)
-        .single();
+        .maybeSingle();
 
       console.log('🔍 API - Update result:', {
         updatedService,
@@ -324,6 +346,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (updateError) {
         console.error('Error updating business service:', updateError);
         return res.status(500).json({ error: 'Failed to update service', details: updateError.message });
+      }
+
+      if (!updatedService) {
+        console.error('Update succeeded but no data returned');
+        return res.status(500).json({ error: 'Update succeeded but service data not returned' });
       }
 
       return res.status(200).json({
