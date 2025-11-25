@@ -43,8 +43,9 @@ export function useBookings(providerData: any, business: any) {
   const [futurePage, setFuturePage] = useState(1);
   const [pastPage, setPastPage] = useState(1);
   
-  // Date range state
-  const [dateRangeDays, setDateRangeDays] = useState(PAGINATION_CONFIG.defaultDateRange);
+  // Date range state - separate for past and future
+  const [dateRangePastDays, setDateRangePastDays] = useState(PAGINATION_CONFIG.defaultDateRangePast);
+  const [dateRangeFutureDays, setDateRangeFutureDays] = useState(PAGINATION_CONFIG.defaultDateRangeFuture);
   
   // Dynamic page size based on device (responsive)
   const [pageSize, setPageSize] = useState(getPageSize());
@@ -60,42 +61,52 @@ export function useBookings(providerData: any, business: any) {
   }, []);
 
   // Load bookings data with date range filtering
+  // Note: We load bookings from past AND future, then let categorization handle grouping
   const loadBookings = async () => {
     if (!business?.id) return;
 
     setLoading(true);
     try {
-      // Calculate date range for query
-      const { start, end } = getDateRange(dateRangeDays);
+      // Calculate date range for query (includes past and future)
+      const { start, end } = getDateRange(dateRangePastDays, dateRangeFutureDays);
       const startDateStr = start.toISOString().split('T')[0];
       const endDateStr = end.toISOString().split('T')[0];
       
       console.log('📅 Loading bookings with date range:', {
-        days: dateRangeDays,
+        pastDays: dateRangePastDays,
+        futureDays: dateRangeFutureDays,
         start: startDateStr,
         end: endDateStr,
         limit: PAGINATION_CONFIG.databaseQueryLimit
       });
 
-      // Use API endpoint with date range and limit
+      // Use API endpoint with limit
+      // We don't filter by date on the API side to ensure we get future bookings
       const response = await api.bookings.getBookings({
         business_id: business.id,
         limit: PAGINATION_CONFIG.databaseQueryLimit,
-        // Note: API may need to be updated to support date filtering
-        // For now, we'll filter client-side if API doesn't support it
       });
 
       if (response.data && typeof response.data === 'object' && 'bookings' in response.data) {
         const apiData = response.data as { bookings: any[]; stats?: any };
         let bookingsData = apiData.bookings || [];
         
-        // Filter by date range client-side if API doesn't support it
+        // Filter by date range client-side to include past and future bookings
         bookingsData = bookingsData.filter((booking: any) => {
           if (!booking.booking_date) return false;
+          // Include bookings within our date range (past and future)
           return booking.booking_date >= startDateStr && booking.booking_date <= endDateStr;
         });
         
-        console.log(`✅ Loaded ${bookingsData.length} bookings within date range`);
+        console.log(`✅ Loaded ${bookingsData.length} bookings within date range (${startDateStr} to ${endDateStr})`);
+        
+        // Log breakdown by date
+        const todayStr = new Date().toISOString().split('T')[0];
+        const pastCount = bookingsData.filter((b: any) => b.booking_date < todayStr).length;
+        const todayCount = bookingsData.filter((b: any) => b.booking_date === todayStr).length;
+        const futureCount = bookingsData.filter((b: any) => b.booking_date > todayStr).length;
+        console.log(`📊 Breakdown: ${pastCount} past, ${todayCount} today, ${futureCount} future`);
+        
         setBookings(bookingsData);
       } else {
         throw new Error('No data received from API');
@@ -117,7 +128,7 @@ export function useBookings(providerData: any, business: any) {
   // Load bookings on mount and when business or date range changes
   useEffect(() => {
     loadBookings();
-  }, [business?.id, dateRangeDays]);
+  }, [business?.id, dateRangePastDays, dateRangeFutureDays]);
 
   // Fetch unread message counts for all bookings
   useEffect(() => {

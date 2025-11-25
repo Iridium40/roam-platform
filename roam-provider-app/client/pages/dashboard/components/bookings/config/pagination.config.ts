@@ -6,7 +6,8 @@ export const PAGINATION_CONFIG = {
   mobilePageSize: 20,                // Smaller for mobile
   
   // Date range defaults
-  defaultDateRange: 30,              // Last 30 days on initial load
+  defaultDateRangePast: 30,          // Last 30 days on initial load
+  defaultDateRangeFuture: 90,        // Next 90 days for future bookings
   maxDateRange: 365,                 // Max 1 year at a time
   
   // Performance limits
@@ -26,10 +27,20 @@ export const getPageSize = (): number => {
 };
 
 // Calculate date range for bookings query
-export const getDateRange = (days: number = PAGINATION_CONFIG.defaultDateRange): { start: Date; end: Date } => {
-  const end = new Date();
+// Includes past bookings (for history) and future bookings (for upcoming)
+export const getDateRange = (
+  pastDays: number = PAGINATION_CONFIG.defaultDateRangePast,
+  futureDays: number = PAGINATION_CONFIG.defaultDateRangeFuture
+): { start: Date; end: Date } => {
+  const today = new Date();
   const start = new Date();
-  start.setDate(start.getDate() - Math.min(days, PAGINATION_CONFIG.maxDateRange));
+  const end = new Date();
+  
+  // Go back in time for past bookings
+  start.setDate(today.getDate() - Math.min(pastDays, PAGINATION_CONFIG.maxDateRange));
+  
+  // Go forward in time for future bookings
+  end.setDate(today.getDate() + Math.min(futureDays, PAGINATION_CONFIG.maxDateRange));
   
   return { start, end };
 };

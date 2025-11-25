@@ -1186,6 +1186,28 @@ export default function BookService() {
       return;
     }
 
+    // Validate that booking date is not more than 1 year in the future
+    if (selectedDate) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const oneYearFromToday = new Date();
+      oneYearFromToday.setFullYear(oneYearFromToday.getFullYear() + 1);
+      oneYearFromToday.setHours(23, 59, 59, 999);
+      
+      const selectedDateOnly = new Date(selectedDate);
+      selectedDateOnly.setHours(0, 0, 0, 0);
+      
+      if (selectedDateOnly > oneYearFromToday) {
+        toast({
+          title: "Invalid Date",
+          description: "Booking date cannot be more than 1 year in the future. Please select a date within the next year.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     // Use selected delivery type or get the primary one for the business
     const businessDeliveryTypes = getDeliveryTypes(selectedBusiness);
     const deliveryType = selectedDeliveryType || businessDeliveryTypes[0] || 'business_location';
@@ -1649,7 +1671,17 @@ export default function BookService() {
                             mode="single"
                             selected={selectedDate}
                             onSelect={setSelectedDate}
-                            disabled={(date) => date < new Date() || date < new Date("1900-01-01")}
+                            disabled={(date) => {
+                              const today = new Date();
+                              today.setHours(0, 0, 0, 0); // Reset to start of day for accurate comparison
+                              
+                              const oneYearFromToday = new Date();
+                              oneYearFromToday.setFullYear(oneYearFromToday.getFullYear() + 1);
+                              oneYearFromToday.setHours(23, 59, 59, 999); // End of day
+                              
+                              // Disable dates before today or more than 1 year from today
+                              return date < today || date > oneYearFromToday;
+                            }}
                             initialFocus
                           />
                         </PopoverContent>
@@ -2499,8 +2531,19 @@ export default function BookService() {
                       }}
                       onSuccess={(paymentIntent) => {
                         console.log('✅ Payment successful!', paymentIntent);
+                        console.log('📋 Payment Intent Status:', paymentIntent.status);
+                        console.log('📋 Booking ID:', createdBookingId);
 
-                        // Redirect to success page
+                        // Show success message
+                        toast({
+                          title: "Payment Authorized!",
+                          description: paymentIntent.status === 'requires_capture' 
+                            ? "Your payment has been authorized. The charge will be processed when your booking is accepted by the business."
+                            : "Your payment has been processed successfully.",
+                        });
+
+                        // Redirect to success page with booking_id
+                        // Note: BookingSuccess page will fetch booking by booking_id
                         navigate(`/booking-success?booking_id=${createdBookingId}`);
                       }}
                       onError={(error) => {

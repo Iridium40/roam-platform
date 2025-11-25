@@ -38,18 +38,19 @@ export default function BookingSuccess() {
   const [error, setError] = useState<string | null>(null);
 
   const sessionId = searchParams.get('session_id');
+  const bookingId = searchParams.get('booking_id');
 
   useEffect(() => {
     const fetchBookingDetails = async (retryCount = 0) => {
-      if (!sessionId) {
-        setError('No session ID provided - please return to the booking page and try again');
+      if (!sessionId && !bookingId) {
+        setError('No booking information provided - please return to the booking page and try again');
         setLoading(false);
         return;
       }
 
       try {
-        // Explicitly type the Supabase query result
-        const { data: bookingData, error: bookingError } = await supabase
+        // Build query - use booking_id if available (Payment Intent flow), otherwise use session_id (Checkout Session flow)
+        let query = supabase
           .from('bookings')
           .select(`
             id,
@@ -58,15 +59,24 @@ export default function BookingSuccess() {
             start_time,
             total_amount,
             payment_status,
+            booking_status,
             service_id,
             business_id,
             customer_id,
             services!bookings_service_id_fkey (name),
             business_profiles!bookings_business_id_fkey (business_name),
             customer_profiles!bookings_customer_id_fkey (first_name, last_name)
-          `)
-          .eq('stripe_checkout_session_id', sessionId)
-          .single<BookingDataRow>();
+          `);
+
+        if (bookingId) {
+          // Payment Intent flow - fetch by booking_id
+          query = query.eq('id', bookingId);
+        } else if (sessionId) {
+          // Checkout Session flow - fetch by session_id
+          query = query.eq('stripe_checkout_session_id', sessionId);
+        }
+
+        const { data: bookingData, error: bookingError } = await query.single<BookingDataRow>();
 
         if (bookingError) {
           console.error('Error fetching booking:', bookingError);
@@ -103,7 +113,7 @@ export default function BookingSuccess() {
       }
     };
     fetchBookingDetails();
-  }, [sessionId]);
+  }, [sessionId, bookingId]);
 
   if (loading) {
     return (
@@ -143,7 +153,8 @@ export default function BookingSuccess() {
               </Button>
             </div>
             <div className="text-xs text-gray-400 pt-2 border-t">
-              <p>Payment Session: {sessionId?.substring(0, 20)}...</p>
+              {sessionId && <p>Payment Session: {sessionId.substring(0, 20)}...</p>}
+              {bookingId && <p>Booking ID: {bookingId.substring(0, 20)}...</p>}
             </div>
           </CardContent>
         </Card>

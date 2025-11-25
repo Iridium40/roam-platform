@@ -28,8 +28,10 @@ export const getPageSize = (): number => {
 };
 
 // Calculate date range for bookings query
+// Includes past bookings (defaultDateRange days back) AND all future bookings
 export const getDateRange = (days: number = PAGINATION_CONFIG.defaultDateRange): { start: Date; end: Date } => {
   const end = new Date();
+  end.setFullYear(end.getFullYear() + 1); // Include bookings up to 1 year in the future
   const start = new Date();
   start.setDate(start.getDate() - Math.min(days, PAGINATION_CONFIG.maxDateRange));
   

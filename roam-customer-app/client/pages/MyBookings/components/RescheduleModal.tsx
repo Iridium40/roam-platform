@@ -109,6 +109,11 @@ export const RescheduleModal: React.FC<RescheduleModalProps> = ({
                 value={newBookingDate}
                 onChange={(e) => onNewDateChange(e.target.value)}
                 min={new Date().toISOString().split("T")[0]}
+                max={(() => {
+                  const oneYearFromToday = new Date();
+                  oneYearFromToday.setFullYear(oneYearFromToday.getFullYear() + 1);
+                  return oneYearFromToday.toISOString().split("T")[0];
+                })()}
                 required
               />
             </div>
