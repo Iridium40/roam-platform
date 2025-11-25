@@ -471,59 +471,59 @@ export function CheckoutForm({ bookingDetails, clientSecret, onSuccess, onError 
                 <Label className="text-base font-semibold">Saved Payment Methods</Label>
                 <RadioGroup value={selectedPaymentMethod} onValueChange={setSelectedPaymentMethod}>
                   {savedPaymentMethods.map((pm) => (
-                    <div
+                    <label
                       key={pm.id}
+                      htmlFor={pm.id}
                       className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-gray-50 ${
                         selectedPaymentMethod === pm.id ? 'border-roam-blue bg-blue-50' : ''
                       }`}
-                      onClick={() => setSelectedPaymentMethod(pm.id)}
                     >
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 flex-1">
                         <RadioGroupItem value={pm.id} id={pm.id} />
-                        <Label htmlFor={pm.id} className="cursor-pointer flex-1">
-                          <div className="flex items-center gap-2">
-                            {pm.card && (
-                              <>
-                                <CreditCard className="w-5 h-5 text-gray-600" />
-                                <span className="font-medium">
-                                  {getCardBrandName(pm.card.brand)} •••• {pm.card.last4}
+                        <div className="flex items-center gap-2">
+                          {pm.card && (
+                            <>
+                              <CreditCard className="w-5 h-5 text-gray-600" />
+                              <span className="font-medium">
+                                {getCardBrandName(pm.card.brand)} •••• {pm.card.last4}
+                              </span>
+                              <span className="text-sm text-gray-500">
+                                Expires {pm.card.exp_month}/{pm.card.exp_year}
+                              </span>
+                              {pm.is_default && (
+                                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
+                                  Default
                                 </span>
-                                <span className="text-sm text-gray-500">
-                                  Expires {pm.card.exp_month}/{pm.card.exp_year}
-                                </span>
-                                {pm.is_default && (
-                                  <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
-                                    Default
-                                  </span>
-                                )}
-                              </>
-                            )}
-                          </div>
-                        </Label>
+                              )}
+                            </>
+                          )}
+                        </div>
                       </div>
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
-                        onClick={(e) => handleDeletePaymentMethod(pm.id, e)}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleDeletePaymentMethod(pm.id, e);
+                        }}
                         className="text-red-600 hover:text-red-700 hover:bg-red-50"
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
-                    </div>
+                    </label>
                   ))}
                   
-                  <div
+                  <label
+                    htmlFor="new"
                     className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 ${
                       selectedPaymentMethod === 'new' ? 'border-roam-blue bg-blue-50' : ''
                     }`}
-                    onClick={() => setSelectedPaymentMethod('new')}
                   >
                     <RadioGroupItem value="new" id="new" />
-                    <Label htmlFor="new" className="cursor-pointer">
-                      Use a new payment method
-                    </Label>
-                  </div>
+                    <span>Use a new payment method</span>
+                  </label>
                 </RadioGroup>
               </div>
             )}
