@@ -1124,49 +1124,55 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
     console.log(`👤 Customer ID: ${booking.customer_id || 'N/A'}`);
     
     // Record in financial_transactions (matching tip payment pattern - no customer_id field)
-    console.log('📝 Recording financial transaction data');
-    
-    const { data: financialTransaction, error: financialError } = await supabase
-      .from('financial_transactions')
-      .insert({
-        booking_id: bookingId,
-        amount: totalAmount,
-        currency: paymentIntent.currency.toUpperCase(),
-        stripe_transaction_id: paymentIntent.id,
-        payment_method: 'card',
-        description: 'Service booking payment received',
-        transaction_type: 'booking_payment',
-        status: 'completed',
-        processed_at: new Date().toISOString(),
-        metadata: {
-          charge_id: paymentIntent.latest_charge,
-          customer_id: paymentIntent.customer,
-          payment_method_types: paymentIntent.payment_method_types,
-          booking_reference: booking.booking_reference || null,
-          booking_customer_id: booking.customer_id || null
-        }
-      })
-      .select()
-      .single();
-
-    if (financialError) {
-      console.error('❌ Error recording financial transaction:', financialError);
-      console.error('❌ Error code:', financialError.code);
-      console.error('❌ Error message:', financialError.message);
-      console.error('❌ Error details:', JSON.stringify(financialError, null, 2));
+    // Only create if it doesn't already exist (idempotent)
+    if (!existingFinancialTransaction) {
+      console.log('📝 Recording financial transaction data');
       
-      // Check for specific error types
-      if (financialError.code === '23505') {
-        console.error('⚠️ Duplicate transaction detected - transaction may already exist');
-        // Don't throw - this is not a critical error
-      } else if (financialError.code === '23503') {
-        console.error('⚠️ Foreign key constraint violation - booking may not exist');
-        throw new Error(`Booking ${bookingId} not found or invalid`);
+      const { data: financialTransaction, error: financialError } = await supabase
+        .from('financial_transactions')
+        .insert({
+          booking_id: bookingId,
+          amount: totalAmount,
+          currency: paymentIntent.currency.toUpperCase(),
+          stripe_transaction_id: paymentIntent.id,
+          payment_method: 'card',
+          description: 'Service booking payment received',
+          transaction_type: 'booking_payment',
+          status: 'completed',
+          processed_at: new Date().toISOString(),
+          metadata: {
+            charge_id: paymentIntent.latest_charge,
+            customer_id: paymentIntent.customer,
+            payment_method_types: paymentIntent.payment_method_types,
+            booking_reference: booking.booking_reference || null,
+            booking_customer_id: booking.customer_id || null,
+            captured_by: paymentIntent.metadata?.captured_by || 'webhook', // Track if captured by payment processor or webhook
+          }
+        })
+        .select()
+        .single();
+
+      if (financialError) {
+        console.error('❌ Error recording financial transaction:', financialError);
+        console.error('❌ Error code:', financialError.code);
+        console.error('❌ Error message:', financialError.message);
+        console.error('❌ Error details:', JSON.stringify(financialError, null, 2));
+        
+        // Check for specific error types
+        if (financialError.code === '23505') {
+          console.error('⚠️ Duplicate transaction detected - transaction may already exist');
+          // Don't throw - this is not a critical error, continue to business transaction
+        } else if (financialError.code === '23503') {
+          console.error('⚠️ Foreign key constraint violation - booking may not exist');
+          throw new Error(`Booking ${bookingId} not found or invalid`);
+        } else {
+          throw financialError;
+        }
       } else {
-        throw financialError;
+        console.log('✅ Financial transaction recorded:', financialTransaction?.id);
       }
     } else {
-      console.log('✅ Financial transaction recorded:', financialTransaction?.id);
+      console.log('ℹ️ Financial transaction already exists, skipping:', existingFinancialTransaction.id);
     }
 
     // Calculate platform fee for business_payment_transactions

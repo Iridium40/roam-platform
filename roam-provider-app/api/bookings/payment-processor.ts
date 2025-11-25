@@ -220,8 +220,11 @@ export async function processBookingAcceptance(
 
           if (financialError) {
             console.error('❌ Error recording financial transaction:', financialError);
+            console.error('❌ Error code:', financialError.code);
+            console.error('❌ Error message:', financialError.message);
             if (financialError.code !== '23505') { // Ignore duplicates
-              throw new Error(`Failed to record financial transaction: ${financialError.message}`);
+              // Don't throw - webhook will create transaction as fallback
+              console.error('⚠️ Financial transaction creation failed - webhook will create it as fallback');
             } else {
               console.log('⚠️ Financial transaction already exists (duplicate)');
             }
@@ -276,8 +279,11 @@ export async function processBookingAcceptance(
 
             if (businessError) {
               console.error('❌ Error recording business payment transaction:', businessError);
+              console.error('❌ Error code:', businessError.code);
+              console.error('❌ Error message:', businessError.message);
               if (businessError.code !== '23505') { // Ignore duplicates
-                throw new Error(`Failed to record business payment transaction: ${businessError.message}`);
+                // Don't throw - webhook will create transaction as fallback
+                console.error('⚠️ Business payment transaction creation failed - webhook will create it as fallback');
               } else {
                 console.log('⚠️ Business payment transaction already exists (duplicate)');
               }
