@@ -7,7 +7,6 @@ import { FavoriteButton } from '@/components/FavoriteButton';
 import {
   ChevronLeft,
   ChevronRight,
-  Star,
   Calendar,
   Search,
   Clock,
@@ -239,13 +238,6 @@ export const ServiceGrid: React.FC<ServiceGridProps> = ({
                               variant="ghost"
                               className="bg-white/90 hover:bg-white"
                             />
-                            <Badge
-                              variant="secondary"
-                              className="bg-white/90 text-gray-800"
-                            >
-                              <Star className="w-3 h-3 mr-1 text-roam-warning fill-current" />
-                              {service.rating || 4.8}
-                            </Badge>
                           </div>
                         </div>
                         <CardContent className="p-6">

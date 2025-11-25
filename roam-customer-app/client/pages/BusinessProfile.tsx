@@ -1,6 +1,7 @@
 import { useParams, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Calendar, Clock, Building, User, CreditCard, Tag, ExternalLink, Share2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { ArrowLeft, Calendar, Clock, Building, User, CreditCard, Tag, ExternalLink, Share2, Search } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useState, useEffect, lazy, Suspense } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -95,6 +96,7 @@ export default function BusinessProfile() {
   );
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [expandedServices, setExpandedServices] = useState<Set<string>>(new Set());
+  const [serviceSearchQuery, setServiceSearchQuery] = useState('');
 
   // Load business details and services
   useEffect(() => {
@@ -471,10 +473,33 @@ export default function BusinessProfile() {
 
               {activeTab === 'services' && (
                 <div>
-                  <h2 className="text-2xl font-semibold mb-6">Available Services</h2>
-                  {services.length > 0 ? (
-                    <div className="grid md:grid-cols-2 gap-6">
-                      {services.map((service) => {
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-2xl font-semibold">Available Services</h2>
+                  </div>
+                  
+                  {/* Search Bar */}
+                  <div className="mb-6">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                      <Input
+                        type="text"
+                        placeholder="Search services by name..."
+                        value={serviceSearchQuery}
+                        onChange={(e) => setServiceSearchQuery(e.target.value)}
+                        className="pl-10 w-full max-w-md"
+                      />
+                    </div>
+                  </div>
+
+                  {(() => {
+                    // Filter services based on search query
+                    const filteredServices = services.filter((service) =>
+                      service.name.toLowerCase().includes(serviceSearchQuery.toLowerCase())
+                    );
+
+                    return filteredServices.length > 0 ? (
+                      <div className="grid md:grid-cols-2 gap-6">
+                        {filteredServices.map((service) => {
                         const isExpanded = expandedServices.has(service.id);
                         const descriptionLength = 200; // Character limit before truncation
                         const shouldTruncate = service.description.length > descriptionLength;
@@ -561,12 +586,20 @@ export default function BusinessProfile() {
                             </CardContent>
                           </Card>
                         );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <Clock className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                      <h3 className="text-lg font-semibold text-gray-600 mb-2">
+                        })}
+                      </div>
+                    ) : serviceSearchQuery ? (
+                      <div className="text-center py-8">
+                        <Search className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold text-gray-600 mb-2">
+                          No services found matching "{serviceSearchQuery}"
+                        </h3>
+                        <p className="text-gray-500">Try adjusting your search terms.</p>
+                      </div>
+                    ) : (
+                      <div className="text-center py-8">
+                        <Clock className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold text-gray-600 mb-2">
                         No Services Available
                       </h3>
                       <p className="text-gray-500">

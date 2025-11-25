@@ -201,15 +201,6 @@ export const FeaturedServices: React.FC<FeaturedServicesProps> = ({
                               </div>
                             )}
 
-                            {/* End Date Badge - Bottom Left */}
-                            {promotion.endDate && (
-                              <div className="absolute bottom-4 left-4">
-                                <div className="bg-white/95 text-roam-blue px-3 py-1.5 rounded-full shadow-lg font-medium text-sm backdrop-blur-sm">
-                                  <Clock className="w-4 h-4 mr-1 inline" />
-                                  Ends {new Date(promotion.endDate).toLocaleDateString()}
-                                </div>
-                              </div>
-                            )}
                           </div>
 
                           <CardContent className="p-6">

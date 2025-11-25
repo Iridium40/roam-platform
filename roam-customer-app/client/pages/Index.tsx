@@ -1044,13 +1044,6 @@ export default function Index() {
                                 variant="ghost"
                                 className="bg-white/90 hover:bg-white"
                               />
-                              <Badge
-                                variant="secondary"
-                                className="bg-white/90 text-gray-800"
-                              >
-                                <Star className="w-3 h-3 mr-1 text-roam-warning fill-current" />
-                                {service.rating}
-                              </Badge>
                             </div>
                           </div>
                           <CardContent className="p-6">
@@ -1257,15 +1250,6 @@ export default function Index() {
                               </div>
                             )}
 
-                            {/* End Date Badge - Bottom Left */}
-                            {promotion.endDate && (
-                              <div className="absolute bottom-4 left-4">
-                                <div className="bg-white/95 text-roam-blue px-3 py-1.5 rounded-full shadow-lg font-medium text-sm backdrop-blur-sm">
-                                  <Clock className="w-4 h-4 mr-1 inline" />
-                                  Ends {new Date(promotion.endDate).toLocaleDateString()}
-                                </div>
-                              </div>
-                            )}
                           </div>
 
                           <CardContent className="p-6">
@@ -1460,16 +1444,6 @@ export default function Index() {
                                 variant="ghost"
                                 className="w-10 h-10 rounded-full bg-white/95 hover:bg-white shadow-lg border-0 text-gray-600 hover:text-red-500 hover:scale-110 transition-all backdrop-blur-sm"
                               />
-                            </div>
-
-                            {/* Rating Badge - Bottom Right */}
-                            <div className="absolute bottom-4 right-4 bg-white/95 backdrop-blur-sm rounded-full px-3 py-1 shadow-lg">
-                              <div className="flex items-center gap-1">
-                                <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                                <span className="text-sm font-medium text-gray-900">
-                                  {service.rating}
-                                </span>
-                              </div>
                             </div>
 
                             {/* Price Badge - Bottom Left */}

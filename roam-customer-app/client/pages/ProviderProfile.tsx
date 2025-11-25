@@ -1,6 +1,7 @@
 import { useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, User, Calendar, Star, MapPin, Share2, Clock, MessageSquare } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { ArrowLeft, User, Calendar, Star, MapPin, Share2, Clock, MessageSquare, Search } from "lucide-react";
 import { useState, useEffect, lazy, Suspense } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -68,6 +69,7 @@ export default function ProviderProfile() {
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [expandedServices, setExpandedServices] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState('services');
+  const [serviceSearchQuery, setServiceSearchQuery] = useState('');
 
   useEffect(() => {
     const loadProviderData = async () => {
@@ -330,9 +332,29 @@ export default function ProviderProfile() {
 
               {/* Services Tab */}
               <TabsContent value="services" className="mt-0">
-                {services.length > 0 ? (
-              <div className="grid md:grid-cols-2 gap-6">
-                {services.map((service) => {
+                {/* Search Bar */}
+                <div className="mb-6">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <Input
+                      type="text"
+                      placeholder="Search services by name..."
+                      value={serviceSearchQuery}
+                      onChange={(e) => setServiceSearchQuery(e.target.value)}
+                      className="pl-10 w-full max-w-md"
+                    />
+                  </div>
+                </div>
+
+                {(() => {
+                  // Filter services based on search query
+                  const filteredServices = services.filter((service) =>
+                    service.name.toLowerCase().includes(serviceSearchQuery.toLowerCase())
+                  );
+
+                  return filteredServices.length > 0 ? (
+                    <div className="grid md:grid-cols-2 gap-6">
+                      {filteredServices.map((service) => {
                   const isExpanded = expandedServices.has(service.id);
                   const descriptionLength = 200; // Character limit before truncation
                   const shouldTruncate = service.description.length > descriptionLength;
@@ -419,14 +441,22 @@ export default function ProviderProfile() {
                       </CardContent>
                     </Card>
                   );
-                })}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <Clock className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-600 mb-2">
-                  No Services Available
-                </h3>
+                      })}
+                    </div>
+                  ) : serviceSearchQuery ? (
+                    <div className="text-center py-8">
+                      <Search className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                      <h3 className="text-lg font-semibold text-gray-600 mb-2">
+                        No services found matching "{serviceSearchQuery}"
+                      </h3>
+                      <p className="text-gray-500">Try adjusting your search terms.</p>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <Clock className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                      <h3 className="text-lg font-semibold text-gray-600 mb-2">
+                        No Services Available
+                      </h3>
                 <p className="text-gray-500">
                   This provider doesn't have any services listed yet.
                 </p>
