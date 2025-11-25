@@ -221,8 +221,8 @@ export default function AdminAnnouncements() {
             content: formData.content,
             start_date: formData.start_date || null,
             end_date: formData.end_date || null,
-            target_audience: formData.announcement_audience,
-            priority: formData.announcement_type || 'medium',
+            announcement_audience: formData.announcement_audience,
+            announcement_type: formData.announcement_type || 'general',
             is_active: formData.is_active,
           }),
         });
@@ -256,8 +256,8 @@ export default function AdminAnnouncements() {
             content: formData.content,
             start_date: formData.start_date || null,
             end_date: formData.end_date || null,
-            target_audience: formData.announcement_audience,
-            priority: formData.announcement_type || 'medium',
+            announcement_audience: formData.announcement_audience,
+            announcement_type: formData.announcement_type || 'general',
             is_active: formData.is_active,
           }),
         });

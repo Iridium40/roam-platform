@@ -26,7 +26,7 @@ async function getAnnouncements(req: Request, res: Response) {
   try {
     const { 
       status,
-      target_audience,
+      announcement_audience,
       search,
       page = '1',
       limit = '50',
@@ -40,17 +40,12 @@ async function getAnnouncements(req: Request, res: Response) {
         id,
         title,
         content,
-        target_audience,
+        announcement_audience,
+        announcement_type,
         is_active,
         start_date,
         end_date,
-        priority,
-        image_url,
-        action_button_text,
-        action_button_url,
-        created_at,
-        updated_at,
-        created_by
+        created_at
       `);
 
     // Apply filters
@@ -60,8 +55,8 @@ async function getAnnouncements(req: Request, res: Response) {
       query = query.eq('is_active', false);
     }
 
-    if (target_audience && target_audience !== 'all') {
-      query = query.eq('target_audience', target_audience);
+    if (announcement_audience && announcement_audience !== 'all') {
+      query = query.eq('announcement_audience', announcement_audience);
     }
 
     if (search) {
@@ -141,37 +136,17 @@ async function createAnnouncement(req: Request, res: Response) {
     const {
       title,
       content,
-      target_audience = 'all',
+      announcement_audience = 'all',
+      announcement_type = 'general',
       is_active = true,
       start_date,
-      end_date,
-      priority = 'medium',
-      image_url,
-      action_button_text,
-      action_button_url,
-      created_by
+      end_date
     } = req.body;
 
     // Validate required fields
     if (!title || !content) {
       return res.status(400).json({ 
         error: 'title and content are required' 
-      });
-    }
-
-    // Validate target_audience
-    const validAudiences = ['all', 'customers', 'providers', 'businesses', 'admin'];
-    if (!validAudiences.includes(target_audience)) {
-      return res.status(400).json({ 
-        error: `target_audience must be one of: ${validAudiences.join(', ')}` 
-      });
-    }
-
-    // Validate priority
-    const validPriorities = ['low', 'medium', 'high', 'urgent'];
-    if (!validPriorities.includes(priority)) {
-      return res.status(400).json({ 
-        error: `priority must be one of: ${validPriorities.join(', ')}` 
       });
     }
 
@@ -192,15 +167,11 @@ async function createAnnouncement(req: Request, res: Response) {
       .insert([{
         title,
         content,
-        target_audience,
+        announcement_audience,
+        announcement_type,
         is_active,
         start_date,
-        end_date,
-        priority,
-        image_url,
-        action_button_text,
-        action_button_url,
-        created_by
+        end_date
       }])
       .select()
       .single();
@@ -231,14 +202,11 @@ async function updateAnnouncement(req: Request, res: Response) {
     const {
       title,
       content,
-      target_audience,
+      announcement_audience,
+      announcement_type,
       is_active,
       start_date,
-      end_date,
-      priority,
-      image_url,
-      action_button_text,
-      action_button_url
+      end_date
     } = req.body;
 
     // Build update object with only provided fields
@@ -246,36 +214,11 @@ async function updateAnnouncement(req: Request, res: Response) {
     
     if (title !== undefined) updateData.title = title;
     if (content !== undefined) updateData.content = content;
-    if (target_audience !== undefined) updateData.target_audience = target_audience;
+    if (announcement_audience !== undefined) updateData.announcement_audience = announcement_audience;
+    if (announcement_type !== undefined) updateData.announcement_type = announcement_type;
     if (is_active !== undefined) updateData.is_active = is_active;
     if (start_date !== undefined) updateData.start_date = start_date;
     if (end_date !== undefined) updateData.end_date = end_date;
-    if (priority !== undefined) updateData.priority = priority;
-    if (image_url !== undefined) updateData.image_url = image_url;
-    if (action_button_text !== undefined) updateData.action_button_text = action_button_text;
-    if (action_button_url !== undefined) updateData.action_button_url = action_button_url;
-
-    updateData.updated_at = new Date().toISOString();
-
-    // Validate target_audience if being updated
-    if (target_audience) {
-      const validAudiences = ['all', 'customers', 'providers', 'businesses', 'admin'];
-      if (!validAudiences.includes(target_audience)) {
-        return res.status(400).json({ 
-          error: `target_audience must be one of: ${validAudiences.join(', ')}` 
-        });
-      }
-    }
-
-    // Validate priority if being updated
-    if (priority) {
-      const validPriorities = ['low', 'medium', 'high', 'urgent'];
-      if (!validPriorities.includes(priority)) {
-        return res.status(400).json({ 
-          error: `priority must be one of: ${validPriorities.join(', ')}` 
-        });
-      }
-    }
 
     // Validate dates if being updated
     if (start_date !== undefined || end_date !== undefined) {
@@ -369,8 +312,7 @@ export async function handleAnnouncementPublication(req: Request, res: Response)
 
     const is_active = action === 'publish';
     const updateData: any = { 
-      is_active,
-      updated_at: new Date().toISOString()
+      is_active
     };
 
     // If publishing and no start_date is set, set it to now
@@ -415,7 +357,7 @@ export async function handleAnnouncementPublication(req: Request, res: Response)
 // Get active announcements (for public consumption)
 export async function handleActiveAnnouncements(req: Request, res: Response) {
   try {
-    const { target_audience = 'all' } = req.query;
+    const { announcement_audience = 'all' } = req.query;
 
     const now = new Date().toISOString();
 
@@ -425,10 +367,7 @@ export async function handleActiveAnnouncements(req: Request, res: Response) {
         id,
         title,
         content,
-        priority,
-        image_url,
-        action_button_text,
-        action_button_url,
+        announcement_type,
         created_at,
         start_date,
         end_date
@@ -437,15 +376,14 @@ export async function handleActiveAnnouncements(req: Request, res: Response) {
       .or(`start_date.is.null,start_date.lte.${now}`)
       .or(`end_date.is.null,end_date.gte.${now}`);
 
-    // Filter by target audience
-    if (target_audience !== 'all') {
-      query = query.or(`target_audience.eq.all,target_audience.eq.${target_audience}`);
+    // Filter by announcement audience
+    if (announcement_audience !== 'all') {
+      query = query.or(`announcement_audience.eq.all,announcement_audience.eq.${announcement_audience}`);
     } else {
-      query = query.eq('target_audience', 'all');
+      query = query.eq('announcement_audience', 'all');
     }
 
-    query = query.order('priority', { ascending: false })
-                 .order('created_at', { ascending: false });
+    query = query.order('created_at', { ascending: false });
 
     const { data: announcements, error: fetchError } = await query;
 
@@ -457,15 +395,7 @@ export async function handleActiveAnnouncements(req: Request, res: Response) {
       });
     }
 
-    // Sort by priority order: urgent > high > medium > low
-    const priorityOrder = { urgent: 4, high: 3, medium: 2, low: 1 };
-    const sortedAnnouncements = (announcements || []).sort((a, b) => {
-      const aPriority = priorityOrder[a.priority as keyof typeof priorityOrder] || 1;
-      const bPriority = priorityOrder[b.priority as keyof typeof priorityOrder] || 1;
-      return bPriority - aPriority;
-    });
-
-    return res.status(200).json({ data: sortedAnnouncements });
+    return res.status(200).json({ data: announcements || [] });
 
   } catch (error) {
     console.error('Error in handleActiveAnnouncements:', error);

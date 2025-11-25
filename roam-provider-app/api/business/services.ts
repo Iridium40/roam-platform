@@ -303,59 +303,109 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(500).json({ error: 'Failed to check service', details: checkError.message });
       }
 
+      let resultService;
+      let resultError;
+
       if (!existingService) {
-        console.warn('⚠️ Business service not found:', { business_id, service_id });
-        return res.status(404).json({ 
-          error: 'Business service not found',
-          details: 'This service is not associated with this business. Please add it first.'
+        // Record doesn't exist - CREATE it (this happens when owner adds pricing for a new eligible service)
+        console.log('📝 Business service not found - creating new entry:', { business_id, service_id });
+        
+        // Ensure required fields for insert
+        const insertData = {
+          business_id,
+          service_id,
+          business_price: updates.business_price || 0,
+          business_duration_minutes: updates.business_duration_minutes || serviceData.duration_minutes,
+          delivery_type: updates.delivery_type || 'business_location',
+          is_active: updates.is_active !== undefined ? updates.is_active : true,
+        };
+
+        console.log('🔍 API - Creating business_service with:', insertData);
+
+        const { data: createdService, error: createError } = await supabase
+          .from('business_services')
+          .insert(insertData)
+          .select(`
+            id,
+            business_id,
+            service_id,
+            business_price,
+            business_duration_minutes,
+            delivery_type,
+            is_active,
+            created_at,
+            services (
+              id,
+              name,
+              description,
+              min_price,
+              duration_minutes,
+              image_url
+            )
+          `)
+          .single();
+
+        resultService = createdService;
+        resultError = createError;
+
+        console.log('🔍 API - Create result:', {
+          createdService,
+          createError,
+          success: !createError && createdService
+        });
+      } else {
+        // Record exists - UPDATE it
+        console.log('📝 Business service found - updating:', { business_id, service_id, existingId: existingService.id });
+
+        const { data: updatedService, error: updateError } = await supabase
+          .from('business_services')
+          .update(updates)
+          .eq('business_id', business_id)
+          .eq('service_id', service_id)
+          .select(`
+            id,
+            business_id,
+            service_id,
+            business_price,
+            business_duration_minutes,
+            delivery_type,
+            is_active,
+            created_at,
+            services (
+              id,
+              name,
+              description,
+              min_price,
+              duration_minutes,
+              image_url
+            )
+          `)
+          .maybeSingle();
+
+        resultService = updatedService;
+        resultError = updateError;
+
+        console.log('🔍 API - Update result:', {
+          updatedService,
+          updateError,
+          success: !updateError && updatedService
         });
       }
 
-      // Perform the update
-      const { data: updatedService, error: updateError } = await supabase
-        .from('business_services')
-        .update(updates)
-        .eq('business_id', business_id)
-        .eq('service_id', service_id)
-        .select(`
-          id,
-          business_id,
-          service_id,
-          business_price,
-          business_duration_minutes,
-          delivery_type,
-          is_active,
-          created_at,
-          services (
-            id,
-            name,
-            description,
-            min_price,
-            duration_minutes,
-            image_url
-          )
-        `)
-        .maybeSingle();
-
-      console.log('🔍 API - Update result:', {
-        updatedService,
-        updateError,
-        success: !updateError && updatedService
-      });
-
-      if (updateError) {
-        console.error('Error updating business service:', updateError);
-        return res.status(500).json({ error: 'Failed to update service', details: updateError.message });
+      if (resultError) {
+        console.error('Error saving business service:', resultError);
+        return res.status(500).json({ error: 'Failed to save service', details: resultError.message });
       }
 
-      if (!updatedService) {
-        console.error('Update succeeded but no data returned');
-        return res.status(500).json({ error: 'Update succeeded but service data not returned' });
+      if (!resultService) {
+        console.error('Save succeeded but no data returned');
+        return res.status(500).json({ error: 'Save succeeded but service data not returned' });
       }
 
       return res.status(200).json({
-        message: 'Service updated successfully',
-        service: updatedService
+        message: existingService ? 'Service updated successfully' : 'Service added successfully',
+        service: resultService,
+        created: !existingService
       });
     }
 
