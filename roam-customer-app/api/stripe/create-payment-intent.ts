@@ -309,11 +309,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Create Payment Intent with manual capture
     // Payment is AUTHORIZED at checkout but NOT CHARGED until booking is accepted
+    // Note: confirm must be false for manual capture - payment will be confirmed on frontend
     const paymentIntent = await stripe.paymentIntents.create({
       amount: totalAmount,
       currency: 'usd',
       customer: stripeCustomerId,
       capture_method: 'manual', // Authorize only, capture later when booking is accepted
+      confirm: false, // Explicitly set to false - will be confirmed on frontend
       metadata: {
         bookingId: bookingId || '',
         customerId,

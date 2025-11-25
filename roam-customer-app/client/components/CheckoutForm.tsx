@@ -215,11 +215,20 @@ export function CheckoutForm({ bookingDetails, clientSecret, onSuccess, onError 
         }
 
         // Confirm payment with saved payment method
+        // For manual capture, this will authorize but not charge (status will be 'requires_capture')
+        // Note: With manual capture, confirmCardPayment should work normally - it will authorize but not capture
         const result = await stripe.confirmCardPayment(clientSecret, {
           payment_method: selectedPaymentMethod,
         });
         paymentIntent = result.paymentIntent;
         error = result.error;
+        
+        // Check if payment was authorized but not captured (manual capture)
+        if (paymentIntent && paymentIntent.status === 'requires_capture') {
+          console.log('✅ Payment authorized successfully (will be captured when booking is accepted)');
+        } else if (paymentIntent && paymentIntent.status === 'succeeded') {
+          console.log('✅ Payment charged successfully');
+        }
       } else {
         // Use new payment method from PaymentElement
         let paymentMethodId: string | null = null;
@@ -293,16 +302,19 @@ export function CheckoutForm({ bookingDetails, clientSecret, onSuccess, onError 
           }
         }
 
-        // Confirm payment
+        // Confirm payment (authorize only, not capture - payment will be captured when booking is accepted)
         // If we have a payment_method_id, use confirmCardPayment; otherwise use confirmPayment with elements
         let result;
         if (paymentMethodId) {
           // Use the attached payment method
+          // For manual capture, we need to ensure the payment intent is in the correct state
           result = await stripe.confirmCardPayment(clientSecret, {
             payment_method: paymentMethodId,
+            // Don't set return_url here - we handle success manually
           });
         } else {
           // Use PaymentElement
+          // For manual capture, confirmPayment will authorize but not capture
           result = await stripe.confirmPayment({
             elements,
             confirmParams: {
@@ -313,12 +325,23 @@ export function CheckoutForm({ bookingDetails, clientSecret, onSuccess, onError 
         }
         paymentIntent = result.paymentIntent;
         error = result.error;
+        
+        // Check if payment was authorized but not captured (manual capture)
+        if (paymentIntent && paymentIntent.status === 'requires_capture') {
+          console.log('✅ Payment authorized successfully (will be captured when booking is accepted)');
+        }
       }
 
       if (error) {
         console.error('Payment failed:', error);
         onError(error.message || 'Payment failed');
-      } else if (paymentIntent && paymentIntent.status === 'succeeded') {
+      } else if (paymentIntent && (paymentIntent.status === 'succeeded' || paymentIntent.status === 'requires_capture')) {
+        // Payment succeeded (charged) OR authorized (requires_capture - will be charged when booking is accepted)
+        if (paymentIntent.status === 'requires_capture') {
+          console.log('✅ Payment authorized - will be charged when booking is accepted');
+        } else {
+          console.log('✅ Payment charged successfully');
+        }
         // Save payment method if requested and using new card
         if (savePaymentMethod && selectedPaymentMethod === 'new' && customer?.user_id && paymentIntent.payment_method) {
           try {
