@@ -473,20 +473,42 @@ async function handleBookingPayment(session: Stripe.Checkout.Session) {
 
   // Process the payment using the same logic as handlePaymentIntentSucceeded
   // Update booking status to confirmed (without stripe_payment_intent_id - that column doesn't exist)
-  const { error: updateError } = await supabase
-    .from('bookings')
-    .update({
-      booking_status: 'confirmed',
-      payment_status: 'paid',
-    })
-    .eq('id', booking.id);
+  // Check if booking is already confirmed to avoid race conditions
+  if (booking.booking_status === 'confirmed' && booking.payment_status === 'paid') {
+    console.log(`ℹ️ Booking ${booking.id} is already confirmed and paid - skipping update`);
+  } else {
+    const { error: updateError } = await supabase
+      .from('bookings')
+      .update({
+        booking_status: 'confirmed',
+        payment_status: 'paid',
+      })
+      .eq('id', booking.id);
 
-  if (updateError) {
-    console.error('❌ Error updating booking:', updateError);
-    throw updateError;
+    if (updateError) {
+      // Handle race condition errors gracefully
+      if (updateError.code === '42P10' || updateError.message?.includes('ON CONFLICT')) {
+        console.warn('⚠️ Booking update conflict - likely already updated by another webhook');
+        // Verify the booking was actually updated
+        const { data: verifyBooking } = await supabase
+          .from('bookings')
+          .select('booking_status, payment_status')
+          .eq('id', booking.id)
+          .single();
+        if (verifyBooking && verifyBooking.booking_status === 'confirmed' && verifyBooking.payment_status === 'paid') {
+          console.log('✅ Verified: Booking is confirmed and paid');
+        } else {
+          console.error('❌ Booking update failed and booking is not in expected state');
+          throw updateError;
+        }
+      } else {
+        console.error('❌ Error updating booking:', updateError);
+        throw updateError;
+      }
+    } else {
+      console.log(`✅ Booking ${booking.id} status updated to confirmed`);
+    }
   }
-
-  console.log(`✅ Booking ${booking.id} status updated to confirmed`);
 
   // Notify providers about the new booking (non-blocking)
   try {
@@ -679,15 +701,28 @@ async function handleBookingPayment(session: Stripe.Checkout.Session) {
     }
 
     if (businessPaymentError) {
-      // If error is due to unique constraint, log warning but don't fail
-      if (businessPaymentError.code === '23505' || businessPaymentError.message?.includes('unique')) {
-        console.warn('⚠️ Unique constraint violation - record may already exist');
+      // If error is due to unique constraint or ON CONFLICT, log warning but don't fail
+      // This can happen due to race conditions when both webhooks fire simultaneously
+      if (businessPaymentError.code === '23505' || 
+          businessPaymentError.message?.includes('unique') ||
+          businessPaymentError.message?.includes('ON CONFLICT') ||
+          businessPaymentError.message?.includes('constraint matching')) {
+        console.warn('⚠️ Duplicate record detected - likely due to race condition between webhooks');
+        console.warn('⚠️ Record may have been created by another webhook handler');
         console.warn('⚠️ If migration has not been run, see migrations/remove_booking_id_unique_add_transaction_type.sql');
-      } else if (businessPaymentError.message?.includes('ON CONFLICT')) {
-        console.warn('⚠️ ON CONFLICT error - migration may need to be run');
-        console.warn('⚠️ See migrations/remove_booking_id_unique_add_transaction_type.sql');
+        // Verify the record actually exists
+        const { data: verifyRecord } = await supabase
+          .from('business_payment_transactions')
+          .select('id')
+          .eq('stripe_payment_intent_id', paymentIntent.id)
+          .maybeSingle();
+        if (verifyRecord) {
+          console.log('✅ Verified: Record exists in database:', verifyRecord.id);
+        }
       } else {
         console.error('❌ Error creating business_payment_transactions record:', businessPaymentError);
+        console.error('❌ Error code:', businessPaymentError.code);
+        console.error('❌ Error message:', businessPaymentError.message);
       }
       console.warn('⚠️ Business payment transaction creation failed, but booking was confirmed');
     } else {
@@ -830,20 +865,42 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
     });
 
     // Update booking status to confirmed (without stripe_payment_intent_id - that column doesn't exist)
-    const { error: updateError } = await supabase
-      .from('bookings')
-      .update({
-        booking_status: 'confirmed',
-        payment_status: 'paid',
-      })
-      .eq('id', bookingId);
+    // Check if booking is already confirmed to avoid race conditions
+    if (booking.booking_status === 'confirmed' && booking.payment_status === 'paid') {
+      console.log(`ℹ️ Booking ${bookingId} is already confirmed and paid - skipping update`);
+    } else {
+      const { error: updateError } = await supabase
+        .from('bookings')
+        .update({
+          booking_status: 'confirmed',
+          payment_status: 'paid',
+        })
+        .eq('id', bookingId);
 
-    if (updateError) {
-      console.error('❌ Error updating booking:', updateError);
-      throw updateError;
+      if (updateError) {
+        // Handle race condition errors gracefully
+        if (updateError.code === '42P10' || updateError.message?.includes('ON CONFLICT')) {
+          console.warn('⚠️ Booking update conflict - likely already updated by checkout.session.completed webhook');
+          // Verify the booking was actually updated
+          const { data: verifyBooking } = await supabase
+            .from('bookings')
+            .select('booking_status, payment_status')
+            .eq('id', bookingId)
+            .single();
+          if (verifyBooking && verifyBooking.booking_status === 'confirmed' && verifyBooking.payment_status === 'paid') {
+            console.log('✅ Verified: Booking is confirmed and paid');
+          } else {
+            console.error('❌ Booking update failed and booking is not in expected state');
+            throw updateError;
+          }
+        } else {
+          console.error('❌ Error updating booking:', updateError);
+          throw updateError;
+        }
+      } else {
+        console.log(`✅ Booking ${bookingId} status updated to confirmed`);
+      }
     }
-
-    console.log(`✅ Booking ${bookingId} status updated to confirmed`);
 
     // Notify providers about the new booking (non-blocking)
     try {
@@ -1058,14 +1115,24 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
       }
 
       if (businessPaymentError) {
-        // If error is due to unique constraint, log warning but don't fail
-        if (businessPaymentError.code === '23505' || businessPaymentError.message?.includes('unique')) {
-          console.warn('⚠️ Unique constraint violation - record may already exist');
+        // If error is due to unique constraint or ON CONFLICT, log warning but don't fail
+        // This can happen due to race conditions when both webhooks fire simultaneously
+        if (businessPaymentError.code === '23505' || 
+            businessPaymentError.message?.includes('unique') ||
+            businessPaymentError.message?.includes('ON CONFLICT') ||
+            businessPaymentError.message?.includes('constraint matching')) {
+          console.warn('⚠️ Duplicate record detected - likely due to race condition between webhooks');
+          console.warn('⚠️ Record may have been created by checkout.session.completed webhook');
           console.warn('⚠️ If migration has not been run, see migrations/remove_booking_id_unique_add_transaction_type.sql');
-        } else if (businessPaymentError.message?.includes('ON CONFLICT')) {
-          console.warn('⚠️ ON CONFLICT error - migration may need to be run');
-          console.warn('⚠️ See migrations/remove_booking_id_unique_add_transaction_type.sql');
-          console.warn('⚠️ This error suggests a database constraint issue - check if migration has been applied');
+          // Verify the record actually exists
+          const { data: verifyRecord } = await supabase
+            .from('business_payment_transactions')
+            .select('id')
+            .eq('stripe_payment_intent_id', paymentIntent.id)
+            .maybeSingle();
+          if (verifyRecord) {
+            console.log('✅ Verified: Record exists in database:', verifyRecord.id);
+          }
         } else {
           console.error('❌ Error creating business_payment_transactions record:', businessPaymentError);
           console.error('❌ Error code:', businessPaymentError.code);
