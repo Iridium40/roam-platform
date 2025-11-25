@@ -981,8 +981,8 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
       .eq('id', booking.business_id)
       .single();
 
-    // Check if business_payment_transactions record already exists (to determine transaction type)
-    const { data: existingBusinessTransaction } = await supabase
+    // Check if business_payment_transactions record already exists for this booking (to determine transaction type)
+    const { data: existingBookingTransaction } = await supabase
       .from('business_payment_transactions')
       .select('id')
       .eq('booking_id', bookingId)
@@ -990,7 +990,7 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
       .maybeSingle();
 
     // Determine transaction type: 'initial_booking' for first payment, 'additional_service' for add more service
-    const transactionType = existingBusinessTransaction ? 'additional_service' : 'initial_booking';
+    const transactionType = existingBookingTransaction ? 'additional_service' : 'initial_booking';
     
     console.log(`📝 Creating business_payment_transactions record with type: ${transactionType}`);
 
