@@ -756,195 +756,65 @@ export default function AdminServices() {
       setLoading(true);
       setError(null);
 
-      console.log("Fetching all service data from Supabase...");
+      console.log("Fetching all service data from API...");
 
-      // First try a simple services query to test basic access
-      console.log("Testing basic services access...");
-      const simpleServicesTest = await supabase
-        .from("services")
-        .select("count", { count: "exact", head: true });
+      const response = await fetch('/api/services/all-data');
+      const result = await response.json();
 
-      console.log("Simple services test result:", simpleServicesTest);
-
-      if (simpleServicesTest.error) {
-        console.error(
-          "Basic services access failed:",
-          simpleServicesTest.error,
-        );
-        setError(
-          `Services table access error: ${JSON.stringify(simpleServicesTest.error)}`,
-        );
+      if (!response.ok) {
+        console.error("API error:", result.error);
+        setError(`Failed to fetch service data: ${result.error || 'Unknown error'}`);
         return;
       }
 
-      // Fetch all data in parallel
-      const [
-        servicesResult,
-        categoriesResult,
-        subcategoriesResult,
-        addonsResult,
-        addonEligibilityResult,
-      ] = await Promise.all([
-        // Services with subcategory and category joins
-        supabase
-          .from("services")
-          .select(
-            `
-            *,
-            service_subcategories (
-              service_subcategory_type,
-              service_categories (
-                service_category_type
-              )
-            )
-          `,
-          )
-          .order("created_at", { ascending: false }),
+      if (!result.success) {
+        console.error("API returned unsuccessful:", result);
+        setError(`API error: ${result.error || 'Unknown error'}`);
+        return;
+      }
 
-        // Categories
-        supabase
-          .from("service_categories")
-          .select("*")
-          .order("sort_order", { ascending: true }),
+      const { services, categories, subcategories, addons, addonEligibility } = result.data;
 
-        // Subcategories with category join
-        supabase
-          .from("service_subcategories")
-          .select(
-            `
-            *,
-            service_categories (
-              service_category_type
-            )
-          `,
-          )
-          .order("created_at", { ascending: false }),
-
-        // Service addons
-        supabase
-          .from("service_addons")
-          .select("*")
-          .order("created_at", { ascending: false }),
-
-        // Service addon eligibility relationships
-        supabase
-          .from("service_addon_eligibility")
-          .select(
-            `
-            *,
-            services (
-              name
-            ),
-            service_addons (
-              name
-            )
-          `,
-          )
-          .order("created_at", { ascending: false }),
-      ]);
-
-      console.log("Supabase responses:", {
-        services: servicesResult,
-        categories: categoriesResult,
-        subcategories: subcategoriesResult,
-        addons: addonsResult,
-        addonEligibility: addonEligibilityResult,
+      console.log("API responses:", {
+        services: services?.length || 0,
+        categories: categories?.length || 0,
+        subcategories: subcategories?.length || 0,
+        addons: addons?.length || 0,
+        addonEligibility: addonEligibility?.length || 0,
       });
 
-      // Handle services with detailed logging
-      console.log("Services result details:", {
-        error: servicesResult.error,
-        data: servicesResult.data,
-        status: servicesResult.status,
-        statusText: servicesResult.statusText,
-      });
-
-      if (servicesResult.error) {
-        console.error("Services error object:", servicesResult.error);
-        console.error("Services error type:", typeof servicesResult.error);
-        console.error(
-          "Services error keys:",
-          Object.keys(servicesResult.error),
-        );
-
-        let errorMessage = "Unknown services error";
-        if (servicesResult.error.message) {
-          errorMessage = servicesResult.error.message;
-        } else if (servicesResult.error.error_description) {
-          errorMessage = servicesResult.error.error_description;
-        } else {
-          try {
-            errorMessage = JSON.stringify(servicesResult.error);
-          } catch (e) {
-            errorMessage = String(servicesResult.error);
-          }
-        }
-
-        console.log("Trying fallback services query without joins...");
-        const fallbackServicesResult = await supabase
-          .from("services")
-          .select("*")
-          .order("created_at", { ascending: false });
-
-        if (fallbackServicesResult.error) {
-          setError(
-            `Services Error (both queries failed): ${errorMessage} | Fallback: ${fallbackServicesResult.error.message || "unknown"}`,
-          );
-        } else {
-          console.log(
-            "Fallback services query worked:",
-            fallbackServicesResult.data?.length || 0,
-            "records",
-          );
-          setServices(fallbackServicesResult.data || []);
-        }
-      } else {
+      // Set all state data
+      if (services) {
         console.log(
           "Services loaded successfully:",
-          servicesResult.data?.length || 0,
+          services.length,
           "records",
         );
-        setServices(servicesResult.data || []);
+        setServices(services);
       }
 
-      // Handle categories
-      if (categoriesResult.error) {
-        console.error("Categories error:", categoriesResult.error);
-        setError(
-          `Categories Error: ${categoriesResult.error.message || JSON.stringify(categoriesResult.error)} (Code: ${categoriesResult.error.code || "unknown"})`,
-        );
-      } else {
-        setCategories(categoriesResult.data || []);
+      // Set categories
+      if (categories) {
+        console.log("Categories loaded:", categories.length);
+        setCategories(categories);
       }
 
-      // Handle subcategories
-      if (subcategoriesResult.error) {
-        console.error("Subcategories error:", subcategoriesResult.error);
-        setError(
-          `Subcategories Error: ${subcategoriesResult.error.message || JSON.stringify(subcategoriesResult.error)} (Code: ${subcategoriesResult.error.code || "unknown"})`,
-        );
-      } else {
-        setSubcategories(subcategoriesResult.data || []);
+      // Set subcategories
+      if (subcategories) {
+        console.log("Subcategories loaded:", subcategories.length);
+        setSubcategories(subcategories);
       }
 
-      // Handle addons
-      if (addonsResult.error) {
-        console.error("Addons error:", addonsResult.error);
-        setError(
-          `Addons Error: ${addonsResult.error.message || JSON.stringify(addonsResult.error)} (Code: ${addonsResult.error.code || "unknown"})`,
-        );
-      } else {
-        setAddons(addonsResult.data || []);
+      // Set addons
+      if (addons) {
+        console.log("Addons loaded:", addons.length);
+        setAddons(addons);
       }
 
-      // Handle addon eligibility
-      if (addonEligibilityResult.error) {
-        console.error("Addon eligibility error:", addonEligibilityResult.error);
-        setError(
-          `Addon Eligibility Error: ${addonEligibilityResult.error.message || JSON.stringify(addonEligibilityResult.error)} (Code: ${addonEligibilityResult.error.code || "unknown"})`,
-        );
-      } else {
-        setAddonEligibility(addonEligibilityResult.data || []);
+      // Set addon eligibility
+      if (addonEligibility) {
+        console.log("Addon eligibility loaded:", addonEligibility.length);
+        setAddonEligibility(addonEligibility);
       }
 
       console.log(

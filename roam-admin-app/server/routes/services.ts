@@ -22,6 +22,95 @@ export async function handleServices(req: Request, res: Response) {
   }
 }
 
+// Get all service-related data (services, categories, subcategories, addons, eligibility)
+export async function handleAllServiceData(req: Request, res: Response) {
+  try {
+    // Fetch all data in parallel
+    const [
+      servicesResult,
+      categoriesResult,
+      subcategoriesResult,
+      addonsResult,
+      addonEligibilityResult,
+    ] = await Promise.all([
+      // Services with subcategory and category joins
+      supabase
+        .from("services")
+        .select(`
+          *,
+          service_subcategories (
+            service_subcategory_type,
+            service_categories (
+              service_category_type
+            )
+          )
+        `)
+        .order("created_at", { ascending: false }),
+
+      // Categories
+      supabase
+        .from("service_categories")
+        .select("*")
+        .order("sort_order", { ascending: true }),
+
+      // Subcategories with category join
+      supabase
+        .from("service_subcategories")
+        .select(`
+          *,
+          service_categories (
+            service_category_type
+          )
+        `)
+        .order("created_at", { ascending: false }),
+
+      // Service addons
+      supabase
+        .from("service_addons")
+        .select("*")
+        .order("created_at", { ascending: false }),
+
+      // Service addon eligibility relationships
+      supabase
+        .from("service_addon_eligibility")
+        .select(`
+          *,
+          services (
+            name
+          ),
+          service_addons (
+            name
+          )
+        `)
+        .order("created_at", { ascending: false }),
+    ]);
+
+    // Check for errors
+    if (servicesResult.error) throw servicesResult.error;
+    if (categoriesResult.error) throw categoriesResult.error;
+    if (subcategoriesResult.error) throw subcategoriesResult.error;
+    if (addonsResult.error) throw addonsResult.error;
+    if (addonEligibilityResult.error) throw addonEligibilityResult.error;
+
+    res.json({
+      success: true,
+      data: {
+        services: servicesResult.data || [],
+        categories: categoriesResult.data || [],
+        subcategories: subcategoriesResult.data || [],
+        addons: addonsResult.data || [],
+        addonEligibility: addonEligibilityResult.data || [],
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching all service data:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to fetch service data' 
+    });
+  }
+}
+
 async function getServices(req: Request, res: Response) {
   try {
     const { data, error } = await supabase

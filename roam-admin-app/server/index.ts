@@ -50,7 +50,7 @@ import {
   handleCustomerBookings,
   handleUpdateCustomerStatus
 } from "./routes/customers.js";
-import { handleServices } from "./routes/services.js";
+import { handleServices, handleAllServiceData } from "./routes/services.js";
 
 export function createServer() {
   const app = express();
@@ -114,6 +114,7 @@ export function createServer() {
   app.post("/api/customers/update-status", handleUpdateCustomerStatus);
   
   // Service management routes
+  app.get("/api/services/all-data", handleAllServiceData);
   app.get("/api/services", handleServices);
   app.post("/api/services", handleServices);
   app.put("/api/services/:id", handleServices);
