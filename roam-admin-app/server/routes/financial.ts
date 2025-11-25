@@ -10,37 +10,33 @@ export async function handleFinancialStats(req: Request, res: Response) {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - parseInt(dateRange as string));
     
-    // Fetch financial statistics
-    const { data: bookings, error: bookingsError } = await supabase
-      .from('bookings')
-      .select('total_amount, created_at, booking_status')
-      .gte('created_at', startDate.toISOString())
-      .lte('created_at', endDate.toISOString());
+    // Fetch financial summary for the date range
+    const { data: summary, error: summaryError } = await supabase
+      .from('admin_financial_summary')
+      .select('*')
+      .gte('summary_date', startDate.toISOString().split('T')[0])
+      .lte('summary_date', endDate.toISOString().split('T')[0]);
     
-    if (bookingsError) throw bookingsError;
+    if (summaryError) throw summaryError;
     
-    // Calculate metrics
-    const totalRevenue = bookings?.reduce((sum, booking) => 
-      sum + (booking.total_amount || 0), 0) || 0;
-    
-    const completedBookings = bookings?.filter(b => b.booking_status === 'completed').length || 0;
-    const totalBookings = bookings?.length || 0;
+    // Aggregate totals from summary
+    const totalRevenue = summary?.reduce((sum, s) => sum + (s.total_revenue || 0), 0) || 0;
+    const totalPlatformFees = summary?.reduce((sum, s) => sum + (s.total_platform_fees || 0), 0) || 0;
+    const totalNetAmount = summary?.reduce((sum, s) => sum + (s.total_net_amount || 0), 0) || 0;
     
     // Fetch previous period for comparison
     const prevStartDate = new Date(startDate);
     prevStartDate.setDate(prevStartDate.getDate() - parseInt(dateRange as string));
     
-    const { data: prevBookings, error: prevBookingsError } = await supabase
-      .from('bookings')
-      .select('total_amount, created_at, booking_status')
-      .gte('created_at', prevStartDate.toISOString())
-      .lt('created_at', startDate.toISOString());
+    const { data: prevSummary, error: prevSummaryError } = await supabase
+      .from('admin_financial_summary')
+      .select('*')
+      .gte('summary_date', prevStartDate.toISOString().split('T')[0])
+      .lt('summary_date', startDate.toISOString().split('T')[0]);
     
-    if (prevBookingsError) throw prevBookingsError;
+    if (prevSummaryError) throw prevSummaryError;
     
-    const prevRevenue = prevBookings?.reduce((sum, booking) => 
-      sum + (booking.total_amount || 0), 0) || 0;
-    
+    const prevRevenue = prevSummary?.reduce((sum, s) => sum + (s.total_revenue || 0), 0) || 0;
     const revenueChange = prevRevenue > 0 ? ((totalRevenue - prevRevenue) / prevRevenue) * 100 : 0;
     
     // Fetch pending payouts
@@ -75,7 +71,7 @@ export async function handleFinancialStats(req: Request, res: Response) {
         change: 0 // TODO: Calculate change
       },
       platformFees: {
-        amount: totalRevenue * 0.07, // 7% platform fee
+        amount: totalPlatformFees,
         change: revenueChange,
         period: `Last ${dateRange} days`
       },
@@ -106,42 +102,35 @@ export async function handleTransactions(req: Request, res: Response) {
     startDate.setDate(startDate.getDate() - parseInt(dateRange as string));
     
     let query = supabase
-      .from('bookings')
-      .select(`
-        id,
-        total_amount,
-        created_at,
-        booking_status,
-        business_profiles!inner(business_name),
-        customer_profiles!inner(first_name, last_name)
-      `)
-      .gte('created_at', startDate.toISOString())
-      .lte('created_at', endDate.toISOString());
+      .from('admin_financial_overview')
+      .select('*')
+      .gte('transaction_date', startDate.toISOString())
+      .lte('transaction_date', endDate.toISOString());
     
     if (status !== 'all') {
-      query = query.eq('booking_status', status);
+      query = query.eq('transaction_status', status);
     }
     
     if (search) {
-      query = query.or(`business_profiles.business_name.ilike.%${search}%,customer_profiles.first_name.ilike.%${search}%,customer_profiles.last_name.ilike.%${search}%`);
+      query = query.or(`business_name.ilike.%${search}%,customer_name.ilike.%${search}%,customer_first_name.ilike.%${search}%,customer_last_name.ilike.%${search}%`);
     }
     
-    const { data, error } = await query.order('created_at', { ascending: false });
+    const { data, error } = await query.order('transaction_date', { ascending: false });
     
     if (error) throw error;
     
     // Transform data to match frontend interface
-    const transactions = data?.map(booking => ({
-      id: booking.id,
-      type: 'payment' as const,
-      amount: booking.total_amount || 0,
-      status: booking.booking_status,
-      description: `Booking #${booking.id}`,
-      business_name: booking.business_profiles?.business_name || 'Unknown',
-      customer_name: `${booking.customer_profiles?.first_name || ''} ${booking.customer_profiles?.last_name || ''}`.trim(),
-      created_at: booking.created_at,
-      fee_amount: (booking.total_amount || 0) * 0.07,
-      net_amount: (booking.total_amount || 0) * 0.93,
+    const transactions = data?.map(transaction => ({
+      id: transaction.transaction_id,
+      type: transaction.transaction_type === 'booking_payment' ? 'payment' as const : transaction.transaction_type as const,
+      amount: transaction.transaction_amount || 0,
+      status: transaction.transaction_status,
+      description: transaction.description || `Booking #${transaction.booking_id || 'N/A'}`,
+      business_name: transaction.business_name || 'Unknown',
+      customer_name: transaction.customer_name || 'Unknown',
+      created_at: transaction.transaction_date,
+      fee_amount: transaction.platform_fee_amount || 0,
+      net_amount: transaction.net_amount || 0,
     })) || [];
     
     res.json({ success: true, data: transactions });
@@ -242,43 +231,50 @@ export async function handleRevenueData(req: Request, res: Response) {
     const { days = "30" } = req.query;
     const numDays = parseInt(days as string);
     
-    const revenueData = [];
+    // Calculate date range
     const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - numDays);
     
+    // Fetch daily summary from financial summary view
+    const { data: summary, error: summaryError } = await supabase
+      .from('admin_financial_summary')
+      .select('*')
+      .gte('summary_date', startDate.toISOString().split('T')[0])
+      .lte('summary_date', endDate.toISOString().split('T')[0])
+      .order('summary_date', { ascending: true });
+    
+    if (summaryError) throw summaryError;
+    
+    // Transform data to match frontend interface
+    const revenueData = summary?.map(day => ({
+      date: day.summary_date,
+      revenue: day.total_revenue || 0,
+      bookings: day.total_bookings || 0,
+      fees: day.total_platform_fees || 0,
+    })) || [];
+    
+    // Fill in missing days with zero values
+    const revenueDataMap = new Map(revenueData.map(d => [d.date, d]));
+    const filledData = [];
     for (let i = numDays - 1; i >= 0; i--) {
       const date = new Date(endDate);
       date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
       
-      const startOfDay = new Date(date);
-      startOfDay.setHours(0, 0, 0, 0);
-      
-      const endOfDay = new Date(date);
-      endOfDay.setHours(23, 59, 59, 999);
-      
-      // Fetch bookings for this day
-      const { data: dayBookings, error: dayBookingsError } = await supabase
-        .from('bookings')
-        .select('total_amount, created_at')
-        .gte('created_at', startOfDay.toISOString())
-        .lte('created_at', endOfDay.toISOString());
-      
-      if (dayBookingsError) throw dayBookingsError;
-      
-      const dayRevenue = dayBookings?.reduce((sum, booking) => 
-        sum + (booking.total_amount || 0), 0) || 0;
-      
-      const dayBookingsCount = dayBookings?.length || 0;
-      const dayFees = dayRevenue * 0.07;
-      
-      revenueData.push({
-        date: date.toISOString().split('T')[0],
-        revenue: dayRevenue,
-        bookings: dayBookingsCount,
-        fees: dayFees,
-      });
+      if (revenueDataMap.has(dateStr)) {
+        filledData.push(revenueDataMap.get(dateStr)!);
+      } else {
+        filledData.push({
+          date: dateStr,
+          revenue: 0,
+          bookings: 0,
+          fees: 0,
+        });
+      }
     }
     
-    res.json({ success: true, data: revenueData });
+    res.json({ success: true, data: filledData });
   } catch (error) {
     console.error('Error fetching revenue data:', error);
     res.status(500).json({ 

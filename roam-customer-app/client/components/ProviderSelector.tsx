@@ -21,6 +21,7 @@ import {
   Shuffle,
   CheckCircle,
 } from 'lucide-react';
+import { formatSpecialty } from '@/utils/formatSpecialty';
 
 interface Provider {
   id: string;
@@ -151,7 +152,7 @@ export function ProviderSelector({
                       <div className="flex flex-wrap gap-1 mt-2">
                         {provider.specialties.slice(0, 3).map((specialty, index) => (
                           <Badge key={index} variant="outline" className="text-xs">
-                            {specialty}
+                            {formatSpecialty(specialty)}
                           </Badge>
                         ))}
                         {provider.specialties.length > 3 && (

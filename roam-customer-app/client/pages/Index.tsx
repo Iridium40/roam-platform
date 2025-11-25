@@ -78,6 +78,7 @@ const ComponentLoader = () => (
 );
 import { supabase } from "@/lib/supabase";
 import { logger } from '@/utils/logger';
+import { formatSpecialty } from '@/utils/formatSpecialty';
 
 export default function Index() {
   const { customer, isCustomer, signOut } = useAuth();
@@ -1649,22 +1650,12 @@ export default function Index() {
                                   {business.specialties
                                     .slice(0, 4)
                                     .map((specialty, index) => {
-                                      // Convert to camel case
-                                      const camelCaseSpecialty = specialty
-                                        .split(" ")
-                                        .map(
-                                          (word) =>
-                                            word.charAt(0).toUpperCase() +
-                                            word.slice(1).toLowerCase(),
-                                        )
-                                        .join(" ");
-
                                       return (
                                         <span
                                           key={specialty}
                                           className="px-3 py-1.5 text-xs font-medium bg-gradient-to-r from-roam-blue/8 to-roam-light-blue/8 text-roam-blue rounded-lg border border-roam-blue/15 hover:border-roam-blue/25 transition-colors"
                                         >
-                                          {camelCaseSpecialty}
+                                          {formatSpecialty(specialty)}
                                         </span>
                                       );
                                     })}
