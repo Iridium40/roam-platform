@@ -307,14 +307,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
     }
 
-    // Create Payment Intent with manual capture
-    // Payment is AUTHORIZED at checkout but NOT CHARGED until booking is accepted
+    // Determine capture method based on payment type
+    // - New bookings: manual capture (authorize now, charge on acceptance)
+    // - Add more services: automatic capture (charge immediately)
+    const isAddMoreService = hasCustomAmount && bookingId; // Add more service if bookingId exists and custom amount provided
+    const captureMethod = isAddMoreService ? 'automatic' : 'manual';
+    
+    // Create Payment Intent
+    // For new bookings: Payment is AUTHORIZED at checkout but NOT CHARGED until booking is accepted
+    // For add more services: Payment is CHARGED immediately when customer submits
     // Note: confirm must be false for manual capture - payment will be confirmed on frontend
     const paymentIntent = await stripe.paymentIntents.create({
       amount: totalAmount,
       currency: 'usd',
       customer: stripeCustomerId,
-      capture_method: 'manual', // Authorize only, capture later when booking is accepted
+      capture_method: captureMethod, // Manual for new bookings, automatic for add more services
       confirm: false, // Explicitly set to false - will be confirmed on frontend
       metadata: {
         bookingId: bookingId || '',
@@ -329,7 +336,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         deliveryType: deliveryType || '',
         specialInstructions: specialInstructions || '',
         promotionId: promotionId || '',
-        guestPhone: guestPhone || ''
+        guestPhone: guestPhone || '',
+        paymentType: isAddMoreService ? 'additional_service' : 'initial_booking', // Track payment type
       },
       automatic_payment_methods: {
         enabled: true,

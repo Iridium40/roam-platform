@@ -198,21 +198,36 @@ export async function processBookingAcceptance(
             .eq('id', bookingId);
 
           // Record financial transactions
-          await supabase.from('financial_transactions').insert({
-            booking_id: bookingId,
-            amount: totalAmount,
-            currency: 'USD',
-            stripe_transaction_id: capturedPaymentIntent.id,
-            payment_method: 'card',
-            description: 'Service booking payment - captured on acceptance',
-            transaction_type: 'booking_payment',
-            status: 'completed',
-            processed_at: new Date().toISOString(),
-            metadata: {
-              payment_type: 'full_payment',
-              captured_on_acceptance: true,
-            },
-          });
+          const { data: financialTransaction, error: financialError } = await supabase
+            .from('financial_transactions')
+            .insert({
+              booking_id: bookingId,
+              amount: totalAmount,
+              currency: 'USD',
+              stripe_transaction_id: capturedPaymentIntent.id,
+              payment_method: 'card',
+              description: 'Service booking payment - captured on acceptance',
+              transaction_type: 'booking_payment',
+              status: 'completed',
+              processed_at: new Date().toISOString(),
+              metadata: {
+                payment_type: 'full_payment',
+                captured_on_acceptance: true,
+              },
+            })
+            .select()
+            .single();
+
+          if (financialError) {
+            console.error('❌ Error recording financial transaction:', financialError);
+            if (financialError.code !== '23505') { // Ignore duplicates
+              throw new Error(`Failed to record financial transaction: ${financialError.message}`);
+            } else {
+              console.log('⚠️ Financial transaction already exists (duplicate)');
+            }
+          } else {
+            console.log('✅ Financial transaction recorded:', financialTransaction?.id);
+          }
 
           // Create business_payment_transaction
           const business = Array.isArray(booking.business_profiles) 
@@ -228,20 +243,48 @@ export async function processBookingAcceptance(
           const platformFee = serviceAmount * platformFeePercentage;
           const netPaymentAmount = serviceAmount;
 
-          await supabase.from('business_payment_transactions').insert({
-            booking_id: bookingId,
-            business_id: businessId,
-            payment_date: paymentDate,
-            gross_payment_amount: totalAmount,
-            platform_fee: platformFee,
-            net_payment_amount: netPaymentAmount,
-            tax_year: currentYear,
-            stripe_payment_intent_id: capturedPaymentIntent.id,
-            stripe_connect_account_id: stripeConnectAccountId,
-            transaction_description: 'Platform service payment',
-            booking_reference: booking.booking_reference || null,
-            transaction_type: 'initial_booking',
-          } as any);
+          // Check if business_payment_transaction already exists (avoid duplicates)
+          const { data: existingBusinessTransaction } = await supabase
+            .from('business_payment_transactions')
+            .select('id')
+            .eq('stripe_payment_intent_id', capturedPaymentIntent.id)
+            .limit(1)
+            .maybeSingle();
+
+          if (existingBusinessTransaction) {
+            console.log('⚠️ Business payment transaction already exists for this payment intent:', existingBusinessTransaction.id);
+            console.log('⚠️ Skipping duplicate insert - webhook may have already created it');
+          } else {
+            const { data: businessTransaction, error: businessError } = await supabase
+              .from('business_payment_transactions')
+              .insert({
+                booking_id: bookingId,
+                business_id: businessId,
+                payment_date: paymentDate,
+                gross_payment_amount: totalAmount,
+                platform_fee: platformFee,
+                net_payment_amount: netPaymentAmount,
+                tax_year: currentYear,
+                stripe_payment_intent_id: capturedPaymentIntent.id,
+                stripe_connect_account_id: stripeConnectAccountId,
+                transaction_description: 'Platform service payment',
+                booking_reference: booking.booking_reference || null,
+                transaction_type: 'initial_booking',
+              } as any)
+              .select()
+              .single();
+
+            if (businessError) {
+              console.error('❌ Error recording business payment transaction:', businessError);
+              if (businessError.code !== '23505') { // Ignore duplicates
+                throw new Error(`Failed to record business payment transaction: ${businessError.message}`);
+              } else {
+                console.log('⚠️ Business payment transaction already exists (duplicate)');
+              }
+            } else {
+              console.log('✅ Business payment transaction recorded:', businessTransaction?.id);
+            }
+          }
 
           console.log('✅ Payment processing completed:', {
             serviceFeeCharged: true,

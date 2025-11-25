@@ -809,9 +809,8 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
       return;
     }
 
-    // Check if this payment intent was already processed by handleBookingPayment
-    // (checkout.session.completed also processes payment_intent.succeeded events)
-    // This prevents duplicate processing for new bookings
+    // Check if this payment intent was already processed
+    // This could be from checkout.session.completed webhook OR from payment processor capture
     const { data: existingBusinessTransaction } = await supabase
       .from('business_payment_transactions')
       .select('id, booking_id')
@@ -819,9 +818,37 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
       .limit(1)
       .maybeSingle();
 
-    if (existingBusinessTransaction) {
-      console.log('ℹ️ Payment intent already processed by checkout.session.completed webhook');
-      console.log('ℹ️ Skipping duplicate processing - business_payment_transactions record exists:', existingBusinessTransaction.id);
+    const { data: existingFinancialTransaction } = await supabase
+      .from('financial_transactions')
+      .select('id')
+      .eq('stripe_transaction_id', paymentIntent.id)
+      .limit(1)
+      .maybeSingle();
+
+    // If both transactions exist, payment was already processed (either by webhook or payment processor)
+    if (existingBusinessTransaction && existingFinancialTransaction) {
+      console.log('ℹ️ Payment intent already processed - both transactions exist');
+      console.log('ℹ️ Financial transaction:', existingFinancialTransaction.id);
+      console.log('ℹ️ Business payment transaction:', existingBusinessTransaction.id);
+      console.log('ℹ️ Skipping duplicate processing');
+      return;
+    }
+
+    // If only one exists, log warning but continue (might be partial processing)
+    // This ensures both transactions are created even if one was created by payment processor
+    if (existingBusinessTransaction || existingFinancialTransaction) {
+      console.warn('⚠️ Partial transaction processing detected:');
+      console.warn('⚠️ Business transaction exists:', !!existingBusinessTransaction);
+      console.warn('⚠️ Financial transaction exists:', !!existingFinancialTransaction);
+      console.warn('⚠️ Continuing to ensure both transactions are created');
+    }
+    
+    // Check payment intent status - must be succeeded to create transactions
+    // If status is requires_capture, payment processor will handle it
+    if (paymentIntent.status !== 'succeeded') {
+      console.log(`ℹ️ Payment intent status is ${paymentIntent.status}, not succeeded`);
+      console.log('ℹ️ If status is requires_capture, payment processor will create transactions on capture');
+      console.log('ℹ️ Skipping transaction creation - will be handled by payment processor or future webhook');
       return;
     }
 
@@ -872,10 +899,20 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
     const isAuthorized = paymentIntent.status === 'requires_capture';
     const isCharged = paymentIntent.status === 'succeeded';
     
+    console.log('💳 Payment Intent Status Check:', {
+      status: paymentIntent.status,
+      isAuthorized,
+      isCharged,
+      paymentIntentId: paymentIntent.id,
+      bookingId: bookingId
+    });
+    
     if (isAuthorized) {
       console.log('✅ Payment authorized but not yet charged - will be captured when booking is accepted');
+      console.log('ℹ️ This payment will be captured by payment processor when booking is accepted');
     } else if (isCharged) {
-      console.log('✅ Payment already charged');
+      console.log('✅ Payment already charged - this may be from payment processor capture or automatic capture');
+      console.log('ℹ️ Checking if transactions need to be created...');
     }
 
     // Get booking details for transaction recording and notifications

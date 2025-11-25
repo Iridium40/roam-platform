@@ -160,11 +160,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
 
     // Create Payment Intent for tip
+    // Tips are charged immediately (automatic capture) when customer submits
     const paymentIntent = await stripe.paymentIntents.create({
       amount: tipAmountCents,
       currency: 'usd',
       customer: stripeCustomerId,
       description: `Tip for service provider${customer_message ? ` - ${customer_message}` : ''}`,
+      // Note: No capture_method specified = automatic capture (charges immediately)
       metadata: {
         type: 'tip',
         booking_id,
