@@ -258,8 +258,8 @@ export default function AdminVerification() {
     overdue: 0,
   });
 
-  // Filters
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  // Filters - Default to showing pending businesses for admin workflow
+  const [statusFilter, setStatusFilter] = useState<string>("pending");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -1285,13 +1285,13 @@ export default function AdminVerification() {
   }, [statusFilter, priorityFilter, searchQuery]);
 
   // Get status badge variant
-  const getStatusVariant = (status: VerificationStatus) => {
+  const getStatusVariant = (status: VerificationStatus): "default" | "success" | "warning" | "secondary" | "danger" | "neutral" | "outline" => {
     switch (status) {
       case "approved":
         return "success";
       case "rejected":
-        return "destructive";
-      case "in_review":
+        return "danger";
+      case "suspended":
         return "warning";
       case "pending":
         return "secondary";
@@ -1301,10 +1301,10 @@ export default function AdminVerification() {
   };
 
   // Get priority badge variant
-  const getPriorityVariant = (priority: string) => {
+  const getPriorityVariant = (priority: string): "default" | "success" | "warning" | "secondary" | "danger" | "neutral" | "outline" => {
     switch (priority) {
       case "urgent":
-        return "destructive";
+        return "danger";
       case "high":
         return "warning";
       case "normal":
@@ -1426,11 +1426,11 @@ export default function AdminVerification() {
 
   if (loading) {
     return (
-      <AdminLayout title="Business Verification">
+      <AdminLayout title="Business Approvals">
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
             <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4 text-roam-blue" />
-            <p className="text-muted-foreground">Loading verifications...</p>
+            <p className="text-muted-foreground">Loading business approvals...</p>
           </div>
         </div>
       </AdminLayout>
@@ -1443,9 +1443,9 @@ export default function AdminVerification() {
         {/* Header */}
         <div className="flex justify-between items-start">
           <div>
-            <h1 className="text-2xl font-bold">Business Verification</h1>
+            <h1 className="text-2xl font-bold">Business Approvals</h1>
             <p className="text-muted-foreground mt-1">
-              Manage business verification queue and approvals
+              Review documents and approve or reject businesses requesting platform access
             </p>
           </div>
           <div className="flex gap-3">
@@ -1460,49 +1460,35 @@ export default function AdminVerification() {
           </div>
         </div>
 
-        {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6">
+        {/* Workflow Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <ROAMStatCard
-            title="Total"
-            value={stats.total.toString()}
-            icon={<FileText className="w-5 h-5" />}
-            changeText="businesses"
+            title="Needs Review"
+            value={stats.pending.toString()}
+            icon={<Clock className="w-6 h-6" />}
+            changeText="pending approval"
             changeType="neutral"
           />
           <ROAMStatCard
-            title="Pending"
-            value={stats.pending.toString()}
-            icon={<Clock className="w-5 h-5" />}
-            changeText="awaiting review"
-            changeType="warning"
+            title="Urgent"
+            value={stats.overdue.toString()}
+            icon={<AlertTriangle className="w-6 h-6" />}
+            changeText="requires immediate attention"
+            changeType="negative"
           />
           <ROAMStatCard
-            title="Suspended"
-            value={stats.suspended.toString()}
-            icon={<AlertTriangle className="w-5 h-5" />}
-            changeText="suspended"
-            changeType="destructive"
-          />
-          <ROAMStatCard
-            title="Approved"
+            title="Approved Today"
             value={stats.approved.toString()}
-            icon={<CheckCircle className="w-5 h-5" />}
-            changeText="verified"
+            icon={<CheckCircle className="w-6 h-6" />}
+            changeText="completed"
             changeType="positive"
           />
           <ROAMStatCard
-            title="Rejected"
-            value={stats.rejected.toString()}
-            icon={<XCircle className="w-5 h-5" />}
-            changeText="declined"
-            changeType="destructive"
-          />
-          <ROAMStatCard
-            title="Overdue"
-            value={stats.overdue.toString()}
-            icon={<AlertTriangle className="w-5 h-5" />}
-            changeText="past due"
-            changeType="destructive"
+            title="Total Businesses"
+            value={stats.total.toString()}
+            icon={<Building2 className="w-6 h-6" />}
+            changeText="in system"
+            changeType="neutral"
           />
         </div>
 
@@ -1558,11 +1544,30 @@ export default function AdminVerification() {
           </ROAMCardContent>
         </ROAMCard>
 
-        {/* Business Verification Cards */}
+        {/* Workflow Guide */}
+        {statusFilter === "pending" && filteredVerifications.length > 0 && (
+          <ROAMCard className="bg-blue-50 border-blue-200">
+            <ROAMCardContent className="p-4">
+              <div className="flex items-start gap-3">
+                <ShieldCheck className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <h3 className="font-semibold text-blue-900 mb-1">Approval Workflow</h3>
+                  <p className="text-sm text-blue-800">
+                    <span className="font-medium">Step 1:</span> Click "Review Documents" to expand each business card.{" "}
+                    <span className="font-medium">Step 2:</span> View and verify each document individually.{" "}
+                    <span className="font-medium">Step 3:</span> Once all documents are verified, use the "Approve" or "Reject" buttons.
+                  </p>
+                </div>
+              </div>
+            </ROAMCardContent>
+          </ROAMCard>
+        )}
+
+        {/* Business Approval Cards */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold">
-              Business Verifications ({filteredVerifications.length})
+              {statusFilter === "pending" ? "Pending Approvals" : "Business Approvals"} ({filteredVerifications.length})
             </h2>
             <div className="text-sm text-muted-foreground">
               Showing {startIndex + 1}-{Math.min(endIndex, filteredVerifications.length)} of {filteredVerifications.length}
@@ -1585,10 +1590,21 @@ export default function AdminVerification() {
                 const documents = cardDocuments[business.id] || [];
 
                 return (
-                  <ROAMCard key={business.id} className="overflow-hidden">
+                  <ROAMCard 
+                    key={business.id} 
+                    className={`overflow-hidden ${
+                      business.priority === "urgent" 
+                        ? "border-l-4 border-l-red-500 shadow-lg" 
+                        : business.priority === "high" 
+                          ? "border-l-4 border-l-orange-400" 
+                          : ""
+                    }`}
+                  >
                     <ROAMCardContent className="p-0">
                       {/* Business Header */}
-                      <div className="p-6 border-b border-gray-100">
+                      <div className={`p-6 border-b border-gray-100 ${
+                        business.priority === "urgent" ? "bg-red-50/50" : ""
+                      }`}>
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
                             <div className="flex items-center gap-3 mb-3">
@@ -1696,37 +1712,85 @@ export default function AdminVerification() {
                               >
                                 {business.verification_status.replace("_", " ")}
                               </ROAMBadge>
-                              <ROAMBadge
-                                variant={getPriorityVariant(business.priority)}
-                              >
-                                {business.priority}
-                              </ROAMBadge>
+                              {business.priority !== "normal" && (
+                                <ROAMBadge
+                                  variant={getPriorityVariant(business.priority)}
+                                >
+                                  {business.priority === "urgent" ? "⚠️ Urgent" : "⚡ High Priority"}
+                                </ROAMBadge>
+                              )}
                             </div>
 
-                            <div className="flex gap-2">
+                            <div className="flex flex-col gap-2 items-end">
                               <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={() => toggleCardExpansion(business.id)}
-                                className="text-roam-blue border-roam-blue hover:bg-blue-50"
+                                className="text-roam-blue border-roam-blue hover:bg-blue-50 w-full"
                               >
                                 <FileText className="w-4 h-4 mr-1" />
-                                {isExpanded ? "Hide" : "Review"} Documents
+                                {isExpanded ? "Hide" : "Review"} Documents ({business.documents_count})
                                 {isExpanded ? (
                                   <ChevronUp className="w-4 h-4 ml-1" />
                                 ) : (
                                   <ChevronDown className="w-4 h-4 ml-1" />
                                 )}
                               </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => openDocumentReview(business)}
-                                className="text-roam-blue hover:text-roam-blue hover:bg-blue-50"
-                              >
-                                <Eye className="w-4 h-4 mr-1" />
-                                Full Review
-                              </Button>
+                              
+                              {business.verification_status !== "approved" && (
+                                <div className="flex gap-2 w-full">
+                                  <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() =>
+                                      handleBusinessActionClick(
+                                        business.id,
+                                        "reject",
+                                      )
+                                    }
+                                    className="flex-1"
+                                  >
+                                    <XCircle className="w-4 h-4 mr-1" />
+                                    Reject
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => {
+                                      const hasUnverifiedDocs = (cardDocuments[business.id] || []).some(
+                                        (doc) => doc.verification_status !== "verified"
+                                      );
+                                      const hasNoDocs = (cardDocuments[business.id] || []).length === 0;
+                                      
+                                      if (!hasUnverifiedDocs && !hasNoDocs) {
+                                        handleVerificationAction(
+                                          business.id,
+                                          "approve",
+                                          "Business approved by admin",
+                                        );
+                                      } else {
+                                        toast({
+                                          title: "Cannot Approve",
+                                          description: hasNoDocs 
+                                            ? "No documents uploaded yet" 
+                                            : "All documents must be verified before approval",
+                                          variant: "destructive",
+                                        });
+                                      }
+                                    }}
+                                    className="bg-green-600 hover:bg-green-700 flex-1"
+                                  >
+                                    <CheckCircle className="w-4 h-4 mr-1" />
+                                    Approve
+                                  </Button>
+                                </div>
+                              )}
+                              
+                              {business.verification_status === "approved" && (
+                                <div className="text-sm text-green-600 font-medium flex items-center gap-1 bg-green-50 px-3 py-2 rounded">
+                                  <CheckCircle className="w-4 h-4" />
+                                  Approved
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -1888,93 +1952,28 @@ export default function AdminVerification() {
                               </div>
                             )}
 
-                            {/* Business-level actions */}
+                            {/* Document Status Summary */}
                             <div className="border-t pt-4 mt-4">
                               <div className="flex items-center justify-between">
-                                <div className="text-sm text-muted-foreground">
-                                  Business verification actions
-                                </div>
-                                <div className="flex gap-2">
-                                  {business.verification_status !==
-                                    "approved" && (
-                                    <>
-                                      {/* Check if all documents are verified */}
-                                      {(() => {
-                                        const hasUnverifiedDocs = documents.some(
-                                          (doc) => doc.verification_status !== "verified"
-                                        );
-                                        const hasNoDocs = documents.length === 0;
-                                        const canApprove = !hasUnverifiedDocs && !hasNoDocs;
-                                        
-                                        return (
-                                          <>
-                                            <Button
-                                              variant="outline"
-                                              size="sm"
-                                              onClick={() =>
-                                                handleBusinessActionClick(
-                                                  business.id,
-                                                  "suspend",
-                                                )
-                                              }
-                                              className="text-orange-600 border-orange-600 hover:bg-orange-50"
-                                            >
-                                              Suspend
-                                            </Button>
-                                            <Button
-                                              variant="destructive"
-                                              size="sm"
-                                              onClick={() =>
-                                                handleBusinessActionClick(
-                                                  business.id,
-                                                  "reject",
-                                                )
-                                              }
-                                            >
-                                              Reject Business
-                                            </Button>
-                                            <div className="relative group">
-                                              <Button
-                                                size="sm"
-                                                onClick={() => {
-                                                  handleVerificationAction(
-                                                    business.id,
-                                                    "approve",
-                                                    "Business approved by admin",
-                                                  );
-                                                }}
-                                                disabled={!canApprove}
-                                                className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
-                                              >
-                                                Approve Business
-                                              </Button>
-                                              {!canApprove && (
-                                                <div className="absolute bottom-full mb-2 hidden group-hover:block bg-gray-900 text-white text-xs rounded py-1 px-2 whitespace-nowrap z-10">
-                                                  {hasNoDocs 
-                                                    ? "No documents uploaded"
-                                                    : `${documents.filter((d) => d.verification_status !== "verified").length} document(s) need verification`
-                                                  }
-                                                </div>
-                                              )}
-                                            </div>
-                                          </>
-                                        );
-                                      })()}
-                                    </>
-                                  )}
-                                  {business.verification_status ===
-                                    "approved" && (
-                                    <div className="text-sm text-green-600 font-medium flex items-center gap-2">
-                                      <CheckCircle className="w-4 h-4" />
-                                      Business Already Approved
-                                      {business.approved_at && (
-                                        <span className="text-xs text-muted-foreground">
-                                          on {formatDate(business.approved_at)}
-                                        </span>
-                                      )}
-                                    </div>
+                                <div className="text-sm">
+                                  <span className="font-medium">Document Review Status:</span>
+                                  <span className="ml-2 text-green-600">
+                                    {documents.filter((d) => d.verification_status === "verified").length} Verified
+                                  </span>
+                                  {documents.some((d) => d.verification_status !== "verified") && (
+                                    <span className="ml-2 text-orange-600">
+                                      • {documents.filter((d) => d.verification_status !== "verified").length} Pending
+                                    </span>
                                   )}
                                 </div>
+                                {business.verification_status !== "approved" && documents.length > 0 && (
+                                  <div className="text-xs text-muted-foreground">
+                                    {documents.every((d) => d.verification_status === "verified")
+                                      ? "✓ All documents verified - Ready to approve"
+                                      : "⚠ Review remaining documents before approval"
+                                    }
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </div>

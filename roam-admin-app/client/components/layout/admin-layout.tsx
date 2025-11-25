@@ -100,7 +100,7 @@ const navigationSections: NavSection[] = [
       {
         href: "/admin/verification",
         icon: <ShieldCheck className="w-5 h-5" />,
-        label: "Verification",
+        label: "Business Approvals",
       },
       {
         href: "/admin/providers",

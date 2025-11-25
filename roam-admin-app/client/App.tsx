@@ -162,7 +162,7 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <ErrorBoundary>
-                  <Suspense fallback={<PageLoader text="Loading Verification..." />}>
+                  <Suspense fallback={<PageLoader text="Loading Business Approvals..." />}>
                     <AdminVerification />
                   </Suspense>
                 </ErrorBoundary>
