@@ -7,7 +7,6 @@ import { FavoriteButton } from '@/components/FavoriteButton';
 import {
   ChevronLeft,
   ChevronRight,
-  Star,
   Clock,
   Tag,
   Building,
@@ -388,7 +387,8 @@ export const FeaturedServices: React.FC<FeaturedServicesProps> = ({
                               )}
 
                               {/* Action Buttons - Top Right */}
-                              <div className="absolute top-4 right-4 flex items-center gap-2 z-20">
+                              {/* Favorite and Share Icons - Top Left (where rating badge was) */}
+                              <div className="absolute top-4 left-4 flex items-center gap-2 z-20">
                                 <FavoriteButton
                                   type="business"
                                   itemId={business.id}
@@ -423,15 +423,6 @@ export const FeaturedServices: React.FC<FeaturedServicesProps> = ({
                                 </div>
                               </div>
 
-                              {/* Rating Badge - Top Left */}
-                              <div className="absolute top-4 left-4 bg-white/95 backdrop-blur-sm rounded-full px-3 py-1 shadow-lg">
-                                <div className="flex items-center gap-1">
-                                  <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                                  <span className="text-sm font-medium text-gray-900">
-                                    {business.rating}
-                                  </span>
-                                </div>
-                              </div>
                             </div>
 
                             {/* Business Content */}
@@ -447,7 +438,6 @@ export const FeaturedServices: React.FC<FeaturedServicesProps> = ({
 
                               {/* Business Stats */}
                               <div className="flex items-center justify-between text-sm text-gray-600 mb-4">
-                                <span>{business.reviews_count || 0} reviews</span>
                                 <span>{business.location || 'Location TBD'}</span>
                               </div>
 

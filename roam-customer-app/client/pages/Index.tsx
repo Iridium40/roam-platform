@@ -415,7 +415,7 @@ export default function Index() {
           setPopularServices(transformedPopular);
         }
 
-        // Fetch featured businesses
+        // Fetch featured businesses with their subcategories
         const businessesResponse = await supabase
           .from("business_profiles")
           .select(
@@ -434,6 +434,17 @@ export default function Index() {
               location_name,
               city,
               state
+            ),
+            business_services (
+              service_id,
+              is_active,
+              services (
+                subcategory_id,
+                service_subcategories (
+                  id,
+                  service_subcategory_type
+                )
+              )
             )
           `,
           )
@@ -471,32 +482,41 @@ export default function Index() {
         });
 
         if (!businessesError && businessesData) {
-          const transformedBusinesses = businessesData.map((business: any) => ({
-            id: business.id,
-            name: business.business_name,
-            description: `Professional ${business.business_type.replace("_", " ")} services`,
-            type: business.business_type,
-            rating: 4.8, // Default rating
-            reviews: Math.floor(Math.random() * 200) + 50, // Random review count
-            deliveryTypes: ["mobile", "business_location", "virtual"],
-            price: "Starting at $100",
-            image:
-              business.logo_url ||
-              business.image_url ||
-              "/api/placeholder/80/80",
-            cover_image_url: business.cover_image_url,
-            specialties: [
-              "Professional Service",
-              "Quality Care",
-              "Experienced",
-            ],
-            location: business.business_locations?.city
-              ? `${business.business_locations.city}, ${business.business_locations.state}`
-              : "Florida",
-            verification_status: business.verification_status,
-            is_featured: business.is_featured,
-            years_in_business: 5, // Default years
-          }));
+          const transformedBusinesses = businessesData.map((business: any) => {
+            // Extract unique subcategories from business_services (only active services)
+            const subcategoriesSet = new Set<string>();
+            if (business.business_services && Array.isArray(business.business_services)) {
+              business.business_services
+                .filter((bs: any) => bs.is_active === true) // Only include active services
+                .forEach((bs: any) => {
+                  if (bs.services?.service_subcategories?.service_subcategory_type) {
+                    subcategoriesSet.add(bs.services.service_subcategories.service_subcategory_type);
+                  }
+                });
+            }
+            const specialties = Array.from(subcategoriesSet).slice(0, 4); // Limit to 4 specialties
+
+            return {
+              id: business.id,
+              name: business.business_name,
+              description: `Professional ${business.business_type.replace("_", " ")} services`,
+              type: business.business_type,
+              deliveryTypes: ["mobile", "business_location", "virtual"],
+              price: "Starting at $100",
+              image:
+                business.logo_url ||
+                business.image_url ||
+                "/api/placeholder/80/80",
+              cover_image_url: business.cover_image_url,
+              specialties: specialties.length > 0 ? specialties : ["Professional Service"], // Fallback if no subcategories
+              location: business.business_locations?.city
+                ? `${business.business_locations.city}, ${business.business_locations.state}`
+                : "Florida",
+              verification_status: business.verification_status,
+              is_featured: business.is_featured,
+              years_in_business: 5, // Default years
+            };
+          });
           logger.debug(
             "Transformed featured businesses:",
             transformedBusinesses,
@@ -1599,8 +1619,8 @@ export default function Index() {
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent"></div>
                               )}
 
-                              {/* Action Buttons - Top Right */}
-                              <div className="absolute top-4 right-4 flex items-center gap-2 z-20">
+                              {/* Favorite and Share Icons - Bottom Right (where rating badge was) */}
+                              <div className="absolute -bottom-4 right-6 flex items-center gap-2 z-20">
                                 <FavoriteButton
                                   type="business"
                                   itemId={business.id}
@@ -1635,18 +1655,6 @@ export default function Index() {
                                 </div>
                               </div>
 
-                              {/* Rating Badge - Overlapping */}
-                              <div className="absolute -bottom-4 right-6 z-20">
-                                <div className="flex items-center gap-1 bg-white px-3 py-2 rounded-full shadow-xl border border-gray-100">
-                                  <Star className="w-4 h-4 text-roam-warning fill-current" />
-                                  <span className="font-bold text-sm text-gray-900">
-                                    {business.rating || '4.5'}
-                                  </span>
-                                  <span className="text-xs text-gray-600 font-medium">
-                                    ({business.reviews || 0})
-                                  </span>
-                                </div>
-                              </div>
                             </div>
 
                             {/* Content Section */}
