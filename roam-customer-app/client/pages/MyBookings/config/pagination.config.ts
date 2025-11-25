@@ -16,3 +16,23 @@ export const PAGINATION_CONFIG = {
 
 export type PaginationConfig = typeof PAGINATION_CONFIG;
 
+// Helper to detect mobile
+export const isMobileDevice = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  return window.innerWidth < 768; // Tailwind md breakpoint
+};
+
+// Get appropriate page size based on device
+export const getPageSize = (): number => {
+  return isMobileDevice() ? PAGINATION_CONFIG.mobilePageSize : PAGINATION_CONFIG.defaultPageSize;
+};
+
+// Calculate date range for bookings query
+export const getDateRange = (days: number = PAGINATION_CONFIG.defaultDateRange): { start: Date; end: Date } => {
+  const end = new Date();
+  const start = new Date();
+  start.setDate(start.getDate() - Math.min(days, PAGINATION_CONFIG.maxDateRange));
+  
+  return { start, end };
+};
+
