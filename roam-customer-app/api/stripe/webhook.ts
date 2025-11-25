@@ -471,18 +471,50 @@ async function handleBookingPayment(session: Stripe.Checkout.Session) {
     total_amount: booking.total_amount
   });
 
+  // Check payment intent status - if manual capture, it will be 'requires_capture', not 'succeeded'
+  console.log('💳 Payment Intent Status:', paymentIntent.status);
+  
+  // If payment is authorized but not captured (requires_capture), don't mark as paid yet
+  // Payment will be captured when booking is accepted by the business
+  const isAuthorized = paymentIntent.status === 'requires_capture';
+  const isCharged = paymentIntent.status === 'succeeded';
+  
+  if (isAuthorized) {
+    console.log('✅ Payment authorized but not yet charged - will be captured when booking is accepted');
+  } else if (isCharged) {
+    console.log('✅ Payment already charged at checkout');
+  }
+
   // Process the payment using the same logic as handlePaymentIntentSucceeded
-  // Update booking status to confirmed (without stripe_payment_intent_id - that column doesn't exist)
+  // Update booking status based on payment status
+  // If payment is authorized but not captured, set status to 'pending' (waiting for acceptance)
+  // If payment is already charged, set status to 'confirmed' and 'paid'
   // Check if booking is already confirmed to avoid race conditions
   if (booking.booking_status === 'confirmed' && booking.payment_status === 'paid') {
     console.log(`ℹ️ Booking ${booking.id} is already confirmed and paid - skipping update`);
   } else {
+    const updateData: any = {
+      booking_status: isCharged ? 'confirmed' : 'pending', // Only confirm if already charged
+      payment_status: isCharged ? 'paid' : 'pending', // Only mark as paid if already charged
+    };
+    
+    // Store payment intent ID if not already stored
+    if (paymentIntentId && !(booking as any).stripe_payment_intent_id) {
+      // Note: stripe_payment_intent_id column may not exist, so we'll try to update it
+      // but won't fail if it doesn't exist
+      try {
+        await supabase
+          .from('bookings')
+          .update({ stripe_payment_intent_id: paymentIntentId })
+          .eq('id', booking.id);
+      } catch (err) {
+        console.warn('⚠️ Could not update stripe_payment_intent_id (column may not exist)');
+      }
+    }
+    
     const { error: updateError } = await supabase
       .from('bookings')
-      .update({
-        booking_status: 'confirmed',
-        payment_status: 'paid',
-      })
+      .update(updateData)
       .eq('id', booking.id);
 
     if (updateError) {

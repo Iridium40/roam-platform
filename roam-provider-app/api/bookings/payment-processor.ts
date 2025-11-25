@@ -94,6 +94,8 @@ export async function processBookingAcceptance(
     // Retrieve payment intent from Stripe
     const paymentIntent = await stripe.paymentIntents.retrieve(booking.stripe_payment_intent_id);
 
+    console.log('💳 Payment Intent Status:', paymentIntent.status);
+
     // Check if payment intent is already succeeded (e.g., from initial acceptance or rescheduled booking)
     if (paymentIntent.status === 'succeeded') {
       console.log('✅ Payment intent already succeeded - booking was previously accepted');
@@ -143,6 +145,109 @@ export async function processBookingAcceptance(
         serviceAmountAuthorized: !isWithin24Hours,
         paymentIntentId: paymentIntent.id,
       };
+    }
+
+    // Check if payment intent requires capture (authorized but not charged)
+    // This happens when checkout uses manual capture
+    if (paymentIntent.status === 'requires_capture') {
+      console.log('💰 Payment intent is authorized but not charged - capturing now');
+      
+      try {
+        // Capture the payment intent (charge the customer)
+        const capturedPaymentIntent = await stripe.paymentIntents.capture(paymentIntent.id);
+        
+        if (capturedPaymentIntent.status === 'succeeded') {
+          console.log('✅ Payment captured successfully:', capturedPaymentIntent.id);
+          
+          // Calculate amounts
+          const totalAmount = booking.total_amount || 0;
+          const serviceFeeAmount = booking.service_fee || 0;
+          const serviceAmount = totalAmount - serviceFeeAmount;
+          
+          // Update booking to mark as charged
+          await supabase
+            .from('bookings')
+            .update({
+              service_fee_charged: true,
+              service_fee_charged_at: new Date().toISOString(),
+              remaining_balance_charged: true,
+              remaining_balance_charged_at: new Date().toISOString(),
+              payment_status: 'paid',
+            })
+            .eq('id', bookingId);
+
+          // Record financial transactions
+          await supabase.from('financial_transactions').insert({
+            booking_id: bookingId,
+            amount: totalAmount,
+            currency: 'USD',
+            stripe_transaction_id: capturedPaymentIntent.id,
+            payment_method: 'card',
+            description: 'Service booking payment - captured on acceptance',
+            transaction_type: 'booking_payment',
+            status: 'completed',
+            processed_at: new Date().toISOString(),
+            metadata: {
+              payment_type: 'full_payment',
+              captured_on_acceptance: true,
+            },
+          });
+
+          // Create business_payment_transaction
+          const business = Array.isArray(booking.business_profiles) 
+            ? booking.business_profiles[0] 
+            : booking.business_profiles;
+          const businessId = booking.business_id;
+          const stripeConnectAccountId = business?.stripe_connect_account_id || null;
+          const currentYear = new Date().getFullYear();
+          const paymentDate = new Date().toISOString().split('T')[0];
+
+          // Calculate platform fee (20% of service amount)
+          const platformFeePercentage = 0.2;
+          const platformFee = serviceAmount * platformFeePercentage;
+          const netPaymentAmount = serviceAmount;
+
+          await supabase.from('business_payment_transactions').insert({
+            booking_id: bookingId,
+            business_id: businessId,
+            payment_date: paymentDate,
+            gross_payment_amount: totalAmount,
+            platform_fee: platformFee,
+            net_payment_amount: netPaymentAmount,
+            tax_year: currentYear,
+            stripe_payment_intent_id: capturedPaymentIntent.id,
+            stripe_connect_account_id: stripeConnectAccountId,
+            transaction_description: 'Platform service payment',
+            booking_reference: booking.booking_reference || null,
+            transaction_type: 'initial_booking',
+          } as any);
+
+          console.log('✅ Payment processing completed:', {
+            serviceFeeCharged: true,
+            serviceAmountCharged: true,
+            paymentIntentId: capturedPaymentIntent.id,
+          });
+
+          return {
+            success: true,
+            serviceFeeCharged: true,
+            serviceAmountCharged: true,
+            serviceAmountAuthorized: false,
+            paymentIntentId: capturedPaymentIntent.id,
+          };
+        } else {
+          return {
+            success: false,
+            error: `Payment capture failed - status: ${capturedPaymentIntent.status}`,
+          };
+        }
+      } catch (captureError: any) {
+        console.error('❌ Error capturing payment intent:', captureError);
+        return {
+          success: false,
+          error: `Failed to capture payment: ${captureError.message}`,
+        };
+      }
     }
 
     // Calculate amounts

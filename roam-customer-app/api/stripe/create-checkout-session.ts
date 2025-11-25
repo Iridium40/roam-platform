@@ -141,7 +141,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       : (process.env.VITE_APP_URL || 'http://localhost:5174');
 
     // Create Checkout Session with all booking data in metadata
-    // The webhook will create the booking after successful payment
+    // Payment is AUTHORIZED at checkout but NOT CHARGED until booking is accepted
+    // The webhook will create the booking after payment authorization
     const session = await stripe.checkout.sessions.create({
       customer: stripeCustomerId,
       payment_method_types: ['card'],
@@ -164,6 +165,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         },
       ],
       mode: 'payment',
+      // Use manual capture - authorize payment but don't charge until booking is accepted
+      payment_intent_data: {
+        capture_method: 'manual', // Authorize only, capture later when booking is accepted
+      },
       success_url: `${DOMAIN}/booking-success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${DOMAIN}/book-service?serviceId=${service_id}&businessId=${business_id}`,
       // All booking data in metadata - webhook will use this to create booking
