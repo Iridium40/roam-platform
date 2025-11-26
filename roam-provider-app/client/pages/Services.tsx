@@ -16,6 +16,7 @@ import {
   ArrowRight,
   Zap,
 } from "lucide-react";
+import { ServiceIconPattern } from "@/components/ServiceIconPattern";
 
 export default function Services() {
   return (
@@ -32,13 +33,8 @@ export default function Services() {
 function Hero() {
   return (
     <div className="relative overflow-hidden bg-gradient-to-br from-roam-blue to-roam-light-blue text-white">
-      {/* Grid pattern overlay */}
-      <div 
-        className="absolute inset-0 opacity-10"
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-        }}
-      />
+      {/* Service icon pattern overlay */}
+      <ServiceIconPattern />
       
       <div className="container py-20 md:py-28 relative">
         <div className="max-w-4xl mx-auto text-center animate-fade-in">
@@ -219,9 +215,9 @@ function DeliveryOptions() {
             Designed Around Your Lifestyle
           </h2>
           <p className="text-lg text-muted-foreground">
-            Every booking adapts to how you want to experience 30A—on the beach, at home, in studio, or entirely online.
-          </p>
-        </div>
+          Every booking adapts to how you want to experience 30A—on the beach, at home, in studio, or entirely online.
+        </p>
+      </div>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 max-w-6xl mx-auto">
           {options.map(({ icon: Icon, title, description }, idx) => (
             <div 
@@ -236,7 +232,7 @@ function DeliveryOptions() {
               <p className="text-sm text-muted-foreground">{description}</p>
             </div>
           ))}
-        </div>
+          </div>
       </div>
     </div>
   );
@@ -302,13 +298,8 @@ function ExperienceSteps() {
 function FinalCTA() {
   return (
     <div className="relative overflow-hidden bg-gradient-to-br from-roam-blue to-roam-light-blue text-white py-20">
-      {/* Grid pattern overlay */}
-      <div 
-        className="absolute inset-0 opacity-10"
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-        }}
-      />
+      {/* Service icon pattern overlay */}
+      <ServiceIconPattern />
       
       <div className="container relative">
         <div className="max-w-3xl mx-auto text-center">

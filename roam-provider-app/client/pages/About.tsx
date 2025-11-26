@@ -20,6 +20,7 @@ import {
   TrendingUp,
   DollarSign,
 } from "lucide-react";
+import { ServiceIconPattern } from "@/components/ServiceIconPattern";
 
 export default function About() {
   return (
@@ -42,13 +43,8 @@ export default function About() {
 function Hero() {
   return (
     <div className="relative overflow-hidden bg-gradient-to-br from-roam-blue to-roam-light-blue text-white">
-      {/* Grid pattern overlay */}
-      <div 
-        className="absolute inset-0 opacity-10"
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-        }}
-      />
+      {/* Service icon pattern overlay */}
+      <ServiceIconPattern />
       
       <div className="container py-20 md:py-28 relative">
         <div className="max-w-4xl mx-auto text-center animate-fade-in">
@@ -104,8 +100,8 @@ function AtAGlance() {
                 <Icon className="w-6 h-6" />
               </div>
               <div className="text-3xl font-extrabold tracking-tight gradient-text">{s.value}</div>
-              <div className="mt-1 text-sm text-muted-foreground">{s.label}</div>
-            </div>
+            <div className="mt-1 text-sm text-muted-foreground">{s.label}</div>
+          </div>
           );
         })}
       </div>
@@ -121,30 +117,30 @@ function Story() {
           <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">Our Story</h2>
           <p className="text-lg text-muted-foreground mb-6">Born from the 30A Lifestyle</p>
           <div className="prose prose-neutral max-w-none dark:prose-invert space-y-4 text-foreground/80">
-            <p>
-              ROAM - Your Best Life. Everywhere was born from a simple observation: the 30A coastal lifestyle embodies
-              wellness, balance, and living your best life. But finding and booking quality wellness services shouldn't be
-              a challenge—it should be as effortless as a beach day.
-            </p>
-            <p>
-              Founded in the heart of Florida's beautiful 30A region, ROAM was created to bridge the gap between busy
-              lifestyles and essential self-care. We saw locals and visitors alike struggling to find reliable massage
-              therapists, IV therapy providers, personal trainers, and beauty professionals. Booking appointments meant
-              endless phone calls, uncertain availability, and no way to read reviews or compare services.
-            </p>
-            <p>We knew there had to be a better way.</p>
-            <p>
-              <strong>ROAM 30A LLC</strong> was founded with a clear mission: make wellness accessible, convenient, and
-              trustworthy. We built a platform where customers can discover, book, and enjoy premium wellness services with
-              just a few taps—whether you're at home, on vacation, or anywhere along the beautiful 30A corridor.
-            </p>
-            <p>
-              Today, ROAM connects verified wellness professionals—from licensed physicians to certified massage
-              therapists, IV therapy specialists to professional beauty experts—with thousands of customers throughout the
-              30A region, making it easier than ever to prioritize your wellbeing without sacrificing convenience.
-            </p>
-          </div>
+          <p>
+            ROAM - Your Best Life. Everywhere was born from a simple observation: the 30A coastal lifestyle embodies
+            wellness, balance, and living your best life. But finding and booking quality wellness services shouldn't be
+            a challenge—it should be as effortless as a beach day.
+          </p>
+          <p>
+            Founded in the heart of Florida's beautiful 30A region, ROAM was created to bridge the gap between busy
+            lifestyles and essential self-care. We saw locals and visitors alike struggling to find reliable massage
+            therapists, IV therapy providers, personal trainers, and beauty professionals. Booking appointments meant
+            endless phone calls, uncertain availability, and no way to read reviews or compare services.
+          </p>
+          <p>We knew there had to be a better way.</p>
+          <p>
+            <strong>ROAM 30A LLC</strong> was founded with a clear mission: make wellness accessible, convenient, and
+            trustworthy. We built a platform where customers can discover, book, and enjoy premium wellness services with
+            just a few taps—whether you're at home, on vacation, or anywhere along the beautiful 30A corridor.
+          </p>
+          <p>
+            Today, ROAM connects verified wellness professionals—from licensed physicians to certified massage
+            therapists, IV therapy specialists to professional beauty experts—with thousands of customers throughout the
+            30A region, making it easier than ever to prioritize your wellbeing without sacrificing convenience.
+          </p>
         </div>
+      </div>
       </div>
     </div>
   );
@@ -228,7 +224,7 @@ function Different() {
         <div className="max-w-3xl mx-auto text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">What Makes ROAM Different</h2>
           <p className="text-muted-foreground">More Than Just a Booking Platform</p>
-        </div>
+      </div>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 max-w-6xl mx-auto">
           {items.map(({ icon: Icon, title, body }, idx) => (
             <div 
@@ -238,12 +234,12 @@ function Different() {
             >
               <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-roam-blue to-roam-light-blue text-white">
                 <Icon className="w-6 h-6" />
-              </div>
-              <h3 className="mt-4 text-lg font-semibold">{title}</h3>
-              <p className="mt-2 text-sm text-muted-foreground">{body}</p>
             </div>
-          ))}
-        </div>
+            <h3 className="mt-4 text-lg font-semibold">{title}</h3>
+            <p className="mt-2 text-sm text-muted-foreground">{body}</p>
+          </div>
+        ))}
+      </div>
       </div>
     </div>
   );
@@ -278,7 +274,7 @@ function ServiceArea() {
             <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-roam-blue to-roam-light-blue flex items-center justify-center text-white">
               <MapPin className="w-5 h-5" />
             </div>
-            <h3 className="text-lg font-semibold">Primary 30A Communities</h3>
+          <h3 className="text-lg font-semibold">Primary 30A Communities</h3>
           </div>
           <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-muted-foreground">
             {primary.map((p) => (
@@ -294,7 +290,7 @@ function ServiceArea() {
             <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-roam-blue to-roam-light-blue flex items-center justify-center text-white">
               <MapPin className="w-5 h-5" />
             </div>
-            <h3 className="text-lg font-semibold">Extended Service Areas</h3>
+          <h3 className="text-lg font-semibold">Extended Service Areas</h3>
           </div>
           <ul className="grid grid-cols-1 gap-2 text-sm text-muted-foreground">
             {extended.map((p) => (
@@ -373,13 +369,8 @@ function Impact() {
   
   return (
     <div className="relative overflow-hidden bg-gradient-to-br from-roam-blue to-roam-light-blue text-white py-20">
-      {/* Grid pattern overlay */}
-      <div 
-        className="absolute inset-0 opacity-10"
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-        }}
-      />
+      {/* Service icon pattern overlay */}
+      <ServiceIconPattern />
       
       <div className="container relative">
         <div className="max-w-4xl mx-auto text-center mb-12">
@@ -398,10 +389,10 @@ function Impact() {
                 <div className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-white/20 text-white mb-3 mx-auto">
                   <Icon className="w-5 h-5" />
                 </div>
-                <div className="text-3xl font-extrabold">{s.value}</div>
-                <div className="mt-1 text-sm">{s.label}</div>
+              <div className="text-3xl font-extrabold">{s.value}</div>
+              <div className="mt-1 text-sm">{s.label}</div>
                 <div className="mt-1 text-xs text-white/80">{s.note}</div>
-              </div>
+            </div>
             );
           })}
         </div>
@@ -471,9 +462,9 @@ function ForProviders() {
         <div className="max-w-3xl mx-auto text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4 gradient-text">Why Choose ROAM?</h2>
           <p className="text-lg text-muted-foreground">
-            For Providers, ROAM offers a comprehensive solution for growing your business and serving the 30A community.
-          </p>
-        </div>
+          For Providers, ROAM offers a comprehensive solution for growing your business and serving the 30A community.
+        </p>
+      </div>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 max-w-6xl mx-auto">
           {benefits.map(({ icon: Icon, title, body }, idx) => (
             <div 
@@ -484,11 +475,11 @@ function ForProviders() {
               <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-roam-blue to-roam-light-blue text-white">
                 <Icon className="w-6 h-6" />
               </div>
-              <h3 className="mt-4 text-lg font-semibold">{title}</h3>
-              <p className="mt-2 text-sm text-muted-foreground">{body}</p>
-            </div>
-          ))}
-        </div>
+            <h3 className="mt-4 text-lg font-semibold">{title}</h3>
+            <p className="mt-2 text-sm text-muted-foreground">{body}</p>
+          </div>
+        ))}
+      </div>
       </div>
     </div>
   );
@@ -497,13 +488,8 @@ function ForProviders() {
 function FinalCTA() {
   return (
     <div className="relative overflow-hidden bg-gradient-to-br from-roam-blue to-roam-light-blue text-white py-20">
-      {/* Grid pattern overlay */}
-      <div 
-        className="absolute inset-0 opacity-10"
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-        }}
-      />
+      {/* Service icon pattern overlay */}
+      <ServiceIconPattern />
       
       <div className="container relative">
         <div className="max-w-3xl mx-auto text-center">
@@ -511,15 +497,15 @@ function FinalCTA() {
             Ready to Experience ROAM?
           </h2>
           <p className="text-lg text-white/90 mb-8">
-            Join our community of wellness enthusiasts and providers today.
-          </p>
+          Join our community of wellness enthusiasts and providers today.
+        </p>
           <div className="flex flex-wrap items-center justify-center gap-4">
             <Button asChild size="lg" className="bg-white text-roam-blue hover:bg-white/90 button-shine">
-              <Link to="/provider-portal">Become a Provider</Link>
-            </Button>
+            <Link to="/provider-portal">Become a Provider</Link>
+          </Button>
             <Button asChild size="lg" className="bg-roam-yellow text-roam-blue hover:bg-roam-yellow/90 font-semibold">
-              <Link to="/contact">Talk to Our Team</Link>
-            </Button>
+            <Link to="/contact">Talk to Our Team</Link>
+          </Button>
           </div>
         </div>
       </div>

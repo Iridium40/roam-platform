@@ -135,7 +135,7 @@ export default function HowItWorks() {
                 </Link>
               </Button>
               <Button asChild size="lg" className="bg-roam-yellow text-roam-blue hover:bg-roam-yellow/90 font-semibold shadow-lg">
-                <a href="https://roamprovider.com" target="_blank" rel="noopener noreferrer">
+                <a href="https://www.roamprovider.com" target="_blank" rel="noopener noreferrer">
                   <Users className="w-5 h-5 mr-2" />
                   Become a Provider
                 </a>
@@ -322,7 +322,7 @@ export default function HowItWorks() {
                   </Link>
                 </Button>
                 <Button asChild size="lg" variant="outline" className="border-2 border-roam-blue text-roam-blue hover:bg-roam-blue hover:text-white shadow-lg hover-scale">
-                  <a href="https://roamprovider.com" target="_blank" rel="noopener noreferrer">
+                  <a href="https://www.roamprovider.com" target="_blank" rel="noopener noreferrer">
                     <Users className="w-5 h-5 mr-2" />
                     Become a Provider
                   </a>

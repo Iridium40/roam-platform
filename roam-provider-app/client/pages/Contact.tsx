@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Mail, Clock, ShieldCheck, HelpCircle, MessageSquare, Book, Phone } from "lucide-react";
 import { Link } from "react-router-dom";
+import { ServiceIconPattern } from "@/components/ServiceIconPattern";
 
 export default function Contact() {
   const [loading, setLoading] = useState(false);
@@ -48,13 +49,8 @@ export default function Contact() {
 function Hero() {
   return (
     <div className="relative overflow-hidden bg-gradient-to-br from-roam-blue to-roam-light-blue text-white">
-      {/* Grid pattern overlay */}
-      <div 
-        className="absolute inset-0 opacity-10"
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-        }}
-      />
+      {/* Service icon pattern overlay */}
+      <ServiceIconPattern />
       
       <div className="container py-20 md:py-28 relative">
         <div className="max-w-3xl mx-auto text-center animate-fade-in">
@@ -95,92 +91,92 @@ function ContactSection({ onSubmit, loading }: { onSubmit: (e: React.FormEvent<H
     <div className="container py-20">
       <div className="grid gap-12 lg:grid-cols-5">
         {/* Contact Form */}
-        <div className="lg:col-span-3">
+          <div className="lg:col-span-3">
           <div className="overflow-hidden rounded-2xl border bg-card shadow-lg">
             <div className="border-b bg-gradient-to-r from-roam-blue/10 to-roam-light-blue/10 p-6">
               <h2 className="text-2xl font-bold">Send Us a Message</h2>
               <p className="mt-1 text-sm text-muted-foreground">
                 We'll route it to the right person and get back quickly.
               </p>
-            </div>
-            <form onSubmit={onSubmit} className="grid gap-6 p-6">
+              </div>
+              <form onSubmit={onSubmit} className="grid gap-6 p-6">
               <div className="grid gap-4 sm:grid-cols-2">
-                <div className="grid gap-2">
-                  <label htmlFor="name" className="text-sm font-medium">
+                  <div className="grid gap-2">
+                    <label htmlFor="name" className="text-sm font-medium">
                     Full Name <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    id="name"
-                    name="name"
-                    required
-                    autoComplete="name"
+                    </label>
+                    <input
+                      id="name"
+                      name="name"
+                      required
+                      autoComplete="name"
                     className="h-11 rounded-lg border bg-background px-4 outline-none ring-offset-background transition-all focus-visible:ring-2 focus-visible:ring-roam-blue"
                     placeholder="John Doe"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <label htmlFor="email" className="text-sm font-medium">
+                    Email <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      id="email"
+                      name="email"
+                      type="email"
+                      required
+                      autoComplete="email"
+                    className="h-11 rounded-lg border bg-background px-4 outline-none ring-offset-background transition-all focus-visible:ring-2 focus-visible:ring-roam-blue"
+                    placeholder="john@example.com"
+                    />
+                  </div>
+                </div>
+              <div className="grid gap-2">
+                  <label htmlFor="phone" className="text-sm font-medium">
+                    Phone (optional)
+                  </label>
+                  <input
+                    id="phone"
+                    name="phone"
+                    autoComplete="tel"
+                  className="h-11 rounded-lg border bg-background px-4 outline-none ring-offset-background transition-all focus-visible:ring-2 focus-visible:ring-roam-blue"
+                  placeholder="(555) 123-4567"
                   />
                 </div>
                 <div className="grid gap-2">
-                  <label htmlFor="email" className="text-sm font-medium">
-                    Email <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    id="email"
-                    name="email"
-                    type="email"
-                    required
-                    autoComplete="email"
-                    className="h-11 rounded-lg border bg-background px-4 outline-none ring-offset-background transition-all focus-visible:ring-2 focus-visible:ring-roam-blue"
-                    placeholder="john@example.com"
-                  />
-                </div>
-              </div>
-              <div className="grid gap-2">
-                <label htmlFor="phone" className="text-sm font-medium">
-                  Phone (optional)
-                </label>
-                <input
-                  id="phone"
-                  name="phone"
-                  autoComplete="tel"
-                  className="h-11 rounded-lg border bg-background px-4 outline-none ring-offset-background transition-all focus-visible:ring-2 focus-visible:ring-roam-blue"
-                  placeholder="(555) 123-4567"
-                />
-              </div>
-              <div className="grid gap-2">
-                <label htmlFor="message" className="text-sm font-medium">
+                  <label htmlFor="message" className="text-sm font-medium">
                   How can we help? <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                  id="message"
-                  name="message"
-                  required
-                  rows={7}
+                  </label>
+                  <textarea
+                    id="message"
+                    name="message"
+                    required
+                    rows={7}
                   className="rounded-lg border bg-background p-4 outline-none ring-offset-background transition-all focus-visible:ring-2 focus-visible:ring-roam-blue"
                   placeholder="Tell us about your inquiry..."
-                />
-              </div>
-              <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3">
-                <Button
-                  type="submit"
-                  disabled={loading}
+                  />
+                </div>
+                <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3">
+                  <Button
+                    type="submit"
+                    disabled={loading}
                   size="lg"
                   className="w-full sm:w-auto bg-roam-blue text-white hover:bg-roam-blue/90 button-shine"
-                >
-                  {loading ? "Sending..." : "Send Message"}
-                </Button>
+                  >
+                    {loading ? "Sending..." : "Send Message"}
+                  </Button>
                 <Button type="reset" variant="outline" size="lg" className="w-full sm:w-auto">
-                  Clear
-                </Button>
+                    Clear
+                  </Button>
               </div>
-              <p className="text-xs text-muted-foreground">
-                By submitting, you agree to be contacted about your inquiry.
-              </p>
-            </form>
+                  <p className="text-xs text-muted-foreground">
+                    By submitting, you agree to be contacted about your inquiry.
+                  </p>
+              </form>
+            </div>
           </div>
-        </div>
 
         {/* Contact Info Sidebar */}
-        <aside className="lg:col-span-2">
-          <div className="lg:sticky lg:top-24 space-y-6">
+          <aside className="lg:col-span-2">
+            <div className="lg:sticky lg:top-24 space-y-6">
             <h3 className="text-xl font-bold">Contact Information</h3>
             
             {contactMethods.map((method, idx) => {
@@ -203,13 +199,13 @@ function ContactSection({ onSubmit, loading }: { onSubmit: (e: React.FormEvent<H
                         <a 
                           href={method.link}
                           className="inline-flex items-center gap-1 text-xs text-roam-blue hover:underline mt-2"
-                        >
+                >
                           Contact us <Mail className="w-3 h-3" />
-                        </a>
+                </a>
                       )}
                     </div>
                   </div>
-                </div>
+              </div>
               );
             })}
 
@@ -228,11 +224,11 @@ function ContactSection({ onSubmit, loading }: { onSubmit: (e: React.FormEvent<H
                   <ShieldCheck className="w-4 h-4 text-roam-blue flex-shrink-0 mt-0.5" />
                   Learn best practices to maximize earnings
                 </li>
-              </ul>
+                </ul>
+              </div>
             </div>
-          </div>
-        </aside>
-      </div>
+          </aside>
+        </div>
     </div>
   );
 }

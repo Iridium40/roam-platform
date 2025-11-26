@@ -82,15 +82,15 @@ export default function TermsAndConditions() {
                     <div className="bg-roam-blue/5 p-6 rounded-xl border border-roam-blue/20">
                       <h3 className="text-xl font-bold mb-3">1.1 Payment Authorization</h3>
                       <p className="text-foreground/80 leading-relaxed">
-                        By submitting a booking request, you agree to our terms and conditions. Upon booking acceptance by the business, both service fees (platform fees) and business service fees will be charged immediately.
-                      </p>
+                    By submitting a booking request, you agree to our terms and conditions. Upon booking acceptance by the business, both service fees (platform fees) and business service fees will be charged immediately.
+                  </p>
                     </div>
 
                     <div className="bg-roam-blue/5 p-6 rounded-xl border border-roam-blue/20">
                       <h3 className="text-xl font-bold mb-3">1.2 Service Fees</h3>
                       <p className="text-foreground/80 leading-relaxed">
                         Both service fees (platform fees) and business service fees are charged immediately upon booking acceptance. Service fees (platform fees) are <strong className="text-roam-blue">non-refundable</strong> and will be charged upon acceptance of your booking, regardless of any subsequent cancellations or changes. Business service fees are refundable if you cancel your booking 24 hours or more before the scheduled booking date and time.
-                      </p>
+                  </p>
                     </div>
                   </div>
                 </section>
@@ -107,8 +107,8 @@ export default function TermsAndConditions() {
                     <div className="bg-green-50 p-6 rounded-xl border border-green-200">
                       <h3 className="text-xl font-bold mb-3 text-green-800">2.1 Cancellation Prior to 24 Hours</h3>
                       <p className="text-foreground/80 leading-relaxed mb-4">
-                        If you cancel your booking 24 hours or more before the scheduled booking date and time:
-                      </p>
+                    If you cancel your booking 24 hours or more before the scheduled booking date and time:
+                  </p>
                       <ul className="space-y-2 ml-6 text-foreground/80">
                         <li className="flex items-start gap-2">
                           <span className="text-green-600 mt-1">•</span>
@@ -122,18 +122,18 @@ export default function TermsAndConditions() {
                           <span className="text-green-600 mt-1">•</span>
                           <span>The service amount will be refunded in full.</span>
                         </li>
-                      </ul>
+                  </ul>
                     </div>
 
                     <div className="bg-red-50 p-6 rounded-xl border border-red-200">
                       <h3 className="text-xl font-bold mb-3 text-red-800">2.2 Cancellation Within 24 Hours</h3>
                       <p className="text-foreground/80 leading-relaxed mb-4">
                         If you cancel your booking within 24 hours of the scheduled booking date and time, you will incur a <strong className="text-red-600">100% loss</strong> with no refund provided. This includes both the service fee and the full service amount. No refunds will be issued for cancellations made within 24 hours of the scheduled booking time.
-                      </p>
+                  </p>
                       <div className="bg-white p-4 rounded-lg border border-red-300">
                         <p className="text-sm font-semibold text-foreground/90">
                           <strong>💡 Rescheduling Option:</strong> To prevent loss of funds, you may reschedule your booking instead of cancelling. Rescheduling allows you to move your booking to a different date and time without losing your payment.
-                        </p>
+                  </p>
                       </div>
                     </div>
                   </div>
@@ -149,8 +149,8 @@ export default function TermsAndConditions() {
                   
                   <div className="bg-purple-50 p-6 rounded-xl border border-purple-200">
                     <p className="text-foreground/80 leading-relaxed mb-4">
-                      If you have any questions, concerns, or wish to dispute a charge, please contact ROAM at:
-                    </p>
+                    If you have any questions, concerns, or wish to dispute a charge, please contact ROAM at:
+                  </p>
                     <div className="bg-white p-4 rounded-lg border border-purple-200 mb-4">
                       <p className="text-sm font-semibold mb-1">Email Support:</p>
                       <a href="mailto:contactus@roamyourbestlife.com" className="text-roam-blue hover:underline font-medium">
@@ -159,7 +159,7 @@ export default function TermsAndConditions() {
                     </div>
                     <p className="text-foreground/80 leading-relaxed">
                       We will review your dispute and respond within <strong>5-7 business days</strong>.
-                    </p>
+                  </p>
                   </div>
                 </section>
 
@@ -173,19 +173,19 @@ export default function TermsAndConditions() {
                   
                   <div className="bg-blue-50 p-6 rounded-xl border border-blue-200">
                     <p className="text-foreground/80 leading-relaxed">
-                      By using ROAM's services, you agree to comply with all applicable laws and regulations. ROAM reserves the right to modify these terms and conditions at any time. Continued use of our services after changes constitutes acceptance of the modified terms.
-                    </p>
+                    By using ROAM's services, you agree to comply with all applicable laws and regulations. ROAM reserves the right to modify these terms and conditions at any time. Continued use of our services after changes constitutes acceptance of the modified terms.
+                  </p>
                   </div>
                 </section>
 
                 <div className="mt-12 pt-6 border-t-2 border-gray-200">
                   <div className="bg-gradient-to-br from-roam-blue/5 to-roam-light-blue/5 p-6 rounded-xl">
                     <p className="text-sm text-foreground/70 text-center leading-relaxed">
-                      If you have any questions about these terms and conditions, please contact us at{" "}
+                    If you have any questions about these terms and conditions, please contact us at{" "}
                       <a href="mailto:contactus@roamyourbestlife.com" className="text-roam-blue hover:underline font-medium">
-                        contactus@roamyourbestlife.com
-                      </a>
-                    </p>
+                      contactus@roamyourbestlife.com
+                    </a>
+                  </p>
                   </div>
                 </div>
               </div>

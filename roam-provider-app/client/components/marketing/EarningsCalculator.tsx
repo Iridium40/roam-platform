@@ -87,7 +87,7 @@ export default function EarningsCalculator() {
             No commissions. No hidden fees. Your earnings are your earnings.
           </p>
           <Button className="mt-6 w-full" asChild>
-            <a href="/apply">Start Earning →</a>
+            <a href="/become-a-provider">Start Earning →</a>
           </Button>
         </div>
       </div>

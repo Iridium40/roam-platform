@@ -406,7 +406,7 @@ export default function About() {
                     cutting-edge technology and a dedicated customer base.
                   </p>
                   <Button asChild variant="outline" className="w-full border-2 border-roam-light-blue text-roam-light-blue hover:bg-roam-light-blue hover:text-white shadow-md">
-                    <a href="https://roamprovider.com" target="_blank" rel="noopener noreferrer">
+                    <a href="https://www.roamprovider.com" target="_blank" rel="noopener noreferrer">
                       <TrendingUp className="w-4 h-4 mr-2" />
                       Become a Provider
                     </a>

@@ -113,7 +113,7 @@ export default function BecomeProvider() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center animate-scale-in">
               <Button asChild size="lg" className="bg-white text-roam-blue hover:bg-white/90 button-shine shadow-lg hover-scale">
-                <a href="https://roamprovider.com" target="_blank" rel="noopener noreferrer">
+                <a href="https://www.roamprovider.com" target="_blank" rel="noopener noreferrer">
                   <ExternalLink className="w-5 h-5 mr-2" />
                   Go to Provider Portal
                 </a>
@@ -181,12 +181,12 @@ export default function BecomeProvider() {
             </Badge>
             <h2 className="text-4xl font-bold mb-4">
               Start Earning in <span className="text-roam-light-blue">4 Easy Steps</span>
-            </h2>
+              </h2>
             <p className="text-xl text-foreground/70 max-w-3xl mx-auto leading-relaxed">
               Our streamlined onboarding process makes it easy to join and start accepting bookings.
             </p>
-          </div>
-
+                </div>
+                
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             {steps.map((step, index) => {
               const Icon = step.icon;
@@ -198,14 +198,14 @@ export default function BecomeProvider() {
                     </div>
                     <div className="absolute top-4 right-4 w-10 h-10 bg-roam-blue/10 rounded-full flex items-center justify-center">
                       <span className="text-lg font-bold text-roam-blue">{step.number}</span>
-                    </div>
+                </div>
                     <h3 className="text-xl font-bold mb-3">{step.title}</h3>
                     <p className="text-sm text-foreground/70 leading-relaxed">{step.description}</p>
                   </CardContent>
                 </Card>
               );
             })}
-          </div>
+              </div>
         </section>
 
         {/* CTA Section */}
@@ -222,7 +222,7 @@ export default function BecomeProvider() {
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
                 <Button asChild size="lg" className="bg-roam-blue hover:bg-roam-blue/90 button-shine shadow-lg hover-scale">
-                  <a href="https://roamprovider.com" target="_blank" rel="noopener noreferrer">
+                  <a href="https://www.roamprovider.com" target="_blank" rel="noopener noreferrer">
                     <ExternalLink className="w-5 h-5 mr-2" />
                     Apply Now
                   </a>
@@ -230,12 +230,12 @@ export default function BecomeProvider() {
                 <Button asChild size="lg" variant="outline" className="border-2 border-roam-blue text-roam-blue hover:bg-roam-blue hover:text-white shadow-lg hover-scale">
                   <Link to="/contact">
                     Questions? Contact Us
-                  </Link>
-                </Button>
-              </div>
+                    </Link>
+                  </Button>
+                </div>
               <div className="text-center">
                 <p className="text-sm text-foreground/60">
-                  Already a provider? <a href="https://roamprovider.com" className="text-roam-blue hover:underline font-medium transition-all">Sign in to your account</a>
+                  Already a provider? <a href="https://www.roamprovider.com" className="text-roam-blue hover:underline font-medium transition-all">Sign in to your account</a>
                 </p>
               </div>
             </CardContent>

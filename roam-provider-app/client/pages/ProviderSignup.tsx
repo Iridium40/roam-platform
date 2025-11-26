@@ -32,23 +32,6 @@ export default function ProviderSignup() {
             {/* Left Side - Benefits & Info */}
             <div className="text-center lg:text-left space-y-8">
               <div>
-                <Link to="/" className="inline-block mb-6">
-                  <img
-                    src="/logo.png"
-                    alt="ROAM"
-                    className="h-16 w-auto mx-auto lg:mx-0"
-                    onError={(e) => {
-                      const target = e.currentTarget;
-                      target.style.display = 'none';
-                      // Try alternative logo paths
-                      if (!target.dataset.triedAlt) {
-                        target.dataset.triedAlt = 'true';
-                        target.src = '/roam-icon.png';
-                        target.style.display = 'block';
-                      }
-                    }}
-                  />
-                </Link>
                 <h1 className="text-2xl sm:text-4xl lg:text-6xl font-bold mb-4 sm:mb-6 text-roam-blue">
                   Become a Provider
                 </h1>
@@ -105,12 +88,11 @@ export default function ProviderSignup() {
             <div className="w-full max-w-md sm:max-w-lg mx-auto lg:mx-0">
               <Card className="border-border/50 shadow-lg">
                 <CardHeader className="text-center pb-4">
-                  {/* Logo for mobile/tablet view */}
-                  <div className="lg:hidden mb-4">
+                  <div className="mb-4 flex justify-center">
                     <img
                       src="/logo.png"
                       alt="ROAM"
-                      className="h-12 w-auto mx-auto"
+                      className="h-16 w-auto"
                       onError={(e) => {
                         const target = e.currentTarget;
                         target.style.display = 'none';
@@ -121,9 +103,6 @@ export default function ProviderSignup() {
                         }
                       }}
                     />
-                  </div>
-                  <div className="w-16 h-16 bg-gradient-to-br from-roam-blue to-roam-light-blue rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Users className="w-8 h-8 text-white" />
                   </div>
                   <CardTitle className="text-2xl">Start Your Application</CardTitle>
                   <p className="text-sm text-foreground/60 mt-2">
@@ -223,9 +202,9 @@ export default function ProviderSignup() {
                         className="p-0 h-auto text-roam-blue"
                         asChild
                       >
-                        <a href="https://www.roamprovider.com/contact" target="_blank" rel="noopener noreferrer">
+                        <Link to="/contact">
                           Contact Support
-                        </a>
+                        </Link>
                       </Button>
                     </p>
                   </div>

@@ -46,17 +46,17 @@ export default function Privacy() {
                   <CheckCircle className="w-5 h-5 text-white" />
                 </div>
                 <h2 className="text-2xl font-bold">{P.summary.title}</h2>
-              </div>
+            </div>
               <p className="text-foreground/70 mb-6 leading-relaxed">{P.summary.description}</p>
               <div className="grid gap-3 sm:grid-cols-2">
-                {P.summary.keyCommitments.map((k) => (
+              {P.summary.keyCommitments.map((k) => (
                   <div key={k} className="rounded-xl border-2 border-roam-blue/20 bg-roam-blue/5 p-4 text-sm font-medium">
                     <div className="flex items-start gap-2">
                       <CheckCircle className="w-4 h-4 text-roam-blue mt-0.5 flex-shrink-0" />
                       <span>{k}</span>
                     </div>
                   </div>
-                ))}
+              ))}
               </div>
             </CardContent>
           </Card>
@@ -70,9 +70,9 @@ export default function Privacy() {
                 </div>
                 <h2 className="text-xl font-bold">Contents</h2>
               </div>
-              <ol className="grid gap-2 sm:grid-cols-2">
+            <ol className="grid gap-2 sm:grid-cols-2">
                 {P.sections.map((s, index) => (
-                  <li key={s.id}>
+                <li key={s.id}>
                     <a 
                       className="flex items-center gap-2 p-3 rounded-xl hover:bg-roam-blue/5 hover:border-roam-blue border border-transparent transition-all group" 
                       href={`#${s.id}`}
@@ -81,10 +81,10 @@ export default function Privacy() {
                         {index + 1}
                       </span>
                       <span className="text-sm font-medium group-hover:text-roam-blue transition-all">{s.title}</span>
-                    </a>
-                  </li>
-                ))}
-              </ol>
+                  </a>
+                </li>
+              ))}
+            </ol>
             </CardContent>
           </Card>
 
@@ -93,7 +93,7 @@ export default function Privacy() {
             <CardContent className="p-8 md:p-12">
               <article className="space-y-10">
                 {P.sections.map((s, index) => (
-                  <section key={s.id} id={s.id} className="scroll-mt-24">
+              <section key={s.id} id={s.id} className="scroll-mt-24">
                     <div className="flex items-start gap-3 mb-4">
                       <div className="w-10 h-10 bg-gradient-to-br from-roam-blue to-roam-light-blue rounded-xl flex items-center justify-center shadow-sm flex-shrink-0 mt-1">
                         <span className="text-white font-bold">{index + 1}</span>
@@ -101,11 +101,11 @@ export default function Privacy() {
                       <h3 className="text-2xl font-bold">{s.title}</h3>
                     </div>
                     <div className="whitespace-pre-line leading-relaxed text-[15px] text-foreground/80 bg-roam-blue/5 p-6 rounded-xl border border-roam-blue/20">
-                      {s.content}
-                    </div>
-                  </section>
-                ))}
-              </article>
+                  {s.content}
+                </div>
+              </section>
+            ))}
+          </article>
             </CardContent>
           </Card>
 

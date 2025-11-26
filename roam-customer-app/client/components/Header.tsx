@@ -97,7 +97,7 @@ export function Header() {
                   asChild 
                   className="bg-roam-blue hover:bg-roam-blue/90 transition-all duration-300 button-shine"
                 >
-                  <a href="https://roamprovider.com" target="_blank" rel="noopener noreferrer">Become a Provider</a>
+                  <a href="https://www.roamprovider.com" target="_blank" rel="noopener noreferrer">Become a Provider</a>
                 </Button>
               </>
             )}
@@ -161,7 +161,7 @@ export function Header() {
                     Sign In
                   </Button>
                   <Button asChild className="bg-roam-blue hover:bg-roam-blue/90">
-                    <a href="https://roamprovider.com" target="_blank" rel="noopener noreferrer">Become a Provider</a>
+                    <a href="https://www.roamprovider.com" target="_blank" rel="noopener noreferrer">Become a Provider</a>
                   </Button>
                 </div>
               )}

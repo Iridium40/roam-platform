@@ -13,6 +13,7 @@ import {
   TrendingUp,
   ArrowRight,
 } from "lucide-react";
+import { ServiceIconPattern } from "@/components/ServiceIconPattern";
 
 function Check({ className = "w-5 h-5 text-green-500 mr-2" }: { className?: string }) {
   return (
@@ -41,13 +42,8 @@ export default function HowItWorks() {
 function Hero() {
   return (
     <div className="relative overflow-hidden bg-gradient-to-br from-roam-blue to-roam-light-blue text-white">
-      {/* Grid pattern overlay */}
-      <div 
-        className="absolute inset-0 opacity-10"
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-        }}
-      />
+      {/* Service icon pattern overlay */}
+      <ServiceIconPattern />
       
       <div className="container py-20 md:py-28 relative">
         <div className="max-w-4xl mx-auto text-center animate-fade-in">
@@ -184,37 +180,37 @@ function Features() {
               {/* Gradient icon container */}
               <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-roam-blue to-roam-light-blue text-white mb-6 group-hover:scale-110 transition-transform">
                 <Icon className="w-8 h-8" />
-              </div>
+            </div>
               
               <h3 className="text-2xl font-bold mb-3">{card.title}</h3>
               <p className="text-muted-foreground leading-relaxed mb-4">{card.description}</p>
               
-              <div
+            <div
                 className="mt-4 overflow-hidden rounded-xl border bg-white cursor-zoom-in hover-scale"
-                role="button"
-                tabIndex={0}
-                onClick={() => open(card.fullImage, `ROAM Provider Management - ${card.title}`)}
-                onKeyDown={(e) =>
-                  e.key === "Enter" && open(card.fullImage, `ROAM Provider Management - ${card.title}`)
-                }
-              >
+              role="button"
+              tabIndex={0}
+              onClick={() => open(card.fullImage, `ROAM Provider Management - ${card.title}`)}
+              onKeyDown={(e) =>
+                e.key === "Enter" && open(card.fullImage, `ROAM Provider Management - ${card.title}`)
+              }
+            >
                 <img 
                   src={card.image} 
                   alt={`ROAM Provider Management - ${card.title}`} 
                   className="w-full h-auto" 
                   loading="lazy" 
                 />
-              </div>
+            </div>
               
-              <ul className="mt-4 space-y-2">
-                {card.points.map((point) => (
+            <ul className="mt-4 space-y-2">
+              {card.points.map((point) => (
                   <li key={point} className="flex items-center text-sm">
                     <CheckCircle2 className="w-4 h-4 text-green-500 mr-2" />
                     {point}
-                  </li>
-                ))}
-              </ul>
-            </div>
+                </li>
+              ))}
+            </ul>
+          </div>
           );
         })}
       </div>
@@ -371,13 +367,8 @@ function WhyChooseROAM() {
 function FinalCTA() {
   return (
     <div className="relative overflow-hidden bg-gradient-to-br from-roam-blue to-roam-light-blue text-white py-20">
-      {/* Grid pattern overlay */}
-      <div 
-        className="absolute inset-0 opacity-10"
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-        }}
-      />
+      {/* Service icon pattern overlay */}
+      <ServiceIconPattern />
       
       <div className="container relative">
         <div className="max-w-3xl mx-auto text-center">

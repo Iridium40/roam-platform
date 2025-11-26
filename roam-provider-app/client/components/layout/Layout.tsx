@@ -1,7 +1,8 @@
 import { Link, Outlet } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import ShareMenu from "@/components/ShareMenu";
-import { Instagram, Facebook } from "lucide-react";
+import { Instagram, Facebook, Menu, X } from "lucide-react";
+import { useState } from "react";
 
 export default function Layout() {
   return (
@@ -16,6 +17,8 @@ export default function Layout() {
 }
 
 function MarketingHeader() {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/60">
       <div className="container flex h-16 items-center justify-between">
@@ -26,6 +29,8 @@ function MarketingHeader() {
             className="h-10 w-auto"
           />
         </Link>
+        
+        {/* Desktop Navigation */}
         <nav className="hidden items-center gap-6 md:flex">
           <Link to="/how-it-works" className="text-sm font-medium text-foreground/80 hover:text-foreground">
             How It Works
@@ -40,13 +45,23 @@ function MarketingHeader() {
             Contact Us
           </Link>
         </nav>
+
         <div className="flex items-center gap-2">
+          {/* Mobile Menu Button - Show first on mobile */}
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="md:hidden inline-flex h-10 w-10 items-center justify-center rounded-md border bg-white text-foreground hover:bg-accent shadow-sm"
+            aria-label="Toggle menu"
+          >
+            {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          </button>
+
           <a
             href="https://www.instagram.com/roamyourbestlife/"
             target="_blank"
             rel="noopener noreferrer"
             aria-label="Instagram"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-tr from-[#f09433] via-[#e6683c] to-[#bc1888] text-white hover:opacity-90"
+            className="hidden sm:inline-flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-tr from-[#f09433] via-[#e6683c] to-[#bc1888] text-white hover:opacity-90"
           >
             <Instagram className="h-4 w-4" />
           </a>
@@ -55,16 +70,81 @@ function MarketingHeader() {
             target="_blank"
             rel="noopener noreferrer"
             aria-label="Facebook"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#1877f2] text-white hover:bg-[#1877f2]/90"
+            className="hidden sm:inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#1877f2] text-white hover:bg-[#1877f2]/90"
           >
             <Facebook className="h-4 w-4" />
           </a>
-          <ShareMenu />
+          <div className="hidden sm:block">
+            <ShareMenu />
+          </div>
           <Button asChild className="hidden sm:inline-flex">
             <Link to="/provider-portal">Become a Provider</Link>
           </Button>
         </div>
       </div>
+
+      {/* Mobile Menu */}
+      {isMobileMenuOpen && (
+        <div className="md:hidden border-t bg-white">
+          <nav className="container flex flex-col space-y-4 py-4">
+            <Link 
+              to="/how-it-works" 
+              className="text-sm font-medium text-foreground/80 hover:text-foreground py-2"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              How It Works
+            </Link>
+            <Link 
+              to="/about" 
+              className="text-sm font-medium text-foreground/80 hover:text-foreground py-2"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              About Us
+            </Link>
+            <Link 
+              to="/services" 
+              className="text-sm font-medium text-foreground/80 hover:text-foreground py-2"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              Our Services
+            </Link>
+            <Link 
+              to="/contact" 
+              className="text-sm font-medium text-foreground/80 hover:text-foreground py-2"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              Contact Us
+            </Link>
+            <div className="pt-4 border-t">
+              <Button asChild className="w-full">
+                <Link to="/provider-portal" onClick={() => setIsMobileMenuOpen(false)}>
+                  Become a Provider
+                </Link>
+              </Button>
+            </div>
+            <div className="flex items-center gap-4 pt-2">
+              <a
+                href="https://www.instagram.com/roamyourbestlife/"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Instagram"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-tr from-[#f09433] via-[#e6683c] to-[#bc1888] text-white hover:opacity-90"
+              >
+                <Instagram className="h-4 w-4" />
+              </a>
+              <a
+                href="https://www.facebook.com/roamtheapp/"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Facebook"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#1877f2] text-white hover:bg-[#1877f2]/90"
+              >
+                <Facebook className="h-4 w-4" />
+              </a>
+            </div>
+          </nav>
+        </div>
+      )}
     </header>
   );
 }

@@ -159,11 +159,11 @@ export default function BookingSuccess() {
                 </h1>
                 
                 <p className="text-lg text-foreground/80 mb-3 font-medium">
-                  Your payment was processed successfully!
-                </p>
+                Your payment was processed successfully!
+              </p>
                 <p className="text-sm text-foreground/60 mb-8 leading-relaxed">
-                  We're processing your booking details. You'll receive a confirmation email shortly.
-                </p>
+                We're processing your booking details. You'll receive a confirmation email shortly.
+              </p>
 
                 {/* Action Buttons */}
                 <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
@@ -172,24 +172,24 @@ export default function BookingSuccess() {
                       <Eye className="w-5 h-5 mr-2" />
                       View My Bookings
                     </Link>
-                  </Button>
+              </Button>
                   <Button asChild size="lg" variant="outline" className="border-2 border-roam-blue text-roam-blue hover:bg-roam-blue hover:text-white shadow-lg">
                     <Link to="/">
                       <Home className="w-5 h-5 mr-2" />
                       Return to Home
                     </Link>
-                  </Button>
-                </div>
+              </Button>
+            </div>
 
                 {/* Debug Info */}
                 {(sessionId || bookingId) && (
                   <div className="text-xs text-foreground/40 pt-6 border-t border-gray-200">
                     {sessionId && <p className="mb-1">Session: {sessionId.substring(0, 20)}...</p>}
                     {bookingId && <p>Booking: {bookingId.substring(0, 20)}...</p>}
-                  </div>
+            </div>
                 )}
-              </CardContent>
-            </Card>
+          </CardContent>
+        </Card>
           </div>
         </div>
       </div>
@@ -237,8 +237,8 @@ export default function BookingSuccess() {
                   </p>
                 </div>
               )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
           {/* What's Next Section */}
           <Card className="mb-8 border-0 shadow-lg rounded-2xl">
@@ -293,7 +293,7 @@ export default function BookingSuccess() {
                     <p className="text-sm text-foreground/70 leading-relaxed">
                       You can view, manage, reschedule, or cancel your booking from your account at any time.
                     </p>
-                  </div>
+              </div>
                 </div>
               </div>
             </CardContent>

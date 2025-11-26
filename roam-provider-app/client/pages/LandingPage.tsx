@@ -103,7 +103,7 @@ function CTA() {
                 variant="secondary"
                 className="bg-white text-foreground hover:bg-white/90"
               >
-                <Link to="/apply">Create Provider Profile</Link>
+                <Link to="/become-a-provider">Create Provider Profile</Link>
               </Button>
               <Button
                 asChild

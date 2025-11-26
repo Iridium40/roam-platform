@@ -165,12 +165,12 @@ export default function WhyRoam() {
             {stats.map((stat, index) => (
               <Card key={index} className="text-center border-0 shadow-lg bg-gradient-to-br from-white to-roam-blue/5 rounded-2xl card-hover">
                 <CardContent className="p-6">
-                  <div className="text-4xl md:text-5xl font-bold text-roam-blue mb-2">
-                    {stat.number}
-                  </div>
+                <div className="text-4xl md:text-5xl font-bold text-roam-blue mb-2">
+                  {stat.number}
+                </div>
                   <div className="text-sm md:text-base text-foreground/70 font-medium">
-                    {stat.label}
-                  </div>
+                  {stat.label}
+                </div>
                 </CardContent>
               </Card>
             ))}
