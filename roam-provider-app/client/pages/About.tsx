@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import {
   ShieldCheck,
   MapPin,
-  Phone,
   Mail,
   HeartHandshake,
   CheckCircle2,
@@ -15,10 +14,11 @@ import {
   Activity,
   Droplets,
   Sparkles,
-  Dumbbell,
   Leaf,
   Trophy,
   Zap,
+  TrendingUp,
+  DollarSign,
 } from "lucide-react";
 
 export default function About() {
@@ -39,92 +39,114 @@ export default function About() {
   );
 }
 
-function SectionWrapper({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return <section className={`container py-12 md:py-20 ${className}`}>{children}</section>;
-}
-
 function Hero() {
   return (
-    <div className="relative overflow-hidden bg-gradient-to-br from-primary to-secondary text-primary-foreground">
-      <div className="pointer-events-none absolute inset-0 -z-10" />
-      <SectionWrapper>
-        <div className="mx-auto max-w-3xl text-center">
-          <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl">Your Best Life. Everywhere</h1>
-          <p className="mt-2 text-lg md:text-xl text-primary-foreground/90">
+    <div className="relative overflow-hidden bg-gradient-to-br from-roam-blue to-roam-light-blue text-white">
+      {/* Grid pattern overlay */}
+      <div 
+        className="absolute inset-0 opacity-10"
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+        }}
+      />
+      
+      <div className="container py-20 md:py-28 relative">
+        <div className="max-w-4xl mx-auto text-center animate-fade-in">
+          <div className="inline-flex items-center gap-2 rounded-full bg-white/20 backdrop-blur-sm px-4 py-2 text-sm font-medium mb-6">
+            <HeartHandshake className="w-4 h-4" />
+            About ROAM
+          </div>
+          <h1 className="text-4xl md:text-6xl font-bold mb-6">
+            Your Best Life. Everywhere
+          </h1>
+          <p className="text-xl text-white/90 mb-4">
             Bringing Premium Wellness Services to the 30A Community
           </p>
-          <p className="mt-6 text-primary-foreground/90">
+          <p className="text-lg text-white/80 max-w-3xl mx-auto mb-8">
             ROAM is more than a wellness platform—we're your partner in living your best life, right where you are. From
             the sugar-white beaches of 30A to your doorstep, we connect you with exceptional wellness professionals who
             share your commitment to health, balance, and vitality.
           </p>
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            <Button asChild className="bg-white text-foreground hover:bg-white/90">
+          <div className="flex flex-wrap items-center justify-center gap-4">
+            <Button asChild size="lg" className="bg-white text-roam-blue hover:bg-white/90 button-shine">
               <Link to="/provider-portal">Become a Provider</Link>
             </Button>
-            <Button asChild variant="secondary" className="bg-[#f88221] text-white hover:bg-[#f88221]/90">
+            <Button asChild size="lg" className="bg-roam-yellow text-roam-blue hover:bg-roam-yellow/90 font-semibold">
               <Link to="/contact">Talk to Our Team</Link>
             </Button>
           </div>
         </div>
-      </SectionWrapper>
+      </div>
     </div>
   );
 }
 
 function AtAGlance() {
   const stats = [
-    { label: "Wellness Services", value: "50+" },
-    { label: "Verified Providers", value: "30+" },
-    { label: "Happy Customers", value: "10,000+" },
-    { label: "Region", value: "30A" },
+    { label: "Wellness Services", value: "50+", icon: Activity },
+    { label: "Verified Providers", value: "30+", icon: Users },
+    { label: "Happy Customers", value: "10,000+", icon: HeartHandshake },
+    { label: "Region", value: "30A", icon: MapPin },
   ];
+  
   return (
-    <SectionWrapper>
-      <div className="mx-auto grid max-w-5xl grid-cols-2 gap-4 sm:grid-cols-4">
-        {stats.map((s) => (
-          <div key={s.label} className="rounded-2xl border bg-card p-6 text-center shadow-sm">
-            <div className="text-3xl font-extrabold tracking-tight">{s.value}</div>
-            <div className="mt-1 text-sm text-muted-foreground">{s.label}</div>
-          </div>
-        ))}
+    <div className="container py-20">
+      <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-6">
+        {stats.map((s, idx) => {
+          const Icon = s.icon;
+          return (
+            <div 
+              key={s.label} 
+              className="rounded-2xl border bg-card p-6 text-center shadow-lg card-hover"
+              style={{ animationDelay: `${idx * 100}ms` }}
+            >
+              <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-roam-blue to-roam-light-blue text-white mb-3 mx-auto">
+                <Icon className="w-6 h-6" />
+              </div>
+              <div className="text-3xl font-extrabold tracking-tight gradient-text">{s.value}</div>
+              <div className="mt-1 text-sm text-muted-foreground">{s.label}</div>
+            </div>
+          );
+        })}
       </div>
-    </SectionWrapper>
+    </div>
   );
 }
 
 function Story() {
   return (
-    <SectionWrapper className="bg-secondary/10 rounded-3xl">
-      <div className="mx-auto max-w-4xl">
-        <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Our Story</h2>
-        <p className="mt-2 text-muted-foreground text-lg">Born from the 30A Lifestyle</p>
-        <div className="prose prose-neutral mt-6 max-w-none dark:prose-invert">
-          <p>
-            ROAM - Your Best Life. Everywhere was born from a simple observation: the 30A coastal lifestyle embodies
-            wellness, balance, and living your best life. But finding and booking quality wellness services shouldn't be
-            a challenge—it should be as effortless as a beach day.
-          </p>
-          <p>
-            Founded in the heart of Florida's beautiful 30A region, ROAM was created to bridge the gap between busy
-            lifestyles and essential self-care. We saw locals and visitors alike struggling to find reliable massage
-            therapists, IV therapy providers, personal trainers, and beauty professionals. Booking appointments meant
-            endless phone calls, uncertain availability, and no way to read reviews or compare services.
-          </p>
-          <p>We knew there had to be a better way.</p>
-          <p>
-            <strong>ROAM 30A LLC</strong> was founded with a clear mission: make wellness accessible, convenient, and
-            trustworthy. We built a platform where customers can discover, book, and enjoy premium wellness services with
-            just a few taps—whether you're at home, on vacation, or anywhere along the beautiful 30A corridor.
-          </p>
-          <p>
-            Today, ROAM connects verified wellness professionals—from licensed physicians to certified massage
-            therapists, IV therapy specialists to professional beauty experts—with thousands of customers throughout the
-            30A region, making it easier than ever to prioritize your wellbeing without sacrificing convenience.
-          </p>
+    <div className="bg-gradient-to-b from-roam-light-blue/10 to-transparent py-20">
+      <div className="container">
+        <div className="max-w-4xl mx-auto bg-card rounded-3xl p-8 md:p-12 shadow-lg border">
+          <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">Our Story</h2>
+          <p className="text-lg text-muted-foreground mb-6">Born from the 30A Lifestyle</p>
+          <div className="prose prose-neutral max-w-none dark:prose-invert space-y-4 text-foreground/80">
+            <p>
+              ROAM - Your Best Life. Everywhere was born from a simple observation: the 30A coastal lifestyle embodies
+              wellness, balance, and living your best life. But finding and booking quality wellness services shouldn't be
+              a challenge—it should be as effortless as a beach day.
+            </p>
+            <p>
+              Founded in the heart of Florida's beautiful 30A region, ROAM was created to bridge the gap between busy
+              lifestyles and essential self-care. We saw locals and visitors alike struggling to find reliable massage
+              therapists, IV therapy providers, personal trainers, and beauty professionals. Booking appointments meant
+              endless phone calls, uncertain availability, and no way to read reviews or compare services.
+            </p>
+            <p>We knew there had to be a better way.</p>
+            <p>
+              <strong>ROAM 30A LLC</strong> was founded with a clear mission: make wellness accessible, convenient, and
+              trustworthy. We built a platform where customers can discover, book, and enjoy premium wellness services with
+              just a few taps—whether you're at home, on vacation, or anywhere along the beautiful 30A corridor.
+            </p>
+            <p>
+              Today, ROAM connects verified wellness professionals—from licensed physicians to certified massage
+              therapists, IV therapy specialists to professional beauty experts—with thousands of customers throughout the
+              30A region, making it easier than ever to prioritize your wellbeing without sacrificing convenience.
+            </p>
+          </div>
         </div>
       </div>
-    </SectionWrapper>
+    </div>
   );
 }
 
@@ -161,27 +183,32 @@ function MissionValues() {
       body: "We grow responsibly, supporting provider success while keeping a personal, local touch.",
     },
   ];
+  
   return (
-    <SectionWrapper>
-      <div className="mx-auto max-w-3xl text-center">
-        <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Our Mission</h2>
-        <p className="mt-3 text-lg text-muted-foreground">
+    <div className="container py-20">
+      <div className="max-w-3xl mx-auto text-center mb-12">
+        <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4 gradient-text">Our Mission</h2>
+        <p className="text-lg text-muted-foreground">
           To make wellness accessible, convenient, and trustworthy for everyone in the 30A community—empowering people to
           live their best lives, everywhere.
         </p>
       </div>
-      <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {values.map(({ icon: Icon, title, body }) => (
-          <div key={title} className="rounded-2xl border bg-card p-6 shadow-sm">
-            <div className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <Icon className="h-5 w-5" />
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 max-w-6xl mx-auto">
+        {values.map(({ icon: Icon, title, body }, idx) => (
+          <div 
+            key={title} 
+            className="rounded-2xl border bg-card p-6 shadow-lg card-hover"
+            style={{ animationDelay: `${idx * 100}ms` }}
+          >
+            <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-roam-blue to-roam-light-blue text-white">
+              <Icon className="w-6 h-6" />
             </div>
             <h3 className="mt-4 text-lg font-semibold">{title}</h3>
             <p className="mt-2 text-sm text-muted-foreground">{body}</p>
           </div>
         ))}
       </div>
-    </SectionWrapper>
+    </div>
   );
 }
 
@@ -194,24 +221,31 @@ function Different() {
     { icon: CalendarCheck2, title: "Flexible Scheduling", body: "Reschedule anytime with the same provider—no fees, no penalties." },
     { icon: BadgeDollarSign, title: "Transparent Pricing", body: "No hidden fees. See the total upfront, including our 12% service fee." },
   ];
+  
   return (
-    <SectionWrapper className="bg-secondary/10 rounded-3xl">
-      <div className="mx-auto max-w-3xl text-center">
-        <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">What Makes ROAM Different</h2>
-        <p className="mt-2 text-muted-foreground">More Than Just a Booking Platform</p>
-      </div>
-      <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {items.map(({ icon: Icon, title, body }) => (
-          <div key={title} className="rounded-2xl border bg-card p-6 shadow-sm">
-            <div className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <Icon className="h-5 w-5" />
+    <div className="bg-gradient-to-b from-roam-light-blue/10 to-transparent py-20">
+      <div className="container">
+        <div className="max-w-3xl mx-auto text-center mb-12">
+          <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">What Makes ROAM Different</h2>
+          <p className="text-muted-foreground">More Than Just a Booking Platform</p>
+        </div>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 max-w-6xl mx-auto">
+          {items.map(({ icon: Icon, title, body }, idx) => (
+            <div 
+              key={title} 
+              className="rounded-2xl border bg-card p-6 shadow-lg card-hover"
+              style={{ animationDelay: `${idx * 100}ms` }}
+            >
+              <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-roam-blue to-roam-light-blue text-white">
+                <Icon className="w-6 h-6" />
+              </div>
+              <h3 className="mt-4 text-lg font-semibold">{title}</h3>
+              <p className="mt-2 text-sm text-muted-foreground">{body}</p>
             </div>
-            <h3 className="mt-4 text-lg font-semibold">{title}</h3>
-            <p className="mt-2 text-sm text-muted-foreground">{body}</p>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
-    </SectionWrapper>
+    </div>
   );
 }
 
@@ -231,31 +265,48 @@ function ServiceArea() {
     "Dune Allen Beach",
   ];
   const extended = ["Destin", "Miramar Beach", "Sandestin", "South Walton", "Panama City Beach (select areas)"];
+  
   return (
-    <SectionWrapper>
-      <div className="mx-auto max-w-3xl text-center">
-        <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Serving the 30A Corridor</h2>
-        <p className="mt-2 text-muted-foreground">From Inlet Beach to Dune Allen</p>
+    <div className="container py-20">
+      <div className="max-w-3xl mx-auto text-center mb-12">
+        <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4 gradient-text">Serving the 30A Corridor</h2>
+        <p className="text-muted-foreground">From Inlet Beach to Dune Allen</p>
       </div>
-      <div className="mt-8 grid gap-8 md:grid-cols-2">
-        <div className="rounded-2xl border bg-card p-6 shadow-sm">
-          <h3 className="text-lg font-semibold">Primary 30A Communities</h3>
-          <ul className="mt-3 grid grid-cols-1 gap-2 text-sm text-muted-foreground sm:grid-cols-2">
+      <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+        <div className="rounded-2xl border bg-card p-6 shadow-lg card-hover">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-roam-blue to-roam-light-blue flex items-center justify-center text-white">
+              <MapPin className="w-5 h-5" />
+            </div>
+            <h3 className="text-lg font-semibold">Primary 30A Communities</h3>
+          </div>
+          <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-muted-foreground">
             {primary.map((p) => (
-              <li key={p}>• {p}</li>
+              <li key={p} className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-roam-blue flex-shrink-0" />
+                {p}
+              </li>
             ))}
           </ul>
         </div>
-        <div className="rounded-2xl border bg-card p-6 shadow-sm">
-          <h3 className="text-lg font-semibold">Extended Service Areas</h3>
-          <ul className="mt-3 grid grid-cols-1 gap-2 text-sm text-muted-foreground sm:grid-cols-2">
+        <div className="rounded-2xl border bg-card p-6 shadow-lg card-hover">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-roam-blue to-roam-light-blue flex items-center justify-center text-white">
+              <MapPin className="w-5 h-5" />
+            </div>
+            <h3 className="text-lg font-semibold">Extended Service Areas</h3>
+          </div>
+          <ul className="grid grid-cols-1 gap-2 text-sm text-muted-foreground">
             {extended.map((p) => (
-              <li key={p}>• {p}</li>
+              <li key={p} className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-roam-blue flex-shrink-0" />
+                {p}
+              </li>
             ))}
           </ul>
         </div>
       </div>
-    </SectionWrapper>
+    </div>
   );
 }
 
@@ -281,57 +332,80 @@ function ServicesPreview() {
   ];
 
   return (
-    <SectionWrapper>
-      <div className="mx-auto max-w-3xl text-center">
-        <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Explore Our Services</h2>
-        <p className="mt-3 text-lg text-muted-foreground">
+    <div className="container py-20">
+      <div className="max-w-3xl mx-auto text-center mb-12">
+        <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4 gradient-text">Explore Our Services</h2>
+        <p className="text-lg text-muted-foreground">
           Browse the full marketplace of wellness experiences—from medical care to beauty and fitness—designed for life on 30A.
         </p>
       </div>
-      <div className="mt-10 grid gap-6 md:grid-cols-3">
-        {highlights.map(({ icon: Icon, title, description }) => (
-          <div key={title} className="rounded-2xl border bg-card p-6 text-left shadow-sm">
-            <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <Icon className="h-6 w-6" />
+      <div className="grid gap-8 md:grid-cols-3 max-w-5xl mx-auto">
+        {highlights.map(({ icon: Icon, title, description }, idx) => (
+          <div 
+            key={title} 
+            className="rounded-2xl border bg-card p-6 shadow-lg text-center card-hover"
+            style={{ animationDelay: `${idx * 100}ms` }}
+          >
+            <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-roam-blue to-roam-light-blue text-white mb-4 mx-auto">
+              <Icon className="w-8 h-8" />
             </div>
-            <h3 className="mt-4 text-lg font-semibold">{title}</h3>
-            <p className="mt-2 text-sm text-muted-foreground">{description}</p>
+            <h3 className="text-lg font-semibold mb-2">{title}</h3>
+            <p className="text-sm text-muted-foreground">{description}</p>
           </div>
         ))}
       </div>
       <div className="mt-10 flex justify-center">
-        <Button asChild variant="secondary" className="bg[#f88221] text-white hover:bg-[#f88221]/90">
+        <Button asChild size="lg" className="bg-roam-blue text-white hover:bg-roam-blue/90 button-shine">
           <Link to="/services">View All Services</Link>
         </Button>
       </div>
-    </SectionWrapper>
+    </div>
   );
 }
 
 function Impact() {
   const stats = [
-    { value: "15,000+", label: "Services Delivered", note: "Wellness experiences that enhanced lives" },
-    { value: "30+", label: "Local Providers", note: "Small businesses we support and empower" },
-    { value: "95%", label: "Customer Satisfaction", note: "Based on verified post-service reviews" },
-    { value: "$2M+", label: "To Local Economy", note: "Supporting 30A wellness professionals" },
+    { value: "15,000+", label: "Services Delivered", note: "Wellness experiences that enhanced lives", icon: Activity },
+    { value: "30+", label: "Local Providers", note: "Small businesses we support and empower", icon: Users },
+    { value: "95%", label: "Customer Satisfaction", note: "Based on verified post-service reviews", icon: HeartHandshake },
+    { value: "$2M+", label: "To Local Economy", note: "Supporting 30A wellness professionals", icon: DollarSign },
   ];
+  
   return (
-    <div className="relative overflow-hidden bg-gradient-to-br from-primary to secondary text-primary-foreground">
-      <SectionWrapper>
-        <div className="mx-auto max-w-4xl text-center">
-          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Our Impact</h2>
-          <p className="mt-2 text-primary-foreground/90">Building a Healthier Community Together</p>
+    <div className="relative overflow-hidden bg-gradient-to-br from-roam-blue to-roam-light-blue text-white py-20">
+      {/* Grid pattern overlay */}
+      <div 
+        className="absolute inset-0 opacity-10"
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+        }}
+      />
+      
+      <div className="container relative">
+        <div className="max-w-4xl mx-auto text-center mb-12">
+          <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">Our Impact</h2>
+          <p className="text-white/90">Building a Healthier Community Together</p>
         </div>
-        <div className="mx-auto mt-8 grid max-w-5xl grid-cols-2 gap-4 sm:grid-cols-4">
-          {stats.map((s) => (
-            <div key={s.label} className="rounded-2xl border border-white/20 bg-white/10 p-6 text-center backdrop-blur">
-              <div className="text-3xl font-extrabold">{s.value}</div>
-              <div className="mt-1 text-sm">{s.label}</div>
-              <div className="mt-1 text-xs text-primary-foreground/80">{s.note}</div>
-            </div>
-          ))}
+        <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-6">
+          {stats.map((s, idx) => {
+            const Icon = s.icon;
+            return (
+              <div 
+                key={s.label} 
+                className="rounded-2xl border border-white/20 bg-white/10 backdrop-blur p-6 text-center hover:bg-white/20 transition-all"
+                style={{ animationDelay: `${idx * 100}ms` }}
+              >
+                <div className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-white/20 text-white mb-3 mx-auto">
+                  <Icon className="w-5 h-5" />
+                </div>
+                <div className="text-3xl font-extrabold">{s.value}</div>
+                <div className="mt-1 text-sm">{s.label}</div>
+                <div className="mt-1 text-xs text-white/80">{s.note}</div>
+              </div>
+            );
+          })}
         </div>
-      </SectionWrapper>
+      </div>
     </div>
   );
 }
@@ -354,69 +428,101 @@ function Testimonials() {
       author: "Jennifer & David K., WaterColor, FL",
     },
   ];
+  
   return (
-    <SectionWrapper>
-      <div className="mx-auto max-w-3xl text-center">
-        <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">What Our Community Says</h2>
+    <div className="container py-20">
+      <div className="max-w-3xl mx-auto text-center mb-12">
+        <h2 className="text-3xl md:text-4xl font-bold tracking-tight gradient-text">What Our Community Says</h2>
       </div>
-      <div className="mx-auto mt-8 grid max-w-5xl gap-6 md:grid-cols-3">
-        {items.map((t, i) => (
-          <blockquote key={i} className="rounded-2xl border bg-card p-6 text-sm text-muted-foreground shadow-sm">
-            <p>“{t.quote}”</p>
-            <footer className="mt-3 font-medium text-foreground">— {t.author}</footer>
+      <div className="max-w-6xl mx-auto grid md:grid-cols-3 gap-8">
+        {items.map((t, idx) => (
+          <blockquote 
+            key={idx} 
+            className="rounded-2xl border bg-card p-6 shadow-lg card-hover"
+            style={{ animationDelay: `${idx * 100}ms` }}
+          >
+            <div className="text-roam-blue mb-2">
+              <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z"/>
+              </svg>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">{t.quote}</p>
+            <footer className="font-medium text-foreground">— {t.author}</footer>
           </blockquote>
         ))}
       </div>
-    </SectionWrapper>
+    </div>
   );
 }
 
 function ForProviders() {
   const benefits = [
-    { title: "Increase Bookings", body: "Average providers see 2–3x more bookings within 90 days." },
-    { title: "Get Paid Faster", body: "Automatic payments in 2 business days—no invoicing." },
-    { title: "Reach More Customers", body: "Access thousands of locals and visitors seeking services." },
-    { title: "Manage Your Schedule", body: "Control availability, pricing, and service areas." },
-    { title: "Build Your Reputation", body: "Collect verified reviews and showcase expertise." },
-    { title: "Dedicated Support", body: "Our local team helps you succeed at every step." },
+    { icon: TrendingUp, title: "Increase Bookings", body: "Average providers see 2–3x more bookings within 90 days." },
+    { icon: DollarSign, title: "Get Paid Faster", body: "Automatic payments in 2 business days—no invoicing." },
+    { icon: Users, title: "Reach More Customers", body: "Access thousands of locals and visitors seeking services." },
+    { icon: CalendarCheck2, title: "Manage Your Schedule", body: "Control availability, pricing, and service areas." },
+    { icon: Trophy, title: "Build Your Reputation", body: "Collect verified reviews and showcase expertise." },
+    { icon: HeartHandshake, title: "Dedicated Support", body: "Our local team helps you succeed at every step." },
   ];
+  
   return (
-    <SectionWrapper className="bg-secondary/10 rounded-3xl">
-      <div className="mx-auto max-w-3xl text-center">
-        <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Why Choose ROAM?</h2>
-        <p className="mt-3 text-lg text-muted-foreground">
-          For Providers, ROAM offers a comprehensive solution for growing your business and serving the 30A community.
-        </p>
+    <div className="bg-gradient-to-b from-roam-light-blue/10 to-transparent py-20">
+      <div className="container">
+        <div className="max-w-3xl mx-auto text-center mb-12">
+          <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4 gradient-text">Why Choose ROAM?</h2>
+          <p className="text-lg text-muted-foreground">
+            For Providers, ROAM offers a comprehensive solution for growing your business and serving the 30A community.
+          </p>
+        </div>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 max-w-6xl mx-auto">
+          {benefits.map(({ icon: Icon, title, body }, idx) => (
+            <div 
+              key={title} 
+              className="rounded-2xl border bg-card p-6 shadow-lg card-hover"
+              style={{ animationDelay: `${idx * 100}ms` }}
+            >
+              <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-roam-blue to-roam-light-blue text-white">
+                <Icon className="w-6 h-6" />
+              </div>
+              <h3 className="mt-4 text-lg font-semibold">{title}</h3>
+              <p className="mt-2 text-sm text-muted-foreground">{body}</p>
+            </div>
+          ))}
+        </div>
       </div>
-      <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {benefits.map(({ title, body }) => (
-          <div key={title} className="rounded-2xl border bg-card p-6 shadow-sm">
-            <h3 className="mt-4 text-lg font-semibold">{title}</h3>
-            <p className="mt-2 text-sm text-muted-foreground">{body}</p>
-          </div>
-        ))}
-      </div>
-    </SectionWrapper>
+    </div>
   );
 }
 
 function FinalCTA() {
   return (
-    <SectionWrapper className="bg-primary text-primary-foreground">
-      <div className="mx-auto max-w-3xl text-center">
-        <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Ready to Experience ROAM?</h2>
-        <p className="mt-3 text-lg text-primary-foreground/90">
-          Join our community of wellness enthusiasts and providers today.
-        </p>
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-          <Button asChild className="bg-white text-foreground hover:bg-white/90">
-            <Link to="/provider-portal">Become a Provider</Link>
-          </Button>
-          <Button asChild variant="secondary" className="bg-[#f88221] text-white hover:bg-[#f88221]/90">
-            <Link to="/contact">Talk to Our Team</Link>
-          </Button>
+    <div className="relative overflow-hidden bg-gradient-to-br from-roam-blue to-roam-light-blue text-white py-20">
+      {/* Grid pattern overlay */}
+      <div 
+        className="absolute inset-0 opacity-10"
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+        }}
+      />
+      
+      <div className="container relative">
+        <div className="max-w-3xl mx-auto text-center">
+          <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-6">
+            Ready to Experience ROAM?
+          </h2>
+          <p className="text-lg text-white/90 mb-8">
+            Join our community of wellness enthusiasts and providers today.
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-4">
+            <Button asChild size="lg" className="bg-white text-roam-blue hover:bg-white/90 button-shine">
+              <Link to="/provider-portal">Become a Provider</Link>
+            </Button>
+            <Button asChild size="lg" className="bg-roam-yellow text-roam-blue hover:bg-roam-yellow/90 font-semibold">
+              <Link to="/contact">Talk to Our Team</Link>
+            </Button>
+          </div>
         </div>
       </div>
-    </SectionWrapper>
+    </div>
   );
 }

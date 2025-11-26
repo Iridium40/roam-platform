@@ -125,37 +125,29 @@ export default function WhyRoam() {
       <Header />
       
       {/* Hero Section with Beach Theme */}
-      <section className="relative py-20 overflow-hidden min-h-[600px] flex items-center">
-        {/* Beach Background Image */}
-        <div className="absolute inset-0">
-          <img 
-            src="https://images.unsplash.com/photo-1519046904884-53103b34b206?q=80&w=2070&auto=format&fit=crop"
-            alt="Beautiful tropical beach paradise"
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-white/50 via-white/40 to-white/30"></div>
-        </div>
+      <section className="relative py-20 overflow-hidden bg-gradient-to-br from-roam-blue via-roam-blue/90 to-roam-light-blue">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS1vcGFjaXR5PSIwLjA1IiBzdHJva2Utd2lkdGg9IjEiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZ3JpZCkiLz48L3N2Zz4=')] opacity-30"></div>
         
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="max-w-4xl mx-auto text-center">
-            <Badge className="mb-6 text-base px-6 py-2 bg-roam-blue shadow-lg">
+            <Badge variant="secondary" className="mb-6 text-sm px-4 py-2 bg-white/20 text-white border-white/30 backdrop-blur-sm animate-fade-in">
               <Sparkles className="w-4 h-4 mr-2 inline" />
               Your Best Life. Everywhere.
             </Badge>
-            <h1 className="text-5xl md:text-6xl font-bold mb-6 leading-tight">
-              Services That Travel <span className="text-roam-blue">With You</span>
+            <h1 className="text-5xl md:text-6xl font-bold mb-6 leading-tight text-white animate-slide-up">
+              Services That Travel <span className="text-roam-yellow">With You</span>
             </h1>
-            <p className="text-xl md:text-2xl text-foreground/80 mb-8 leading-relaxed">
+            <p className="text-xl md:text-2xl text-white/90 mb-10 leading-relaxed animate-fade-in">
               Whether you're at the beach, exploring a new city, or relaxing at home — book quality beauty, fitness, wellness, and healthcare services anywhere, anytime.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button asChild size="lg" className="bg-roam-blue hover:bg-roam-blue/90 text-lg px-8 py-6 shadow-xl">
-                <Link to="/">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center animate-scale-in">
+              <Button asChild size="lg" className="bg-white text-roam-blue hover:bg-white/90 button-shine shadow-lg hover-scale">
+                <Link to="/booknow">
                   <Search className="w-5 h-5 mr-2" />
                   Browse Services
                 </Link>
               </Button>
-              <Button asChild size="lg" variant="outline" className="text-lg px-8 py-6 border-2 bg-white/80 backdrop-blur-sm">
+              <Button asChild size="lg" className="bg-roam-yellow text-roam-blue hover:bg-roam-yellow/90 font-semibold shadow-lg">
                 <Link to="/how-it-works">
                   Learn More
                   <ArrowRight className="w-5 h-5 ml-2" />
@@ -167,18 +159,20 @@ export default function WhyRoam() {
       </section>
 
       {/* Stats Section */}
-      <section className="py-12 bg-white/50 backdrop-blur-sm border-y">
+      <section className="py-16 bg-white border-y">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 max-w-5xl mx-auto">
             {stats.map((stat, index) => (
-              <div key={index} className="text-center">
-                <div className="text-4xl md:text-5xl font-bold text-roam-blue mb-2">
-                  {stat.number}
-                </div>
-                <div className="text-sm md:text-base text-foreground/70">
-                  {stat.label}
-                </div>
-              </div>
+              <Card key={index} className="text-center border-0 shadow-lg bg-gradient-to-br from-white to-roam-blue/5 rounded-2xl card-hover">
+                <CardContent className="p-6">
+                  <div className="text-4xl md:text-5xl font-bold text-roam-blue mb-2">
+                    {stat.number}
+                  </div>
+                  <div className="text-sm md:text-base text-foreground/70 font-medium">
+                    {stat.label}
+                  </div>
+                </CardContent>
+              </Card>
             ))}
           </div>
         </div>
@@ -238,11 +232,11 @@ export default function WhyRoam() {
 
         {/* Benefits Section */}
         <section className="mb-20">
-          <div className="text-center mb-16">
+          <div className="text-center mb-12">
             <h2 className="text-4xl md:text-5xl font-bold mb-4">
               Simple, Safe, and <span className="text-roam-blue">Reliable</span>
             </h2>
-            <p className="text-xl text-foreground/70 max-w-3xl mx-auto">
+            <p className="text-xl text-foreground/70 max-w-3xl mx-auto leading-relaxed">
               We've built ROAM to make booking professional services as easy and secure as possible.
             </p>
           </div>
@@ -250,13 +244,21 @@ export default function WhyRoam() {
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {benefits.map((benefit, index) => {
               const Icon = benefit.icon;
+              const gradientColors = [
+                "from-green-500 to-emerald-500",
+                "from-blue-500 to-cyan-500",
+                "from-purple-500 to-pink-500",
+                "from-yellow-500 to-orange-500",
+                "from-red-500 to-pink-500",
+                "from-orange-500 to-red-500"
+              ];
               return (
-                <Card key={index} className="group hover:shadow-xl transition-all duration-300 border-2 hover:border-roam-blue/20">
+                <Card key={index} className="group border-0 shadow-lg bg-white rounded-2xl card-hover">
                   <CardContent className="p-8">
-                    <div className={`w-16 h-16 ${benefit.bgColor} rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform`}>
-                      <Icon className={`w-8 h-8 ${benefit.color}`} />
+                    <div className={`w-16 h-16 bg-gradient-to-br ${gradientColors[index]} rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-md`}>
+                      <Icon className="w-8 h-8 text-white" />
                     </div>
-                    <h3 className="text-2xl font-semibold mb-3">{benefit.title}</h3>
+                    <h3 className="text-xl font-bold mb-3">{benefit.title}</h3>
                     <p className="text-foreground/70 leading-relaxed">{benefit.description}</p>
                   </CardContent>
                 </Card>
@@ -267,12 +269,12 @@ export default function WhyRoam() {
 
         {/* How It Works Section */}
         <section className="mb-20">
-          <div className="text-center mb-16">
-            <Badge className="mb-4 text-base px-6 py-2">Simple Process</Badge>
+          <div className="text-center mb-12">
+            <Badge variant="secondary" className="mb-4 text-sm px-4 py-2 bg-roam-light-blue text-white">Simple Process</Badge>
             <h2 className="text-4xl md:text-5xl font-bold mb-4">
               Book in <span className="text-roam-blue">3 Easy Steps</span>
             </h2>
-            <p className="text-xl text-foreground/70 max-w-3xl mx-auto">
+            <p className="text-xl text-foreground/70 max-w-3xl mx-auto leading-relaxed">
               From search to service completion, we've streamlined everything.
             </p>
           </div>
@@ -282,19 +284,21 @@ export default function WhyRoam() {
               const Icon = item.icon;
               return (
                 <div key={index} className="relative">
-                  <Card className="text-center group hover:shadow-lg transition-all duration-300">
+                  <Card className="text-center group border-0 shadow-lg bg-white rounded-2xl card-hover">
                     <CardContent className="p-8">
-                      <div className="w-20 h-20 bg-roam-blue text-white rounded-full flex items-center justify-center mx-auto mb-6 text-3xl font-bold group-hover:scale-110 transition-transform">
+                      <div className="w-20 h-20 bg-gradient-to-br from-roam-blue to-roam-light-blue text-white rounded-2xl flex items-center justify-center mx-auto mb-6 text-3xl font-bold group-hover:scale-110 transition-transform shadow-md">
                         {item.step}
                       </div>
                       <Icon className="w-12 h-12 text-roam-blue mx-auto mb-4" />
-                      <h3 className="text-2xl font-semibold mb-3">{item.title}</h3>
-                      <p className="text-foreground/70">{item.description}</p>
+                      <h3 className="text-2xl font-bold mb-3">{item.title}</h3>
+                      <p className="text-foreground/70 leading-relaxed">{item.description}</p>
                     </CardContent>
                   </Card>
                   {index < howItWorks.length - 1 && (
                     <div className="hidden md:block absolute top-1/2 -right-4 transform -translate-y-1/2 z-10">
-                      <ArrowRight className="w-8 h-8 text-roam-blue/30" />
+                      <div className="w-8 h-8 bg-white rounded-full shadow-md flex items-center justify-center">
+                        <ArrowRight className="w-5 h-5 text-roam-blue" />
+                      </div>
                     </div>
                   )}
                 </div>
@@ -355,15 +359,15 @@ export default function WhyRoam() {
 
         {/* Safety Section */}
         <section className="mb-20">
-          <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-3xl p-12 md:p-16 border-2 border-green-200/50">
+          <div className="bg-gradient-to-br from-green-50 via-white to-blue-50 rounded-3xl p-12 md:p-16 border border-green-200/50 shadow-lg">
             <div className="text-center mb-12">
-              <div className="inline-flex items-center justify-center w-20 h-20 bg-green-500 rounded-full mb-6">
+              <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-green-500 to-emerald-500 rounded-2xl mb-6 shadow-md">
                 <Shield className="w-10 h-10 text-white" />
               </div>
               <h2 className="text-4xl md:text-5xl font-bold mb-4">
                 Your Safety is Our <span className="text-green-600">Priority</span>
               </h2>
-              <p className="text-xl text-foreground/70 max-w-3xl mx-auto">
+              <p className="text-xl text-foreground/70 max-w-3xl mx-auto leading-relaxed">
                 We take extensive measures to ensure every interaction on our platform is safe and secure.
               </p>
             </div>
@@ -372,14 +376,14 @@ export default function WhyRoam() {
               {safetyFeatures.map((feature, index) => {
                 const Icon = feature.icon;
                 return (
-                  <Card key={index} className="bg-white/80 backdrop-blur-sm">
+                  <Card key={index} className="border-0 shadow-md bg-white rounded-2xl card-hover">
                     <CardContent className="p-6 flex items-start gap-4">
-                      <div className="w-12 h-12 bg-green-500/10 rounded-xl flex items-center justify-center flex-shrink-0">
-                        <Icon className="w-6 h-6 text-green-600" />
+                      <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm">
+                        <Icon className="w-6 h-6 text-white" />
                       </div>
                       <div>
-                        <h3 className="text-lg font-semibold mb-2">{feature.title}</h3>
-                        <p className="text-foreground/70 text-sm">{feature.description}</p>
+                        <h3 className="text-lg font-bold mb-2">{feature.title}</h3>
+                        <p className="text-foreground/70 text-sm leading-relaxed">{feature.description}</p>
                       </div>
                     </CardContent>
                   </Card>
@@ -500,30 +504,34 @@ export default function WhyRoam() {
 
         {/* CTA Section */}
         <section className="text-center">
-          <Card className="bg-gradient-to-r from-roam-blue to-roam-light-blue text-white border-0 shadow-2xl">
+          <Card className="border-0 shadow-2xl bg-gradient-to-br from-roam-blue/5 via-white to-roam-light-blue/5 rounded-3xl overflow-hidden">
             <CardContent className="p-12 md:p-16">
-              <Heart className="w-16 h-16 mx-auto mb-6" />
-              <h2 className="text-4xl md:text-5xl font-bold mb-6">
+              <Badge variant="secondary" className="mb-6 text-sm px-4 py-2 bg-roam-blue/10 text-roam-blue">
+                Get Started
+              </Badge>
+              <div className="w-16 h-16 bg-gradient-to-br from-roam-blue to-roam-light-blue rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-md">
+                <Heart className="w-8 h-8 text-white" />
+              </div>
+              <h2 className="text-3xl md:text-4xl font-bold mb-4 gradient-text">
                 Ready to Experience the ROAM Difference?
               </h2>
-              <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto">
+              <p className="text-xl text-foreground/70 mb-8 max-w-2xl mx-auto leading-relaxed">
                 Join thousands of satisfied customers who trust ROAM for their service needs.
               </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button asChild size="lg" variant="secondary" className="bg-white text-roam-blue hover:bg-white/90 text-lg px-8 py-6">
-                  <Link to="/">
+              <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
+                <Button asChild size="lg" className="bg-roam-blue hover:bg-roam-blue/90 button-shine shadow-lg hover-scale">
+                  <Link to="/booknow">
                     <Search className="w-5 h-5 mr-2" />
                     Get Started Now
                   </Link>
                 </Button>
-                <Button asChild size="lg" variant="outline" className="border-2 border-white text-white hover:bg-white/10 text-lg px-8 py-6">
+                <Button asChild size="lg" variant="outline" className="border-2 border-roam-blue text-roam-blue hover:bg-roam-blue hover:text-white shadow-lg hover-scale">
                   <Link to="/contact">
-                    <Phone className="w-5 h-5 mr-2" />
                     Contact Us
                   </Link>
                 </Button>
               </div>
-              <p className="mt-8 text-white/80">
+              <p className="text-sm text-foreground/60">
                 No credit card required • Cancel anytime • 100% satisfaction guaranteed
               </p>
             </CardContent>

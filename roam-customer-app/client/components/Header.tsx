@@ -38,15 +38,15 @@ export function Header() {
   }, [isAuthenticated, navigate]);
 
   return (
-    <nav className="border-b bg-background/80 backdrop-blur-md sticky top-0 z-50">
+    <nav className="border-b border-border/50 bg-background/95 backdrop-blur-lg sticky top-0 z-50 shadow-sm">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center space-x-4">
-            <Link to="/booknow" className="flex items-center">
+            <Link to="/booknow" className="flex items-center group">
               <img
                 src={siteLogo || "https://cdn.builder.io/api/v1/image/assets%2Fa42b6f9ec53e4654a92af75aad56d14f%2F38446bf6c22b453fa45caf63b0513e21?format=webp&width=800"}
                 alt="ROAM - Your Best Life. Everywhere."
-                className="h-10 w-auto hover:opacity-80 transition-opacity"
+                className="h-10 w-auto transition-all duration-300 group-hover:scale-105"
                 onError={(e) => {
                   // Fallback to default logo if dynamic logo fails to load
                   const target = e.target as HTMLImageElement;
@@ -59,8 +59,13 @@ export function Header() {
           {/* Desktop Navigation */}
           <div className="hidden md:flex flex-1 items-center justify-center space-x-8">
             {navLinks.map(({ to, label }) => (
-              <Link key={to} to={to} className="text-foreground/70 hover:text-roam-blue transition-colors">
+              <Link 
+                key={to} 
+                to={to} 
+                className="text-foreground/70 hover:text-roam-blue transition-all duration-300 font-medium relative group"
+              >
                 {label}
+                <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-roam-blue transition-all duration-300 group-hover:w-full"></span>
               </Link>
             ))}
           </div>
@@ -71,7 +76,7 @@ export function Header() {
               <>
                 <Button
                   variant="ghost"
-                  className="text-foreground hover:bg-foreground/10 border border-foreground/20"
+                  className="text-foreground hover:bg-roam-blue/10 hover:text-roam-blue border border-foreground/20 transition-all duration-300"
                   onClick={handleSignInClick}
                 >
                   <Calendar className="w-4 h-4 mr-2" />
@@ -83,12 +88,15 @@ export function Header() {
               <>
                 <Button
                   variant="outline"
-                  className="border-roam-blue text-roam-blue hover:bg-roam-blue hover:text-white"
+                  className="border-roam-blue text-roam-blue hover:bg-roam-blue hover:text-white transition-all duration-300"
                   onClick={handleSignInClick}
                 >
                   Sign In
                 </Button>
-                <Button asChild className="bg-roam-blue hover:bg-roam-blue/90">
+                <Button 
+                  asChild 
+                  className="bg-roam-blue hover:bg-roam-blue/90 transition-all duration-300 button-shine"
+                >
                   <a href="https://roamprovider.com" target="_blank" rel="noopener noreferrer">Become a Provider</a>
                 </Button>
               </>

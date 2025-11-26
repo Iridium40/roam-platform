@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import {
   Activity,
@@ -33,21 +34,25 @@ function SectionWrapper({ children, className = "" }: { children: React.ReactNod
 
 function Hero() {
   return (
-    <div className="relative overflow-hidden bg-gradient-to-br from-primary to-secondary text-primary-foreground">
-      <SectionWrapper>
+    <div className="relative overflow-hidden bg-gradient-to-br from-roam-blue via-roam-blue/90 to-roam-light-blue text-white">
+      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS1vcGFjaXR5PSIwLjA1IiBzdHJva2Utd2lkdGg9IjEiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZ3JpZCkiLz48L3N2Zz4=')] opacity-30"></div>
+      <SectionWrapper className="relative z-10">
         <div className="mx-auto max-w-3xl text-center">
-          <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl">Wellness Without Boundaries</h1>
-          <p className="mt-3 text-lg md:text-xl text-primary-foreground/90">
+          <Badge className="mb-6 text-sm px-4 py-2 bg-white/20 text-white border-white/30 backdrop-blur-sm animate-fade-in">
+            Our Services
+          </Badge>
+          <h1 className="text-5xl md:text-6xl font-bold tracking-tight mb-6 animate-slide-up">Wellness Without Boundaries</h1>
+          <p className="mt-3 text-xl md:text-2xl text-white/90 leading-relaxed animate-fade-in">
             Discover a curated marketplace of mobile, in-studio, and virtual services created for the 30A lifestyle.
           </p>
-          <p className="mt-6 text-primary-foreground/90">
+          <p className="mt-6 text-lg text-white/90 leading-relaxed animate-scale-in">
             From IV therapy and massage to aesthetics and performance coaching, every experience is delivered by a licensed professional vetted by our local team.
           </p>
-          <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
-            <Button asChild className="bg-white text-foreground hover:bg-white/90">
+          <div className="mt-10 flex flex-wrap items-center justify-center gap-4 animate-fade-in">
+            <Button asChild size="lg" className="bg-white text-roam-blue hover:bg-white/90 button-shine shadow-lg hover-scale">
               <Link to="/booknow">Book a Service</Link>
             </Button>
-            <Button asChild variant="secondary" className="bg-[#f88221] text-white hover:bg-[#f88221]/90">
+            <Button asChild size="lg" className="bg-roam-yellow text-roam-blue hover:bg-roam-yellow/90 font-semibold shadow-lg">
               <Link to="/contact">Talk to Our Team</Link>
             </Button>
           </div>
@@ -140,17 +145,17 @@ function ServiceHighlights() {
       </div>
       <div className="mt-10 grid gap-6 md:grid-cols-2">
         {categories.map(({ icon: Icon, title, description, services }) => (
-          <div key={title} className="rounded-2xl border bg-card p-6 shadow-sm transition hover:shadow-md">
-            <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <Icon className="h-6 w-6" />
+          <div key={title} className="rounded-2xl border-0 bg-white p-8 shadow-lg card-hover">
+            <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-roam-blue to-roam-light-blue text-white shadow-md">
+              <Icon className="h-7 w-7" />
             </div>
-            <h3 className="mt-4 text-xl font-semibold">{title}</h3>
-            <p className="mt-2 text-sm text-muted-foreground">{description}</p>
-            <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
+            <h3 className="mt-6 text-xl font-bold">{title}</h3>
+            <p className="mt-3 text-sm text-muted-foreground leading-relaxed">{description}</p>
+            <ul className="mt-6 space-y-3 text-sm text-muted-foreground">
               {services.map((item) => (
-                <li key={item} className="flex items-start gap-2">
-                  <span className="mt-1.5 inline-block h-1.5 w-1.5 rounded-full bg-primary" />
-                  <span>{item}</span>
+                <li key={item} className="flex items-start gap-3">
+                  <span className="mt-1.5 inline-block h-2 w-2 rounded-full bg-roam-blue flex-shrink-0" />
+                  <span className="leading-relaxed">{item}</span>
                 </li>
               ))}
             </ul>
@@ -193,21 +198,21 @@ function DeliveryOptions() {
   ];
 
   return (
-    <SectionWrapper className="rounded-3xl bg-secondary/10">
+    <SectionWrapper className="rounded-3xl bg-gradient-to-br from-roam-blue/5 via-background to-roam-light-blue/5">
       <div className="mx-auto max-w-3xl text-center">
-        <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Designed Around Your Lifestyle</h2>
-        <p className="mt-3 text-lg text-muted-foreground">
+        <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">Designed Around Your Lifestyle</h2>
+        <p className="mt-3 text-lg text-muted-foreground leading-relaxed">
           Every booking adapts to how you want to experience 30A—on the beach, at home, in studio, or entirely online.
         </p>
       </div>
       <div className="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {options.map(({ icon: Icon, title, description }) => (
-          <div key={title} className="rounded-2xl border bg-card p-6 text-left shadow-sm">
-            <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+          <div key={title} className="rounded-2xl border-0 bg-white p-6 text-left shadow-lg card-hover">
+            <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-roam-blue to-roam-light-blue text-white shadow-md">
               <Icon className="h-6 w-6" />
             </div>
-            <h3 className="mt-4 text-lg font-semibold">{title}</h3>
-            <p className="mt-2 text-sm text-muted-foreground">{description}</p>
+            <h3 className="mt-4 text-lg font-bold">{title}</h3>
+            <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{description}</p>
           </div>
         ))}
       </div>
@@ -234,19 +239,19 @@ function ExperienceSteps() {
   return (
     <SectionWrapper>
       <div className="mx-auto max-w-3xl text-center">
-        <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Booking in Three Simple Steps</h2>
-        <p className="mt-3 text-lg text-muted-foreground">
+        <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">Booking in Three Simple Steps</h2>
+        <p className="mt-3 text-lg text-muted-foreground leading-relaxed">
           Thoughtful technology keeps every interaction personal, transparent, and stress-free.
         </p>
       </div>
       <div className="mx-auto mt-10 grid max-w-5xl gap-6 md:grid-cols-3">
         {steps.map(({ title, description }, index) => (
-          <div key={title} className="rounded-2xl border bg-card p-6 text-center shadow-sm">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground text-lg font-bold">
+          <div key={title} className="rounded-2xl border-0 bg-white p-8 text-center shadow-lg card-hover">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-roam-blue to-roam-light-blue text-white text-2xl font-bold shadow-md">
               {index + 1}
             </div>
-            <h3 className="mt-4 text-lg font-semibold">{title}</h3>
-            <p className="mt-2 text-sm text-muted-foreground">{description}</p>
+            <h3 className="mt-6 text-lg font-bold">{title}</h3>
+            <p className="mt-3 text-sm text-muted-foreground leading-relaxed">{description}</p>
           </div>
         ))}
       </div>

@@ -1,5 +1,18 @@
 import { useEffect, useState } from "react";
-import { X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
+import {
+  X,
+  LayoutDashboard,
+  Calendar,
+  MessageSquare,
+  Settings,
+  Users,
+  Building2,
+  CheckCircle2,
+  TrendingUp,
+  ArrowRight,
+} from "lucide-react";
 
 function Check({ className = "w-5 h-5 text-green-500 mr-2" }: { className?: string }) {
   return (
@@ -10,6 +23,55 @@ function Check({ className = "w-5 h-5 text-green-500 mr-2" }: { className?: stri
         clipRule="evenodd"
       />
     </svg>
+  );
+}
+
+export default function HowItWorks() {
+  return (
+    <div className="bg-background">
+      <Hero />
+      <Features />
+      <HowItWorksSteps />
+      <WhyChooseROAM />
+      <FinalCTA />
+    </div>
+  );
+}
+
+function Hero() {
+  return (
+    <div className="relative overflow-hidden bg-gradient-to-br from-roam-blue to-roam-light-blue text-white">
+      {/* Grid pattern overlay */}
+      <div 
+        className="absolute inset-0 opacity-10"
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+        }}
+      />
+      
+      <div className="container py-20 md:py-28 relative">
+        <div className="max-w-4xl mx-auto text-center animate-fade-in">
+          <div className="inline-flex items-center gap-2 rounded-full bg-white/20 backdrop-blur-sm px-4 py-2 text-sm font-medium mb-6">
+            <TrendingUp className="w-4 h-4" />
+            Provider Platform Features
+          </div>
+          <h1 className="text-4xl md:text-6xl font-bold mb-6">
+            Everything You Need to Grow Your Wellness Business
+          </h1>
+          <p className="text-xl text-white/90 mb-8 max-w-3xl mx-auto">
+            Powerful tools to manage bookings, communicate with clients, track revenue, and scale your business—all in one intuitive platform.
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-4">
+            <Button asChild size="lg" className="bg-white text-roam-blue hover:bg-white/90 button-shine">
+              <Link to="/provider-portal">Get Started</Link>
+            </Button>
+            <Button asChild size="lg" className="bg-roam-yellow text-roam-blue hover:bg-roam-yellow/90 font-semibold">
+              <Link to="/contact">Talk to Our Team</Link>
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -33,6 +95,7 @@ function Features() {
   const cards = [
     {
       title: "Dashboard",
+      icon: LayoutDashboard,
       description:
         "Track revenue, bookings, conversations, and key performance metrics in real-time. Get insights that help you make smarter business decisions.",
       image:
@@ -43,6 +106,7 @@ function Features() {
     },
     {
       title: "My Bookings",
+      icon: Calendar,
       description:
         "Manage booking acceptance, status updates, provider assignments, and scheduling with an intuitive calendar interface.",
       image:
@@ -53,6 +117,7 @@ function Features() {
     },
     {
       title: "Messages",
+      icon: MessageSquare,
       description:
         "Communicate with customers who booked services with you without sharing personal contact information.",
       image:
@@ -63,6 +128,7 @@ function Features() {
     },
     {
       title: "Services",
+      icon: Settings,
       description:
         "Manage services and add-ons, pricing, and delivery options (mobile, business location, virtual).",
       image:
@@ -73,6 +139,7 @@ function Features() {
     },
     {
       title: "Staff",
+      icon: Users,
       description:
         "Onboard staff like dispatchers or providers. Define their services, locations, and availability to scale your business.",
       image:
@@ -83,6 +150,7 @@ function Features() {
     },
     {
       title: "Business Profile",
+      icon: Building2,
       description:
         "Customize your brand, set business hours, and publish a dedicated services page.",
       image:
@@ -94,46 +162,61 @@ function Features() {
   ];
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-20">
-      <div className="text-center mb-16">
-        <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
+    <div className="container py-20">
+      <div className="text-center mb-16 animate-fade-in">
+        <h2 className="text-4xl md:text-5xl font-bold mb-4 gradient-text">
           Powerful Features Built For You
         </h2>
-        <p className="text-xl text-muted-foreground max-w-3xl mx-auto mt-8">
+        <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
           Everything you need to manage bookings, communicate with clients, and grow your revenue—all in one intuitive platform.
         </p>
       </div>
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {cards.map((card) => (
-          <div key={card.title} className="rounded-2xl border bg-card p-8 shadow-sm transition">
-            <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-primary text-primary-foreground mb-6">
-              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-              </svg>
-            </div>
-            <h3 className="text-2xl font-bold text-foreground mb-3">{card.title}</h3>
-            <p className="text-muted-foreground leading-relaxed">{card.description}</p>
-            <div
-              className="mt-4 overflow-hidden rounded-xl border bg-white cursor-zoom-in"
-              role="button"
-              tabIndex={0}
-              onClick={() => open(card.fullImage, `ROAM Provider Management - ${card.title}`)}
-              onKeyDown={(e) =>
-                e.key === "Enter" && open(card.fullImage, `ROAM Provider Management - ${card.title}`)
-              }
+        {cards.map((card, idx) => {
+          const Icon = card.icon;
+          return (
+            <div 
+              key={card.title} 
+              className="rounded-2xl border bg-card p-8 shadow-lg card-hover group"
+              style={{ animationDelay: `${idx * 100}ms` }}
             >
-              <img src={card.image} alt={`ROAM Provider Management - ${card.title}`} className="w-full h-auto" loading="lazy" />
+              {/* Gradient icon container */}
+              <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-roam-blue to-roam-light-blue text-white mb-6 group-hover:scale-110 transition-transform">
+                <Icon className="w-8 h-8" />
+              </div>
+              
+              <h3 className="text-2xl font-bold mb-3">{card.title}</h3>
+              <p className="text-muted-foreground leading-relaxed mb-4">{card.description}</p>
+              
+              <div
+                className="mt-4 overflow-hidden rounded-xl border bg-white cursor-zoom-in hover-scale"
+                role="button"
+                tabIndex={0}
+                onClick={() => open(card.fullImage, `ROAM Provider Management - ${card.title}`)}
+                onKeyDown={(e) =>
+                  e.key === "Enter" && open(card.fullImage, `ROAM Provider Management - ${card.title}`)
+                }
+              >
+                <img 
+                  src={card.image} 
+                  alt={`ROAM Provider Management - ${card.title}`} 
+                  className="w-full h-auto" 
+                  loading="lazy" 
+                />
+              </div>
+              
+              <ul className="mt-4 space-y-2">
+                {card.points.map((point) => (
+                  <li key={point} className="flex items-center text-sm">
+                    <CheckCircle2 className="w-4 h-4 text-green-500 mr-2" />
+                    {point}
+                  </li>
+                ))}
+              </ul>
             </div>
-            <ul className="mt-4 space-y-2">
-              {card.points.map((point) => (
-                <li key={point} className="flex items-center text-sm text-foreground/80">
-                  <Check /> {point}
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {lightbox.open && (
@@ -160,10 +243,160 @@ function Features() {
   );
 }
 
-export default function HowItWorks() {
+function HowItWorksSteps() {
+  const steps = [
+    {
+      number: "1",
+      title: "Apply & Get Approved",
+      description: "Submit your application with business details, licenses, and insurance. Our team reviews and approves within 2-3 business days.",
+    },
+    {
+      number: "2",
+      title: "Set Up Your Profile",
+      description: "Add your services, pricing, availability, and service areas. Customize your business profile to showcase your brand.",
+    },
+    {
+      number: "3",
+      title: "Receive Bookings",
+      description: "Accept or decline booking requests instantly. Manage your calendar and communicate with customers through the platform.",
+    },
+    {
+      number: "4",
+      title: "Deliver & Get Paid",
+      description: "Provide your service, and get paid automatically within 2 business days. Build your reputation with reviews.",
+    },
+  ];
+
   return (
-    <div className="bg-background">
-      <Features />
+    <div className="bg-gradient-to-b from-roam-light-blue/10 to-transparent py-20">
+      <div className="container">
+        <div className="text-center mb-16">
+          <h2 className="text-4xl md:text-5xl font-bold mb-4">How It Works</h2>
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+            Get started in 4 simple steps and start growing your business
+          </p>
+        </div>
+
+        <div className="max-w-5xl mx-auto grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+          {steps.map((step, idx) => (
+            <div key={step.number} className="relative">
+              <div className="bg-card rounded-2xl p-6 shadow-lg border h-full card-hover">
+                {/* Gradient number badge */}
+                <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-roam-blue to-roam-light-blue text-white font-bold text-xl mb-4">
+                  {step.number}
+                </div>
+                <h3 className="text-xl font-bold mb-3">{step.title}</h3>
+                <p className="text-muted-foreground">{step.description}</p>
+              </div>
+              
+              {/* Arrow between steps */}
+              {idx < steps.length - 1 && (
+                <div className="hidden lg:block absolute top-1/2 -right-4 transform -translate-y-1/2 z-10">
+                  <ArrowRight className="w-8 h-8 text-roam-blue" />
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function WhyChooseROAM() {
+  const benefits = [
+    {
+      icon: TrendingUp,
+      title: "Grow Your Business",
+      description: "Access thousands of customers actively seeking wellness services in the 30A area.",
+    },
+    {
+      icon: Calendar,
+      title: "Manage Everything",
+      description: "Handle bookings, scheduling, messaging, and payments all from one platform.",
+    },
+    {
+      icon: CheckCircle2,
+      title: "Get Paid Fast",
+      description: "Automatic payments deposited to your account within 2 business days—no invoicing required.",
+    },
+    {
+      icon: Users,
+      title: "Build Your Team",
+      description: "Onboard staff members and scale your business with multi-provider support.",
+    },
+    {
+      icon: MessageSquare,
+      title: "Stay Connected",
+      description: "Communicate securely with customers without sharing personal contact details.",
+    },
+    {
+      icon: Building2,
+      title: "Professional Presence",
+      description: "Get a dedicated business page to showcase your services and build your brand.",
+    },
+  ];
+
+  return (
+    <div className="container py-20">
+      <div className="text-center mb-16">
+        <h2 className="text-4xl md:text-5xl font-bold mb-4">Why Choose ROAM?</h2>
+        <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+          Built specifically for wellness professionals who want to grow
+        </p>
+      </div>
+
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
+        {benefits.map((benefit, idx) => {
+          const Icon = benefit.icon;
+          return (
+            <div 
+              key={benefit.title} 
+              className="bg-card rounded-2xl p-6 shadow-lg border card-hover"
+              style={{ animationDelay: `${idx * 100}ms` }}
+            >
+              <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-roam-blue to-roam-light-blue text-white mb-4">
+                <Icon className="w-6 h-6" />
+              </div>
+              <h3 className="text-xl font-bold mb-2">{benefit.title}</h3>
+              <p className="text-muted-foreground">{benefit.description}</p>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function FinalCTA() {
+  return (
+    <div className="relative overflow-hidden bg-gradient-to-br from-roam-blue to-roam-light-blue text-white py-20">
+      {/* Grid pattern overlay */}
+      <div 
+        className="absolute inset-0 opacity-10"
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+        }}
+      />
+      
+      <div className="container relative">
+        <div className="max-w-3xl mx-auto text-center">
+          <h2 className="text-4xl md:text-5xl font-bold mb-6">
+            Ready to Grow Your Wellness Business?
+          </h2>
+          <p className="text-xl text-white/90 mb-8">
+            Join ROAM today and start connecting with customers who need your services.
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-4">
+            <Button asChild size="lg" className="bg-white text-roam-blue hover:bg-white/90 button-shine">
+              <Link to="/provider-portal">Apply Now</Link>
+            </Button>
+            <Button asChild size="lg" className="bg-roam-yellow text-roam-blue hover:bg-roam-yellow/90 font-semibold">
+              <Link to="/contact">Contact Support</Link>
+            </Button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

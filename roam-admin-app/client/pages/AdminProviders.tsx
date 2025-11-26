@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useDataCache } from "@/hooks/useDataCache";
 import { AdminLayout } from "@/components/layout/admin-layout";
 import { ROAMDataTable, Column } from "@/components/ui/roam-data-table";
 import {
@@ -722,6 +723,9 @@ export default function AdminProviders() {
     is_active: true,
   });
 
+  // Initialize data cache (5 minute cache duration)
+  const cache = useDataCache();
+
   // Fetch providers, provider services, provider add-ons, and businesses from Supabase
   useEffect(() => {
     fetchProviders();
@@ -730,8 +734,19 @@ export default function AdminProviders() {
     fetchBusinesses();
   }, []);
 
-  const fetchProviders = async () => {
+  const fetchProviders = async (forceRefresh = false) => {
     try {
+      // Check cache first unless force refresh
+      if (!forceRefresh && !cache.shouldRefetch('providers')) {
+        const cached = cache.getCachedData('providers');
+        if (cached) {
+          console.log("Using cached providers data");
+          setProviders(cached);
+          setLoading(false);
+          return;
+        }
+      }
+
       setLoading(true);
       setError(null);
 
@@ -748,8 +763,10 @@ export default function AdminProviders() {
         console.log(
           `Successfully fetched ${result.data?.length || 0} providers`,
         );
-        setProviders(result.data || []);
-        if (result.data?.length === 0) {
+        const providersData = result.data || [];
+        setProviders(providersData);
+        cache.setCachedData('providers', providersData);
+        if (providersData.length === 0) {
           setError(
             "No provider records found.",
           );
@@ -766,8 +783,18 @@ export default function AdminProviders() {
     }
   };
 
-  const fetchProviderServices = async () => {
+  const fetchProviderServices = async (forceRefresh = false) => {
     try {
+      // Check cache first unless force refresh
+      if (!forceRefresh && !cache.shouldRefetch('providerServices')) {
+        const cached = cache.getCachedData('providerServices');
+        if (cached) {
+          console.log("Using cached provider services data");
+          setProviderServices(cached);
+          return;
+        }
+      }
+
       console.log("Fetching provider services from API...");
 
       const response = await fetch('/api/provider-services');
@@ -781,8 +808,10 @@ export default function AdminProviders() {
         console.log(
           `Successfully fetched ${result.data?.length || 0} provider services`,
         );
-        setProviderServices(result.data || []);
-        if ((result.data?.length || 0) === 0) {
+        const servicesData = result.data || [];
+        setProviderServices(servicesData);
+        cache.setCachedData('providerServices', servicesData);
+        if (servicesData.length === 0) {
           setError(
             "Provider services table is empty. This is normal if no provider services have been created yet.",
           );
@@ -799,8 +828,18 @@ export default function AdminProviders() {
     }
   };
 
-  const fetchProviderAddons = async () => {
+  const fetchProviderAddons = async (forceRefresh = false) => {
     try {
+      // Check cache first unless force refresh
+      if (!forceRefresh && !cache.shouldRefetch('providerAddons')) {
+        const cached = cache.getCachedData('providerAddons');
+        if (cached) {
+          console.log("Using cached provider addons data");
+          setProviderAddons(cached);
+          return;
+        }
+      }
+
       console.log("Fetching provider add-ons from API...");
 
       const response = await fetch('/api/provider-addons');
@@ -814,7 +853,9 @@ export default function AdminProviders() {
         console.log(
           `Successfully fetched ${result.data?.length || 0} provider add-ons`,
         );
-        setProviderAddons(result.data || []);
+        const addonsData = result.data || [];
+        setProviderAddons(addonsData);
+        cache.setCachedData('providerAddons', addonsData);
       }
     } catch (err) {
       console.error("Unexpected error fetching provider add-ons:", err);
@@ -825,8 +866,18 @@ export default function AdminProviders() {
     }
   };
 
-  const fetchBusinesses = async () => {
+  const fetchBusinesses = async (forceRefresh = false) => {
     try {
+      // Check cache first unless force refresh
+      if (!forceRefresh && !cache.shouldRefetch('businesses')) {
+        const cached = cache.getCachedData('businesses');
+        if (cached) {
+          console.log("Using cached businesses data");
+          setBusinesses(cached);
+          return;
+        }
+      }
+
       const response = await fetch('/api/businesses');
       const result = await response.json();
 
@@ -839,6 +890,7 @@ export default function AdminProviders() {
           business_name: b.business_name
         })).filter((b: any) => b.business_name); // Filter active businesses
         setBusinesses(businessList);
+        cache.setCachedData('businesses', businessList);
       }
     } catch (err) {
       console.error("Error fetching businesses:", err);
@@ -917,7 +969,8 @@ export default function AdminProviders() {
           notification_phone: "",
           is_active: true,
         });
-        await fetchProviders(); // Refresh the providers list
+        cache.clearCache('providers'); // Invalidate cache
+        await fetchProviders(true); // Refresh the providers list
       }
     } catch (err) {
       console.error("Unexpected error:", err);
@@ -955,7 +1008,8 @@ export default function AdminProviders() {
         console.log(
           `Provider ${providerId} status updated to ${newStatus ? "active" : "inactive"}`,
         );
-        await fetchProviders(); // Refresh the providers list
+        cache.clearCache('providers'); // Invalidate cache
+        await fetchProviders(true); // Refresh the providers list
       }
     } catch (err) {
       console.error("Unexpected error:", err);
@@ -991,7 +1045,8 @@ export default function AdminProviders() {
         console.log(
           `Provider ${providerId} verification status updated to ${newStatus}`,
         );
-        await fetchProviders(); // Refresh the providers list
+        cache.clearCache('providers'); // Invalidate cache
+        await fetchProviders(true); // Refresh the providers list
       }
     } catch (err) {
       console.error("Unexpected error:", err);
@@ -1497,10 +1552,35 @@ export default function AdminProviders() {
               </select>
             </div>
 
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                fetchProviders(true);
+                fetchProviderServices(true);
+                fetchProviderAddons(true);
+                fetchBusinesses(true);
+              }}
+              disabled={loading}
+              className="flex items-center gap-2"
+            >
+              {loading ? (
+                <RefreshCw className="w-4 h-4 animate-spin" />
+              ) : (
+                <RefreshCw className="w-4 h-4" />
+              )}
+              Refresh
+            </Button>
+
             <div className="text-sm text-muted-foreground ml-auto">
               {loading
                 ? "Loading..."
                 : `Showing ${filteredProviders.length} of ${providers.length} providers`}
+              {cache.getTimeSinceLastFetch('providers') && (
+                <span className="text-xs text-muted-foreground ml-2">
+                  (Updated {cache.getTimeSinceLastFetch('providers')})
+                </span>
+              )}
               {error && (
                 <div className="text-orange-600 text-xs mt-1">{error}</div>
               )}

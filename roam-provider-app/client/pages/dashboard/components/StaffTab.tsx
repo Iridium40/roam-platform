@@ -26,9 +26,14 @@ import {
   AlertCircle,
   Phone,
   Mail,
+  RefreshCw,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
+import { getCached, setCache, invalidateCache, CacheKeys } from "@/lib/cache";
+
+// Cache TTL: 5 minutes
+const CACHE_TTL_MS = 5 * 60 * 1000;
 
 interface StaffTabProps {
   providerData: any;
@@ -100,7 +105,7 @@ export default function StaffTab({
   };
 
   // Staff Management Functions
-  const loadStaffData = async () => {
+  const loadStaffData = async (forceRefresh: boolean = false) => {
     // Check if we have a business ID from either business context or provider data
     const businessId = business?.id || providerData?.business_id;
     
@@ -150,11 +155,24 @@ export default function StaffTab({
     }
     
     // Load staff data with the business ID
-    await loadStaffWithBusinessId(businessId);
+    await loadStaffWithBusinessId(businessId, forceRefresh);
   };
 
   // Helper function to load staff data with a specific business ID
-  const loadStaffWithBusinessId = async (businessId: string) => {
+  const loadStaffWithBusinessId = async (businessId: string, forceRefresh: boolean = false) => {
+    const cacheKey = CacheKeys.staff(businessId);
+
+    // Check cache first (unless force refresh)
+    if (!forceRefresh) {
+      const cached = getCached<{ staff: any[]; providers: any[] }>(cacheKey, CACHE_TTL_MS);
+      if (cached) {
+        setStaffMembers(cached.staff);
+        setAllProviders(cached.providers);
+        setLoading(false);
+        return;
+      }
+    }
+
     try {
       setLoading(true);
       // Load staff members
@@ -172,6 +190,9 @@ export default function StaffTab({
       // Load all providers for assignment (only those with provider_role = "provider")
       const availableProviders = staffData?.filter(provider => provider.provider_role === "provider") || [];
       setAllProviders(availableProviders);
+
+      // Cache the data
+      setCache(cacheKey, { staff: staffData || [], providers: availableProviders });
 
     } catch (error: any) {
       console.error("Error loading staff data:", error);

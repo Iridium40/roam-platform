@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -8,7 +9,6 @@ import {
   ArrowLeft, 
   Mail, 
   Clock, 
-  Phone, 
   MapPin, 
   MessageCircle, 
   Send,
@@ -107,13 +107,6 @@ export default function Contact() {
       action: null
     },
     {
-      icon: Phone,
-      title: "Phone Support",
-      description: "Speak with our team",
-      details: "(855) ROAM-HELP",
-      action: "tel:8557626-4357"
-    },
-    {
       icon: MessageCircle,
       title: "Live Chat",
       description: "Chat with our AI assistant",
@@ -146,20 +139,23 @@ export default function Contact() {
       <Header />
       
       {/* Hero Section */}
-      <section className="py-12 bg-gradient-to-r from-roam-blue to-roam-light-blue text-white">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="relative py-20 overflow-hidden bg-gradient-to-br from-roam-blue via-roam-blue/90 to-roam-light-blue">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS1vcGFjaXR5PSIwLjA1IiBzdHJva2Utd2lkdGg9IjEiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZ3JpZCkiLz48L3N2Zz4=')] opacity-30"></div>
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="max-w-4xl mx-auto text-center">
-            <h1 className="text-4xl font-bold mb-4">
+            <Badge variant="secondary" className="mb-6 text-sm px-4 py-2 bg-white/20 text-white border-white/30 backdrop-blur-sm animate-fade-in">
+              Support
+            </Badge>
+            <h1 className="text-5xl md:text-6xl font-bold mb-6 text-white animate-slide-up">
               Get in Touch with ROAM
             </h1>
-            <p className="text-xl text-white/90 mb-6">
+            <p className="text-xl md:text-2xl text-white/90 mb-10 leading-relaxed animate-fade-in">
               We're here to help you with any questions about our platform, services, or becoming a provider.
             </p>
             <Button
               onClick={() => setChatBotOpen(true)}
               size="lg"
-              variant="secondary"
-              className="bg-white text-roam-blue hover:bg-white/90"
+              className="bg-white text-roam-blue hover:bg-white/90 button-shine shadow-lg hover-scale animate-scale-in"
             >
               <MessageCircle className="w-5 h-5 mr-2" />
               Start Live Chat
@@ -182,16 +178,16 @@ export default function Contact() {
                   const isButton = method.action && typeof method.action === 'function';
                   
                   const content = (
-                    <Card className={`${isClickable || isButton ? 'cursor-pointer hover:shadow-md transition-shadow' : ''}`}>
-                      <CardContent className="p-4">
-                        <div className="flex items-start gap-3">
-                          <div className="w-10 h-10 bg-roam-blue/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                            <Icon className="w-5 h-5 text-roam-blue" />
+                    <Card className={`border-0 shadow-lg rounded-2xl ${isClickable || isButton ? 'cursor-pointer card-hover' : ''}`}>
+                      <CardContent className="p-5">
+                        <div className="flex items-start gap-4">
+                          <div className="w-12 h-12 bg-gradient-to-br from-roam-blue to-roam-light-blue rounded-xl flex items-center justify-center flex-shrink-0 shadow-md">
+                            <Icon className="w-6 h-6 text-white" />
                           </div>
                           <div>
-                            <h3 className="font-semibold text-foreground">{method.title}</h3>
-                            <p className="text-sm text-foreground/60 mb-1">{method.description}</p>
-                            <p className="text-sm font-medium text-roam-blue">{method.details}</p>
+                            <h3 className="font-bold text-foreground">{method.title}</h3>
+                            <p className="text-sm text-foreground/60 mb-1 leading-relaxed">{method.description}</p>
+                            <p className="text-sm font-semibold text-roam-blue">{method.details}</p>
                           </div>
                         </div>
                       </CardContent>
@@ -217,7 +213,7 @@ export default function Contact() {
               </div>
 
               {/* Quick Links */}
-              <Card className="mt-8">
+              <Card className="mt-8 border-0 shadow-lg rounded-2xl">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <HelpCircle className="w-5 h-5 text-roam-blue" />
@@ -225,19 +221,19 @@ export default function Contact() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <Button asChild variant="outline" className="w-full justify-start">
+                  <Button asChild variant="outline" className="w-full justify-start border-2 hover:bg-roam-blue/5 hover:border-roam-blue">
                     <Link to="/my-bookings">
                       <CheckCircle className="w-4 h-4 mr-2" />
                       Manage My Bookings
                     </Link>
                   </Button>
-                  <Button asChild variant="outline" className="w-full justify-start">
+                  <Button asChild variant="outline" className="w-full justify-start border-2 hover:bg-roam-blue/5 hover:border-roam-blue">
                     <Link to="/become-a-provider">
                       <Users className="w-4 h-4 mr-2" />
                       Become a Provider
                     </Link>
                   </Button>
-                  <Button asChild variant="outline" className="w-full justify-start">
+                  <Button asChild variant="outline" className="w-full justify-start border-2 hover:bg-roam-blue/5 hover:border-roam-blue">
                     <Link to="/about">
                       <Building className="w-4 h-4 mr-2" />
                       About ROAM
@@ -249,10 +245,10 @@ export default function Contact() {
 
             {/* Contact Form */}
             <div className="lg:col-span-2">
-              <Card>
+              <Card className="border-0 shadow-lg rounded-2xl">
                 <CardHeader>
-                  <CardTitle>Send us a Message</CardTitle>
-                  <CardDescription>
+                  <CardTitle className="text-2xl font-bold">Send us a Message</CardTitle>
+                  <CardDescription className="text-base">
                     Fill out the form below and we'll get back to you within 24 hours.
                   </CardDescription>
                 </CardHeader>
@@ -334,17 +330,18 @@ export default function Contact() {
 
                     <Button 
                       type="submit" 
-                      className="w-full bg-roam-blue hover:bg-roam-blue/90"
+                      size="lg"
+                      className="w-full bg-roam-blue hover:bg-roam-blue/90 button-shine shadow-md"
                       disabled={isSubmitting}
                     >
                       {isSubmitting ? (
                         <>
-                          <Send className="w-4 h-4 mr-2 animate-pulse" />
+                          <Send className="w-5 h-5 mr-2 animate-pulse" />
                           Sending Message...
                         </>
                       ) : (
                         <>
-                          <Send className="w-4 h-4 mr-2" />
+                          <Send className="w-5 h-5 mr-2" />
                           Send Message
                         </>
                       )}
@@ -357,14 +354,14 @@ export default function Contact() {
 
           {/* FAQ Section */}
           <div className="mt-16">
-            <h2 className="text-3xl font-bold text-center mb-8">
+            <h2 className="text-3xl md:text-4xl font-bold text-center mb-12">
               Frequently Asked Questions
             </h2>
             <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
               {faqs.map((faq, index) => (
-                <Card key={index}>
+                <Card key={index} className="border-0 shadow-lg rounded-2xl card-hover">
                   <CardContent className="p-6">
-                    <h3 className="font-semibold text-lg mb-3 text-roam-blue">
+                    <h3 className="font-bold text-lg mb-3 text-roam-blue">
                       {faq.question}
                     </h3>
                     <p className="text-foreground/70 leading-relaxed">
@@ -378,10 +375,13 @@ export default function Contact() {
 
           {/* Additional Support */}
           <div className="mt-16 text-center">
-            <Card className="bg-gradient-to-r from-roam-blue/5 to-roam-light-blue/5 border-roam-blue/20">
-              <CardContent className="p-8">
-                <h3 className="text-2xl font-bold mb-4">Need Immediate Help?</h3>
-                <p className="text-foreground/70 mb-6 max-w-2xl mx-auto">
+            <Card className="border-0 shadow-2xl bg-gradient-to-br from-roam-blue/5 via-white to-roam-light-blue/5 rounded-3xl overflow-hidden">
+              <CardContent className="p-12 md:p-16">
+                <Badge variant="secondary" className="mb-6 text-sm px-4 py-2 bg-roam-blue/10 text-roam-blue">
+                  24/7 Support
+                </Badge>
+                <h3 className="text-3xl md:text-4xl font-bold mb-4 gradient-text">Need Immediate Help?</h3>
+                <p className="text-lg text-foreground/70 mb-8 max-w-2xl mx-auto leading-relaxed">
                   Our AI-powered chat assistant is available 24/7 to help answer your questions instantly. 
                   For complex issues, our support team is available during business hours.
                 </p>
@@ -389,12 +389,12 @@ export default function Contact() {
                   <Button
                     onClick={() => setChatBotOpen(true)}
                     size="lg"
-                    className="bg-roam-blue hover:bg-roam-blue/90"
+                    className="bg-roam-blue hover:bg-roam-blue/90 button-shine shadow-lg hover-scale"
                   >
                     <MessageCircle className="w-5 h-5 mr-2" />
                     Chat with AI Assistant
                   </Button>
-                  <Button asChild size="lg" variant="outline">
+                  <Button asChild size="lg" variant="outline" className="border-2 border-roam-blue text-roam-blue hover:bg-roam-blue hover:text-white shadow-lg hover-scale">
                     <a href="mailto:contactus@roamyourbestlife.com">
                       <Mail className="w-5 h-5 mr-2" />
                       Email Support

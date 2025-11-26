@@ -1,7 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/auth/AuthProvider';
 import { EligibleService, ServiceStats } from '@/types/services';
 import { getAuthHeaders } from '@/lib/api/authUtils';
+import { getCached, setCache, invalidateCache, CacheKeys } from '@/lib/cache';
+
+// Cache TTL: 5 minutes
+const CACHE_TTL_MS = 5 * 60 * 1000;
 
 export function useSimplifiedServices() {
   const { provider } = useAuth();
@@ -51,20 +55,32 @@ export function useSimplifiedServices() {
     }
   };
 
-  const loadServicesData = async () => {
+  const loadServicesData = async (forceRefresh: boolean = false) => {
     if (!isProviderReady()) {
       setError('Business profile setup required. Please complete your business registration.');
       setLoading(false);
       return;
     }
 
+    const businessId = provider!.provider!.business_id!;
+    const cacheKey = CacheKeys.services(businessId);
+
+    // Check cache first (unless force refresh)
+    if (!forceRefresh) {
+      const cached = getCached<{ services: EligibleService[]; stats: ServiceStats }>(cacheKey, CACHE_TTL_MS);
+      if (cached) {
+        setEligibleServices(cached.services);
+        setServiceStats(cached.stats);
+        setLoading(false);
+        return;
+      }
+    }
+
     try {
       setLoading(true);
       setError(null);
 
-      const businessId = provider!.provider!.business_id!;
       const userId = provider!.provider!.user_id!;
-      console.log('Loading eligible services for business:', businessId);
       
       // Backend uses service role key - no auth headers needed
       const response = await fetch(`/api/business-eligible-services?business_id=${businessId}&user_id=${userId}`);
@@ -92,12 +108,16 @@ export function useSimplifiedServices() {
       }, 0);
       const avgPrice = activeServices.length > 0 ? totalRevenue / activeServices.length : 0;
 
-      setServiceStats({
+      const stats = {
         total_services: services.length,
         active_services: activeServices.length,
         total_revenue: totalRevenue,
         avg_price: avgPrice,
-      });
+      };
+      setServiceStats(stats);
+
+      // Cache the data
+      setCache(cacheKey, { services, stats });
 
     } catch (error) {
       console.error('Error loading services data:', error);
@@ -144,8 +164,9 @@ export function useSimplifiedServices() {
         throw new Error(errorMessage);
       }
 
-      // Reload services to get updated data
-      await loadServicesData();
+      // Invalidate cache and reload services to get updated data
+      invalidateCache(CacheKeys.services(provider!.provider!.business_id!));
+      await loadServicesData(true);
 
     } catch (error) {
       console.error('Error updating service:', error);

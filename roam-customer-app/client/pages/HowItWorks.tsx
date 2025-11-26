@@ -107,24 +107,28 @@ export default function HowItWorks() {
       <Header />
       
       {/* Hero Section */}
-      <section className="py-16 bg-gradient-to-r from-roam-blue to-roam-light-blue text-white">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="relative py-20 overflow-hidden bg-gradient-to-br from-roam-blue via-roam-blue/90 to-roam-light-blue">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS1vcGFjaXR5PSIwLjA1IiBzdHJva2Utd2lkdGg9IjEiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZ3JpZCkiLz48L3N2Zz4=')] opacity-30"></div>
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="max-w-4xl mx-auto text-center">
-            <h1 className="text-5xl font-bold mb-6">
+            <Badge variant="secondary" className="mb-6 text-sm px-4 py-2 bg-white/20 text-white border-white/30 backdrop-blur-sm animate-fade-in">
+              Platform Overview
+            </Badge>
+            <h1 className="text-5xl md:text-6xl font-bold mb-6 text-white animate-slide-up">
               How ROAM Works
             </h1>
-            <p className="text-xl text-white/90 mb-8">
+            <p className="text-xl md:text-2xl text-white/90 mb-10 leading-relaxed animate-fade-in">
               Connecting customers with trusted local service providers has never been easier. 
               Here's how our platform brings quality services directly to you.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button asChild size="lg" variant="secondary" className="bg-white text-roam-blue hover:bg-white/90">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center animate-scale-in">
+              <Button asChild size="lg" variant="secondary" className="bg-white text-roam-blue hover:bg-white/90 hover-scale shadow-lg">
                 <Link to="/booknow">
                   <Play className="w-5 h-5 mr-2" />
                   Get Started
                 </Link>
               </Button>
-              <Button asChild size="lg" variant="outline" className="border-white text-white bg-white/10 hover:bg-white/20">
+              <Button asChild size="lg" className="bg-roam-yellow text-roam-blue hover:bg-roam-yellow/90 font-semibold shadow-lg">
                 <a href="https://roamprovider.com" target="_blank" rel="noopener noreferrer">
                   <Users className="w-5 h-5 mr-2" />
                   Become a Provider
@@ -155,27 +159,29 @@ export default function HowItWorks() {
             {customerSteps.map((step, index) => {
               const Icon = step.icon;
               return (
-                <Card key={index} className="relative overflow-hidden group hover:shadow-lg transition-all duration-300">
+                <Card key={index} className="relative overflow-hidden group card-hover border-0 shadow-lg bg-white rounded-2xl">
                   <CardHeader className="text-center">
-                    <div className="w-16 h-16 bg-roam-blue/10 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-roam-blue/20 transition-colors">
-                      <Icon className="w-8 h-8 text-roam-blue" />
+                    <div className="w-16 h-16 bg-gradient-to-br from-roam-blue to-roam-light-blue rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300 shadow-md">
+                      <Icon className="w-8 h-8 text-white" />
                     </div>
-                    <CardTitle className="text-xl">{step.title}</CardTitle>
-                    <CardDescription className="text-base">{step.description}</CardDescription>
+                    <CardTitle className="text-xl font-bold">{step.title}</CardTitle>
+                    <CardDescription className="text-base mt-2">{step.description}</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <ul className="space-y-2">
                       {step.details.map((detail, detailIndex) => (
-                        <li key={detailIndex} className="flex items-center text-sm text-foreground/70">
-                          <CheckCircle className="w-4 h-4 text-green-500 mr-2 flex-shrink-0" />
-                          {detail}
+                        <li key={detailIndex} className="flex items-start text-sm text-foreground/70">
+                          <CheckCircle className="w-4 h-4 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
+                          <span>{detail}</span>
                         </li>
                       ))}
                     </ul>
                   </CardContent>
                   {index < customerSteps.length - 1 && (
                     <div className="hidden lg:block absolute -right-4 top-1/2 transform -translate-y-1/2 z-10">
-                      <ArrowRight className="w-8 h-8 text-roam-blue/30" />
+                      <div className="w-8 h-8 bg-white rounded-full shadow-md flex items-center justify-center">
+                        <ArrowRight className="w-5 h-5 text-roam-blue" />
+                      </div>
                     </div>
                   )}
                 </Card>
@@ -202,27 +208,29 @@ export default function HowItWorks() {
             {providerSteps.map((step, index) => {
               const Icon = step.icon;
               return (
-                <Card key={index} className="relative overflow-hidden group hover:shadow-lg transition-all duration-300">
+                <Card key={index} className="relative overflow-hidden group card-hover border-0 shadow-lg bg-white rounded-2xl">
                   <CardHeader className="text-center">
-                    <div className="w-16 h-16 bg-roam-light-blue/10 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-roam-light-blue/20 transition-colors">
-                      <Icon className="w-8 h-8 text-roam-light-blue" />
+                    <div className="w-16 h-16 bg-gradient-to-br from-roam-light-blue to-roam-blue rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300 shadow-md">
+                      <Icon className="w-8 h-8 text-white" />
                     </div>
-                    <CardTitle className="text-xl">{step.title}</CardTitle>
-                    <CardDescription className="text-base">{step.description}</CardDescription>
+                    <CardTitle className="text-xl font-bold">{step.title}</CardTitle>
+                    <CardDescription className="text-base mt-2">{step.description}</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <ul className="space-y-2">
                       {step.details.map((detail, detailIndex) => (
-                        <li key={detailIndex} className="flex items-center text-sm text-foreground/70">
-                          <CheckCircle className="w-4 h-4 text-green-500 mr-2 flex-shrink-0" />
-                          {detail}
+                        <li key={detailIndex} className="flex items-start text-sm text-foreground/70">
+                          <CheckCircle className="w-4 h-4 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
+                          <span>{detail}</span>
                         </li>
                       ))}
                     </ul>
                   </CardContent>
                   {index < providerSteps.length - 1 && (
                     <div className="hidden lg:block absolute -right-4 top-1/2 transform -translate-y-1/2 z-10">
-                      <ArrowRight className="w-8 h-8 text-roam-light-blue/30" />
+                      <div className="w-8 h-8 bg-white rounded-full shadow-md flex items-center justify-center">
+                        <ArrowRight className="w-5 h-5 text-roam-light-blue" />
+                      </div>
                     </div>
                   )}
                 </Card>
@@ -246,13 +254,13 @@ export default function HowItWorks() {
             {features.map((feature, index) => {
               const Icon = feature.icon;
               return (
-                <Card key={index} className="text-center group hover:shadow-lg transition-all duration-300">
+                <Card key={index} className="text-center group card-hover border-0 shadow-lg bg-white rounded-2xl">
                   <CardContent className="p-8">
-                    <div className={`w-16 h-16 ${feature.color} rounded-full flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform`}>
+                    <div className={`w-16 h-16 ${feature.color} rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform shadow-md`}>
                       <Icon className="w-8 h-8 text-white" />
                     </div>
-                    <h3 className="text-xl font-semibold mb-3">{feature.title}</h3>
-                    <p className="text-foreground/70">{feature.description}</p>
+                    <h3 className="text-xl font-bold mb-3">{feature.title}</h3>
+                    <p className="text-foreground/70 leading-relaxed">{feature.description}</p>
                   </CardContent>
                 </Card>
               );
@@ -278,11 +286,11 @@ export default function HowItWorks() {
               { name: "Wellness", icon: "🧘", services: "Massage, Spa, Relaxation" },
               { name: "Healthcare", icon: "🏥", services: "Physical Therapy, Nutrition, Mental Health" }
             ].map((category, index) => (
-              <Card key={index} className="text-center hover:shadow-lg transition-all hover:scale-105">
+              <Card key={index} className="text-center card-hover border-0 shadow-lg bg-white rounded-2xl overflow-hidden group">
                 <CardContent className="p-8">
-                  <div className="text-5xl mb-4">{category.icon}</div>
-                  <h3 className="text-xl font-semibold mb-3">{category.name}</h3>
-                  <p className="text-sm text-foreground/70">{category.services}</p>
+                  <div className="text-5xl mb-4 group-hover:scale-110 transition-transform duration-300">{category.icon}</div>
+                  <h3 className="text-xl font-bold mb-3">{category.name}</h3>
+                  <p className="text-sm text-foreground/70 leading-relaxed">{category.services}</p>
                 </CardContent>
               </Card>
             ))}
@@ -291,29 +299,32 @@ export default function HowItWorks() {
 
         {/* CTA Section */}
         <section className="text-center">
-          <Card className="bg-gradient-to-r from-roam-blue/5 to-roam-light-blue/5 border-roam-blue/20">
-            <CardContent className="p-12">
-              <h2 className="text-3xl font-bold mb-4">Ready to Get Started?</h2>
-              <p className="text-xl text-foreground/70 mb-8 max-w-2xl mx-auto">
+          <Card className="border-0 shadow-2xl bg-gradient-to-br from-roam-blue/5 via-white to-roam-light-blue/5 rounded-3xl overflow-hidden">
+            <CardContent className="p-12 md:p-16">
+              <Badge variant="secondary" className="mb-6 text-sm px-4 py-2 bg-roam-blue/10 text-roam-blue">
+                Get Started Today
+              </Badge>
+              <h2 className="text-3xl md:text-4xl font-bold mb-4 gradient-text">Ready to Get Started?</h2>
+              <p className="text-xl text-foreground/70 mb-8 max-w-2xl mx-auto leading-relaxed">
                 Join thousands of satisfied customers and trusted providers on the ROAM platform today.
               </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button asChild size="lg" className="bg-roam-blue hover:bg-roam-blue/90">
+              <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
+                <Button asChild size="lg" className="bg-roam-blue hover:bg-roam-blue/90 button-shine shadow-lg hover-scale">
                   <Link to="/booknow">
                     <Search className="w-5 h-5 mr-2" />
                     Find Services
                   </Link>
                 </Button>
-                <Button asChild size="lg" variant="outline" className="border-roam-blue text-roam-blue hover:bg-roam-blue/10">
+                <Button asChild size="lg" variant="outline" className="border-2 border-roam-blue text-roam-blue hover:bg-roam-blue hover:text-white shadow-lg hover-scale">
                   <a href="https://roamprovider.com" target="_blank" rel="noopener noreferrer">
                     <Users className="w-5 h-5 mr-2" />
                     Become a Provider
                   </a>
                 </Button>
               </div>
-              <div className="mt-8 text-center">
+              <div className="text-center">
                 <p className="text-sm text-foreground/60">
-                  Questions? <Link to="/contact" className="text-roam-blue hover:underline">Contact our support team</Link>
+                  Questions? <Link to="/contact" className="text-roam-blue hover:underline font-medium transition-all">Contact our support team</Link>
                 </p>
               </div>
             </CardContent>

@@ -1,82 +1,102 @@
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Shield, ArrowLeft, Home } from "lucide-react";
+import { Search, Home, HelpCircle, MapPin } from "lucide-react";
 import { Link } from "react-router-dom";
+import { Header } from "@/components/Header";
 
 export default function NotFound() {
+  const quickLinks = [
+    { to: "/booknow", label: "Browse Services", icon: Search },
+    { to: "/my-bookings", label: "My Bookings", icon: MapPin },
+    { to: "/contact", label: "Get Help", icon: HelpCircle }
+  ];
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-accent/5 to-roam-light-blue/10">
-      {/* Simple Navigation */}
-      <nav className="border-b bg-background/80 backdrop-blur-md">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <img
-                src="https://cdn.builder.io/api/v1/image/assets%2Fa42b6f9ec53e4654a92af75aad56d14f%2F38446bf6c22b453fa45caf63b0513e21?format=webp&width=800"
-                alt="ROAM - Your Best Life. Everywhere."
-                className="h-8 w-auto"
-              />
-            </div>
-            <div className="text-sm text-foreground/60">Provider Portal</div>
-          </div>
-        </div>
-      </nav>
+      <Header />
 
       <section className="py-20 lg:py-32">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-2xl mx-auto text-center">
-            <Card className="border-border/50">
-              <CardContent className="p-12">
-                <div className="w-20 h-20 bg-gradient-to-br from-roam-blue to-roam-light-blue rounded-full flex items-center justify-center mx-auto mb-6">
-                  <Shield className="w-10 h-10 text-white" />
+          <div className="max-w-3xl mx-auto text-center">
+            <Card className="border-0 shadow-2xl rounded-3xl overflow-hidden">
+              <CardContent className="p-12 md:p-16">
+                {/* 404 Icon */}
+                <div className="relative mb-8">
+                  <div className="w-32 h-32 bg-gradient-to-br from-roam-blue to-roam-light-blue rounded-3xl flex items-center justify-center mx-auto shadow-lg animate-bounce-subtle">
+                    <span className="text-6xl font-bold text-white">404</span>
+                  </div>
+                  <div className="absolute -bottom-2 -right-2 w-16 h-16 bg-roam-yellow rounded-2xl flex items-center justify-center shadow-md">
+                    <HelpCircle className="w-8 h-8 text-gray-800" />
+                  </div>
                 </div>
 
-                <h1 className="text-4xl sm:text-5xl font-bold mb-4 text-roam-blue">
-                  404
+                <Badge variant="secondary" className="mb-4 text-sm px-4 py-2 bg-roam-blue/10 text-roam-blue">
+                  Page Not Found
+                </Badge>
+
+                <h1 className="text-4xl md:text-5xl font-bold mb-4 gradient-text">
+                  Oops! This Page Got Lost
                 </h1>
 
-                <h2 className="text-2xl font-semibold mb-4">
-                  Page Not Found
-                </h2>
-
-                <p className="text-lg text-foreground/70 mb-8">
-                  The page you're looking for doesn't exist in the Provider Portal. 
-                  Let's get you back to managing your business.
+                <p className="text-xl text-foreground/70 mb-8 leading-relaxed">
+                  The page you're looking for doesn't exist or may have been moved. 
+                  Don't worry, let's get you back on track!
                 </p>
 
-                <div className="bg-roam-light-blue/10 rounded-lg p-6 mb-8 border border-roam-light-blue/20">
-                  <p className="text-sm text-foreground/80">
-                    💡 <strong>Quick Access:</strong> Use the navigation to access your 
-                    dashboard, manage your business, or sign in to your provider account.
+                {/* Quick Navigation */}
+                <div className="bg-gradient-to-br from-roam-blue/5 to-roam-light-blue/5 rounded-2xl p-6 mb-8 border border-roam-blue/20">
+                  <p className="text-sm font-semibold text-foreground mb-4 flex items-center justify-center gap-2">
+                    <MapPin className="w-4 h-4 text-roam-blue" />
+                    Popular Destinations
                   </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {quickLinks.map((link) => {
+                      const Icon = link.icon;
+                      return (
+                        <Link
+                          key={link.to}
+                          to={link.to}
+                          className="flex items-center justify-center gap-2 p-3 rounded-xl bg-white hover:bg-roam-blue/10 border border-gray-200 hover:border-roam-blue transition-all group"
+                        >
+                          <Icon className="w-4 h-4 text-roam-blue group-hover:scale-110 transition-transform" />
+                          <span className="text-sm font-medium group-hover:text-roam-blue">{link.label}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                {/* Primary Actions */}
+                <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
                   <Button
                     asChild
-                    className="bg-roam-blue hover:bg-roam-blue/90"
+                    size="lg"
+                    className="bg-roam-blue hover:bg-roam-blue/90 button-shine shadow-lg hover-scale"
                   >
-                    <Link to="/provider-portal">
-                      <Home className="w-4 h-4 mr-2" />
-                      Provider Portal
+                    <Link to="/">
+                      <Home className="w-5 h-5 mr-2" />
+                      Return Home
                     </Link>
                   </Button>
 
                   <Button
                     asChild
+                    size="lg"
                     variant="outline"
-                    className="border-roam-blue text-roam-blue hover:bg-roam-blue hover:text-white"
+                    className="border-2 border-roam-blue text-roam-blue hover:bg-roam-blue hover:text-white shadow-lg hover-scale"
                   >
-                    <Link to="/dashboard">
-                      <Shield className="w-4 h-4 mr-2" />
-                      Dashboard
+                    <Link to="/booknow">
+                      <Search className="w-5 h-5 mr-2" />
+                      Browse Services
                     </Link>
                   </Button>
                 </div>
 
-                <div className="mt-8 text-sm text-foreground/60">
-                  <p>
-                    Need help? Contact ROAM Provider Support
+                {/* Help Text */}
+                <div className="text-center">
+                  <p className="text-sm text-foreground/60">
+                    Need assistance? <Link to="/contact" className="text-roam-blue hover:underline font-medium">Contact our support team</Link>
                   </p>
                 </div>
               </CardContent>

@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Mail, Clock, ShieldCheck } from "lucide-react";
+import { Mail, Clock, ShieldCheck, HelpCircle, MessageSquare, Book, Phone } from "lucide-react";
+import { Link } from "react-router-dom";
 
 export default function Contact() {
   const [loading, setLoading] = useState(false);
@@ -35,131 +36,324 @@ export default function Contact() {
   }
 
   return (
-    <div className="relative">
-      <div className="absolute inset-0 -z-10 bg-[radial-gradient(1200px_500px_at_10%_-20%,theme(colors.accent/0.25),transparent),radial-gradient(900px_400px_at_90%_10%,theme(colors.primary/0.2),transparent)]" />
+    <div className="bg-background">
+      <Hero />
+      <ContactSection onSubmit={onSubmit} loading={loading} />
+      <QuickHelp />
+      <FAQ />
+    </div>
+  );
+}
 
-      <section className="container py-12 text-center md:py-16">
-        <div className="mx-auto max-w-3xl">
-          <span className="inline-flex items-center gap-2 rounded-full border bg-white/70 px-3 py-1 text-xs font-medium backdrop-blur">
-            <ShieldCheck className="h-3.5 w-3.5 text-primary" /> Provider Success Team
-          </span>
-          <h1 className="mt-4 text-4xl font-extrabold tracking-tight sm:text-5xl">Talk to a Provider Success Manager</h1>
-          <p className="mt-3 text-lg text-muted-foreground">
-            Questions, demos, partnerships—send a message and we’ll respond within one business day.
+function Hero() {
+  return (
+    <div className="relative overflow-hidden bg-gradient-to-br from-roam-blue to-roam-light-blue text-white">
+      {/* Grid pattern overlay */}
+      <div 
+        className="absolute inset-0 opacity-10"
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+        }}
+      />
+      
+      <div className="container py-20 md:py-28 relative">
+        <div className="max-w-3xl mx-auto text-center animate-fade-in">
+          <div className="inline-flex items-center gap-2 rounded-full bg-white/20 backdrop-blur-sm px-4 py-2 text-sm font-medium mb-6">
+            <ShieldCheck className="w-4 h-4" />
+            Provider Success Team
+          </div>
+          <h1 className="text-4xl md:text-5xl font-bold mb-6">
+            Talk to a Provider Success Manager
+          </h1>
+          <p className="text-lg text-white/90 mb-4">
+            Questions, demos, partnerships—send a message and we'll respond within one business day.
           </p>
         </div>
-      </section>
+      </div>
+    </div>
+  );
+}
 
-      <section className="container pb-16">
-        <div className="grid gap-8 lg:grid-cols-5">
-          <div className="lg:col-span-3">
-            <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">
-              <div className="border-b bg-secondary/40 p-6">
-                <h2 className="text-xl font-semibold">Send us a message</h2>
-                <p className="mt-1 text-sm text-muted-foreground">We’ll route it to the right person and get back quickly.</p>
-              </div>
-              <form onSubmit={onSubmit} className="grid gap-6 p-6">
-                <div className="grid gap-2 sm:grid-cols-2">
-                  <div className="grid gap-2">
-                    <label htmlFor="name" className="text-sm font-medium">
-                      Full Name
-                    </label>
-                    <input
-                      id="name"
-                      name="name"
-                      required
-                      autoComplete="name"
-                      className="h-11 rounded-md border bg-background px-3 outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <label htmlFor="email" className="text-sm font-medium">
-                      Email
-                    </label>
-                    <input
-                      id="email"
-                      name="email"
-                      type="email"
-                      required
-                      autoComplete="email"
-                      className="h-11 rounded-md border bg-background px-3 outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
-                    />
-                  </div>
-                </div>
-                <div className="grid gap-2 sm:max-w-xs">
-                  <label htmlFor="phone" className="text-sm font-medium">
-                    Phone (optional)
+function ContactSection({ onSubmit, loading }: { onSubmit: (e: React.FormEvent<HTMLFormElement>) => void; loading: boolean }) {
+  const contactMethods = [
+    {
+      icon: Mail,
+      title: "Email",
+      detail: "contactus@roamyourbestlife.com",
+      description: "Best for detailed inquiries",
+      link: "mailto:contactus@roamyourbestlife.com",
+    },
+    {
+      icon: Clock,
+      title: "Hours",
+      detail: "7 days/week, 8am–10pm ET",
+      description: "We respond within 24 hours",
+    },
+  ];
+
+  return (
+    <div className="container py-20">
+      <div className="grid gap-12 lg:grid-cols-5">
+        {/* Contact Form */}
+        <div className="lg:col-span-3">
+          <div className="overflow-hidden rounded-2xl border bg-card shadow-lg">
+            <div className="border-b bg-gradient-to-r from-roam-blue/10 to-roam-light-blue/10 p-6">
+              <h2 className="text-2xl font-bold">Send Us a Message</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                We'll route it to the right person and get back quickly.
+              </p>
+            </div>
+            <form onSubmit={onSubmit} className="grid gap-6 p-6">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-2">
+                  <label htmlFor="name" className="text-sm font-medium">
+                    Full Name <span className="text-red-500">*</span>
                   </label>
                   <input
-                    id="phone"
-                    name="phone"
-                    autoComplete="tel"
-                    className="h-11 rounded-md border bg-background px-3 outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
+                    id="name"
+                    name="name"
+                    required
+                    autoComplete="name"
+                    className="h-11 rounded-lg border bg-background px-4 outline-none ring-offset-background transition-all focus-visible:ring-2 focus-visible:ring-roam-blue"
+                    placeholder="John Doe"
                   />
                 </div>
                 <div className="grid gap-2">
-                  <label htmlFor="message" className="text-sm font-medium">
-                    How can we help?
+                  <label htmlFor="email" className="text-sm font-medium">
+                    Email <span className="text-red-500">*</span>
                   </label>
-                  <textarea
-                    id="message"
-                    name="message"
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
                     required
-                    rows={7}
-                    className="rounded-md border bg-background p-3 outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
+                    autoComplete="email"
+                    className="h-11 rounded-lg border bg-background px-4 outline-none ring-offset-background transition-all focus-visible:ring-2 focus-visible:ring-roam-blue"
+                    placeholder="john@example.com"
                   />
                 </div>
-                <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3">
-                  <Button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full sm:w-auto bg-[#f88221] text-white hover:bg-[#f88221]/90"
-                  >
-                    {loading ? "Sending..." : "Send Message"}
-                  </Button>
-                  <Button type="reset" variant="outline" className="w-full sm:w-auto">
-                    Clear
-                  </Button>
-                  <p className="text-xs text-muted-foreground">
-                    By submitting, you agree to be contacted about your inquiry.
-                  </p>
+              </div>
+              <div className="grid gap-2">
+                <label htmlFor="phone" className="text-sm font-medium">
+                  Phone (optional)
+                </label>
+                <input
+                  id="phone"
+                  name="phone"
+                  autoComplete="tel"
+                  className="h-11 rounded-lg border bg-background px-4 outline-none ring-offset-background transition-all focus-visible:ring-2 focus-visible:ring-roam-blue"
+                  placeholder="(555) 123-4567"
+                />
+              </div>
+              <div className="grid gap-2">
+                <label htmlFor="message" className="text-sm font-medium">
+                  How can we help? <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  id="message"
+                  name="message"
+                  required
+                  rows={7}
+                  className="rounded-lg border bg-background p-4 outline-none ring-offset-background transition-all focus-visible:ring-2 focus-visible:ring-roam-blue"
+                  placeholder="Tell us about your inquiry..."
+                />
+              </div>
+              <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3">
+                <Button
+                  type="submit"
+                  disabled={loading}
+                  size="lg"
+                  className="w-full sm:w-auto bg-roam-blue text-white hover:bg-roam-blue/90 button-shine"
+                >
+                  {loading ? "Sending..." : "Send Message"}
+                </Button>
+                <Button type="reset" variant="outline" size="lg" className="w-full sm:w-auto">
+                  Clear
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                By submitting, you agree to be contacted about your inquiry.
+              </p>
+            </form>
+          </div>
+        </div>
+
+        {/* Contact Info Sidebar */}
+        <aside className="lg:col-span-2">
+          <div className="lg:sticky lg:top-24 space-y-6">
+            <h3 className="text-xl font-bold">Contact Information</h3>
+            
+            {contactMethods.map((method, idx) => {
+              const Icon = method.icon;
+              return (
+                <div 
+                  key={method.title} 
+                  className="rounded-2xl border bg-card p-6 shadow-lg card-hover"
+                  style={{ animationDelay: `${idx * 100}ms` }}
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-roam-blue to-roam-light-blue text-white flex-shrink-0">
+                      <Icon className="w-6 h-6" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold mb-1">{method.title}</h4>
+                      <p className="text-sm text-foreground font-medium mb-1">{method.detail}</p>
+                      <p className="text-xs text-muted-foreground">{method.description}</p>
+                      {method.link && (
+                        <a 
+                          href={method.link}
+                          className="inline-flex items-center gap-1 text-xs text-roam-blue hover:underline mt-2"
+                        >
+                          Contact us <Mail className="w-3 h-3" />
+                        </a>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </form>
+              );
+            })}
+
+            <div className="rounded-2xl border bg-gradient-to-br from-roam-blue/5 to-roam-light-blue/5 p-6 shadow-lg">
+              <h4 className="font-semibold mb-3">Why contact our team?</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li className="flex items-start gap-2">
+                  <ShieldCheck className="w-4 h-4 text-roam-blue flex-shrink-0 mt-0.5" />
+                  See how ROAM brings you prepaid bookings
+                </li>
+                <li className="flex items-start gap-2">
+                  <ShieldCheck className="w-4 h-4 text-roam-blue flex-shrink-0 mt-0.5" />
+                  Get help setting up your provider profile
+                </li>
+                <li className="flex items-start gap-2">
+                  <ShieldCheck className="w-4 h-4 text-roam-blue flex-shrink-0 mt-0.5" />
+                  Learn best practices to maximize earnings
+                </li>
+              </ul>
             </div>
           </div>
+        </aside>
+      </div>
+    </div>
+  );
+}
 
-          <aside className="lg:col-span-2">
-            <div className="lg:sticky lg:top-24 space-y-6">
-              <div className="rounded-2xl border bg-white/70 p-6 backdrop-blur">
-                <h3 className="text-base font-semibold">Contact details</h3>
-                <ul className="mt-4 space-y-3 text-sm">
-                  <li className="flex items-center gap-3">
-                    <Mail className="h-4 w-4 text-primary" /> contactus@roamyourbestlife.com
-                  </li>
-                  <li className="flex items-center gap-3">
-                    <Clock className="h-4 w-4 text-primary" /> 7 days/week, 8am–10pm ET
-                  </li>
-                </ul>
-                <a
-                  href="mailto:contactus@roamyourbestlife.com"
-                  className="mt-4 inline-flex w-full justify-center rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 sm:w-auto"
-                >
-                  Email us directly
-                </a>
-              </div>
+function QuickHelp() {
+  const helpLinks = [
+    {
+      icon: Book,
+      title: "Provider Guide",
+      description: "Learn how to get started and manage your business on ROAM",
+      link: "/how-it-works",
+    },
+    {
+      icon: MessageSquare,
+      title: "FAQ",
+      description: "Find answers to common questions about being a provider",
+      link: "#faq",
+    },
+    {
+      icon: HelpCircle,
+      title: "About ROAM",
+      description: "Discover our mission and how we support providers",
+      link: "/about",
+    },
+  ];
 
-              <div className="rounded-2xl border bg-white/70 p-6 backdrop-blur">
-                <h3 className="text-base font-semibold">Why contact our team?</h3>
-                <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-muted-foreground">
-                  <li>See how ROAM brings you prepaid bookings</li>
-                  <li>Get help setting up your provider profile</li>
-                  <li>Learn best practices to maximize earnings</li>
-                </ul>
-              </div>
-            </div>
-          </aside>
+  return (
+    <div className="bg-gradient-to-b from-roam-light-blue/10 to-transparent py-20">
+      <div className="container">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl md:text-4xl font-bold mb-4 gradient-text">Quick Help</h2>
+          <p className="text-muted-foreground max-w-2xl mx-auto">
+            Browse our resources for instant answers
+          </p>
         </div>
-      </section>
+        <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+          {helpLinks.map((link, idx) => {
+            const Icon = link.icon;
+            return (
+              <Link
+                key={link.title}
+                to={link.link}
+                className="group rounded-2xl border bg-card p-6 shadow-lg card-hover"
+                style={{ animationDelay: `${idx * 100}ms` }}
+              >
+                <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-roam-blue to-roam-light-blue text-white mb-4 group-hover:scale-110 transition-transform">
+                  <Icon className="w-6 h-6" />
+                </div>
+                <h3 className="text-lg font-bold mb-2 group-hover:text-roam-blue transition-colors">
+                  {link.title}
+                </h3>
+                <p className="text-sm text-muted-foreground">{link.description}</p>
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FAQ() {
+  const faqs = [
+    {
+      question: "How do I get paid?",
+      answer: "Payments are automatically transferred to your linked bank account within 2 business days after completing a service. No invoicing required!",
+    },
+    {
+      question: "What does ROAM charge?",
+      answer: "ROAM charges a 12% platform fee on each booking. This covers payment processing, marketing, customer support, and all platform features.",
+    },
+    {
+      question: "Can I set my own prices?",
+      answer: "Yes! You have complete control over your service pricing, add-ons, and travel fees. Update them anytime from your dashboard.",
+    },
+    {
+      question: "How do I handle cancellations?",
+      answer: "Our cancellation policy protects both providers and customers. Cancellations 24+ hours in advance have no penalties. Within 24 hours, providers receive 50% of the service fee.",
+    },
+    {
+      question: "Do I need insurance?",
+      answer: "Yes, all providers must maintain current liability insurance and provide proof during onboarding. This protects you, your customers, and the ROAM platform.",
+    },
+    {
+      question: "How does scheduling work?",
+      answer: "You control your availability through the provider dashboard. Customers can only book times you've marked as available, and you can accept or decline any booking request.",
+    },
+  ];
+
+  return (
+    <div className="container py-20">
+      <div className="text-center mb-12">
+        <h2 className="text-3xl md:text-4xl font-bold mb-4">Frequently Asked Questions</h2>
+        <p className="text-muted-foreground max-w-2xl mx-auto">
+          Common questions from providers like you
+        </p>
+      </div>
+      <div className="max-w-4xl mx-auto grid md:grid-cols-2 gap-6">
+        {faqs.map((faq, idx) => (
+          <div 
+            key={faq.question} 
+            className="rounded-2xl border bg-card p-6 shadow-lg card-hover"
+            style={{ animationDelay: `${idx * 100}ms` }}
+          >
+            <div className="flex items-start gap-3 mb-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-roam-blue to-roam-light-blue text-white flex-shrink-0">
+                <HelpCircle className="w-4 h-4" />
+              </div>
+              <h3 className="font-bold text-lg">{faq.question}</h3>
+            </div>
+            <p className="text-sm text-muted-foreground pl-11">{faq.answer}</p>
+          </div>
+        ))}
+      </div>
+      
+      <div className="mt-12 text-center">
+        <p className="text-muted-foreground mb-4">Still have questions?</p>
+        <Button asChild size="lg" className="bg-roam-blue text-white hover:bg-roam-blue/90 button-shine">
+          <a href="mailto:contactus@roamyourbestlife.com">Email Our Team</a>
+        </Button>
+      </div>
     </div>
   );
 }

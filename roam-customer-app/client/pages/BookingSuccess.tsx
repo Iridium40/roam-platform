@@ -13,10 +13,12 @@ type BookingDataRow = {
 import { useEffect, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckCircle, Calendar, Clock, MapPin, User, CreditCard } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
+import { CheckCircle, Calendar, Clock, Mail, Home, Eye, Bell } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
+import { Header } from '@/components/Header';
 
 interface BookingDetails {
   id: string;
@@ -117,98 +119,181 @@ export default function BookingSuccess() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-accent/5 to-roam-light-blue/10 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-roam-blue mx-auto mb-4"></div>
-          <p>Loading booking details...</p>
+      <div className="min-h-screen bg-gradient-to-br from-background via-accent/5 to-roam-light-blue/10">
+        <Header />
+        <div className="flex items-center justify-center py-32">
+          <Card className="border-0 shadow-lg rounded-2xl">
+            <CardContent className="p-12 text-center">
+              <div className="animate-spin rounded-full h-16 w-16 border-4 border-roam-blue border-t-transparent mx-auto mb-6"></div>
+              <p className="text-lg font-medium text-foreground">Loading booking details...</p>
+              <p className="text-sm text-foreground/60 mt-2">Please wait while we retrieve your information</p>
+            </CardContent>
+          </Card>
         </div>
-  {/* Spinner and loading message only */}
       </div>
     );
   }
 
   if (error || !booking) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-accent/5 to-roam-light-blue/10 flex items-center justify-center">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle className="text-center text-green-600">Payment Successful! 🎉</CardTitle>
-          </CardHeader>
-          <CardContent className="text-center space-y-4">
-            <div className="space-y-2">
-              <CheckCircle className="h-12 w-12 text-green-500 mx-auto" />
-              <p className="text-gray-600 font-medium">
-                Your payment was processed successfully!
-              </p>
-              <p className="text-sm text-gray-500">
-                We're processing your booking details. You'll receive a confirmation email shortly.
-              </p>
-            </div>
-            <div className="space-y-3">
-              <Button asChild className="w-full">
-                <Link to="/my-bookings">View My Bookings</Link>
-              </Button>
-              <Button asChild variant="outline" className="w-full">
-                <Link to="/">Return to Home</Link>
-              </Button>
-            </div>
-            <div className="text-xs text-gray-400 pt-2 border-t">
-              {sessionId && <p>Payment Session: {sessionId.substring(0, 20)}...</p>}
-              {bookingId && <p>Booking ID: {bookingId.substring(0, 20)}...</p>}
-            </div>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen bg-gradient-to-br from-background via-accent/5 to-roam-light-blue/10">
+        <Header />
+        <div className="container mx-auto px-4 py-16">
+          <div className="max-w-2xl mx-auto">
+            <Card className="border-0 shadow-2xl rounded-3xl overflow-hidden">
+              <CardContent className="p-12 md:p-16 text-center">
+                {/* Success Animation */}
+                <div className="relative mb-8">
+                  <div className="w-32 h-32 bg-gradient-to-br from-green-500 to-emerald-500 rounded-full flex items-center justify-center mx-auto shadow-lg animate-scale-in">
+                    <CheckCircle className="h-16 w-16 text-white" />
+                  </div>
+                  <div className="absolute -bottom-2 -right-2 text-4xl animate-bounce-subtle">🎉</div>
+                </div>
+
+                <Badge variant="secondary" className="mb-4 text-sm px-4 py-2 bg-green-500/10 text-green-700 border-green-200">
+                  Payment Confirmed
+                </Badge>
+
+                <h1 className="text-3xl md:text-4xl font-bold mb-4 gradient-text">
+                  Payment Successful!
+                </h1>
+                
+                <p className="text-lg text-foreground/80 mb-3 font-medium">
+                  Your payment was processed successfully!
+                </p>
+                <p className="text-sm text-foreground/60 mb-8 leading-relaxed">
+                  We're processing your booking details. You'll receive a confirmation email shortly.
+                </p>
+
+                {/* Action Buttons */}
+                <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
+                  <Button asChild size="lg" className="bg-roam-blue hover:bg-roam-blue/90 button-shine shadow-lg">
+                    <Link to="/my-bookings">
+                      <Eye className="w-5 h-5 mr-2" />
+                      View My Bookings
+                    </Link>
+                  </Button>
+                  <Button asChild size="lg" variant="outline" className="border-2 border-roam-blue text-roam-blue hover:bg-roam-blue hover:text-white shadow-lg">
+                    <Link to="/">
+                      <Home className="w-5 h-5 mr-2" />
+                      Return to Home
+                    </Link>
+                  </Button>
+                </div>
+
+                {/* Debug Info */}
+                {(sessionId || bookingId) && (
+                  <div className="text-xs text-foreground/40 pt-6 border-t border-gray-200">
+                    {sessionId && <p className="mb-1">Session: {sessionId.substring(0, 20)}...</p>}
+                    {bookingId && <p>Booking: {bookingId.substring(0, 20)}...</p>}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-accent/5 to-roam-light-blue/10">
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-2xl mx-auto">
+      <Header />
+      
+      <div className="container mx-auto px-4 py-12">
+        <div className="max-w-3xl mx-auto">
 
-          {/* Next Steps */}
-          {/* Booking Reference Display */}
-          {booking.booking_reference && (
-            <Card className="mb-6">
-              <CardHeader>
-                <CardTitle>Booking Reference</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-lg font-bold text-center text-roam-blue">
-                  {booking.booking_reference}
-                </div>
-                <div className="text-xs text-gray-500 text-center mt-2">
-                  Please save this reference for your records.
-                </div>
-              </CardContent>
-            </Card>
-          )}
-          {/* Next Steps */}
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle>What's Next?</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-start gap-3">
-                <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-medium mt-0.5">1</div>
-                <div>
-                  <p className="font-medium">Confirmation Email</p>
-                  <p className="text-sm text-gray-600">You'll receive a confirmation email with all the details.</p>
+          {/* Success Header */}
+          <Card className="mb-8 border-0 shadow-2xl rounded-3xl overflow-hidden">
+            <CardContent className="p-12 text-center">
+              {/* Success Animation */}
+              <div className="relative mb-6">
+                <div className="w-24 h-24 bg-gradient-to-br from-green-500 to-emerald-500 rounded-2xl flex items-center justify-center mx-auto shadow-lg animate-scale-in">
+                  <CheckCircle className="h-12 w-12 text-white" />
                 </div>
               </div>
-              <div className="flex items-start gap-3">
-                <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-medium mt-0.5">2</div>
-                <div>
-                  <p className="font-medium">Provider Notification</p>
-                  <p className="text-sm text-gray-600">The service provider will be notified of your booking.</p>
+
+              <Badge variant="secondary" className="mb-4 text-sm px-4 py-2 bg-green-500/10 text-green-700 border-green-200">
+                Booking Confirmed
+              </Badge>
+
+              <h1 className="text-3xl md:text-4xl font-bold mb-4 gradient-text">
+                Booking Complete!
+              </h1>
+              
+              <p className="text-lg text-foreground/70 mb-8 leading-relaxed">
+                Thank you for booking with ROAM. Your service has been confirmed and the provider has been notified.
+              </p>
+
+              {/* Booking Reference */}
+              {booking.booking_reference && (
+                <div className="bg-gradient-to-br from-roam-blue/5 to-roam-light-blue/5 p-6 rounded-2xl border border-roam-blue/20">
+                  <p className="text-sm font-medium text-foreground/60 mb-2">Booking Reference</p>
+                  <p className="text-2xl md:text-3xl font-bold text-roam-blue tracking-wider">
+                    {booking.booking_reference}
+                  </p>
+                  <p className="text-xs text-foreground/50 mt-2">
+                    Save this reference for your records
+                  </p>
                 </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* What's Next Section */}
+          <Card className="mb-8 border-0 shadow-lg rounded-2xl">
+            <CardContent className="p-8">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 bg-gradient-to-br from-roam-blue to-roam-light-blue rounded-xl flex items-center justify-center shadow-sm">
+                  <Calendar className="w-5 h-5 text-white" />
+                </div>
+                <h2 className="text-2xl font-bold">What's Next?</h2>
               </div>
-              <div className="flex items-start gap-3">
-                <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-medium mt-0.5">3</div>
-                <div>
-                  <p className="font-medium">Booking Management</p>
-                  <p className="text-sm text-gray-600">You can view and manage your booking in your account.</p>
+              
+              <div className="space-y-6">
+                <div className="flex items-start gap-4">
+                  <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-500 text-white rounded-xl flex items-center justify-center text-lg font-bold shadow-sm flex-shrink-0">
+                    1
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Mail className="w-5 h-5 text-blue-500" />
+                      <p className="font-bold text-lg">Confirmation Email</p>
+                    </div>
+                    <p className="text-sm text-foreground/70 leading-relaxed">
+                      You'll receive a confirmation email with all the details, including service information, provider contact, and booking instructions.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4">
+                  <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 text-white rounded-xl flex items-center justify-center text-lg font-bold shadow-sm flex-shrink-0">
+                    2
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Bell className="w-5 h-5 text-purple-500" />
+                      <p className="font-bold text-lg">Provider Notification</p>
+                    </div>
+                    <p className="text-sm text-foreground/70 leading-relaxed">
+                      The service provider will be notified immediately and will prepare for your appointment.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4">
+                  <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-500 text-white rounded-xl flex items-center justify-center text-lg font-bold shadow-sm flex-shrink-0">
+                    3
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Eye className="w-5 h-5 text-green-500" />
+                      <p className="font-bold text-lg">Booking Management</p>
+                    </div>
+                    <p className="text-sm text-foreground/70 leading-relaxed">
+                      You can view, manage, reschedule, or cancel your booking from your account at any time.
+                    </p>
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -216,11 +301,17 @@ export default function BookingSuccess() {
 
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button asChild variant="outline">
-              <Link to="/my-bookings">View My Bookings</Link>
+            <Button asChild size="lg" className="bg-roam-blue hover:bg-roam-blue/90 button-shine shadow-lg hover-scale">
+              <Link to="/my-bookings">
+                <Eye className="w-5 h-5 mr-2" />
+                View My Bookings
+              </Link>
             </Button>
-            <Button asChild>
-              <Link to="/">Return to Home</Link>
+            <Button asChild size="lg" variant="outline" className="border-2 border-roam-blue text-roam-blue hover:bg-roam-blue hover:text-white shadow-lg hover-scale">
+              <Link to="/">
+                <Home className="w-5 h-5 mr-2" />
+                Return to Home
+              </Link>
             </Button>
           </div>
         </div>

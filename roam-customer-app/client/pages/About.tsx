@@ -142,21 +142,25 @@ export default function About() {
       <Header />
 
       {/* Hero Section */}
-      <section className="py-20 relative overflow-hidden">
+      <section className="relative py-20 overflow-hidden bg-gradient-to-br from-roam-blue via-roam-blue/90 to-roam-light-blue">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS1vcGFjaXR5PSIwLjA1IiBzdHJva2Utd2lkdGg9IjEiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZ3JpZCkiLz48L3N2Zz4=')] opacity-30"></div>
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="max-w-4xl mx-auto text-center">
-            <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6 flex items-center justify-center gap-4">
+            <Badge variant="secondary" className="mb-6 text-sm px-4 py-2 bg-white/20 text-white border-white/30 backdrop-blur-sm animate-fade-in">
+              Our Story
+            </Badge>
+            <h1 className="text-5xl md:text-6xl font-bold text-white mb-6 flex items-center justify-center gap-4 animate-slide-up">
               About 
               <img
-                src="/logo-notagline.png"
+                src="/logo-white-notagline.png"
                 alt="ROAM"
                 className="h-12 md:h-16 w-auto inline-block"
               />
             </h1>
-            <h2 className="text-2xl md:text-3xl font-semibold text-gray-700 mb-8">
+            <h2 className="text-2xl md:text-3xl font-semibold text-white/90 mb-8 animate-fade-in">
               Transforming Wellness Services, One Appointment at a Time
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+            <p className="text-xl text-white/90 max-w-3xl mx-auto leading-relaxed animate-scale-in">
               At ROAM, we believe that accessing quality wellness services should be as simple as tapping your phone. 
               Founded on the principle that wellness is not a luxury but a necessity, we've created Florida's premier 
               on-demand wellness platform that brings professional services directly to you—wherever you are, whenever you need them.
@@ -210,16 +214,16 @@ export default function About() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-6xl mx-auto">
             {serviceCategories.map((category, index) => (
-              <Card key={index} className="group hover:shadow-2xl transition-all duration-500 border-0 shadow-xl bg-white overflow-hidden rounded-3xl">
+              <Card key={index} className="group card-hover border-0 shadow-lg bg-white overflow-hidden rounded-2xl">
                 <CardContent className="p-8">
                   <div className="flex items-start gap-6">
-                    <div className={`w-16 h-16 bg-gradient-to-br ${category.color} rounded-2xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300`}>
+                    <div className={`w-16 h-16 bg-gradient-to-br ${category.color} rounded-2xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300 shadow-md`}>
                       <category.icon className="w-8 h-8 text-white" />
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-3">
                         <h3 className="text-xl font-bold text-gray-900">{category.title}</h3>
-                        <Badge variant="secondary" className="bg-roam-blue/10 text-roam-blue">
+                        <Badge variant="secondary" className="bg-roam-blue/10 text-roam-blue border-0">
                           {category.count}
                         </Badge>
                       </div>
@@ -238,10 +242,10 @@ export default function About() {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-6xl mx-auto">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-              <Card className="border-0 shadow-xl bg-gradient-to-br from-roam-blue/5 to-roam-light-blue/5 rounded-3xl">
+              <Card className="border-0 shadow-lg bg-gradient-to-br from-roam-blue/5 to-roam-light-blue/5 rounded-2xl card-hover">
                 <CardContent className="p-8">
                   <div className="text-center mb-6">
-                    <div className="w-16 h-16 bg-gradient-to-br from-roam-blue to-roam-light-blue rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <div className="w-16 h-16 bg-gradient-to-br from-roam-blue to-roam-light-blue rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-md">
                       <Heart className="w-8 h-8 text-white" />
                     </div>
                     <h3 className="text-2xl font-bold text-gray-900">Our Mission</h3>
@@ -253,10 +257,10 @@ export default function About() {
                 </CardContent>
               </Card>
 
-              <Card className="border-0 shadow-xl bg-gradient-to-br from-roam-yellow/5 to-roam-light-blue/5 rounded-3xl">
+              <Card className="border-0 shadow-lg bg-gradient-to-br from-roam-yellow/5 to-roam-light-blue/5 rounded-2xl card-hover">
                 <CardContent className="p-8">
                   <div className="text-center mb-6">
-                    <div className="w-16 h-16 bg-gradient-to-br from-roam-yellow to-roam-light-blue rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <div className="w-16 h-16 bg-gradient-to-br from-roam-yellow to-roam-light-blue rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-md">
                       <TrendingUp className="w-8 h-8 text-gray-800" />
                     </div>
                     <h3 className="text-2xl font-bold text-gray-900">Our Vision</h3>
@@ -283,10 +287,10 @@ export default function About() {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
             {differentiators.map((item, index) => (
-              <Card key={index} className="border-0 shadow-xl bg-white rounded-3xl hover:shadow-2xl transition-all duration-300">
+              <Card key={index} className="border-0 shadow-lg bg-white rounded-2xl card-hover">
                 <CardContent className="p-8">
                   <div className="flex items-center gap-4 mb-6">
-                    <div className="w-12 h-12 bg-gradient-to-br from-roam-blue to-roam-light-blue rounded-xl flex items-center justify-center">
+                    <div className="w-12 h-12 bg-gradient-to-br from-roam-blue to-roam-light-blue rounded-xl flex items-center justify-center shadow-md">
                       <item.icon className="w-6 h-6 text-white" />
                     </div>
                     <h3 className="text-xl font-bold text-gray-900">{item.title}</h3>
@@ -295,7 +299,7 @@ export default function About() {
                     {item.features.map((feature, featureIndex) => (
                       <li key={featureIndex} className="flex items-start gap-3 text-gray-600">
                         <div className="w-2 h-2 bg-roam-blue rounded-full mt-2 flex-shrink-0"></div>
-                        <span>{feature}</span>
+                        <span className="leading-relaxed">{feature}</span>
                       </li>
                     ))}
                   </ul>
@@ -344,9 +348,9 @@ export default function About() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
             {values.map((value, index) => (
-              <Card key={index} className="border-0 shadow-lg bg-white rounded-2xl hover:shadow-xl transition-all duration-300 group">
+              <Card key={index} className="border-0 shadow-lg bg-white rounded-2xl card-hover group">
                 <CardContent className="p-6 text-center">
-                  <div className="w-12 h-12 bg-gradient-to-br from-roam-blue to-roam-light-blue rounded-xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
+                  <div className="w-12 h-12 bg-gradient-to-br from-roam-blue to-roam-light-blue rounded-xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300 shadow-md">
                     <value.icon className="w-6 h-6 text-white" />
                   </div>
                   <h3 className="text-lg font-bold text-gray-900 mb-3">{value.title}</h3>
@@ -372,15 +376,17 @@ export default function About() {
             </p>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
-              <Card className="border-0 shadow-xl bg-white rounded-3xl">
+              <Card className="border-0 shadow-lg bg-white rounded-2xl card-hover">
                 <CardContent className="p-8 text-center">
-                  <Users className="w-12 h-12 text-roam-blue mx-auto mb-4" />
+                  <div className="w-12 h-12 bg-roam-blue/10 rounded-xl flex items-center justify-center mx-auto mb-4">
+                    <Users className="w-6 h-6 text-roam-blue" />
+                  </div>
                   <h3 className="text-xl font-bold text-gray-900 mb-4">For Customers</h3>
-                  <p className="text-gray-600 mb-6">
+                  <p className="text-gray-600 mb-6 leading-relaxed">
                     Discover how easy it is to prioritize your wellness. Your first massage, personal training session, 
                     or beauty treatment is just a few taps away.
                   </p>
-                  <Button asChild className="w-full bg-roam-blue hover:bg-roam-blue/90">
+                  <Button asChild className="w-full bg-roam-blue hover:bg-roam-blue/90 button-shine shadow-md">
                     <Link to="/booknow">
                       <Star className="w-4 h-4 mr-2" />
                       Browse Services
@@ -389,15 +395,17 @@ export default function About() {
                 </CardContent>
               </Card>
 
-              <Card className="border-0 shadow-xl bg-white rounded-3xl">
+              <Card className="border-0 shadow-lg bg-white rounded-2xl card-hover">
                 <CardContent className="p-8 text-center">
-                  <Award className="w-12 h-12 text-roam-light-blue mx-auto mb-4" />
+                  <div className="w-12 h-12 bg-roam-light-blue/10 rounded-xl flex items-center justify-center mx-auto mb-4">
+                    <Award className="w-6 h-6 text-roam-light-blue" />
+                  </div>
                   <h3 className="text-xl font-bold text-gray-900 mb-4">For Providers</h3>
-                  <p className="text-gray-600 mb-6">
+                  <p className="text-gray-600 mb-6 leading-relaxed">
                     Join our community of wellness professionals and grow your business with the support of 
                     cutting-edge technology and a dedicated customer base.
                   </p>
-                  <Button asChild variant="outline" className="w-full border-roam-light-blue text-roam-light-blue hover:bg-roam-light-blue hover:text-white">
+                  <Button asChild variant="outline" className="w-full border-2 border-roam-light-blue text-roam-light-blue hover:bg-roam-light-blue hover:text-white shadow-md">
                     <a href="https://roamprovider.com" target="_blank" rel="noopener noreferrer">
                       <TrendingUp className="w-4 h-4 mr-2" />
                       Become a Provider
@@ -407,20 +415,20 @@ export default function About() {
               </Card>
             </div>
 
-            <div className="bg-gradient-to-r from-roam-blue/10 to-roam-light-blue/10 p-8 rounded-3xl">
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">
+            <div className="bg-gradient-to-br from-roam-blue/10 via-white to-roam-light-blue/10 p-10 rounded-2xl shadow-lg border border-roam-blue/10">
+              <h3 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4 text-center">
                 Ready to experience the future of wellness?
               </h3>
-              <p className="text-lg text-gray-600 mb-6">
+              <p className="text-lg text-gray-600 mb-8 text-center leading-relaxed">
                 Join thousands of satisfied customers who have made ROAM their trusted wellness partner.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button size="lg" className="bg-roam-blue hover:bg-roam-blue/90">
+                <Button size="lg" className="bg-roam-blue hover:bg-roam-blue/90 button-shine shadow-lg hover-scale">
                   <Smartphone className="w-5 h-5 mr-2" />
                   Visit www.roamyourbestlife.com
                   <ExternalLink className="w-4 h-4 ml-2" />
                 </Button>
-                <Button size="lg" variant="outline" className="border-roam-blue text-roam-blue hover:bg-roam-blue hover:text-white">
+                <Button size="lg" variant="outline" className="border-2 border-roam-blue text-roam-blue hover:bg-roam-blue hover:text-white shadow-lg hover-scale">
                   <Download className="w-5 h-5 mr-2" />
                   Download ROAM App
                 </Button>
