@@ -101,24 +101,15 @@ export default function StaffTab({
 
   // Staff Management Functions
   const loadStaffData = async () => {
-    console.log('🔍 loadStaffData called');
-    console.log('🔍 business?.id:', business?.id);
-    console.log('🔍 providerData?.business_id:', providerData?.business_id);
-    console.log('🔍 providerData:', providerData);
-    
     // Check if we have a business ID from either business context or provider data
     const businessId = business?.id || providerData?.business_id;
-    console.log('🔍 Using businessId:', businessId);
     
     if (!businessId) {
       // If no business ID available, use the current provider data if available
       if (providerData && providerData.id) {
-        console.log('🔍 Using providerData for staff members:', providerData);
         setStaffMembers([providerData]);
         setAllProviders([providerData]);
       } else {
-        console.log('🔍 No providerData available, using sample data');
-        console.log('🔍 providerData value:', providerData);
         // Only use sample data if no provider data is available
         setStaffMembers([
           {
@@ -164,8 +155,6 @@ export default function StaffTab({
 
   // Helper function to load staff data with a specific business ID
   const loadStaffWithBusinessId = async (businessId: string) => {
-    console.log('🔍 loadStaffWithBusinessId called with businessId:', businessId);
-
     try {
       setLoading(true);
       // Load staff members
@@ -198,10 +187,6 @@ export default function StaffTab({
 
   // Availability Editor Functions
   const openAvailabilityEditor = (provider: any) => {
-    console.log('🔍 openAvailabilityEditor called with provider:', provider);
-    console.log('🔍 Provider ID:', provider.id);
-    console.log('🔍 Is sample data?', provider.is_sample_data);
-
     // Prevent editing sample data
     if (provider.is_sample_data) {
       toast({

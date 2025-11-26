@@ -84,7 +84,6 @@ export default function FinancialsTab({
 
   // Supabase financial data state
   const [financialTransactions, setFinancialTransactions] = useState<any[]>([]);
-  const [paymentTransactions, setPaymentTransactions] = useState<any[]>([]);
   const [businessPaymentTransactions, setBusinessPaymentTransactions] = useState<any[]>([]);
   const [supabaseLoading, setSupabaseLoading] = useState(false);
 
@@ -187,23 +186,6 @@ export default function FinancialsTab({
         console.error('Error loading financial transactions:', financialError);
       } else {
         setFinancialTransactions(financialData || []);
-      }
-
-      // Load payment_transactions through bookings (since payment_transactions has booking_id, not business_id)
-      const { data: paymentData, error: paymentError } = await supabase
-        .from('payment_transactions')
-        .select(`
-          *,
-          bookings!inner(business_id)
-        `)
-        .eq('bookings.business_id', businessId)
-        .order('processed_at', { ascending: false })
-        .limit(50);
-
-      if (paymentError) {
-        console.error('Error loading payment transactions:', paymentError);
-      } else {
-        setPaymentTransactions(paymentData || []);
       }
 
       // Load business_payment_transactions (this table has business_id directly)
@@ -1019,63 +1001,6 @@ export default function FinancialsTab({
             </CardContent>
           </Card>
 
-          {/* Payment Splits Section */}
-          {paymentTransactions.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <PieChart className="w-5 h-5" />
-                  <span>Payment Breakdown</span>
-                </CardTitle>
-                <CardDescription>How your earnings are split between platform fees and your payout</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {paymentTransactions.map((payment) => (
-                    <div key={payment.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                      <div className="flex items-center space-x-3">
-                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                          payment.transaction_type === 'service_fee' ? 'bg-orange-100' :
-                          payment.transaction_type === 'remaining_balance' ? 'bg-green-100' :
-                          'bg-gray-100'
-                        }`}>
-                          {payment.transaction_type === 'service_fee' ? (
-                            <TrendingDown className="w-5 h-5 text-orange-600" />
-                          ) : (
-                            <TrendingUp className="w-5 h-5 text-green-600" />
-                          )}
-                        </div>
-                        <div>
-                          <p className="font-medium text-sm">
-                            {payment.transaction_type === 'service_fee' ? 'Platform Fee (12%)' : 'Your Earnings (88%)'}
-                          </p>
-                          <p className="text-xs text-gray-600">
-                            {payment.booking_id && `Booking ID: ${payment.booking_id}`}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {new Date(payment.processed_at || payment.created_at).toLocaleDateString()}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className={`font-semibold ${payment.transaction_type === 'service_fee' ? 'text-orange-600' : 'text-green-600'}`}>
-                          {payment.transaction_type === 'service_fee' ? '-' : '+'}${Math.abs(payment.amount).toFixed(2)}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {payment.destination_account === 'roam_platform' ? 'To Platform' : 'To You'}
-                        </p>
-                        <p className="text-xs text-gray-400">
-                          {payment.status === 'completed' ? '✓ Completed' : 
-                           payment.status === 'pending' ? '⏳ Pending' : 
-                           payment.status}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
         </TabsContent>
 
         {/* Tips Tab - Owner Only */}

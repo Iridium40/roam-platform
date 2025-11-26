@@ -196,6 +196,7 @@ export default function ProviderPortal() {
                               type={showPassword ? "text" : "password"}
                               placeholder="Enter your password"
                               className="pl-10 pr-10"
+                              autoComplete="current-password"
                               value={loginData.password}
                               onChange={(e) =>
                                 setLoginData({

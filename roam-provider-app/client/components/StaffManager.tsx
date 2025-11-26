@@ -153,14 +153,6 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
   // Safely handle locations prop - ensure it's always an array
   const safeLocations = Array.isArray(locations) ? locations : [];
 
-  // Debug: Log locations when component mounts or locations change
-  useEffect(() => {
-    console.log('🏢 StaffManager - Locations received:', {
-      locationsCount: safeLocations.length,
-      locations: safeLocations
-    });
-  }, [locations]);
-
   useEffect(() => {
     fetchStaff();
     fetchBusinessServices();

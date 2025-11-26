@@ -296,6 +296,7 @@ export default function StaffOnboarding() {
                   <Input
                     id="password"
                     type="password"
+                    autoComplete="new-password"
                     value={formData.password}
                     onChange={(e) => handleInputChange('password', e.target.value)}
                     placeholder="Create a secure password"
@@ -307,6 +308,7 @@ export default function StaffOnboarding() {
                   <Input
                     id="confirmPassword"
                     type="password"
+                    autoComplete="new-password"
                     value={formData.confirmPassword}
                     onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
                     placeholder="Confirm your password"

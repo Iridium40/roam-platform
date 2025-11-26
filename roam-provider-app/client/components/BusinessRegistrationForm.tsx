@@ -584,6 +584,7 @@ export const BusinessRegistrationForm: React.FC<
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
+                  autoComplete="new-password"
                   value={formData.password}
                   onChange={(e) =>
                     handleInputChange("password", e.target.value)
@@ -615,6 +616,7 @@ export const BusinessRegistrationForm: React.FC<
                 <Input
                   id="confirmPassword"
                   type={showPassword ? "text" : "password"}
+                  autoComplete="new-password"
                   value={formData.confirmPassword}
                   onChange={(e) =>
                     handleInputChange("confirmPassword", e.target.value)

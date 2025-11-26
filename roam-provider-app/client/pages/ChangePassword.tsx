@@ -162,6 +162,7 @@ export default function ChangePassword() {
                   type={showPasswords.current ? "text" : "password"}
                   placeholder="Enter current password"
                   className="pl-10 pr-10"
+                  autoComplete="current-password"
                   value={passwords.current}
                   onChange={(e) =>
                     setPasswords({ ...passwords, current: e.target.value })
@@ -199,6 +200,7 @@ export default function ChangePassword() {
                   type={showPasswords.new ? "text" : "password"}
                   placeholder="Enter new password (min. 8 characters)"
                   className="pl-10 pr-10"
+                  autoComplete="new-password"
                   value={passwords.new}
                   onChange={(e) =>
                     setPasswords({ ...passwords, new: e.target.value })
@@ -237,6 +239,7 @@ export default function ChangePassword() {
                   type={showPasswords.confirm ? "text" : "password"}
                   placeholder="Confirm new password"
                   className="pl-10 pr-10"
+                  autoComplete="new-password"
                   value={passwords.confirm}
                   onChange={(e) =>
                     setPasswords({ ...passwords, confirm: e.target.value })

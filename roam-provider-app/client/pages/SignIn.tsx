@@ -284,6 +284,7 @@ export default function SignIn() {
                         <Input
                           id="signin-password"
                           type={showPassword ? "text" : "password"}
+                          autoComplete="current-password"
                           value={signInForm.password}
                           onChange={(e) =>
                             setSignInForm((prev) => ({
@@ -401,6 +402,7 @@ export default function SignIn() {
                         <Input
                           id="signup-password"
                           type={showPassword ? "text" : "password"}
+                          autoComplete="new-password"
                           value={signUpForm.password}
                           onChange={(e) =>
                             setSignUpForm((prev) => ({
@@ -433,6 +435,7 @@ export default function SignIn() {
                         <Input
                           id="signup-confirmPassword"
                           type={showConfirmPassword ? "text" : "password"}
+                          autoComplete="new-password"
                           value={signUpForm.confirmPassword}
                           onChange={(e) =>
                             setSignUpForm((prev) => ({

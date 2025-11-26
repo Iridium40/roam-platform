@@ -436,24 +436,15 @@ export default function ProviderDashboard() {
 
   // Staff Management Functions
   const loadStaffData = async () => {
-    console.log('🔍 loadStaffData called');
-    console.log('🔍 business?.id:', business?.id);
-    console.log('🔍 providerData?.business_id:', providerData?.business_id);
-    console.log('🔍 providerData:', providerData);
-    
     // Check if we have a business ID from either business context or provider data
     const businessId = business?.id || providerData?.business_id;
-    console.log('🔍 Using businessId:', businessId);
     
     if (!businessId) {
       // If no business ID available, use the current provider data if available
       if (providerData && providerData.id) {
-        console.log('🔍 Using providerData for staff members:', providerData);
         setStaffMembers([providerData]);
         setAllProviders([providerData]);
       } else {
-        console.log('🔍 No providerData available, using sample data');
-        console.log('🔍 providerData value:', providerData);
         // Only use sample data if no provider data is available
       setStaffMembers([
         {
@@ -499,8 +490,6 @@ export default function ProviderDashboard() {
 
   // Helper function to load staff data with a specific business ID
   const loadStaffWithBusinessId = async (businessId: string) => {
-    console.log('🔍 loadStaffWithBusinessId called with businessId:', businessId);
-
     try {
       // Load staff members
       const { data: staffData, error: staffError } = await supabase
@@ -548,10 +537,6 @@ export default function ProviderDashboard() {
 
   // Availability Editor Functions
   const openAvailabilityEditor = (provider: any) => {
-    console.log('🔍 openAvailabilityEditor called with provider:', provider);
-    console.log('🔍 Provider ID:', provider.id);
-    console.log('🔍 Is sample data?', provider.is_sample_data);
-
     // Prevent editing sample data
     if (provider.is_sample_data) {
       toast({
@@ -638,11 +623,6 @@ export default function ProviderDashboard() {
       try {
         setLoading(true);
 
-        // Load provider data
-        console.log('🔍 Loading provider data for user ID:', userId);
-        console.log('🔍 Provider object:', provider);
-        console.log('🔍 User ID from provider:', userId);
-        
         // ✅ Optimized: Single query with nested relations (admin app pattern)
         // Note: We don't filter by is_active here to allow approved providers to access
         // the dashboard to complete Phase 2 onboarding (which sets is_active to true)
@@ -667,24 +647,9 @@ export default function ProviderDashboard() {
           .eq('user_id', userId)
           .maybeSingle();
 
-        console.log('🔍 Provider query result:', { providerData, providerError });
-
         if (providerError) throw providerError;
         
         if (!providerData) {
-          // No provider record found - let's check if there are any providers at all
-          console.log('🔍 No provider record found for user:', userId);
-          console.log('🔍 Checking if there are any providers in the database...');
-          
-          const { data: allProviders, error: allProvidersError } = await supabase
-            .from('providers')
-            .select('*')
-            .limit(5);
-          
-          console.log('🔍 All providers in database:', allProviders);
-          console.log('🔍 All providers error:', allProvidersError);
-          
-          // For now, let's not redirect and just show the error
           setError(`Provider profile not found for user ID: ${userId}. Please check the database.`);
           return;
         }
@@ -711,16 +676,9 @@ export default function ProviderDashboard() {
           if (locationsError) {
             console.error('Error loading business locations:', locationsError);
           } else {
-            console.log('🏢 Business locations loaded:', locationsData);
             setLocations(locationsData || []);
           }
         }
-
-        console.log('✅ Provider data loaded successfully:', {
-          provider_id: typedProviderData.id,
-          business_id: typedProviderData.business_id,
-          business_name: typedProviderData.business_profiles?.business_name,
-        });
 
         // Note: Staff data and bookings are now loaded by their respective tab components
 

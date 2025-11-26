@@ -196,6 +196,7 @@ export default function StaffAccountSetup({
             <Input
               id="password"
               type="password"
+              autoComplete="new-password"
               value={formData.password}
               onChange={(e) => handleChange('password', e.target.value)}
               placeholder="Create a secure password"
@@ -218,6 +219,7 @@ export default function StaffAccountSetup({
             <Input
               id="confirmPassword"
               type="password"
+              autoComplete="new-password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder="Confirm your password"

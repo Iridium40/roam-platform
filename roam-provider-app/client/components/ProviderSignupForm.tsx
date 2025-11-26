@@ -350,6 +350,7 @@ export function ProviderSignupForm({
                   type={showPassword ? "text" : "password"}
                   placeholder="Create a strong password"
                   className="pl-10 pr-10"
+                  autoComplete="new-password"
                   value={formData.password}
                   onChange={handleInputChange("password")}
                   disabled={loading}
@@ -386,6 +387,7 @@ export function ProviderSignupForm({
                   type={showConfirmPassword ? "text" : "password"}
                   placeholder="Confirm your password"
                   className="pl-10 pr-10"
+                  autoComplete="new-password"
                   value={formData.confirmPassword}
                   onChange={handleInputChange("confirmPassword")}
                   disabled={loading}
