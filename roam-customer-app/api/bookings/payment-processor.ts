@@ -339,7 +339,7 @@ export async function handleBookingCancellation(
         refund_amount: refundAmount,
         service_fee_kept: serviceFeeAmount,
         reason: 'customer_cancellation',
-        transfer_reversed,
+        transferReversed,
         transfer_reversal_id: transferReversalId,
       },
     });

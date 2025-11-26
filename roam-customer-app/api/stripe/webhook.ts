@@ -732,8 +732,9 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
     }
 
     // Check payment intent status
-    const isAuthorized = paymentIntent.status === 'requires_capture';
-    const isCharged = paymentIntent.status === 'succeeded';
+    const status = paymentIntent.status;
+    const isAuthorized = status === 'requires_capture';
+    const isCharged = status === 'succeeded';
 
     // Get booking details for transaction recording and notifications
     const { data: booking, error: bookingError } = await supabase
