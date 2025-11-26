@@ -147,101 +147,6 @@ export default function AdminVerification() {
   const { toast } = useToast();
   const { user } = useAuth();
 
-  // Debug user state
-  console.log("AdminVerification - User state:", {
-    user: user ? { id: user.id, email: user.email } : null,
-  });
-
-  // Add debug function to window for testing
-  useEffect(() => {
-    (window as any).debugDocumentUpdate = async (documentId: string) => {
-      console.log("Testing document update with:", {
-        documentId,
-        userId: user?.id,
-      });
-
-      try {
-        const { data: existingDoc, error: fetchError } = await supabase
-          .from("business_documents")
-          .select("*")
-          .eq("id", documentId)
-          .single();
-
-        console.log("Existing document:", { existingDoc, fetchError });
-
-        if (fetchError) {
-          console.error("Could not fetch document:", fetchError);
-          return;
-        }
-
-        const { data, error } = await supabase
-          .from("business_documents")
-          .update({
-            verification_status: "verified",
-            verified_by: user?.id,
-            verified_at: new Date().toISOString(),
-          })
-          .eq("id", documentId)
-          .select();
-
-        console.log("Update result:", { data, error });
-      } catch (error) {
-        console.error("Test update error:", error);
-      }
-    };
-
-    // Add debug function for business verification testing
-    (window as any).debugBusinessVerification = async (
-      businessId: string,
-      action: string,
-    ) => {
-      console.log("Testing business verification with:", {
-        businessId,
-        action,
-        userId: user?.id,
-      });
-
-      try {
-        // Check if business exists
-        const { data: existingBusiness, error: fetchError } = await supabase
-          .from("business_profiles")
-          .select("*")
-          .eq("id", businessId)
-          .single();
-
-        console.log("Existing business:", { existingBusiness, fetchError });
-
-        if (fetchError) {
-          console.error("Could not fetch business:", fetchError);
-          return;
-        }
-
-        // Check if admin user exists
-        const { data: adminUser, error: adminUserError } = await supabase
-          .from("admin_users")
-          .select("*")
-          .eq("user_id", user?.id)
-          .single();
-
-        console.log("Admin user lookup:", { adminUser, adminUserError });
-
-        // Test the actual verification action
-        await handleVerificationAction(
-          businessId,
-          action as any,
-          "Debug test notes",
-        );
-      } catch (error) {
-        console.error("Test verification error:", error);
-      }
-    };
-
-    return () => {
-      delete (window as any).debugDocumentUpdate;
-      delete (window as any).debugBusinessVerification;
-    };
-  }, [user]);
-
   // State
   const [verifications, setVerifications] = useState<BusinessVerification[]>(
     [],
@@ -566,20 +471,7 @@ export default function AdminVerification() {
 
       // Only set verified_by and verified_at when actually verifying the document
       if (action === "verify") {
-        // Look up the admin_users record for the current auth user
-        const { data: adminUser, error: adminUserError } = await supabase
-          .from("admin_users")
-          .select("id")
-          .eq("user_id", user.id)
-          .single();
-
-        if (adminUserError || !adminUser) {
-          throw new Error(
-            "Admin user record not found. Please contact support.",
-          );
-        }
-
-        updateData.verified_by = adminUser.id;
+        updateData.verified_by = user.id;
         updateData.verified_at = new Date().toISOString();
       } else {
         // For other actions (review, reject), leave verified_by as NULL
@@ -593,22 +485,26 @@ export default function AdminVerification() {
 
       console.log("Updating document with data:", { documentId, updateData });
 
-      const { error, data } = await supabase
-        .from("business_documents")
-        .update(updateData)
-        .eq("id", documentId)
-        .select();
+      const updateResponse = await fetch("/api/business-documents", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id: documentId,
+          ...updateData,
+        }),
+      });
 
-      console.log("Supabase update response:", { error, data });
-
-      if (error) {
-        console.error("Supabase error details:", error);
-        throw error;
+      if (!updateResponse.ok) {
+        const errorData = await updateResponse.json().catch(() => ({}));
+        throw new Error(
+          errorData.error || `Failed to update document (${updateResponse.status})`
+        );
       }
 
-      if (!data || data.length === 0) {
-        throw new Error("Document not found or no changes were made");
-      }
+      const result = await updateResponse.json();
+      console.log("Document update response:", result);
 
       toast({
         title: "Success",
@@ -996,32 +892,36 @@ export default function AdminVerification() {
         const approvalResult = await approvalResponse.json();
         console.log("Approval successful:", approvalResult);
 
-        toast({
-          title: "Business Approved",
-          description: `Business has been approved successfully. An approval email with Phase 2 onboarding link has been sent.`,
-          variant: "default",
-        });
-      } else {
-        // For other actions (reject, suspend, pending), update directly
-      console.log("Update data prepared:", updateData);
-
-      const { error } = await supabase
-        .from("business_profiles")
-        .update(updateData)
-        .eq("id", businessId);
-
-      console.log("Supabase update result:", { error });
-
-      if (error) {
-        console.error("Supabase update error:", error);
-        throw error;
-      }
-
             toast({
-          title: `Business ${newStatus.charAt(0).toUpperCase() + newStatus.slice(1)}`,
-          description: `Business verification status updated to ${newStatus}.`,
+              title: "Business Approved",
+          description: `Business has been approved successfully. An approval email with Phase 2 onboarding link has been sent.`,
               variant: "default",
             });
+          } else {
+        // For other actions (reject, suspend, pending), update directly via API
+        const updateResponse = await fetch("/api/businesses", {
+          method: "PUT",
+              headers: {
+                "Content-Type": "application/json",
+              },
+          body: JSON.stringify({
+            id: businessId,
+            ...updateData,
+          }),
+        });
+
+        if (!updateResponse.ok) {
+          const errorData = await updateResponse.json().catch(() => ({}));
+          throw new Error(
+            errorData.error || `Failed to update business status (${updateResponse.status})`
+          );
+        }
+
+              toast({
+          title: `Business ${newStatus.charAt(0).toUpperCase() + newStatus.slice(1)}`,
+          description: `Business verification status updated to ${newStatus}.`,
+                variant: "default",
+              });
       }
 
       // Send rejection email if business was rejected
@@ -1029,19 +929,23 @@ export default function AdminVerification() {
         try {
           console.log("Sending rejection email for business:", businessId);
 
-          // Get business details for the email
-          const { data: businessData, error: businessFetchError } =
-            await supabase
-              .from("business_profiles")
-              .select("business_name, contact_email")
-              .eq("id", businessId)
-              .single();
+          // Get business details for the email via API
+          const businessResponse = await fetch(`/api/businesses?id=${businessId}`);
+          
+          if (!businessResponse.ok) {
+            console.error("Could not fetch business details");
+            toast({
+              title: "Business Rejected",
+              description:
+                "Business verification rejected successfully. Note: Could not send rejection notification.",
+              variant: "default",
+            });
+          } else {
+            const businessResult = await businessResponse.json();
+            const businessData = businessResult.data?.[0];
 
-          if (businessFetchError || !businessData?.contact_email) {
-            console.error(
-              "Could not fetch business email:",
-              businessFetchError,
-            );
+          if (!businessData?.contact_email) {
+            console.error("No contact email found for business");
             toast({
               title: "Business Rejected",
               description:
@@ -1091,6 +995,7 @@ export default function AdminVerification() {
                 description: `Business verification rejected successfully. Note: Rejection email could not be sent. Error: ${errorMessage}`,
                 variant: "default",
               });
+            }
             }
           }
         } catch (emailError) {

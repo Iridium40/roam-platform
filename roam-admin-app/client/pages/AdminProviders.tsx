@@ -1629,8 +1629,7 @@ export default function AdminProviders() {
             data={loading ? [] : filteredProviders}
             searchable={true}
             filterable={false}
-            addable={true}
-            onAdd={() => setIsAddProviderOpen(true)}
+            addable={false}
             onRowClick={(provider) => console.log("View provider:", provider)}
             pageSize={10}
           />

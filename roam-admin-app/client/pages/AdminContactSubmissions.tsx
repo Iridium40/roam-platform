@@ -676,6 +676,7 @@ export default function AdminContactSubmissions() {
           <ROAMDataTable
             data={filteredSubmissions || []}
             columns={columns}
+            addable={false}
           />
         </ROAMCardContent>
       </ROAMCard>
