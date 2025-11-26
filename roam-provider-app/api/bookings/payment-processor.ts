@@ -59,6 +59,8 @@ export async function processBookingAcceptance(
         customer_id,
         business_id,
         booking_reference,
+        service_fee_charged,
+        remaining_balance_charged,
         business_profiles!inner (
           id,
           stripe_connect_account_id
@@ -371,7 +373,8 @@ export async function processBookingAcceptance(
 
     // Cancel the original payment intent since we're creating two separate ones
     try {
-      if (paymentIntent.status !== 'succeeded' && paymentIntent.status !== 'canceled') {
+      const piStatus = paymentIntent.status;
+      if (piStatus !== 'succeeded' && piStatus !== 'canceled') {
         await stripe.paymentIntents.cancel(paymentIntent.id);
         console.log('✅ Cancelled original payment intent:', paymentIntent.id);
       }
