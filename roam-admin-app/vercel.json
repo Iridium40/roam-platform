@@ -179,6 +179,14 @@
       "destination": "/api/index.ts"
     },
     {
+      "source": "/api/business-locations",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/api/business-services",
+      "destination": "/api/index.ts"
+    },
+    {
       "source": "/api/businesses",
       "destination": "/api/index.ts"
     },

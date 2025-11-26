@@ -1050,26 +1050,22 @@ export default function AdminBusinesses() {
 
   const fetchBusinessLocations = async () => {
     try {
-      console.log("Fetching business locations from Supabase...");
+      console.log("Fetching business locations from API...");
 
-      const { data, error } = await supabase
-        .from("business_locations")
-        .select("*")
-        .order("created_at", { ascending: false });
+      const response = await fetch('/api/business-locations');
+      const result = await response.json();
 
-      console.log("Business locations query response:", { data, error });
-
-      if (error) {
-        console.error("Business locations query error:", error);
+      if (!response.ok) {
+        console.error("Business locations error:", result.error);
         setError(
-          `Business Locations Query Error: ${error.message}. You may need to create RLS policy: CREATE POLICY "Allow anon read access" ON public.business_locations FOR SELECT USING (true);`,
+          `Business Locations Error: ${result.error || 'Failed to fetch business locations'}`,
         );
         setBusinessLocations([]);
       } else {
         console.log(
-          `Successfully fetched ${data?.length || 0} business locations from database`,
+          `Successfully fetched ${result.data?.length || 0} business locations`,
         );
-        setBusinessLocations(data || []);
+        setBusinessLocations(result.data || []);
       }
     } catch (err) {
       console.error("Unexpected error fetching business locations:", err);
@@ -1082,44 +1078,22 @@ export default function AdminBusinesses() {
 
   const fetchBusinessServices = async () => {
     try {
-      console.log("Fetching business services from Supabase...");
+      console.log("Fetching business services from API...");
 
-      const { data, error } = await supabase
-        .from("business_services")
-        .select(
-          `
-          id,
-          business_id,
-          service_id,
-          business_price,
-          business_duration_minutes,
-          is_active,
-          created_at,
-          delivery_type,
-          services (
-            id,
-            name,
-            duration_minutes,
-            min_price,
-            description
-          )
-        `,
-        )
-        .order("created_at", { ascending: false });
+      const response = await fetch('/api/business-services');
+      const result = await response.json();
 
-      console.log("Business services query response:", { data, error });
-
-      if (error) {
-        console.error("Business services query error:", error);
+      if (!response.ok) {
+        console.error("Business services error:", result.error);
         setError(
-          `Business Services Query Error: ${error.message}. You may need to create RLS policy: CREATE POLICY "Allow anon read access" ON public.business_services FOR SELECT USING (true);`,
+          `Business Services Error: ${result.error || 'Failed to fetch business services'}`,
         );
         setBusinessServices([]);
       } else {
         console.log(
-          `Successfully fetched ${data?.length || 0} business services from database`,
+          `Successfully fetched ${result.data?.length || 0} business services`,
         );
-        setBusinessServices(data || []);
+        setBusinessServices(result.data || []);
       }
     } catch (err) {
       console.error("Unexpected error fetching business services:", err);
@@ -1474,15 +1448,23 @@ export default function AdminBusinesses() {
     newStatus: boolean,
   ) => {
     try {
-      const { error } = await supabase
-        .from("business_profiles")
-        .update({ is_active: newStatus })
-        .eq("id", businessId);
+      const response = await fetch('/api/businesses', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: businessId,
+          is_active: newStatus,
+        }),
+      });
 
-      if (error) {
-        console.error("Error updating business status:", error);
+      const result = await response.json();
+
+      if (!response.ok) {
+        console.error("Error updating business status:", result.error);
         alert(
-          `Error updating business status: ${error?.message || error?.error?.message || JSON.stringify(error)}`,
+          `Error updating business status: ${result.error || 'Update failed'}`,
         );
       } else {
         console.log(
@@ -1522,40 +1504,26 @@ export default function AdminBusinesses() {
     }
 
     try {
-      const { error } = await supabase
-        .from("business_profiles")
-        .update({ verification_status: newStatus })
-        .eq("id", businessId);
+      const response = await fetch('/api/businesses', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: businessId,
+          verification_status: newStatus,
+        }),
+      });
 
-      if (error) {
+      const result = await response.json();
+
+      if (!response.ok) {
         console.error("Error updating verification status - details:");
-        console.error("Message:", error.message);
-        console.error("Code:", error.code);
-        console.error("Details:", error.details);
-        console.error("Hint:", error.hint);
+        console.error("Message:", result.error);
         console.error("Business ID:", businessId);
         console.error("New Status:", newStatus);
-        console.error("Full error object:", error);
-        console.error("Error keys:", Object.keys(error));
-        console.error("Error JSON:", JSON.stringify(error, null, 2));
 
-        let errorMessage = "Unknown error occurred";
-        if (error?.message) {
-          errorMessage = error.message;
-        } else if (error?.details) {
-          errorMessage = error.details;
-        } else if (error?.hint) {
-          errorMessage = error.hint;
-        } else if (error?.code) {
-          errorMessage = `Database error (code: ${error.code})`;
-        } else {
-          try {
-            errorMessage = JSON.stringify(error);
-          } catch (e) {
-            errorMessage = "Failed to parse error details";
-          }
-        }
-
+        let errorMessage = result.error || "Unknown error occurred";
         alert(`Error updating verification status: ${errorMessage}`);
       } else {
         console.log(
@@ -1593,15 +1561,23 @@ export default function AdminBusinesses() {
     newStatus: boolean,
   ) => {
     try {
-      const { error } = await supabase
-        .from("business_profiles")
-        .update({ is_featured: newStatus })
-        .eq("id", businessId);
+      const response = await fetch('/api/businesses', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: businessId,
+          is_featured: newStatus,
+        }),
+      });
 
-      if (error) {
-        console.error("Error updating featured status:", error);
+      const result = await response.json();
+
+      if (!response.ok) {
+        console.error("Error updating featured status:", result.error);
         alert(
-          `Error updating featured status: ${error?.message || error?.error?.message || JSON.stringify(error)}`,
+          `Error updating featured status: ${result.error || 'Update failed'}`,
         );
       } else {
         console.log(
@@ -1652,9 +1628,13 @@ export default function AdminBusinesses() {
       });
 
       // First update the business profile
-      const { error: profileError } = await supabase
-        .from("business_profiles")
-        .update({
+      const response = await fetch('/api/businesses', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: editingBusiness.id,
           business_name: editFormData.business_name,
           contact_email: editFormData.contact_email,
           phone: editFormData.phone,
@@ -1663,13 +1643,15 @@ export default function AdminBusinesses() {
           is_active: editFormData.is_active,
           is_featured: editFormData.is_featured,
           business_type: editFormData.business_type,
-        })
-        .eq("id", editingBusiness.id);
+        }),
+      });
 
-      if (profileError) {
-        console.error("Error updating business profile:", profileError);
+      const result = await response.json();
+
+      if (!response.ok) {
+        console.error("Error updating business profile:", result.error);
         alert(
-          `Error updating business profile: ${profileError.message || profileError.details || profileError.hint || JSON.stringify(profileError)}`,
+          `Error updating business profile: ${result.error || 'Update failed'}`,
         );
         return;
       }

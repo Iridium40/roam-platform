@@ -414,6 +414,46 @@ export function createServer() {
     }
   );
 
+  // Optimized services route - server-side filtering, pagination, and stats
+  app.get("/api/services-optimized",
+    requireAuth(['owner', 'dispatcher', 'provider', 'admin']),
+    async (req: AuthenticatedRequest, res) => {
+      try {
+        const servicesHandler = await import("../api/services-optimized");
+        const vercelReq = {
+          ...req,
+          query: req.query,
+          headers: req.headers,
+          method: req.method,
+        };
+        await servicesHandler.default(vercelReq as any, res as any);
+      } catch (error) {
+        console.error("Error in services-optimized handler:", error);
+        res.status(500).json({ error: "Failed to load services" });
+      }
+    }
+  );
+
+  // Optimized addons route - server-side filtering, pagination, and stats
+  app.get("/api/addons-optimized",
+    requireAuth(['owner', 'dispatcher', 'provider', 'admin']),
+    async (req: AuthenticatedRequest, res) => {
+      try {
+        const addonsHandler = await import("../api/addons-optimized");
+        const vercelReq = {
+          ...req,
+          query: req.query,
+          headers: req.headers,
+          method: req.method,
+        };
+        await addonsHandler.default(vercelReq as any, res as any);
+      } catch (error) {
+        console.error("Error in addons-optimized handler:", error);
+        res.status(500).json({ error: "Failed to load addons" });
+      }
+    }
+  );
+
   // Business tax info routes (Stripe Tax / 1099)
   app.get("/api/business/tax-info",
     requireAuth(['owner', 'dispatcher', 'admin']),

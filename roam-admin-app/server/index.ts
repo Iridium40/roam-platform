@@ -14,6 +14,8 @@ import { handleBusinessServiceCategories } from "./routes/business-service-categ
 import { handleBusinessServiceSubcategories } from "./routes/business-service-subcategories.js";
 import { handleBusinesses, handleVerificationStats } from "./routes/businesses.js";
 import { handleBusinessDocuments } from "./routes/business-documents.js";
+import { handleBusinessLocations } from "./routes/business-locations.js";
+import { handleBusinessServices } from "./routes/business-services.js";
 import { handleUsers, handleUserActivity } from "./routes/users.js";
 import { handleBookings, handleBookingStats, handleBookingTrends } from "./routes/bookings.js";
 import { 
@@ -107,6 +109,16 @@ export function createServer() {
   app.put("/api/businesses", handleBusinesses);
   app.get("/api/verification/stats", handleVerificationStats);
   app.get("/api/business-documents", handleBusinessDocuments);
+  
+  app.get("/api/business-locations", handleBusinessLocations);
+  app.post("/api/business-locations", handleBusinessLocations);
+  app.put("/api/business-locations", handleBusinessLocations);
+  app.delete("/api/business-locations", handleBusinessLocations);
+  
+  app.get("/api/business-services", handleBusinessServices);
+  app.post("/api/business-services", handleBusinessServices);
+  app.put("/api/business-services", handleBusinessServices);
+  app.delete("/api/business-services", handleBusinessServices);
   
   // User management routes (monitoring only)
   app.get("/api/users", handleUsers);
