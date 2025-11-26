@@ -375,6 +375,45 @@ export function createServer() {
     }
   );
 
+  // Optimized conversations route - eliminates N+1 Twilio API calls
+  app.get("/api/conversations-optimized",
+    requireAuth(['owner', 'dispatcher', 'provider', 'admin']),
+    async (req: AuthenticatedRequest, res) => {
+      try {
+        const conversationsHandler = await import("../api/conversations-optimized");
+        const vercelReq = {
+          ...req,
+          query: req.query,
+          headers: req.headers,
+          method: req.method,
+        };
+        await conversationsHandler.default(vercelReq as any, res as any);
+      } catch (error) {
+        console.error("Error in conversations-optimized handler:", error);
+        res.status(500).json({ error: "Failed to load conversations" });
+      }
+    }
+  );
+  
+  app.post("/api/conversations-optimized",
+    requireAuth(['owner', 'dispatcher', 'provider', 'admin']),
+    async (req: AuthenticatedRequest, res) => {
+      try {
+        const conversationsHandler = await import("../api/conversations-optimized");
+        const vercelReq = {
+          ...req,
+          body: req.body,
+          headers: req.headers,
+          method: req.method,
+        };
+        await conversationsHandler.default(vercelReq as any, res as any);
+      } catch (error) {
+        console.error("Error in conversations-optimized handler:", error);
+        res.status(500).json({ error: "Failed to load conversations" });
+      }
+    }
+  );
+
   // Business tax info routes (Stripe Tax / 1099)
   app.get("/api/business/tax-info",
     requireAuth(['owner', 'dispatcher', 'admin']),
