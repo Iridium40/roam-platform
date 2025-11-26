@@ -260,7 +260,7 @@ async function getProviderProfiles(req: Request, res: Response, sendResponse = t
     } = req.query;
 
     let query = supabase
-      .from('provider_profiles')
+      .from('providers')
       .select(`
         id,
         user_id,
@@ -398,16 +398,16 @@ async function getCustomerStats() {
 async function getProviderStats() {
   try {
     const { count: total } = await supabase
-      .from('provider_profiles')
+      .from('providers')
       .select('*', { count: 'exact', head: true });
 
     const { count: verified } = await supabase
-      .from('provider_profiles')
+      .from('providers')
       .select('*', { count: 'exact', head: true })
       .eq('verification_status', 'approved');
 
     const { count: pending } = await supabase
-      .from('provider_profiles')
+      .from('providers')
       .select('*', { count: 'exact', head: true })
       .eq('verification_status', 'pending');
 
@@ -466,7 +466,7 @@ export async function handleUserActivity(req: Request, res: Response) {
           booking_date,
           booking_status,
           provider_id,
-          provider_profiles!inner (first_name, last_name)
+          providers!inner (first_name, last_name)
         `)
         .gte('created_at', startDate)
         .order('booking_date', { ascending: false });

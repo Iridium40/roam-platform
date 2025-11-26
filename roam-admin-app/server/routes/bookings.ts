@@ -185,12 +185,12 @@ export async function handleBookingTrends(req: Request, res: Response) {
         booking_status,
         total_amount,
         provider_id,
-        provider_profiles!inner (business_id)
+        providers!inner (business_id)
       `)
       .gte('booking_date', startDate.split('T')[0]); // Use date only
 
     if (business_id) {
-      query = query.eq('provider_profiles.business_id', business_id);
+      query = query.eq('providers.business_id', business_id);
     }
 
     if (provider_id) {
@@ -222,10 +222,11 @@ export async function handleBookingTrends(req: Request, res: Response) {
 // Helper functions
 async function getOverallBookingStats(startDate: string, businessId?: string, providerId?: string) {
   try {
-    let query = supabase.from('bookings').select('*', { count: 'exact', head: true });
+    // Use admin_bookings_enriched view for efficient filtering
+    let query = supabase.from('admin_bookings_enriched').select('*', { count: 'exact', head: true });
     
     if (businessId) {
-      query = query.eq('provider_profiles.business_id', businessId);
+      query = query.eq('business_id', businessId);
     }
     if (providerId) {
       query = query.eq('provider_id', providerId);
@@ -262,11 +263,11 @@ async function getOverallBookingStats(startDate: string, businessId?: string, pr
 async function getBookingStatusBreakdown(startDate: string, businessId?: string, providerId?: string) {
   try {
     let query = supabase
-      .from('bookings')
+      .from('admin_bookings_enriched')
       .select('booking_status');
 
     if (businessId) {
-      query = query.eq('provider_profiles.business_id', businessId);
+      query = query.eq('business_id', businessId);
     }
     if (providerId) {
       query = query.eq('provider_id', providerId);
@@ -289,11 +290,11 @@ async function getBookingStatusBreakdown(startDate: string, businessId?: string,
 async function getRevenueStats(startDate: string, businessId?: string, providerId?: string) {
   try {
     let query = supabase
-      .from('bookings')
+      .from('admin_bookings_enriched')
       .select('total_amount, booking_status');
 
     if (businessId) {
-      query = query.eq('provider_profiles.business_id', businessId);
+      query = query.eq('business_id', businessId);
     }
     if (providerId) {
       query = query.eq('provider_id', providerId);
@@ -326,15 +327,11 @@ async function getRevenueStats(startDate: string, businessId?: string, providerI
 async function getPopularServices(startDate: string, businessId?: string, providerId?: string) {
   try {
     let query = supabase
-      .from('bookings')
-      .select(`
-        service_id,
-        services!inner (service_name, category),
-        provider_profiles!inner (business_id)
-      `);
+      .from('admin_bookings_enriched')
+      .select('service_id, service_name, service_category');
 
     if (businessId) {
-      query = query.eq('provider_profiles.business_id', businessId);
+      query = query.eq('business_id', businessId);
     }
     if (providerId) {
       query = query.eq('provider_id', providerId);
@@ -343,8 +340,8 @@ async function getPopularServices(startDate: string, businessId?: string, provid
     const { data: bookings } = await query.gte('created_at', startDate);
 
     const serviceCounts = (bookings || []).reduce((acc: any, booking: any) => {
-      const serviceName = booking.services?.service_name || 'Unknown Service';
-      const serviceCategory = booking.services?.category || 'Unknown';
+      const serviceName = booking.service_name || 'Unknown Service';
+      const serviceCategory = booking.service_category || 'Unknown';
       
       if (!acc[serviceName]) {
         acc[serviceName] = { 
