@@ -32,6 +32,19 @@ async function getBookings(req: Request, res: Response) {
       sortOrder = 'desc'
     } = req.query;
 
+    // Calculate default date range: 30 days in the past and 1 year into the future
+    const defaultDateFrom = new Date();
+    defaultDateFrom.setDate(defaultDateFrom.getDate() - 30);
+    const defaultDateFromStr = defaultDateFrom.toISOString().split('T')[0];
+    
+    const defaultDateTo = new Date();
+    defaultDateTo.setFullYear(defaultDateTo.getFullYear() + 1);
+    const defaultDateToStr = defaultDateTo.toISOString().split('T')[0];
+
+    // Use provided dates or defaults
+    const effectiveDateFrom = date_from || defaultDateFromStr;
+    const effectiveDateTo = date_to || defaultDateToStr;
+
     let query = supabase
       .from('bookings')
       .select(`
@@ -104,13 +117,9 @@ async function getBookings(req: Request, res: Response) {
       query = query.eq('provider_profiles.business_id', business_id);
     }
 
-    if (date_from) {
-      query = query.gte('booking_date', date_from);
-    }
-
-    if (date_to) {
-      query = query.lte('booking_date', date_to);
-    }
+    // Apply date range (either provided or default)
+    query = query.gte('booking_date', effectiveDateFrom);
+    query = query.lte('booking_date', effectiveDateTo);
 
     // Apply sorting
     const sortField = sortBy as string;
@@ -179,6 +188,11 @@ async function getBookings(req: Request, res: Response) {
         limit: limitNum,
         total: count || 0,
         totalPages: Math.ceil((count || 0) / limitNum)
+      },
+      dateRange: {
+        from: effectiveDateFrom,
+        to: effectiveDateTo,
+        isDefault: !date_from && !date_to
       }
     });
 
