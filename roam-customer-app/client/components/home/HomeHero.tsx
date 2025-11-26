@@ -297,14 +297,14 @@ export function HomeHero({
                 id="mobile-only"
                 checked={mobileOnly}
                 onCheckedChange={(checked) => setMobileOnly(checked as boolean)}
-                className="border-gray-300 data-[state=checked]:bg-roam-blue data-[state=checked]:border-roam-blue"
+                className="border-gray-300 data-[state=checked]:bg-roam-blue data-[state=checked]:border-roam-blue rounded-lg"
               />
               <Label 
                 htmlFor="mobile-only"
                 className="text-sm font-medium text-gray-700 cursor-pointer flex items-center gap-1.5"
               >
                 <Car className="w-4 h-4 text-roam-blue" />
-                Mobile Services Only
+                Mobile Only
               </Label>
             </div>
           </div>
