@@ -45,7 +45,7 @@ function Hero() {
           </p>
           <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
             <Button asChild className="bg-white text-foreground hover:bg-white/90">
-              <Link to="/">Book a Service</Link>
+              <Link to="/booknow">Book a Service</Link>
             </Button>
             <Button asChild variant="secondary" className="bg-[#f88221] text-white hover:bg-[#f88221]/90">
               <Link to="/contact">Talk to Our Team</Link>

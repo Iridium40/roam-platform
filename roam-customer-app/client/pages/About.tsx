@@ -381,7 +381,7 @@ export default function About() {
                     or beauty treatment is just a few taps away.
                   </p>
                   <Button asChild className="w-full bg-roam-blue hover:bg-roam-blue/90">
-                    <Link to="/">
+                    <Link to="/booknow">
                       <Star className="w-4 h-4 mr-2" />
                       Browse Services
                     </Link>
