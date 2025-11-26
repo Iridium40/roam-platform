@@ -2,8 +2,10 @@ import React, { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { X } from "lucide-react";
+import { X, Car } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 
@@ -64,6 +66,7 @@ export function HomeHero({
   const [businessSearch, setBusinessSearch] = useState("");
   const [serviceSearch, setServiceSearch] = useState("");
   const [selectedTime, setSelectedTime] = useState("anytime");
+  const [mobileOnly, setMobileOnly] = useState(false);
   const [featuredSubcategories, setFeaturedSubcategories] = useState<ServiceSubcategory[]>([]);
   const [allCategories, setAllCategories] = useState<CategoryWithSubcategories[]>([]);
   const [loadingSubcategories, setLoadingSubcategories] = useState(true);
@@ -172,6 +175,7 @@ export function HomeHero({
       if (businessSearch) params.set("q", businessSearch);
       if (serviceSearch) params.set("service", serviceSearch);
       if (selectedTime !== "anytime") params.set("time", selectedTime);
+      if (mobileOnly) params.set("mobileOnly", "true");
       // Always include default location
       params.set("location", DEFAULT_LOCATION);
       navigate(`/businesses?${params.toString()}`);
@@ -285,6 +289,23 @@ export function HomeHero({
               >
                 Search
               </Button>
+            </div>
+            
+            {/* Mobile Only Toggle */}
+            <div className="flex items-center gap-2 mt-4 justify-center">
+              <Checkbox
+                id="mobile-only"
+                checked={mobileOnly}
+                onCheckedChange={(checked) => setMobileOnly(checked as boolean)}
+                className="border-gray-300 data-[state=checked]:bg-roam-blue data-[state=checked]:border-roam-blue"
+              />
+              <Label 
+                htmlFor="mobile-only"
+                className="text-sm font-medium text-gray-700 cursor-pointer flex items-center gap-1.5"
+              >
+                <Car className="w-4 h-4 text-roam-blue" />
+                Mobile Services Only
+              </Label>
             </div>
           </div>
 

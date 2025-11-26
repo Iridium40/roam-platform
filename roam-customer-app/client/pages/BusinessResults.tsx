@@ -113,6 +113,7 @@ export default function BusinessResults() {
   // Support both 'q' (general search) and 'service' (service type search) parameters
   const searchQuery = searchParams.get("q") || searchParams.get("service") || "";
   const locationParam = searchParams.get("location") || "30.3226432,-86.1447833"; // Default to Seaside, FL
+  const mobileOnlyParam = searchParams.get("mobileOnly") === "true";
 
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [services, setServices] = useState<Service[]>([]);
@@ -122,7 +123,7 @@ export default function BusinessResults() {
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | null>(null);
   const [isFilterExpanded, setIsFilterExpanded] = useState(false);
-  const [deliveryType, setDeliveryType] = useState<"all" | "at_business" | "mobile">("all");
+  const [deliveryType, setDeliveryType] = useState<"all" | "at_business" | "mobile">(mobileOnlyParam ? "mobile" : "all");
   const [sortBy, setSortBy] = useState<"distance" | "price" | "rating">("distance");
   const [mapsLoaded, setMapsLoaded] = useState(false);
   const mapRef = React.useRef<HTMLDivElement>(null);
