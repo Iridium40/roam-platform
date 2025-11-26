@@ -102,7 +102,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Return stats with performance metadata
     return res.status(200).json({
-      ...stats,
+      ...(stats || {}),
       _meta: {
         query_time_ms: queryTime,
         business_id,
