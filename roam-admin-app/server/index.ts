@@ -16,6 +16,7 @@ import { handleBusinesses, handleVerificationStats } from "./routes/businesses.j
 import { handleBusinessDocuments } from "./routes/business-documents.js";
 import { handleBusinessLocations } from "./routes/business-locations.js";
 import { handleBusinessServices } from "./routes/business-services.js";
+import { handleProviders, handleProviderServices, handleProviderAddons } from "./routes/providers.js";
 import { handleUsers, handleUserActivity } from "./routes/users.js";
 import { handleBookings, handleBookingStats, handleBookingTrends } from "./routes/bookings.js";
 import { 
@@ -129,6 +130,22 @@ export function createServer() {
   app.get("/api/customers/locations", handleCustomerLocations);
   app.get("/api/customers/bookings", handleCustomerBookings);
   app.post("/api/customers/update-status", handleUpdateCustomerStatus);
+  
+  // Provider management routes
+  app.get("/api/providers", handleProviders);
+  app.post("/api/providers", handleProviders);
+  app.put("/api/providers", handleProviders);
+  app.delete("/api/providers", handleProviders);
+  
+  app.get("/api/provider-services", handleProviderServices);
+  app.post("/api/provider-services", handleProviderServices);
+  app.put("/api/provider-services", handleProviderServices);
+  app.delete("/api/provider-services", handleProviderServices);
+  
+  app.get("/api/provider-addons", handleProviderAddons);
+  app.post("/api/provider-addons", handleProviderAddons);
+  app.put("/api/provider-addons", handleProviderAddons);
+  app.delete("/api/provider-addons", handleProviderAddons);
   
   // Service management routes
   app.get("/api/services/all-data", handleAllServiceData);

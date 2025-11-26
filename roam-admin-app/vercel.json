@@ -219,6 +219,18 @@
       "destination": "/api/index.ts"
     },
     {
+      "source": "/api/providers",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/api/provider-services",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/api/provider-addons",
+      "destination": "/api/index.ts"
+    },
+    {
       "source": "/api/services/all-data",
       "destination": "/api/index.ts"
     },

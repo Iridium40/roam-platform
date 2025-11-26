@@ -60,7 +60,6 @@ import {
   Upload,
   Puzzle,
 } from "lucide-react";
-import { supabase } from "@/lib/supabase";
 
 type VerificationStatus =
   | "pending"
@@ -736,69 +735,23 @@ export default function AdminProviders() {
       setLoading(true);
       setError(null);
 
-      console.log("Fetching providers from Supabase...");
+      console.log("Fetching providers from API...");
 
-      const { data, error } = await supabase
-        .from("providers")
-        .select(
-          `
-          *,
-          business_profiles!business_id (
-            business_name
-          ),
-          provider_services (
-            id,
-            provider_id,
-            service_id,
-            is_active,
-            created_at,
-            services (
-              id,
-              name,
-              description,
-              min_price,
-              duration_minutes,
-              is_active,
-              service_subcategories (
-                service_subcategory_type,
-                service_categories (
-                  service_category_type
-                )
-              )
-            )
-          ),
-          provider_addons (
-            id,
-            provider_id,
-            addon_id,
-            is_active,
-            created_at,
-            service_addons (
-              id,
-              name,
-              description,
-              image_url,
-              is_active
-            )
-          )
-        `,
-        )
-        .order("created_at", { ascending: false });
+      const response = await fetch('/api/providers');
+      const result = await response.json();
 
-      console.log("Provider query response:", { data, error });
-
-      if (error) {
-        console.error("Query error:", error);
-        setError(`Query Error: ${error.message} (Code: ${error.code})`);
+      if (!response.ok) {
+        console.error("Provider API error:", result.error);
+        setError(`API Error: ${result.error || 'Failed to fetch providers'}`);
         setProviders([]);
       } else {
         console.log(
-          `Successfully fetched ${data?.length || 0} providers from database`,
+          `Successfully fetched ${result.data?.length || 0} providers`,
         );
-        setProviders(data || []);
-        if (data?.length === 0) {
+        setProviders(result.data || []);
+        if (result.data?.length === 0) {
           setError(
-            "Database connected successfully but no provider records found.",
+            "No provider records found.",
           );
         }
       }
@@ -815,85 +768,21 @@ export default function AdminProviders() {
 
   const fetchProviderServices = async () => {
     try {
-      console.log("Fetching provider services from Supabase...");
+      console.log("Fetching provider services from API...");
 
-      const { data, error } = await supabase
-        .from("provider_services")
-        .select(
-          `
-          *,
-          services (
-            id,
-            name,
-            description,
-            min_price,
-            duration_minutes,
-            is_active,
-            service_subcategories (
-              service_subcategory_type,
-              service_categories (
-                service_category_type
-              )
-            )
-          )
-        `,
-        )
-        .order("created_at", { ascending: false });
+      const response = await fetch('/api/provider-services');
+      const result = await response.json();
 
-      console.log("Provider services query response:", { data, error });
-
-      if (error) {
-        console.error("Provider services query error:", error);
-
-        // Extract error message properly
-        const errorMessage =
-          error?.message ||
-          error?.error_description ||
-          JSON.stringify(error) ||
-          "Unknown error";
-        console.log("Provider services error details:", {
-          message: error?.message,
-          code: error?.code,
-          details: error?.details,
-          hint: error?.hint,
-        });
-
-        // If the complex query fails, try a simple one
-        console.log("Trying simple provider services query...");
-        const { data: simpleData, error: simpleError } = await supabase
-          .from("provider_services")
-          .select("*")
-          .order("created_at", { ascending: false });
-
-        if (simpleError) {
-          console.error(
-            "Simple provider services query also failed:",
-            simpleError,
-          );
-          const simpleErrorMessage =
-            simpleError?.message ||
-            simpleError?.error_description ||
-            JSON.stringify(simpleError) ||
-            "Unknown error";
-          setError(
-            `Provider Services Access Error: ${simpleErrorMessage}. You may need to create RLS policy: CREATE POLICY "Allow anon read access" ON public.provider_services FOR SELECT USING (true);`,
-          );
-          setProviderServices([]);
-        } else {
-          console.log(
-            `Simple query succeeded: ${simpleData?.length || 0} provider services`,
-          );
-          setProviderServices(simpleData || []);
-          setError(
-            `Provider services loaded but without service details (${errorMessage}). Complex join may need permissions.`,
-          );
-        }
+      if (!response.ok) {
+        console.error("Provider services API error:", result.error);
+        setError(`Provider Services Error: ${result.error || 'Failed to fetch provider services'}`);
+        setProviderServices([]);
       } else {
         console.log(
-          `Successfully fetched ${data?.length || 0} provider services with service details`,
+          `Successfully fetched ${result.data?.length || 0} provider services`,
         );
-        setProviderServices(data || []);
-        if ((data?.length || 0) === 0) {
+        setProviderServices(result.data || []);
+        if ((result.data?.length || 0) === 0) {
           setError(
             "Provider services table is empty. This is normal if no provider services have been created yet.",
           );
@@ -912,43 +801,20 @@ export default function AdminProviders() {
 
   const fetchProviderAddons = async () => {
     try {
-      console.log("Fetching provider add-ons from Supabase...");
+      console.log("Fetching provider add-ons from API...");
 
-      const { data, error } = await supabase
-        .from("provider_addons")
-        .select(
-          `
-          *,
-          service_addons (
-            id,
-            name,
-            description,
-            image_url,
-            is_active
-          )
-        `,
-        )
-        .order("created_at", { ascending: false });
+      const response = await fetch('/api/provider-addons');
+      const result = await response.json();
 
-      console.log("Provider add-ons query response:", { data, error });
-
-      if (error) {
-        console.error("Provider add-ons query error:", error);
-        const errorMessage =
-          error?.message ||
-          error?.error_description ||
-          JSON.stringify(error) ||
-          "Unknown error";
-        const errorCode = error?.code || "unknown";
-        setError(
-          `Provider Add-ons Query Error: ${errorMessage} (Code: ${errorCode})`,
-        );
+      if (!response.ok) {
+        console.error("Provider add-ons API error:", result.error);
+        setError(`Provider Add-ons Error: ${result.error || 'Failed to fetch provider add-ons'}`);
         setProviderAddons([]);
       } else {
         console.log(
-          `Successfully fetched ${data?.length || 0} provider add-ons from database`,
+          `Successfully fetched ${result.data?.length || 0} provider add-ons`,
         );
-        setProviderAddons(data || []);
+        setProviderAddons(result.data || []);
       }
     } catch (err) {
       console.error("Unexpected error fetching provider add-ons:", err);
@@ -961,16 +827,18 @@ export default function AdminProviders() {
 
   const fetchBusinesses = async () => {
     try {
-      const { data, error } = await supabase
-        .from("business_profiles")
-        .select("id, business_name")
-        .eq("is_active", true)
-        .order("business_name");
+      const response = await fetch('/api/businesses');
+      const result = await response.json();
 
-      if (error) {
-        console.error("Error fetching businesses:", error);
+      if (!response.ok) {
+        console.error("Error fetching businesses:", result.error);
       } else {
-        setBusinesses(data || []);
+        // Extract just id and business_name from the businesses
+        const businessList = (result.data || []).map((b: any) => ({
+          id: b.id,
+          business_name: b.business_name
+        })).filter((b: any) => b.business_name); // Filter active businesses
+        setBusinesses(businessList);
       }
     } catch (err) {
       console.error("Error fetching businesses:", err);
@@ -1016,22 +884,23 @@ export default function AdminProviders() {
         total_reviews: 0,
       };
 
-      const { data, error } = await supabase
-        .from("providers")
-        .insert([providerData]).select(`
-          *,
-          business_profiles!business_id (
-            business_name
-          )
-        `);
+      const response = await fetch('/api/providers', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(providerData),
+      });
 
-      if (error) {
-        console.error("Error creating provider:", error);
+      const result = await response.json();
+
+      if (!response.ok) {
+        console.error("Error creating provider:", result.error);
         alert(
-          `Error creating provider: ${error?.message || error?.error?.message || JSON.stringify(error)}`,
+          `Error creating provider: ${result.error || 'Failed to create provider'}`,
         );
       } else {
-        console.log("Provider created successfully:", data);
+        console.log("Provider created successfully:", result.data);
         setIsAddProviderOpen(false);
         setNewProvider({
           first_name: "",
@@ -1064,15 +933,23 @@ export default function AdminProviders() {
     newStatus: boolean,
   ) => {
     try {
-      const { error } = await supabase
-        .from("providers")
-        .update({ is_active: newStatus })
-        .eq("id", providerId);
+      const response = await fetch('/api/providers', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: providerId,
+          is_active: newStatus,
+        }),
+      });
 
-      if (error) {
-        console.error("Error updating provider status:", error);
+      const result = await response.json();
+
+      if (!response.ok) {
+        console.error("Error updating provider status:", result.error);
         alert(
-          `Error updating provider status: ${error?.message || error?.error?.message || JSON.stringify(error)}`,
+          `Error updating provider status: ${result.error || 'Update failed'}`,
         );
       } else {
         console.log(
@@ -1092,15 +969,23 @@ export default function AdminProviders() {
     newStatus: VerificationStatus,
   ) => {
     try {
-      const { error } = await supabase
-        .from("providers")
-        .update({ verification_status: newStatus })
-        .eq("id", providerId);
+      const response = await fetch('/api/providers', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: providerId,
+          verification_status: newStatus,
+        }),
+      });
 
-      if (error) {
-        console.error("Error updating verification status:", error);
+      const result = await response.json();
+
+      if (!response.ok) {
+        console.error("Error updating verification status:", result.error);
         alert(
-          `Error updating verification status: ${error?.message || error?.error?.message || JSON.stringify(error)}`,
+          `Error updating verification status: ${result.error || 'Update failed'}`,
         );
       } else {
         console.log(
