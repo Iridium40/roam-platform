@@ -6,7 +6,7 @@ export default function Hero() {
       <div className="container mx-auto grid grid-cols-1 lg:grid-cols-2 gap-10 py-16 lg:py-24 items-center">
         <div>
           <img
-            src="https://cdn.builder.io/api/v1/image/assets%2Fa42b6f9ec53e4654a92af75aad56d14f%2F1b24105c85514e8398ae9cb54f5c323a?format=webp&width=800"
+            src="/roam-hero.png"
             alt="ROAM logo"
             className="mb-4 h-10 w-auto object-contain"
           />

@@ -44,13 +44,13 @@ export function Header() {
           <div className="flex items-center space-x-4">
             <Link to="/booknow" className="flex items-center group">
               <img
-                src={siteLogo || "https://cdn.builder.io/api/v1/image/assets%2Fa42b6f9ec53e4654a92af75aad56d14f%2F38446bf6c22b453fa45caf63b0513e21?format=webp&width=800"}
+                src={siteLogo || "/default-placeholder.png"}
                 alt="ROAM - Your Best Life. Everywhere."
                 className="h-10 w-auto transition-all duration-300 group-hover:scale-105"
                 onError={(e) => {
                   // Fallback to default logo if dynamic logo fails to load
                   const target = e.target as HTMLImageElement;
-                  target.src = "https://cdn.builder.io/api/v1/image/assets%2Fa42b6f9ec53e4654a92af75aad56d14f%2F38446bf6c22b453fa45caf63b0513e21?format=webp&width=800";
+                  target.src = "/default-placeholder.png";
                 }}
               />
             </Link>

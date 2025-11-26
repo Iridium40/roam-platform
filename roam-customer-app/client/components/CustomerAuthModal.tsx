@@ -277,7 +277,7 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
           <DialogTitle className="text-center text-2xl font-bold">
             Welcome to{" "}
             <img
-              src="https://cdn.builder.io/api/v1/image/assets%2Fa42b6f9ec53e4654a92af75aad56d14f%2Fdcd8f042c3944c5c8b0e2484134236c2?format=webp&width=800"
+              src="/customer-auth-modal.png"
               alt="ROAM"
               className="inline h-4 ml-2"
             />

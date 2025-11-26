@@ -15,7 +15,11 @@ import {
   Phone,
   MessageCircle,
   ArrowRight,
-  Play
+  Play,
+  Sparkles,
+  Dumbbell,
+  Heart,
+  Activity
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Header } from "@/components/Header";
@@ -281,25 +285,30 @@ export default function HowItWorks() {
               Services We <span className="text-roam-blue">Offer</span>
             </h2>
             <p className="text-xl text-foreground/70 max-w-3xl mx-auto">
-              From beauty and wellness to fitness and healthcare, find the perfect service provider for your needs.
+              From beauty and therapy to fitness and healthcare, find the perfect service provider for your needs.
             </p>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
             {[
-              { name: "Beauty", icon: "💄", services: "Hair, Nails, Skincare, Makeup" },
-              { name: "Fitness", icon: "🏃‍♀️", services: "Personal Training, Yoga, Exercise" },
-              { name: "Wellness", icon: "🧘", services: "Massage, Spa, Relaxation" },
-              { name: "Healthcare", icon: "🏥", services: "Physical Therapy, Nutrition, Mental Health" }
-            ].map((category, index) => (
-              <Card key={index} className="text-center card-hover border-0 shadow-lg bg-white rounded-2xl overflow-hidden group">
-                <CardContent className="p-8">
-                  <div className="text-5xl mb-4 group-hover:scale-110 transition-transform duration-300">{category.icon}</div>
-                  <h3 className="text-xl font-bold mb-3">{category.name}</h3>
-                  <p className="text-sm text-foreground/70 leading-relaxed">{category.services}</p>
-                </CardContent>
-              </Card>
-            ))}
+              { name: "Beauty", icon: Sparkles, services: "Hair, Nails, Skincare, Makeup", color: "text-pink-500" },
+              { name: "Fitness", icon: Dumbbell, services: "Personal Training, Yoga, Exercise", color: "text-orange-500" },
+              { name: "Therapy", icon: Heart, services: "Massage, Spa, Relaxation", color: "text-purple-500" },
+              { name: "Healthcare", icon: Activity, services: "Physical Therapy, Nutrition, Mental Health", color: "text-blue-500" }
+            ].map((category, index) => {
+              const Icon = category.icon;
+              return (
+                <Card key={index} className="text-center card-hover border-0 shadow-lg bg-white rounded-2xl overflow-hidden group">
+                  <CardContent className="p-8">
+                    <div className={`w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br ${category.color === 'text-pink-500' ? 'from-pink-500/10 to-rose-500/10' : category.color === 'text-orange-500' ? 'from-orange-500/10 to-red-500/10' : category.color === 'text-purple-500' ? 'from-purple-500/10 to-pink-500/10' : 'from-blue-500/10 to-cyan-500/10'} flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
+                      <Icon className={`w-8 h-8 ${category.color}`} />
+                    </div>
+                    <h3 className="text-xl font-bold mb-3">{category.name}</h3>
+                    <p className="text-sm text-foreground/70 leading-relaxed">{category.services}</p>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </section>
 

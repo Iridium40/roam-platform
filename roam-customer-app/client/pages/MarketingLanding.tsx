@@ -81,7 +81,7 @@ export default function MarketingLanding() {
         </div>
         <div className="container relative z-20 mx-auto flex min-h-[60vh] flex-col items-center justify-center gap-6 py-16 text-center">
           <img
-            src="https://cdn.builder.io/api/v1/image/assets%2Fa42b6f9ec53e4654a92af75aad56d14f%2Fb039513f83c04be3b573c6e38287f9ab?format=webp&width=800"
+            src="/marketing-landing.png"
             alt="ROAM logo"
             className="h-[6.75rem] w-auto object-contain md:h-[8.1rem]"
           />

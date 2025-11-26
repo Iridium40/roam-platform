@@ -210,7 +210,7 @@ export function HomeHero({
         <div className="max-w-4xl mx-auto text-center mb-12">
           <div className="mb-6">
             <img
-              src="https://cdn.builder.io/api/v1/image/assets%2Fa42b6f9ec53e4654a92af75aad56d14f%2F98c77fcac42745ca81f9db3fb7f4e366?format=webp&width=800"
+              src="/home-hero.png"
               alt="ROAM Logo"
               className="mx-auto h-24 sm:h-32 lg:h-40 w-auto drop-shadow-lg"
             />
