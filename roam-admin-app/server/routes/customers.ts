@@ -104,7 +104,10 @@ export async function handleCustomerBookings(req: Request, res: Response) {
     // Fetch business names for each booking's provider
     const businessIds = [...new Set(
       (data || [])
-        .map(b => b.providers?.business_id)
+        .map(b => {
+          const provider = Array.isArray(b.providers) ? b.providers[0] : b.providers;
+          return provider?.business_id;
+        })
         .filter(Boolean)
     )];
     
@@ -123,16 +126,19 @@ export async function handleCustomerBookings(req: Request, res: Response) {
     }
     
     // Enhance data with business names
-    const enhancedData = (data || []).map(booking => ({
-      ...booking,
-      providers: booking.providers ? {
-        ...booking.providers,
-        business_profiles: booking.providers.business_id ? {
-          id: booking.providers.business_id,
-          business_name: businessMap[booking.providers.business_id] || 'Unknown'
+    const enhancedData = (data || []).map(booking => {
+      const provider = Array.isArray(booking.providers) ? booking.providers[0] : booking.providers;
+      return {
+        ...booking,
+        providers: provider ? {
+          ...provider,
+          business_profiles: provider.business_id ? {
+            id: provider.business_id,
+            business_name: businessMap[provider.business_id] || 'Unknown'
+          } : null
         } : null
-      } : null
-    }));
+      };
+    });
     
     res.json({ success: true, data: enhancedData });
   } catch (error) {
