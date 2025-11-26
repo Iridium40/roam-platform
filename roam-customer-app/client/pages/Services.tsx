@@ -13,10 +13,12 @@ import {
   Stethoscope,
   Users,
 } from "lucide-react";
+import { Header } from "@/components/Header";
 
 export default function Services() {
   return (
     <div className="bg-background">
+      <Header />
       <Hero />
       <ServiceHighlights />
       <DeliveryOptions />

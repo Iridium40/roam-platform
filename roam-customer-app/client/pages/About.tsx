@@ -2,7 +2,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { 
-  ArrowLeft, 
   Scissors, 
   Dumbbell, 
   Hand, 
@@ -21,6 +20,7 @@ import {
   ExternalLink
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { Header } from "@/components/Header";
 
 export default function About() {
   const serviceCategories = [
@@ -139,31 +139,7 @@ export default function About() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-accent/5 to-roam-light-blue/10">
-      {/* Navigation */}
-      <nav className="border-b bg-background/80 backdrop-blur-md sticky top-0 z-50">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center gap-4">
-              <Button
-                asChild
-                variant="ghost"
-                size="sm"
-                className="text-foreground hover:text-roam-blue"
-              >
-                <Link to="/">
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Back to Home
-                </Link>
-              </Button>
-              <img
-                src="https://cdn.builder.io/api/v1/image/assets%2Fa42b6f9ec53e4654a92af75aad56d14f%2F38446bf6c22b453fa45caf63b0513e21?format=webp&width=800"
-                alt="ROAM - Your Best Life. Everywhere."
-                className="h-8 w-auto"
-              />
-            </div>
-          </div>
-        </div>
-      </nav>
+      <Header />
 
       {/* Hero Section */}
       <section className="py-20 relative overflow-hidden">
@@ -172,7 +148,7 @@ export default function About() {
             <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6 flex items-center justify-center gap-4">
               About 
               <img
-                src="https://cdn.builder.io/api/v1/image/assets%2Fa42b6f9ec53e4654a92af75aad56d14f%2F38446bf6c22b453fa45caf63b0513e21?format=webp&width=800"
+                src="/logo-notagline.png"
                 alt="ROAM"
                 className="h-12 md:h-16 w-auto inline-block"
               />
