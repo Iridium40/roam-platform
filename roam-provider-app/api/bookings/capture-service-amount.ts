@@ -155,6 +155,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               .eq('id', booking.id);
             
             results.push({ 
+              scheduleId: schedule.id,
               bookingId: booking.id, 
               status: 'already_captured' 
             });
@@ -164,6 +165,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           // If it's canceled or failed, mark as failed
           if (paymentIntent.status === 'canceled' || paymentIntent.status === 'requires_payment_method') {
             results.push({ 
+              scheduleId: schedule.id,
               bookingId: booking.id, 
               status: 'failed',
               error: `Payment intent status: ${paymentIntent.status}` 

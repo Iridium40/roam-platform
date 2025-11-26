@@ -1,6 +1,22 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 
+// Type definition for the RPC response
+interface ServiceRPCResponse {
+  services: any[];
+  total_count: number;
+  stats: {
+    total_services: number;
+    active_services: number;
+    configured_services: number;
+    unconfigured_services: number;
+    avg_price: number;
+    total_value: number;
+    category_count: number;
+    subcategory_count: number;
+  };
+}
+
 /**
  * GET /api/services-optimized
  * 
@@ -92,7 +108,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Call the optimized database function
-    const { data, error } = await supabase
+    const { data, error } = (await supabase
       .rpc('get_business_eligible_services_optimized', {
         p_business_id: business_id,
         p_search: search && typeof search === 'string' ? search : null,
@@ -102,7 +118,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         p_limit: parseInt(typeof limit === 'string' ? limit : '50', 10),
         p_offset: parseInt(typeof offset === 'string' ? offset : '0', 10)
       })
-      .single();
+      .single()) as { data: ServiceRPCResponse | null; error: any };
 
     if (error) {
       console.error('Error calling get_business_eligible_services_optimized:', error);
