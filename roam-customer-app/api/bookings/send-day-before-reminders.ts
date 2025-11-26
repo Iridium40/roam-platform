@@ -139,15 +139,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       // Determine customer email and name
-      const customerEmail = booking.guest_email || 
-        (Array.isArray(booking.customer_profiles) 
-          ? booking.customer_profiles[0]?.email 
-          : booking.customer_profiles?.email);
+      const customerProfile: any = Array.isArray(booking.customer_profiles) 
+        ? booking.customer_profiles[0] 
+        : booking.customer_profiles;
+      
+      const customerEmail = booking.guest_email || customerProfile?.email;
       
       const customerName = booking.guest_name || 
-        (Array.isArray(booking.customer_profiles)
-          ? `${booking.customer_profiles[0]?.first_name || ''} ${booking.customer_profiles[0]?.last_name || ''}`.trim()
-          : `${booking.customer_profiles?.first_name || ''} ${booking.customer_profiles?.last_name || ''}`.trim());
+        `${customerProfile?.first_name || ''} ${customerProfile?.last_name || ''}`.trim();
 
       if (!customerEmail) {
         console.warn(`⚠️ No email found for booking ${booking.id}`);
@@ -248,9 +247,7 @@ The ROAM Team`;
         }
 
         // Log notification
-        const customerUserId = Array.isArray(booking.customer_profiles)
-          ? booking.customer_profiles[0]?.user_id
-          : booking.customer_profiles?.user_id;
+        const customerUserId = customerProfile?.user_id;
 
         if (customerUserId) {
           await supabase.from('notification_logs').insert({
