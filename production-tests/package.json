@@ -6,6 +6,8 @@
   "scripts": {
     "test:smoke": "ts-node -r dotenv/config smoke-tests.ts dotenv_config_path=../.env.production.test",
     "test:api": "ts-node -r dotenv/config api-tests.ts dotenv_config_path=../.env.production.test",
+    "test:provider-perf": "ts-node -r dotenv/config provider-api-performance.ts dotenv_config_path=../.env.production.test",
+    "test:provider-perf:prod": "ROAM_ENV=production ts-node -r dotenv/config provider-api-performance.ts dotenv_config_path=../.env.production.test",
     "test:e2e": "playwright test e2e-tests.ts",
     "test:phase1": "ts-node -r dotenv/config phase1-production-tests.ts dotenv_config_path=../.env.production.test",
     "test:phase1-local": "ts-node -r dotenv/config phase1-tests.ts dotenv_config_path=../.env.production.test",

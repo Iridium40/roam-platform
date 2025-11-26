@@ -334,6 +334,47 @@ export function createServer() {
     getServiceEligibility
   );
 
+  // Business dashboard stats route - OPTIMIZED single query for all dashboard metrics
+  app.get("/api/business/dashboard-stats",
+    requireAuth(['owner', 'dispatcher', 'provider', 'admin']),
+    async (req: AuthenticatedRequest, res) => {
+      try {
+        const dashboardStatsHandler = await import("../api/business/dashboard-stats");
+        // Transform Express request to Vercel format
+        const vercelReq = {
+          ...req,
+          query: req.query,
+          headers: req.headers,
+          method: req.method,
+        };
+        await dashboardStatsHandler.default(vercelReq as any, res as any);
+      } catch (error) {
+        console.error("Error in dashboard-stats handler:", error);
+        res.status(500).json({ error: "Failed to load dashboard stats" });
+      }
+    }
+  );
+
+  // Optimized bookings route - server-side filtering, pagination, and stats
+  app.get("/api/bookings-optimized",
+    requireAuth(['owner', 'dispatcher', 'provider', 'admin']),
+    async (req: AuthenticatedRequest, res) => {
+      try {
+        const bookingsHandler = await import("../api/bookings-optimized");
+        const vercelReq = {
+          ...req,
+          query: req.query,
+          headers: req.headers,
+          method: req.method,
+        };
+        await bookingsHandler.default(vercelReq as any, res as any);
+      } catch (error) {
+        console.error("Error in bookings-optimized handler:", error);
+        res.status(500).json({ error: "Failed to load bookings" });
+      }
+    }
+  );
+
   // Business tax info routes (Stripe Tax / 1099)
   app.get("/api/business/tax-info",
     requireAuth(['owner', 'dispatcher', 'admin']),

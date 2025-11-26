@@ -10,8 +10,9 @@ This directory contains automated tests and monitoring tools to ensure the relia
 
 1. **Smoke Tests** (`smoke-tests.ts`) - Quick health checks (~2 min)
 2. **API Tests** (`api-tests.ts`) - Comprehensive endpoint testing (~5-10 min)
-3. **E2E Tests** (`e2e-tests.ts`) - Full user flow validation (~15-30 min)
-4. **Monitoring Dashboard** (`monitoring-dashboard.ts`) - Real-time health monitoring
+3. **Provider API Performance** (`provider-api-performance.ts`) - Provider app API benchmarks (~3-5 min)
+4. **E2E Tests** (`e2e-tests.ts`) - Full user flow validation (~15-30 min)
+5. **Monitoring Dashboard** (`monitoring-dashboard.ts`) - Real-time health monitoring
 
 ## 🚀 Quick Start
 
@@ -100,6 +101,47 @@ npm run test:e2e
 
 **Duration:** 15-30 minutes
 
+### Provider API Performance Tests
+
+```bash
+# Development environment
+npm run test:provider-perf
+
+# Production environment
+npm run test:provider-perf:prod
+```
+
+**What it does:**
+- ✓ Tests 20+ Provider App API endpoints
+- ✓ Measures response times against thresholds
+- ✓ Runs load tests with concurrent requests
+- ✓ Identifies slow endpoints and N+1 patterns
+- ✓ Generates optimization recommendations
+
+**Performance Thresholds:**
+| Rating | Response Time |
+|--------|---------------|
+| ⚡ Excellent | < 200ms |
+| ✓ Good | < 500ms |
+| ○ Acceptable | < 1000ms |
+| ⚠ Slow | > 1000ms |
+
+**Endpoints Tested:**
+- Bookings API (list, filter, paginate)
+- Service Eligibility & Business Services
+- Business Profile, Hours, Tax Info
+- Stripe APIs (balance, transactions, payouts)
+- Provider Profile
+- Chat & Notifications
+- Twilio Conversations
+
+**Load Testing:**
+- Configurable concurrency (default: 5)
+- Measures P95 response times
+- Tracks requests per second throughput
+
+**Duration:** 3-5 minutes
+
 ### All Tests
 
 ```bash
@@ -131,12 +173,16 @@ npm run monitor
 
 ```
 production-tests/
-├── smoke-tests.ts              # Quick health checks
-├── api-tests.ts                # API endpoint testing
-├── e2e-tests.ts                # End-to-end user flows
-├── monitoring-dashboard.ts     # Real-time monitoring
-├── package.json                # Dependencies
-└── README.md                   # This file
+├── smoke-tests.ts                  # Quick health checks
+├── api-tests.ts                    # API endpoint testing
+├── provider-api-performance.ts     # Provider App performance benchmarks
+├── e2e-tests.ts                    # End-to-end user flows
+├── monitoring-dashboard.ts         # Real-time monitoring
+├── phase1-production-tests.ts      # Phase 1 specific tests
+├── phase1-tests.ts                 # Phase 1 local tests
+├── phase1-monitoring.ts            # Phase 1 monitoring
+├── package.json                    # Dependencies
+└── README.md                       # This file
 ```
 
 ## 🎯 Testing Strategy
@@ -173,6 +219,7 @@ Results are saved to JSON files:
 
 - `smoke-test-results.json` - Smoke test results
 - `production-test-results.json` - API test results
+- `provider-api-performance-results.json` - Provider API performance benchmarks
 - `monitoring-YYYY-MM-DD.json` - Monitoring metrics
 
 ### Example Result
@@ -322,11 +369,13 @@ For issues with production tests:
 
 ## 🚀 Future Enhancements
 
-- [ ] Load testing suite
-- [ ] Performance regression detection
+- [x] Load testing suite (Provider API Performance Tests)
+- [x] Performance regression detection (threshold-based)
 - [ ] Visual regression testing
 - [ ] Synthetic monitoring
 - [ ] Automated rollback on failures
+- [ ] Customer App performance tests
+- [ ] Admin App performance tests
 
 ---
 

@@ -1,0 +1,128 @@
+{
+  "summary": {
+    "total": 8,
+    "passed": 3,
+    "failed": 5,
+    "avgResponseTime": 19,
+    "byRating": {
+      "excellent": 8,
+      "good": 0,
+      "acceptable": 0,
+      "slow": 0,
+      "critical": 0
+    }
+  },
+  "performanceResults": [
+    {
+      "endpoint": "",
+      "method": "GET",
+      "responseTime": 33,
+      "status": 200,
+      "statusText": "OK",
+      "dataSize": 553,
+      "rating": "excellent",
+      "threshold": 2000,
+      "passed": true,
+      "details": null
+    },
+    {
+      "endpoint": "/favicon.ico",
+      "method": "GET",
+      "responseTime": 4,
+      "status": 200,
+      "statusText": "OK",
+      "dataSize": 4740,
+      "rating": "excellent",
+      "threshold": 500,
+      "passed": true,
+      "details": null
+    },
+    {
+      "endpoint": "/api/bookings",
+      "method": "GET",
+      "responseTime": 9,
+      "status": 400,
+      "statusText": "Bad Request",
+      "dataSize": 35,
+      "rating": "excellent",
+      "threshold": 500,
+      "passed": false,
+      "details": {
+        "error": "business_id is required"
+      }
+    },
+    {
+      "endpoint": "/api/business/services",
+      "method": "GET",
+      "responseTime": 4,
+      "status": 400,
+      "statusText": "Bad Request",
+      "dataSize": 35,
+      "rating": "excellent",
+      "threshold": 500,
+      "passed": false,
+      "details": {
+        "error": "Business ID is required"
+      }
+    },
+    {
+      "endpoint": "/api/business/service-eligibility",
+      "method": "GET",
+      "responseTime": 5,
+      "status": 400,
+      "statusText": "Bad Request",
+      "dataSize": 45,
+      "rating": "excellent",
+      "threshold": 500,
+      "passed": false,
+      "details": {
+        "error": "business_id parameter is required"
+      }
+    },
+    {
+      "endpoint": "/api/auth/signup",
+      "method": "OPTIONS",
+      "responseTime": 2,
+      "status": 204,
+      "statusText": "No Content",
+      "dataSize": 0,
+      "rating": "excellent",
+      "threshold": 500,
+      "passed": true,
+      "details": null
+    },
+    {
+      "endpoint": "/api/stripe/balance",
+      "method": "GET",
+      "responseTime": 91,
+      "status": 400,
+      "statusText": "Bad Request",
+      "dataSize": 32,
+      "rating": "excellent",
+      "threshold": 800,
+      "passed": false,
+      "details": {
+        "error": "Business ID required"
+      }
+    },
+    {
+      "endpoint": "/api/notifications/edge",
+      "method": "GET",
+      "responseTime": 4,
+      "status": 400,
+      "statusText": "Bad Request",
+      "dataSize": 26,
+      "rating": "excellent",
+      "threshold": 500,
+      "passed": false,
+      "details": {
+        "error": "Missing userId"
+      }
+    }
+  ],
+  "loadResults": [],
+  "recommendations": [
+    "🔴 5 endpoint(s) failed. Immediate action needed!"
+  ],
+  "timestamp": "2025-11-26T15:55:25.072Z"
+}
