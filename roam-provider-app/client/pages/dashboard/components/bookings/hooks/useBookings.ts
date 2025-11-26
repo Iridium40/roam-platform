@@ -31,9 +31,8 @@ export function useBookings(providerData: any, business: any) {
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
   const [activeTab, setActiveTab] = useState("present");
   
-  // Debug wrapper for setActiveTab
+  // Wrapper for setActiveTab
   const handleSetActiveTab = (tab: string) => {
-    console.log('🎯 setActiveTab called:', { from: activeTab, to: tab });
     setActiveTab(tab);
   };
   const [selectedBooking, setSelectedBooking] = useState<any>(null);
@@ -72,14 +71,6 @@ export function useBookings(providerData: any, business: any) {
       const startDateStr = start.toISOString().split('T')[0];
       const endDateStr = end.toISOString().split('T')[0];
       
-      console.log('📅 Loading bookings with date range:', {
-        pastDays: dateRangePastDays,
-        futureDays: dateRangeFutureDays,
-        start: startDateStr,
-        end: endDateStr,
-        limit: PAGINATION_CONFIG.databaseQueryLimit
-      });
-
       // Use API endpoint with limit
       // We don't filter by date on the API side to ensure we get future bookings
       const response = await api.bookings.getBookings({
@@ -97,15 +88,6 @@ export function useBookings(providerData: any, business: any) {
           // Include bookings within our date range (past and future)
           return booking.booking_date >= startDateStr && booking.booking_date <= endDateStr;
         });
-        
-        console.log(`✅ Loaded ${bookingsData.length} bookings within date range (${startDateStr} to ${endDateStr})`);
-        
-        // Log breakdown by date
-        const todayStr = new Date().toISOString().split('T')[0];
-        const pastCount = bookingsData.filter((b: any) => b.booking_date < todayStr).length;
-        const todayCount = bookingsData.filter((b: any) => b.booking_date === todayStr).length;
-        const futureCount = bookingsData.filter((b: any) => b.booking_date > todayStr).length;
-        console.log(`📊 Breakdown: ${pastCount} past, ${todayCount} today, ${futureCount} future`);
         
         setBookings(bookingsData);
       } else {
@@ -222,7 +204,6 @@ export function useBookings(providerData: any, business: any) {
 
       // Only redirect if there are actually bookings that need to move
       if (bookingsToMove.length > 0) {
-        console.log('📅 Auto-redirecting due to time transitions:', bookingsToMove.length, 'bookings');
         handleSetActiveTab('present');
         toast({
           title: "Bookings Updated",
@@ -289,53 +270,31 @@ export function useBookings(providerData: any, business: any) {
     const finalStatuses = new Set(['completed', 'cancelled', 'declined', 'no_show']);
     const todayStr = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
     
-    console.log('=== BOOKING CATEGORIZATION START ===');
-    console.log('Today is:', todayStr);
-    console.log('Total filtered bookings:', filteredBookings.length);
-
-    filteredBookings.forEach((b: any, index: number) => {
+    filteredBookings.forEach((b: any) => {
       const status = b.booking_status;
       const dateStr: string = b.booking_date || '';
       
-      console.log(`\n[Booking ${index + 1}]`, {
-        id: b.id,
-        service: b.services?.name,
-        status,
-        dateStr,
-        todayStr,
-      });
-      
       // PAST = Final status states (completed, cancelled, declined, no_show)
       if (finalStatuses.has(status)) {
-        console.log(`  ✓ PAST - Final status: ${status}`);
         past.push(b);
         return;
       }
       
       // FUTURE = Future dates (not in final status)
       if (dateStr > todayStr) {
-        console.log('  ✓ FUTURE - Date is in the future');
         future.push(b);
         return;
       }
       
       // PRESENT = Today's date or in the past (not in final status)
       if (dateStr <= todayStr) {
-        console.log(`  ✓ PRESENT - Date is ${dateStr === todayStr ? 'today' : 'past'}`);
         present.push(b);
         return;
       }
       
       // Fallback (should never reach here)
-      console.log('  ⚠ FALLBACK - Defaulting to PRESENT');
       present.push(b);
     });
-    
-    console.log('\n=== CATEGORIZATION RESULTS ===');
-    console.log(`Present: ${present.length} bookings`);
-    console.log(`Future: ${future.length} bookings`);
-    console.log(`Past: ${past.length} bookings`);
-    console.log('===========================\n');
 
     return { present, future, past };
   }, [filteredBookings]);
@@ -350,10 +309,6 @@ export function useBookings(providerData: any, business: any) {
       const paginatedItems = items.slice(startIndex, endIndex);
       const totalPages = Math.ceil(items.length / pageSize);
 
-      // Log warning if approaching virtual scroll threshold
-      if (items.length > PAGINATION_CONFIG.maxItemsBeforeVirtualScroll) {
-        console.warn(`⚠️ Large list detected (${items.length} items). Consider implementing virtual scrolling for better performance.`);
-      }
 
       return {
         items: paginatedItems,
@@ -408,20 +363,13 @@ export function useBookings(providerData: any, business: any) {
     // Prevent duplicate requests for the same booking
     const requestKey = `${bookingId}-${newStatus}`;
     if (updatingStatuses.current.has(requestKey)) {
-      console.log('Request already in progress, skipping duplicate:', requestKey);
-      return;
+      return; // Request already in progress
     }
 
     updatingStatuses.current.add(requestKey);
 
     try {
       const userId = provider?.provider?.user_id || provider?.provider?.id || 'provider';
-      console.log('Frontend: Updating booking status', {
-        bookingId,
-        newStatus,
-        updatedBy: userId,
-        reason: `Status updated to ${newStatus}`
-      });
       
       // Use API endpoint instead of direct Supabase call
       // Wrap in Promise.race to handle potential Stripe timeout issues
@@ -438,8 +386,6 @@ export function useBookings(providerData: any, business: any) {
       );
 
       const response = await Promise.race([apiCall, timeoutPromise]) as any;
-      
-      console.log('Frontend: API response', response);
 
       // Check if the response indicates success (handle both response.data.success and response.success)
       const isSuccess = (response?.data as any)?.success || (response as any)?.success;
@@ -470,7 +416,6 @@ export function useBookings(providerData: any, business: any) {
       
       // Ignore Stripe timeout errors as they're likely unrelated to the booking update
       if (isStripeError && (errorMessage.includes('timeout') || errorMessage.includes('TIMED_OUT'))) {
-        console.warn('⚠️ Stripe-related error detected but ignoring (likely browser extension):', errorMessage);
         // Still update local state optimistically if it's a decline action
         if (newStatus === 'declined') {
           setBookings(prev => prev.map(booking => 

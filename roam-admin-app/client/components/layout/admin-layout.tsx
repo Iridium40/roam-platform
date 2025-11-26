@@ -83,9 +83,9 @@ const navigationSections: NavSection[] = [
     title: "Management",
     items: [
       {
-        href: "/admin/users",
-        icon: <Shield className="w-5 h-5" />,
-        label: "Admin Users",
+        href: "/admin/verification",
+        icon: <ShieldCheck className="w-5 h-5" />,
+        label: "Approvals",
       },
       {
         href: "/admin/customers",
@@ -96,11 +96,6 @@ const navigationSections: NavSection[] = [
         href: "/admin/businesses",
         icon: <Building2 className="w-5 h-5" />,
         label: "Businesses",
-      },
-      {
-        href: "/admin/verification",
-        icon: <ShieldCheck className="w-5 h-5" />,
-        label: "Business Approvals",
       },
       {
         href: "/admin/providers",
@@ -166,6 +161,11 @@ const navigationSections: NavSection[] = [
         href: "/admin/system-settings",
         icon: <Cog className="w-5 h-5" />,
         label: "System Settings",
+      },
+      {
+        href: "/admin/users",
+        icon: <Shield className="w-5 h-5" />,
+        label: "Users",
       },
     ],
   },

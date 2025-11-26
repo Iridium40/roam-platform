@@ -65,19 +65,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Declare at function scope to be accessible in catch block
   let event: Stripe.Event | undefined;
   let webhookEventId: string | null = null;
-
+  
   try {
-    console.log('🔔 Webhook received:', req.method);
-    
-    if (req.method !== 'POST') {
-      return res.status(405).json({ error: 'Method not allowed' });
-    }
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
 
-    const sig = req.headers['stripe-signature'] as string;
+  const sig = req.headers['stripe-signature'] as string;
     const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
     if (!endpointSecret) {
-      console.error('❌ STRIPE_WEBHOOK_SECRET is not configured');
+      console.error('STRIPE_WEBHOOK_SECRET is not configured');
       return res.status(500).json({ 
         error: {
           code: '500',
@@ -86,24 +84,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    console.log('🔐 Verifying webhook signature...');
-
-    try {
-      // Get raw body as buffer for signature verification
-      const buf = await buffer(req);
-      const rawBody = buf.toString('utf8');
-      
-      event = stripe.webhooks.constructEvent(rawBody, sig, endpointSecret);
-      console.log('✅ Webhook signature verified:', event.type);
-    } catch (err: any) {
-      console.error('❌ Webhook signature verification failed:', err.message);
-      return res.status(400).json({ error: `Webhook signature verification failed: ${err.message}` });
-    }
+  try {
+    // Get raw body as buffer for signature verification
+    const buf = await buffer(req);
+    const rawBody = buf.toString('utf8');
+    
+    event = stripe.webhooks.constructEvent(rawBody, sig, endpointSecret);
+  } catch (err: any) {
+      console.error('Webhook signature verification failed:', err.message);
+    return res.status(400).json({ error: `Webhook signature verification failed: ${err.message}` });
+  }
 
     // At this point event is guaranteed to be defined
     if (!event) {
       return res.status(400).json({ error: 'Event verification failed' });
-    }
+  }
 
   // Record webhook event in database for audit trail
   // Check if event already exists to handle duplicates gracefully
@@ -117,95 +112,71 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (existingEvent) {
       // Event already exists, use existing ID
       webhookEventId = existingEvent.id;
-      console.log('ℹ️ Webhook event already recorded:', event.id);
     } else {
       // Insert new event
-      const { data: webhookEvent, error: webhookError } = await supabase
-        .from('stripe_tax_webhook_events')
-        .insert({
-          stripe_event_id: event.id,
-          stripe_event_type: event.type,
-          stripe_object_id: (event.data.object as any).id || null,
-          stripe_object_type: (event.data.object as any).object || null,
-          event_data: event.data as any,
-          processed: false,
-          api_version: event.api_version,
-          webhook_received_at: new Date().toISOString(),
-        })
-        .select('id')
-        .single();
+    const { data: webhookEvent, error: webhookError } = await supabase
+      .from('stripe_tax_webhook_events')
+      .insert({
+        stripe_event_id: event.id,
+        stripe_event_type: event.type,
+        stripe_object_id: (event.data.object as any).id || null,
+        stripe_object_type: (event.data.object as any).object || null,
+        event_data: event.data as any,
+        processed: false,
+        api_version: event.api_version,
+        webhook_received_at: new Date().toISOString(),
+      })
+      .select('id')
+      .single();
 
-      if (webhookError) {
+    if (webhookError) {
         // If it's a duplicate key error, try to fetch the existing event
         if (webhookError.code === '23505') {
-          console.log('ℹ️ Duplicate webhook event detected, fetching existing record');
           const { data: existing } = await supabase
             .from('stripe_tax_webhook_events')
             .select('id')
             .eq('stripe_event_id', event.id)
             .maybeSingle();
           webhookEventId = existing?.id || null;
-        } else {
-          console.error('⚠️ Failed to record webhook event:', webhookError);
         }
-        // Continue processing anyway - don't fail webhook due to logging
-      } else {
-        webhookEventId = webhookEvent?.id || null;
-        console.log('✅ Webhook event recorded:', event.id);
+      // Continue processing anyway - don't fail webhook due to logging
+    } else {
+      webhookEventId = webhookEvent?.id || null;
       }
     }
   } catch (err) {
-    console.error('⚠️ Error recording webhook event:', err);
     // Continue processing anyway
   }
 
-    console.log('📋 Processing event type:', event.type);
-    console.log('📋 Event ID:', event.id);
-    
     let processed = false;
     
     switch (event.type) {
       case 'checkout.session.completed':
         try {
-          await handleCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session);
+        await handleCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session);
           processed = true;
         } catch (err: any) {
-          console.error(`❌ Error handling checkout.session.completed:`, err);
-          throw err; // Re-throw to be caught by outer catch
+          console.error('Error handling checkout.session.completed:', err);
+          throw err;
         }
         break;
       
       case 'payment_intent.succeeded':
         try {
-          console.log('🎯 Processing payment_intent.succeeded event');
           const paymentIntent = event.data.object as Stripe.PaymentIntent;
-          console.log('💳 Payment Intent ID:', paymentIntent.id);
-          console.log('💳 Payment Intent metadata:', JSON.stringify(paymentIntent.metadata, null, 2));
-          console.log('💳 Payment Intent amount:', paymentIntent.amount);
-          console.log('💳 Payment Intent status:', paymentIntent.status);
-          
           await handlePaymentIntentSucceeded(paymentIntent);
           processed = true;
-          console.log('✅ payment_intent.succeeded processed successfully');
         } catch (err: any) {
-          console.error(`❌ Error handling payment_intent.succeeded:`, err);
-          console.error('Error stack:', err.stack);
-          throw err; // Re-throw to be caught by outer catch
+          console.error('Error handling payment_intent.succeeded:', err);
+          throw err;
         }
         break;
 
       case 'charge.updated':
       case 'charge.succeeded':
-        // These events don't require processing for our use case
-        // However, if payment_intent.succeeded wasn't received, we can try to process from charge
-        console.log(`ℹ️ Event ${event.type} received`);
-        
-        // Try to extract payment intent ID from charge and process if needed
+        // Fallback: if payment_intent.succeeded wasn't received, process from charge
         const charge = event.data.object as Stripe.Charge;
         if (charge.payment_intent && typeof charge.payment_intent === 'string') {
-          console.log(`🔍 Charge has payment_intent: ${charge.payment_intent}`);
-          
-          // Check if we've already processed this payment intent
           const { data: existingTransaction } = await supabase
             .from('financial_transactions')
             .select('id')
@@ -214,77 +185,59 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             .single();
           
           if (!existingTransaction && charge.status === 'succeeded') {
-            console.log(`⚠️ No financial transaction found for payment_intent ${charge.payment_intent} - attempting to process from charge event`);
-            
-            // Try to retrieve and process the payment intent
             try {
               const paymentIntent = await stripe.paymentIntents.retrieve(charge.payment_intent);
               if (paymentIntent.status === 'succeeded') {
-                console.log(`🔄 Processing payment_intent.succeeded from charge event fallback`);
                 await handlePaymentIntentSucceeded(paymentIntent);
-                console.log(`✅ Successfully processed payment intent from charge event`);
               }
             } catch (fallbackError: any) {
-              console.error(`❌ Error processing payment intent from charge event:`, fallbackError);
-              // Don't throw - charge.updated is not critical for transaction recording
+              // Don't throw - charge.updated is not critical
             }
-          } else if (existingTransaction) {
-            console.log(`✅ Financial transaction already exists for payment_intent ${charge.payment_intent}`);
           }
         }
-        
         processed = true;
         break;
       
       case 'charge.failed':
-        console.log(`ℹ️ Event ${event.type} received - charge failed, no processing needed`);
         processed = true;
         break;
 
       default:
-        console.log(`⚠️ Unhandled event type: ${event.type} - acknowledging but not processing`);
         processed = true; // Acknowledge unhandled events to prevent retries
     }
 
     // Mark webhook event as processed
     if (webhookEventId) {
       try {
-        await supabase
-          .from('stripe_tax_webhook_events')
-          .update({
+      await supabase
+        .from('stripe_tax_webhook_events')
+        .update({
             processed: processed,
-            processed_at: new Date().toISOString(),
-          })
-          .eq('id', webhookEventId);
+          processed_at: new Date().toISOString(),
+        })
+        .eq('id', webhookEventId);
       } catch (updateError) {
-        console.error('⚠️ Error updating webhook event status (non-fatal):', updateError);
+        // Non-fatal
       }
     }
 
-    console.log('✅ Webhook processed successfully');
     return res.status(200).json({ received: true });
   } catch (error: any) {
-    console.error('❌ Webhook handler error:', error);
-    console.error('Error details:', {
-      message: error.message,
-      stack: error.stack,
-      eventType: event?.type || 'unknown',
-      eventId: event?.id || 'unknown'
-    });
+    console.error('Webhook handler error:', error.message);
 
     // Mark webhook event as failed with error
     if (webhookEventId) {
       try {
-        await supabase
-          .from('stripe_tax_webhook_events')
-          .update({
-            processed: false,
-            processing_error: error.message || 'Unknown error',
-            processed_at: new Date().toISOString(),
-          })
-          .eq('id', webhookEventId);
+      await supabase
+        .from('stripe_tax_webhook_events')
+        .update({
+          processed: false,
+          processing_error: error.message || 'Unknown error',
+          processed_at: new Date().toISOString(),
+        })
+        .eq('id', webhookEventId);
       } catch (updateError) {
-        console.error('⚠️ Error updating webhook event status (non-fatal):', updateError);
+        // Non-fatal
       }
     }
 
@@ -300,8 +253,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 }
 
 async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) {
-  console.log('✅ Checkout session completed:', session.id);
-  
   // Check if this is a tip payment
   if (session.metadata?.type === 'tip') {
     await handleTipPayment(session);
@@ -324,12 +275,6 @@ async function handleTipPayment(session: Stripe.Checkout.Session) {
   } = session.metadata!;
 
   try {
-    console.log('💳 Processing tip payment:', {
-      sessionId: session.id,
-      bookingId: booking_id,
-      tipAmount: tip_amount,
-    });
-
     // Create tip record in database
     const { data, error } = await supabase
       .from('tips')
@@ -339,25 +284,23 @@ async function handleTipPayment(session: Stripe.Checkout.Session) {
         provider_id,
         business_id,
         tip_amount: parseFloat(tip_amount),
-        tip_percentage: 0, // We'll calculate this if needed
+        tip_percentage: 0,
         payment_status: 'completed',
         stripe_payment_intent_id: session.payment_intent as string,
         stripe_session_id: session.id,
-        platform_fee_amount: parseFloat(stripe_fee || '0'), // Stripe processing fees (will be updated with actual fees in webhook)
-        provider_net_amount: parseFloat(provider_net || tip_amount || '0'), // Tip minus Stripe fees (will be updated with actual amount in webhook)
+        platform_fee_amount: parseFloat(stripe_fee || '0'),
+        provider_net_amount: parseFloat(provider_net || tip_amount || '0'),
         customer_message: customer_message || '',
       })
       .select()
         .single();
 
         if (error) {
-      console.error('❌ Error creating tip record:', error);
+      console.error('Error creating tip record:', error);
       throw error;
     }
 
-    console.log('✅ Tip record created successfully:', data.id);
-
-    // Update booking with tip information (optional)
+    // Update booking with tip information
     await supabase
       .from('bookings')
       .update({
@@ -367,25 +310,20 @@ async function handleTipPayment(session: Stripe.Checkout.Session) {
       .eq('id', booking_id);
 
   } catch (error) {
-    console.error('❌ Error processing tip payment:', error);
+    console.error('Error processing tip payment:', error);
     throw error;
   }
 }
 
 async function handleBookingPayment(session: Stripe.Checkout.Session) {
-  console.log('📅 Processing booking payment from checkout session:', session.id);
-  
   // Extract payment intent from session
   const paymentIntentId = typeof session.payment_intent === 'string' 
     ? session.payment_intent 
     : session.payment_intent?.id;
 
   if (!paymentIntentId) {
-    console.error('❌ No payment intent found in checkout session');
     throw new Error('Payment intent not found in checkout session');
   }
-
-  console.log('💳 Payment Intent ID from session:', paymentIntentId);
 
   // Retrieve the payment intent to get full details
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -396,18 +334,11 @@ async function handleBookingPayment(session: Stripe.Checkout.Session) {
     expand: ['customer']
   });
 
-  console.log('✅ Payment Intent retrieved:', paymentIntent.id);
-  console.log('💳 Payment Intent metadata:', paymentIntent.metadata);
-
   // Check if booking was created from checkout session metadata
-  // Checkout sessions store booking data in metadata, but we need to find the booking
-  // by looking for a booking with matching customer_id and service_id
   const customerId = session.metadata?.customer_id;
   const serviceId = session.metadata?.service_id;
 
   if (!customerId || !serviceId) {
-    console.error('❌ Missing customer_id or service_id in checkout session metadata');
-    console.error('Available metadata:', JSON.stringify(session.metadata, null, 2));
     throw new Error('Missing required metadata in checkout session');
   }
 
@@ -461,31 +392,12 @@ async function handleBookingPayment(session: Stripe.Checkout.Session) {
     .single();
 
   if (bookingError || !booking) {
-    console.error('❌ Error finding booking:', bookingError);
-    console.error('Searched for customer_id:', customerId, 'service_id:', serviceId);
     throw bookingError || new Error('Booking not found');
   }
 
-  console.log('📦 Found booking:', {
-    id: booking.id,
-    booking_reference: booking.booking_reference,
-    customer_id: booking.customer_id,
-    total_amount: booking.total_amount
-  });
-
   // Check payment intent status - if manual capture, it will be 'requires_capture', not 'succeeded'
-  console.log('💳 Payment Intent Status:', paymentIntent.status);
-  
-  // If payment is authorized but not captured (requires_capture), don't mark as paid yet
-  // Payment will be captured when booking is accepted by the business
   const isAuthorized = paymentIntent.status === 'requires_capture';
   const isCharged = paymentIntent.status === 'succeeded';
-  
-  if (isAuthorized) {
-    console.log('✅ Payment authorized but not yet charged - will be captured when booking is accepted');
-  } else if (isCharged) {
-    console.log('✅ Payment already charged at checkout');
-  }
 
   // Calculate service fee if not already set (20% of service amount)
   // Service amount = total_amount - service_fee, or total_amount / 1.2 if service_fee not set
@@ -498,19 +410,15 @@ async function handleBookingPayment(session: Stripe.Checkout.Session) {
     const serviceAmountFromMetadata = parseFloat(paymentIntent.metadata?.serviceAmount || '0');
     
     if (serviceAmountFromMetadata > 0) {
-      // Use service amount from metadata
       const serviceAmount = serviceAmountFromMetadata;
       serviceFee = serviceAmount * platformFeePercentage;
       remainingBalance = serviceAmount;
     } else {
-      // Calculate from total_amount: total = serviceAmount + (serviceAmount * 0.2) = serviceAmount * 1.2
       const totalAmount = booking.total_amount || 0;
       const serviceAmount = totalAmount / (1 + platformFeePercentage);
       serviceFee = serviceAmount * platformFeePercentage;
       remainingBalance = serviceAmount;
     }
-    
-    console.log(`💰 Calculated service fee: $${serviceFee.toFixed(2)}, remaining balance: $${remainingBalance.toFixed(2)}`);
   }
 
   // Process the payment using the same logic as handlePaymentIntentSucceeded
@@ -519,7 +427,7 @@ async function handleBookingPayment(session: Stripe.Checkout.Session) {
   // If payment is already charged, set status to 'confirmed' and 'paid'
   // Check if booking is already confirmed to avoid race conditions
   if (booking.booking_status === 'confirmed' && booking.payment_status === 'paid') {
-    console.log(`ℹ️ Booking ${booking.id} is already confirmed and paid - skipping update`);
+    // Already processed
   } else {
     const updateData: any = {
       booking_status: isCharged ? 'confirmed' : 'pending', // Only confirm if already charged
@@ -534,15 +442,13 @@ async function handleBookingPayment(session: Stripe.Checkout.Session) {
     
     // Store payment intent ID if not already stored
     if (paymentIntentId && !(booking as any).stripe_payment_intent_id) {
-      // Note: stripe_payment_intent_id column may not exist, so we'll try to update it
-      // but won't fail if it doesn't exist
       try {
         await supabase
           .from('bookings')
           .update({ stripe_payment_intent_id: paymentIntentId })
           .eq('id', booking.id);
       } catch (err) {
-        console.warn('⚠️ Could not update stripe_payment_intent_id (column may not exist)');
+        // Column may not exist
       }
     }
     
@@ -554,25 +460,17 @@ async function handleBookingPayment(session: Stripe.Checkout.Session) {
     if (updateError) {
       // Handle race condition errors gracefully
       if (updateError.code === '42P10' || updateError.message?.includes('ON CONFLICT')) {
-        console.warn('⚠️ Booking update conflict - likely already updated by another webhook');
-        // Verify the booking was actually updated
         const { data: verifyBooking } = await supabase
           .from('bookings')
           .select('booking_status, payment_status')
           .eq('id', booking.id)
           .single();
-        if (verifyBooking && verifyBooking.booking_status === 'confirmed' && verifyBooking.payment_status === 'paid') {
-          console.log('✅ Verified: Booking is confirmed and paid');
-        } else {
-          console.error('❌ Booking update failed and booking is not in expected state');
+        if (!(verifyBooking && verifyBooking.booking_status === 'confirmed' && verifyBooking.payment_status === 'paid')) {
           throw updateError;
         }
       } else {
-        console.error('❌ Error updating booking:', updateError);
         throw updateError;
       }
-    } else {
-      console.log(`✅ Booking ${booking.id} status updated to confirmed`);
     }
   }
 
@@ -617,16 +515,14 @@ async function handleBookingPayment(session: Stripe.Checkout.Session) {
             business_address: businessAddress,
           },
         });
-        console.log('✅ Provider notifications sent successfully');
       }
     }
   } catch (notificationError) {
-    console.error('⚠️ Error sending provider notifications (non-fatal):', notificationError);
+    // Non-fatal
   }
 
-  // Record in financial_transactions (matching tip payment pattern - no customer_id field)
+  // Record in financial_transactions
   const totalAmount = paymentIntent.amount / 100;
-  console.log(`💵 Recording financial transaction: $${totalAmount} for booking ${booking.id}`);
   
   const { data: financialTransaction, error: financialError } = await supabase
     .from('financial_transactions')
@@ -652,12 +548,10 @@ async function handleBookingPayment(session: Stripe.Checkout.Session) {
     .single();
 
   if (financialError) {
-    console.error('❌ Error recording financial transaction:', financialError);
     if (financialError.code !== '23505') { // Ignore duplicates
+      console.error('Error recording financial transaction:', financialError);
       throw financialError;
     }
-  } else {
-    console.log('✅ Financial transaction recorded:', financialTransaction?.id);
   }
 
   // Calculate platform fee for business_payment_transactions
@@ -675,11 +569,7 @@ async function handleBookingPayment(session: Stripe.Checkout.Session) {
   
   const serviceAmount = serviceAmountFromMetadata || (totalAmount / (1 + platformFeePercentage));
   const platformFee = serviceAmount * platformFeePercentage;
-  const netPaymentAmount = serviceAmount; // Business receives full service amount
-
-  console.log(`💰 Payment splits calculated: Service Amount $${serviceAmount.toFixed(2)}, Platform Fee $${platformFee.toFixed(2)}, Customer Paid $${totalAmount.toFixed(2)}, Business Receives $${netPaymentAmount.toFixed(2)}`);
-
-  console.log(`✅ Financial transaction recorded for booking ${booking.id}`);
+  const netPaymentAmount = serviceAmount;
   
   // Extract tax year from booking date or use current year
   const bookingDate = booking.booking_date ? new Date(booking.booking_date) : new Date();
@@ -712,9 +602,7 @@ async function handleBookingPayment(session: Stripe.Checkout.Session) {
     .limit(1)
     .maybeSingle();
 
-  if (existingByPaymentIntent) {
-    console.log('ℹ️ Business payment transaction already exists for this payment intent:', existingByPaymentIntent.id);
-  } else {
+  if (!existingByPaymentIntent) {
     const businessPaymentTransactionData: any = {
       booking_id: booking.id,
       business_id: booking.business_id,
@@ -753,7 +641,6 @@ async function handleBookingPayment(session: Stripe.Checkout.Session) {
       businessPaymentError.message?.includes('column') ||
       businessPaymentError.message?.includes('does not exist')
     )) {
-      console.warn('⚠️ transaction_type column may not exist yet - retrying without it');
       delete businessPaymentTransactionData.transaction_type;
       
       const { data: retryResult, error: retryError } = await supabase
@@ -767,32 +654,13 @@ async function handleBookingPayment(session: Stripe.Checkout.Session) {
     }
 
     if (businessPaymentError) {
-      // If error is due to unique constraint or ON CONFLICT, log warning but don't fail
-      // This can happen due to race conditions when both webhooks fire simultaneously
-      if (businessPaymentError.code === '23505' || 
+      // If error is due to unique constraint or ON CONFLICT, don't fail
+      if (!(businessPaymentError.code === '23505' || 
           businessPaymentError.message?.includes('unique') ||
           businessPaymentError.message?.includes('ON CONFLICT') ||
-          businessPaymentError.message?.includes('constraint matching')) {
-        console.warn('⚠️ Duplicate record detected - likely due to race condition between webhooks');
-        console.warn('⚠️ Record may have been created by another webhook handler');
-        console.warn('⚠️ If migration has not been run, see migrations/remove_booking_id_unique_add_transaction_type.sql');
-        // Verify the record actually exists
-        const { data: verifyRecord } = await supabase
-          .from('business_payment_transactions')
-          .select('id')
-          .eq('stripe_payment_intent_id', paymentIntent.id)
-          .maybeSingle();
-        if (verifyRecord) {
-          console.log('✅ Verified: Record exists in database:', verifyRecord.id);
-        }
-      } else {
-        console.error('❌ Error creating business_payment_transactions record:', businessPaymentError);
-        console.error('❌ Error code:', businessPaymentError.code);
-        console.error('❌ Error message:', businessPaymentError.message);
+          businessPaymentError.message?.includes('constraint matching'))) {
+        console.error('Error creating business_payment_transactions record:', businessPaymentError);
       }
-      console.warn('⚠️ Business payment transaction creation failed, but booking was confirmed');
-    } else {
-      console.log('✅ Business payment transaction created:', businessPaymentTransaction?.id);
     }
   }
 }
@@ -825,30 +693,13 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
       .limit(1)
       .maybeSingle();
 
-    // If both transactions exist, payment was already processed (either by webhook or payment processor)
+    // If both transactions exist, payment was already processed
     if (existingBusinessTransaction && existingFinancialTransaction) {
-      console.log('ℹ️ Payment intent already processed - both transactions exist');
-      console.log('ℹ️ Financial transaction:', existingFinancialTransaction.id);
-      console.log('ℹ️ Business payment transaction:', existingBusinessTransaction.id);
-      console.log('ℹ️ Skipping duplicate processing');
       return;
     }
 
-    // If only one exists, log warning but continue (might be partial processing)
-    // This ensures both transactions are created even if one was created by payment processor
-    if (existingBusinessTransaction || existingFinancialTransaction) {
-      console.warn('⚠️ Partial transaction processing detected:');
-      console.warn('⚠️ Business transaction exists:', !!existingBusinessTransaction);
-      console.warn('⚠️ Financial transaction exists:', !!existingFinancialTransaction);
-      console.warn('⚠️ Continuing to ensure both transactions are created');
-    }
-    
     // Check payment intent status - must be succeeded to create transactions
-    // If status is requires_capture, payment processor will handle it
     if (paymentIntent.status !== 'succeeded') {
-      console.log(`ℹ️ Payment intent status is ${paymentIntent.status}, not succeeded`);
-      console.log('ℹ️ If status is requires_capture, payment processor will create transactions on capture');
-      console.log('ℹ️ Skipping transaction creation - will be handled by payment processor or future webhook');
       return;
     }
 
@@ -856,12 +707,10 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
     
     // If bookingId is missing, try to find booking by customer_id and service_id
     if (!bookingId) {
-      console.warn('⚠️ No booking ID in payment intent metadata - attempting to find booking by customer_id and service_id');
       const customerId = paymentIntent.metadata.customerId;
       const serviceId = paymentIntent.metadata.serviceId;
       
       if (customerId && serviceId) {
-        console.log(`🔍 Searching for booking with customer_id: ${customerId}, service_id: ${serviceId}`);
         const { data: booking, error: bookingSearchError } = await supabase
           .from('bookings')
           .select('id, booking_status, payment_status')
@@ -874,46 +723,17 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
         
         if (booking && !bookingSearchError) {
           bookingId = booking.id;
-          console.log(`✅ Found booking by customer_id and service_id: ${bookingId}`);
-        } else {
-          console.error('❌ Could not find booking by customer_id and service_id:', bookingSearchError);
         }
       }
     }
     
     if (!bookingId) {
-      console.error('❌ No booking ID found in payment intent metadata or database');
-      console.error('Available metadata:', JSON.stringify(paymentIntent.metadata, null, 2));
-      console.error('Payment Intent ID:', paymentIntent.id);
-      console.error('Payment Intent Amount:', paymentIntent.amount);
-      console.error('Payment Intent Status:', paymentIntent.status);
       throw new Error(`Cannot process payment: No booking ID found for payment intent ${paymentIntent.id}`);
     }
 
-    console.log(`📋 Processing booking: ${bookingId}`);
-    console.log(`💳 Payment Intent ID: ${paymentIntent.id}`);
-    console.log(`💳 Payment Intent Status: ${paymentIntent.status}`);
-    console.log(`💰 Payment Amount: $${(paymentIntent.amount / 100).toFixed(2)}`);
-
-    // Check payment intent status - if manual capture, it will be 'requires_capture', not 'succeeded'
+    // Check payment intent status
     const isAuthorized = paymentIntent.status === 'requires_capture';
     const isCharged = paymentIntent.status === 'succeeded';
-    
-    console.log('💳 Payment Intent Status Check:', {
-      status: paymentIntent.status,
-      isAuthorized,
-      isCharged,
-      paymentIntentId: paymentIntent.id,
-      bookingId: bookingId
-    });
-    
-    if (isAuthorized) {
-      console.log('✅ Payment authorized but not yet charged - will be captured when booking is accepted');
-      console.log('ℹ️ This payment will be captured by payment processor when booking is accepted');
-    } else if (isCharged) {
-      console.log('✅ Payment already charged - this may be from payment processor capture or automatic capture');
-      console.log('ℹ️ Checking if transactions need to be created...');
-    }
 
     // Get booking details for transaction recording and notifications
     const { data: booking, error: bookingError } = await supabase
@@ -960,27 +780,12 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
       .single();
 
     if (bookingError) {
-      console.error('❌ Error fetching booking:', bookingError);
-      console.error('❌ Booking ID searched:', bookingId);
       throw bookingError;
     }
 
     if (!booking) {
-      console.error('❌ Booking not found:', bookingId);
       throw new Error(`Booking ${bookingId} not found`);
     }
-
-    console.log('📦 Booking data:', {
-      id: booking.id,
-      booking_reference: booking.booking_reference,
-      customer_id: booking.customer_id,
-      business_id: booking.business_id,
-      total_amount: booking.total_amount,
-      service_fee: booking.service_fee,
-      remaining_balance: booking.remaining_balance,
-      booking_status: booking.booking_status,
-      payment_status: booking.payment_status
-    });
 
     // Calculate service fee if not already set (20% of service amount)
     let serviceFee = booking.service_fee || 0;
@@ -1003,16 +808,12 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
         serviceFee = serviceAmount * platformFeePercentage;
         remainingBalance = serviceAmount;
       }
-      
-      console.log(`💰 Calculated service fee: $${serviceFee.toFixed(2)}, remaining balance: $${remainingBalance.toFixed(2)}`);
     }
 
     // Update booking status based on payment status
-    // If payment is authorized but not captured (requires_capture), set status to 'pending' (waiting for acceptance)
-    // If payment is already charged, set status to 'confirmed' and 'paid'
     // Check if booking is already confirmed to avoid race conditions
     if (booking.booking_status === 'confirmed' && booking.payment_status === 'paid') {
-      console.log(`ℹ️ Booking ${bookingId} is already confirmed and paid - skipping update`);
+      // Already processed
     } else {
       const updateData: any = {
         booking_status: isCharged ? 'confirmed' : 'pending', // Only confirm if already charged
@@ -1025,33 +826,25 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
         updateData.remaining_balance = remainingBalance;
       }
       
-      const { error: updateError } = await supabase
-        .from('bookings')
+    const { error: updateError } = await supabase
+      .from('bookings')
         .update(updateData)
-        .eq('id', bookingId);
+      .eq('id', bookingId);
 
-      if (updateError) {
+    if (updateError) {
         // Handle race condition errors gracefully
         if (updateError.code === '42P10' || updateError.message?.includes('ON CONFLICT')) {
-          console.warn('⚠️ Booking update conflict - likely already updated by checkout.session.completed webhook');
-          // Verify the booking was actually updated
           const { data: verifyBooking } = await supabase
             .from('bookings')
             .select('booking_status, payment_status')
             .eq('id', bookingId)
             .single();
-          if (verifyBooking && verifyBooking.booking_status === 'confirmed' && verifyBooking.payment_status === 'paid') {
-            console.log('✅ Verified: Booking is confirmed and paid');
-          } else {
-            console.error('❌ Booking update failed and booking is not in expected state');
-            throw updateError;
+          if (!(verifyBooking && verifyBooking.booking_status === 'confirmed' && verifyBooking.payment_status === 'paid')) {
+      throw updateError;
           }
         } else {
-          console.error('❌ Error updating booking:', updateError);
           throw updateError;
         }
-      } else {
-        console.log(`✅ Booking ${bookingId} status updated to confirmed`);
       }
     }
 
@@ -1096,83 +889,56 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
               business_address: businessAddress,
             },
           });
-          console.log('✅ Provider notifications sent successfully');
-        } else {
-          console.warn('⚠️ Missing booking data for notifications:', { service: !!service, customer: !!customer, business: !!business });
         }
-      } else {
-        console.warn('⚠️ notifyProvidersNewBooking function not available - skipping provider notifications');
       }
     } catch (notificationError) {
-      console.error('⚠️ Error sending provider notifications (non-fatal):', notificationError);
-      // Continue - don't fail the webhook if notifications fail
+      // Non-fatal
     }
 
     // Only record financial transactions if payment is actually charged (succeeded)
-    // If payment is only authorized (requires_capture), skip transaction recording
-    // Transactions will be recorded when payment is captured on booking acceptance
     if (!isCharged) {
-      console.log('ℹ️ Payment is authorized but not charged - skipping financial transaction recording');
-      console.log('ℹ️ Financial transactions will be recorded when payment is captured on booking acceptance');
-      return; // Exit early - don't create transactions for authorized-only payments
+      return;
     }
 
-    // Record in financial_transactions (overall payment ledger)
+    // Record in financial_transactions
     const totalAmount = paymentIntent.amount / 100;
-    console.log(`💵 Recording financial transaction: $${totalAmount} for booking ${bookingId}`);
-    console.log(`📋 Booking reference: ${booking.booking_reference || 'N/A'}`);
-    console.log(`👤 Customer ID: ${booking.customer_id || 'N/A'}`);
     
-    // Record in financial_transactions (matching tip payment pattern - no customer_id field)
     // Only create if it doesn't already exist (idempotent)
     if (!existingFinancialTransaction) {
-      console.log('📝 Recording financial transaction data');
       
       const { data: financialTransaction, error: financialError } = await supabase
         .from('financial_transactions')
         .insert({
-          booking_id: bookingId,
-          amount: totalAmount,
-          currency: paymentIntent.currency.toUpperCase(),
-          stripe_transaction_id: paymentIntent.id,
-          payment_method: 'card',
-          description: 'Service booking payment received',
+      booking_id: bookingId,
+      amount: totalAmount,
+      currency: paymentIntent.currency.toUpperCase(),
+      stripe_transaction_id: paymentIntent.id,
+      payment_method: 'card',
+      description: 'Service booking payment received',
           transaction_type: 'booking_payment',
-          status: 'completed',
-          processed_at: new Date().toISOString(),
-          metadata: {
-            charge_id: paymentIntent.latest_charge,
-            customer_id: paymentIntent.customer,
+      status: 'completed',
+      processed_at: new Date().toISOString(),
+      metadata: {
+        charge_id: paymentIntent.latest_charge,
+        customer_id: paymentIntent.customer,
             payment_method_types: paymentIntent.payment_method_types,
             booking_reference: booking.booking_reference || null,
             booking_customer_id: booking.customer_id || null,
             captured_by: paymentIntent.metadata?.captured_by || 'webhook', // Track if captured by payment processor or webhook
-          }
+      }
         })
         .select()
         .single();
 
-      if (financialError) {
-        console.error('❌ Error recording financial transaction:', financialError);
-        console.error('❌ Error code:', financialError.code);
-        console.error('❌ Error message:', financialError.message);
-        console.error('❌ Error details:', JSON.stringify(financialError, null, 2));
-        
-        // Check for specific error types
-        if (financialError.code === '23505') {
-          console.error('⚠️ Duplicate transaction detected - transaction may already exist');
-          // Don't throw - this is not a critical error, continue to business transaction
-        } else if (financialError.code === '23503') {
-          console.error('⚠️ Foreign key constraint violation - booking may not exist');
+    if (financialError) {
+        if (financialError.code === '23503') {
           throw new Error(`Booking ${bookingId} not found or invalid`);
-        } else {
-          throw financialError;
+        } else if (financialError.code !== '23505') {
+          // Don't throw for duplicates
+          console.error('Error recording financial transaction:', financialError);
+      throw financialError;
         }
-      } else {
-        console.log('✅ Financial transaction recorded:', financialTransaction?.id);
       }
-    } else {
-      console.log('ℹ️ Financial transaction already exists, skipping:', existingFinancialTransaction.id);
     }
 
     // Calculate platform fee for business_payment_transactions
@@ -1244,14 +1010,14 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
       // Note: After migration removes unique constraint and adds transaction_type column,
       // this will work correctly. Until then, it may fail on unique constraint for "add more service"
       const businessPaymentTransactionData: any = {
-        booking_id: bookingId,
+      booking_id: bookingId,
         business_id: booking.business_id,
         payment_date: paymentDate,
         gross_payment_amount: totalAmount, // Total amount customer paid
         platform_fee: platformFee, // 20% of service amount
         net_payment_amount: netPaymentAmount, // Full service amount (what business receives)
         tax_year: taxYear,
-        stripe_payment_intent_id: paymentIntent.id,
+      stripe_payment_intent_id: paymentIntent.id,
         stripe_connect_account_id: businessProfile?.stripe_connect_account_id || null,
         transaction_description: transactionType === 'additional_service' 
           ? 'Additional service payment' 
@@ -1508,23 +1274,23 @@ async function handleTipPaymentIntent(paymentIntent: Stripe.PaymentIntent) {
       // Create new tip record if it doesn't exist (fallback)
       console.log('📝 Creating new tip record (fallback)');
       const { data: newTip, error: insertError } = await supabase
-        .from('tips')
-        .insert({
-          booking_id,
-          customer_id,
-          provider_id,
-          business_id,
-          tip_amount: parseFloat(tip_amount),
+      .from('tips')
+      .insert({
+        booking_id,
+        customer_id,
+        provider_id,
+        business_id,
+        tip_amount: parseFloat(tip_amount),
           tip_percentage: null,
-          payment_status: 'completed',
-          stripe_payment_intent_id: paymentIntent.id,
+        payment_status: 'completed',
+        stripe_payment_intent_id: paymentIntent.id,
           platform_fee_amount: actualStripeFee, // Actual Stripe fees from balance transaction
           provider_net_amount: actualProviderNet, // Actual net amount after Stripe fees
           customer_message: customer_message || null,
           payment_processed_at: new Date().toISOString(),
-        })
-        .select()
-        .single();
+      })
+      .select()
+      .single();
 
       if (insertError) {
         console.error('❌ Error creating tip record:', insertError);

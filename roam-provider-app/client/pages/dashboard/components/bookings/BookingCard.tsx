@@ -142,17 +142,6 @@ export default function BookingCard({
             {/* Customer Avatar */}
             <div className="w-16 h-16 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
               {(() => {
-                // Debug logging
-                console.log("🔍 BOOKINGS TAB AVATAR DEBUG:", {
-                  bookingId: booking.id,
-                  customerProfiles: booking.customer_profiles,
-                  imageUrl: booking.customer_profiles?.image_url,
-                  firstName: booking.customer_profiles?.first_name,
-                  lastName: booking.customer_profiles?.last_name,
-                  hasImage: !!booking.customer_profiles?.image_url,
-                  fullBookingData: booking
-                });
-                
                 if (booking.customer_profiles?.image_url) {
                   return (
                     <img
@@ -160,7 +149,6 @@ export default function BookingCard({
                       alt={`${booking.customer_profiles.first_name || ""} ${booking.customer_profiles.last_name || ""}`}
                       className="w-full h-full object-cover rounded-lg"
                       onError={(e) => {
-                        console.log("❌ IMAGE LOAD ERROR:", booking.customer_profiles.image_url);
                         e.currentTarget.style.display = 'none';
                       }}
                     />

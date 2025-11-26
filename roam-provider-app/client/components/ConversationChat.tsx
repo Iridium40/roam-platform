@@ -116,17 +116,6 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
   const currentUser = provider || customer;
   const currentUserId = provider?.user_id || provider?.id || customer?.id || '';
 
-  // Debug logging for user identity
-  console.log('🔍 ConversationChat User Identity Debug:', {
-    currentUserType,
-    provider_role: provider?.provider_role,
-    provider_user_id: provider?.user_id,
-    provider_id: provider?.id,
-    customer_id: customer?.id,
-    currentUserId,
-    finalIdentity: `${currentUserType}-${currentUserId}`,
-  });
-
   const getUserIdentity = useCallback(() => {
     if (!currentUserId) return null;
     return `${currentUserType}-${currentUserId}`;

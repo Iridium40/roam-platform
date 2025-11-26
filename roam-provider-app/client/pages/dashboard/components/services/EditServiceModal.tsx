@@ -84,13 +84,6 @@ export function EditServiceModal({
         is_active: isActive,
       };
       
-      console.log('🔍 EditServiceModal - Form data being sent:', {
-        formData,
-        businessDurationMinutes,
-        businessDurationMinutesType: typeof businessDurationMinutes,
-        businessDurationMinutesValue: businessDurationMinutes
-      });
-      
       await onSave(formData);
       onClose();
     } catch (err) {

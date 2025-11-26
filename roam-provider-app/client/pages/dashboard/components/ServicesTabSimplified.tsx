@@ -69,12 +69,6 @@ export default function ServicesTabSimplified({
 
   const handleSaveService = async (serviceForm: any) => {
     try {
-      console.log('🔍 handleSaveService - Processing form data:', {
-        serviceForm,
-        business_duration_minutes: serviceForm.business_duration_minutes,
-        business_duration_minutes_type: typeof serviceForm.business_duration_minutes
-      });
-
       const updateData: any = {
         business_price: parseFloat(serviceForm.business_price),
         delivery_type: serviceForm.delivery_type,
@@ -84,10 +78,7 @@ export default function ServicesTabSimplified({
       // Add business_duration_minutes if provided
       if (serviceForm.business_duration_minutes !== undefined && serviceForm.business_duration_minutes !== null && serviceForm.business_duration_minutes !== '') {
         updateData.business_duration_minutes = parseInt(serviceForm.business_duration_minutes);
-        console.log('🔍 handleSaveService - Added business_duration_minutes:', updateData.business_duration_minutes);
       }
-
-      console.log('🔍 handleSaveService - Final update data:', updateData);
 
       await actions.updateService(serviceForm.service_id, updateData);
       setEditingService(null);

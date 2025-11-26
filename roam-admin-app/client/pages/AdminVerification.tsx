@@ -1426,11 +1426,11 @@ export default function AdminVerification() {
 
   if (loading) {
     return (
-      <AdminLayout title="Business Approvals">
+      <AdminLayout title="Approvals">
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
             <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4 text-roam-blue" />
-            <p className="text-muted-foreground">Loading business approvals...</p>
+            <p className="text-muted-foreground">Loading approvals...</p>
           </div>
         </div>
       </AdminLayout>
@@ -1443,7 +1443,7 @@ export default function AdminVerification() {
         {/* Header */}
         <div className="flex justify-between items-start">
           <div>
-            <h1 className="text-2xl font-bold">Business Approvals</h1>
+            <h1 className="text-2xl font-bold">Approvals</h1>
             <p className="text-muted-foreground mt-1">
               Review documents and approve or reject businesses requesting platform access
             </p>
@@ -1713,11 +1713,11 @@ export default function AdminVerification() {
                                 {business.verification_status.replace("_", " ")}
                               </ROAMBadge>
                               {business.priority !== "normal" && (
-                                <ROAMBadge
-                                  variant={getPriorityVariant(business.priority)}
-                                >
+                              <ROAMBadge
+                                variant={getPriorityVariant(business.priority)}
+                              >
                                   {business.priority === "urgent" ? "⚠️ Urgent" : "⚡ High Priority"}
-                                </ROAMBadge>
+                              </ROAMBadge>
                               )}
                             </div>
 
@@ -1739,9 +1739,9 @@ export default function AdminVerification() {
                               
                               {business.verification_status !== "approved" && (
                                 <div className="flex gap-2 w-full">
-                                  <Button
+                              <Button
                                     variant="destructive"
-                                    size="sm"
+                                size="sm"
                                     onClick={() =>
                                       handleBusinessActionClick(
                                         business.id,
@@ -1781,8 +1781,8 @@ export default function AdminVerification() {
                                   >
                                     <CheckCircle className="w-4 h-4 mr-1" />
                                     Approve
-                                  </Button>
-                                </div>
+                              </Button>
+                            </div>
                               )}
                               
                               {business.verification_status === "approved" && (
@@ -1971,10 +1971,10 @@ export default function AdminVerification() {
                                     {documents.every((d) => d.verification_status === "verified")
                                       ? "✓ All documents verified - Ready to approve"
                                       : "⚠ Review remaining documents before approval"
-                                    }
-                                  </div>
-                                )}
-                              </div>
+                                                  }
+                                                </div>
+                                              )}
+                                            </div>
                             </div>
                           </div>
                         </div>
