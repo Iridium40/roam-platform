@@ -108,8 +108,14 @@ export default function HowItWorks() {
       <section className="py-16 bg-gradient-to-r from-roam-blue to-roam-light-blue text-white">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-4xl mx-auto text-center">
-            <h1 className="text-5xl font-bold mb-6">
-              How ROAM Works
+            <h1 className="text-5xl font-bold mb-6 flex items-center justify-center gap-4">
+              How 
+              <img
+                src="https://cdn.builder.io/api/v1/image/assets%2Fa42b6f9ec53e4654a92af75aad56d14f%2F98c77fcac42745ca81f9db3fb7f4e366?format=webp&width=800"
+                alt="ROAM"
+                className="h-12 md:h-16 w-auto inline-block"
+              />
+              Works
             </h1>
             <p className="text-xl text-white/90 mb-8">
               Connecting customers with trusted local service providers has never been easier. 

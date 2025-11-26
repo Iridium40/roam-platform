@@ -169,8 +169,13 @@ export default function About() {
       <section className="py-20 relative overflow-hidden">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="max-w-4xl mx-auto text-center">
-            <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
-              About <span className="bg-gradient-to-r from-roam-blue to-roam-light-blue bg-clip-text text-transparent">ROAM</span>
+            <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6 flex items-center justify-center gap-4">
+              About 
+              <img
+                src="https://cdn.builder.io/api/v1/image/assets%2Fa42b6f9ec53e4654a92af75aad56d14f%2F38446bf6c22b453fa45caf63b0513e21?format=webp&width=800"
+                alt="ROAM"
+                className="h-12 md:h-16 w-auto inline-block"
+              />
             </h1>
             <h2 className="text-2xl md:text-3xl font-semibold text-gray-700 mb-8">
               Transforming Wellness Services, One Appointment at a Time
