@@ -4,7 +4,8 @@ import cors from "cors";
 import { handleDemo } from "./routes/demo.js";
 import { handleSystemConfig } from "./routes/system-config.js";
 import { handleTestSMS, handleGetSMSSettings } from "./routes/sms.js";
-import { handleUploadImage } from "./routes/storage.js";
+import { handleUploadImage, handleDeleteImage } from "./routes/storage.js";
+import { handleAddEnumValue } from "./routes/database-operations.js";
 import { handleSendApprovalEmail } from "./routes/send-approval-email.js";
 import { handleSendRejectionEmail } from "./routes/send-rejection-email.js";
 import { handleSendContactReply } from "./routes/send-contact-reply.js";
@@ -74,6 +75,10 @@ export function createServer() {
 
   // Storage routes
   app.post("/api/storage/upload-image", handleUploadImage);
+  app.post("/api/storage/delete-image", handleDeleteImage);
+  
+  // Database operations routes
+  app.post("/api/database/add-enum-value", handleAddEnumValue);
 
   app.get("/api/demo", handleDemo);
   app.get("/api/system-config", handleSystemConfig);

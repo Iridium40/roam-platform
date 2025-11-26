@@ -840,19 +840,39 @@ export default function AdminServices() {
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
       const filePath = `image-services/${fileName}`;
 
-      // Upload file to Supabase storage
-      const { data, error } = await supabase.storage
-        .from("roam-file-storage")
-        .upload(filePath, file);
+      // Convert file to base64
+      const reader = new FileReader();
+      const fileData = await new Promise<string>((resolve, reject) => {
+        reader.onload = () => {
+          const base64 = (reader.result as string).split(',')[1];
+          resolve(base64);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
 
-      if (error) throw error;
+      // Upload file via API
+      const response = await fetch("/api/storage/upload-image", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          fileData,
+          fileName,
+          filePath,
+          mimeType: file.type,
+          imageType: "service",
+        }),
+      });
 
-      // Get public URL
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from("roam-file-storage").getPublicUrl(filePath);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Upload failed");
+      }
 
-      return publicUrl;
+      const result = await response.json();
+      return result.publicUrl;
     } catch (error) {
       console.error("Error uploading image:", error);
       throw error;
@@ -868,12 +888,21 @@ export default function AdminServices() {
       const pathSegments = url.pathname.split("/");
       const filePath = pathSegments.slice(-2).join("/"); // Get 'image-services/filename'
 
-      // Remove file from storage
-      const { error } = await supabase.storage
-        .from("roam-file-storage")
-        .remove([filePath]);
+      // Remove file via API
+      const response = await fetch("/api/storage/delete-image", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          filePath,
+        }),
+      });
 
-      if (error) throw error;
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Delete failed");
+      }
     } catch (error) {
       console.error("Error removing image:", error);
       throw error;
@@ -976,19 +1005,39 @@ export default function AdminServices() {
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
       const filePath = `image-categories/${fileName}`;
 
-      // Upload file to Supabase storage
-      const { data, error } = await supabase.storage
-        .from("roam-file-storage")
-        .upload(filePath, file);
+      // Convert file to base64
+      const reader = new FileReader();
+      const fileData = await new Promise<string>((resolve, reject) => {
+        reader.onload = () => {
+          const base64 = (reader.result as string).split(',')[1];
+          resolve(base64);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
 
-      if (error) throw error;
+      // Upload file via API
+      const response = await fetch("/api/storage/upload-image", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          fileData,
+          fileName,
+          filePath,
+          mimeType: file.type,
+          imageType: "category",
+        }),
+      });
 
-      // Get public URL
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from("roam-file-storage").getPublicUrl(filePath);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Upload failed");
+      }
 
-      return publicUrl;
+      const result = await response.json();
+      return result.publicUrl;
     } catch (error) {
       console.error("Error uploading category image:", error);
       throw error;
@@ -1004,12 +1053,21 @@ export default function AdminServices() {
       const pathSegments = url.pathname.split("/");
       const filePath = pathSegments.slice(-2).join("/"); // Get 'image-categories/filename'
 
-      // Remove file from storage
-      const { error } = await supabase.storage
-        .from("roam-file-storage")
-        .remove([filePath]);
+      // Remove file via API
+      const response = await fetch("/api/storage/delete-image", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          filePath,
+        }),
+      });
 
-      if (error) throw error;
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Delete failed");
+      }
     } catch (error) {
       console.error("Error removing category image:", error);
       throw error;
@@ -1109,19 +1167,39 @@ export default function AdminServices() {
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
       const filePath = `image-subcategories/${fileName}`;
 
-      // Upload file to Supabase storage
-      const { data, error } = await supabase.storage
-        .from("roam-file-storage")
-        .upload(filePath, file);
+      // Convert file to base64
+      const reader = new FileReader();
+      const fileData = await new Promise<string>((resolve, reject) => {
+        reader.onload = () => {
+          const base64 = (reader.result as string).split(',')[1];
+          resolve(base64);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
 
-      if (error) throw error;
+      // Upload file via API
+      const response = await fetch("/api/storage/upload-image", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          fileData,
+          fileName,
+          filePath,
+          mimeType: file.type,
+          imageType: "subcategory",
+        }),
+      });
 
-      // Get public URL
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from("roam-file-storage").getPublicUrl(filePath);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Upload failed");
+      }
 
-      return publicUrl;
+      const result = await response.json();
+      return result.publicUrl;
     } catch (error) {
       console.error("Error uploading subcategory image:", error);
       throw error;
@@ -1137,12 +1215,21 @@ export default function AdminServices() {
       const pathSegments = url.pathname.split("/");
       const filePath = pathSegments.slice(-2).join("/"); // Get 'image-subcategories/filename'
 
-      // Remove file from storage
-      const { error } = await supabase.storage
-        .from("roam-file-storage")
-        .remove([filePath]);
+      // Remove file via API
+      const response = await fetch("/api/storage/delete-image", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          filePath,
+        }),
+      });
 
-      if (error) throw error;
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Delete failed");
+      }
     } catch (error) {
       console.error("Error removing subcategory image:", error);
       throw error;
@@ -1528,23 +1615,30 @@ export default function AdminServices() {
 
         try {
           // First, check if the custom function exists by trying to call it
-          console.log("Attempting to call add_category_type function");
-          const { data: functionResult, error: enumError } = await supabase.rpc(
-            "add_category_type",
-            {
-              new_type: categoryType,
+          console.log("Attempting to call add_category_type function via API");
+          const rpcResponse = await fetch("/api/database/add-enum-value", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
             },
-          );
+            body: JSON.stringify({
+              function_name: "add_category_type",
+              new_value: categoryType,
+            }),
+          });
+          
+          const enumError = !rpcResponse.ok ? await rpcResponse.json().catch(() => ({})) : null;
+          const functionResult = rpcResponse.ok ? await rpcResponse.json() : null;
 
           if (enumError) {
             console.error("Custom function error details:", enumError);
 
             // Check if the error is because the function doesn't exist
             if (
-              enumError.message?.includes("function") &&
-              (enumError.message?.includes("does not exist") ||
-                enumError.message?.includes("not found") ||
-                enumError.message?.includes("schema cache"))
+              enumError.error?.includes("function") &&
+              (enumError.error?.includes("does not exist") ||
+                enumError.error?.includes("not found") ||
+                enumError.error?.includes("schema cache"))
             ) {
               // Function doesn't exist - provide setup instructions
               throw new Error(`⚠️ DATABASE SETUP REQUIRED
@@ -1568,7 +1662,7 @@ ALTER TYPE service_category_types ADD VALUE '${categoryType}';
               // Function exists but failed for another reason
               throw new Error(`Failed to add enum value via database function.
 
-Error: ${enumError.message}
+Error: ${enumError.error || 'Unknown error'}
 
 Please manually run this SQL command in Supabase:
 ALTER TYPE service_category_types ADD VALUE '${categoryType}';`);
@@ -1852,23 +1946,30 @@ ALTER TYPE service_category_types ADD VALUE '${categoryType}';`);
 
         try {
           // First, check if the custom function exists by trying to call it
-          console.log("Attempting to call add_subcategory_type function");
-          const { data: functionResult, error: enumError } = await supabase.rpc(
-            "add_subcategory_type",
-            {
-              new_type: subcategoryType,
+          console.log("Attempting to call add_subcategory_type function via API");
+          const rpcResponse = await fetch("/api/database/add-enum-value", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
             },
-          );
+            body: JSON.stringify({
+              function_name: "add_subcategory_type",
+              new_value: subcategoryType,
+            }),
+          });
+          
+          const enumError = !rpcResponse.ok ? await rpcResponse.json().catch(() => ({})) : null;
+          const functionResult = rpcResponse.ok ? await rpcResponse.json() : null;
 
           if (enumError) {
             console.error("Custom function error details:", enumError);
 
             // Check if the error is because the function doesn't exist
             if (
-              enumError.message?.includes("function") &&
-              (enumError.message?.includes("does not exist") ||
-                enumError.message?.includes("not found") ||
-                enumError.message?.includes("schema cache"))
+              enumError.error?.includes("function") &&
+              (enumError.error?.includes("does not exist") ||
+                enumError.error?.includes("not found") ||
+                enumError.error?.includes("schema cache"))
             ) {
               // Function doesn't exist - provide setup instructions
               throw new Error(`⚠️ DATABASE SETUP REQUIRED
@@ -1892,7 +1993,7 @@ ALTER TYPE service_subcategory_types ADD VALUE '${subcategoryType}';
               // Function exists but failed for another reason
               throw new Error(`Failed to add enum value via database function.
 
-Error: ${enumError.message}
+Error: ${enumError.error || 'Unknown error'}
 
 Please manually run this SQL command in Supabase:
 ALTER TYPE service_subcategory_types ADD VALUE '${subcategoryType}';`);

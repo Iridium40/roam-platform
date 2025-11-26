@@ -75,6 +75,18 @@
       "destination": "/api/onboarding/status/[userId].ts"
     },
     {
+      "source": "/api/storage/upload-image",
+      "destination": "/api/storage/upload-image.ts"
+    },
+    {
+      "source": "/api/storage/delete-image",
+      "destination": "/api/storage/delete-image.ts"
+    },
+    {
+      "source": "/api/database/add-enum-value",
+      "destination": "/api/database/add-enum-value.ts"
+    },
+    {
       "source": "/api/admin/approve-application",
       "destination": "/api/admin/approve-application.ts"
     },
