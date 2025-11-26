@@ -45,59 +45,20 @@ async function getBookings(req: Request, res: Response) {
     const effectiveDateFrom = date_from || defaultDateFromStr;
     const effectiveDateTo = date_to || defaultDateToStr;
 
+    // Use the enriched view which includes all related data in one query (no N+1 problem)
     let query = supabase
-      .from('bookings')
-      .select(`
-        id,
-        customer_id,
-        provider_id,
-        service_id,
-        booking_date,
-        booking_time,
-        booking_status,
-        total_amount,
-        duration_minutes,
-        special_requests,
-        payment_status,
-        payment_method,
-        cancellation_reason,
-        created_at,
-        updated_at,
-        customer_profiles!inner (
-          id,
-          first_name,
-          last_name,
-          email,
-          phone
-        ),
-        provider_profiles!inner (
-          id,
-          first_name,
-          last_name,
-          email,
-          business_id,
-          business_profiles!inner (
-            business_name,
-            business_type
-          )
-        ),
-        services!inner (
-          id,
-          service_name,
-          category,
-          subcategory,
-          price,
-          duration_minutes as service_duration
-        )
-      `);
+      .from('admin_bookings_enriched')
+      .select('*', { count: 'exact' });
 
     if (search) {
       query = query.or(`
-        customer_profiles.first_name.ilike.%${search}%,
-        customer_profiles.last_name.ilike.%${search}%,
-        provider_profiles.first_name.ilike.%${search}%,
-        provider_profiles.last_name.ilike.%${search}%,
-        services.service_name.ilike.%${search}%
+        customer_first_name.ilike.%${search}%,
+        customer_last_name.ilike.%${search}%,
+        customer_email.ilike.%${search}%,
+        provider_first_name.ilike.%${search}%,
+        provider_last_name.ilike.%${search}%,
+        business_name.ilike.%${search}%,
+        service_name.ilike.%${search}%
       `);
     }
 
@@ -114,7 +75,7 @@ async function getBookings(req: Request, res: Response) {
     }
 
     if (business_id) {
-      query = query.eq('provider_profiles.business_id', business_id);
+      query = query.eq('business_id', business_id);
     }
 
     // Apply date range (either provided or default)
@@ -143,46 +104,22 @@ async function getBookings(req: Request, res: Response) {
       });
     }
 
-    // Transform and enrich booking data
-    const enrichedBookings = await Promise.all(
-      (bookings || []).map(async (booking: any) => {
-        // Get review if exists
-        const { data: review } = await supabase
-          .from('reviews')
-          .select('overall_rating, review_text, created_at')
-          .eq('booking_id', booking.id)
-          .single();
-
-        // Get payment details if available
-        const { data: payment } = await supabase
-          .from('payments')
-          .select('stripe_payment_intent_id, amount_paid, payment_date, refund_amount')
-          .eq('booking_id', booking.id)
-          .single();
-
-        return {
-          ...booking,
-          customer_name: `${booking.customer_profiles?.first_name || ''} ${booking.customer_profiles?.last_name || ''}`.trim(),
-          provider_name: `${booking.provider_profiles?.first_name || ''} ${booking.provider_profiles?.last_name || ''}`.trim(),
-          business_name: booking.provider_profiles?.business_profiles?.business_name || 'Unknown',
-          service_name: booking.services?.service_name || 'Unknown Service',
-          service_category: booking.services?.category || 'Unknown',
-          has_review: !!review,
-          review_rating: review?.overall_rating || null,
-          payment_details: payment ? {
-            stripe_payment_intent_id: payment.stripe_payment_intent_id,
-            amount_paid: payment.amount_paid,
-            payment_date: payment.payment_date,
-            refund_amount: payment.refund_amount
-          } : null,
-          booking_datetime: new Date(`${booking.booking_date}T${booking.booking_time}`).toISOString(),
-          duration_display: `${booking.duration_minutes || booking.services?.service_duration || 0} minutes`
-        };
-      })
-    );
+    // The enriched view already contains all the data we need - no N+1 queries needed!
+    // Just format the payment details if they exist
+    const formattedBookings = (bookings || []).map((booking: any) => ({
+      ...booking,
+      payment_details: booking.payment_id ? {
+        stripe_transaction_id: booking.stripe_transaction_id,
+        amount_paid: booking.amount_paid,
+        payment_date: booking.payment_date,
+        transaction_status: booking.transaction_status,
+        transaction_type: booking.transaction_type,
+        payment_method: booking.transaction_payment_method
+      } : null
+    }));
 
     return res.status(200).json({ 
-      data: enrichedBookings,
+      data: formattedBookings,
       pagination: {
         page: pageNum,
         limit: limitNum,
