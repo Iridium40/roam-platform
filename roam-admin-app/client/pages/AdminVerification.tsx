@@ -198,9 +198,9 @@ export default function AdminVerification() {
       setLoading(true);
       setError(null);
 
-      console.log("Fetching business profiles from API...");
-      // Fetch businesses via API
-      const businessResponse = await fetch('/api/businesses');
+      console.log("Fetching business profiles from optimized API (with pre-aggregated document counts)...");
+      // Use optimized approvals view that includes document counts in a single query
+      const businessResponse = await fetch('/api/businesses?use_approvals_view=true');
       const businessResult = await businessResponse.json();
 
       if (!businessResponse.ok) {
@@ -209,69 +209,12 @@ export default function AdminVerification() {
       }
 
       const businessData = businessResult.data || [];
-      console.log("Business profiles result:", {
+      console.log("Business profiles result (optimized):", {
         count: businessData.length,
         sample: businessData[0],
       });
 
-      console.log("Fetching business documents for count aggregation from API...");
-      // Fetch all documents via API (no business_id parameter = get all)
-      const documentsResponse = await fetch('/api/business-documents');
-      const documentsResult = await documentsResponse.json();
-
-      if (!documentsResponse.ok) {
-        console.error("Business documents error:", documentsResult.error);
-        throw new Error(documentsResult.error || 'Failed to fetch documents');
-      }
-
-      const documentCounts = documentsResult.data || [];
-      console.log("Business documents result:", {
-        count: documentCounts.length,
-        sample: documentCounts[0],
-      });
-
-      console.log("Processing document counts...");
-      // Calculate document counts by business
-      const documentStats: Record<
-        string,
-        {
-          total: number;
-          verified: number;
-          pending: number;
-          rejected: number;
-          under_review: number;
-        }
-      > = {};
-
-      (documentCounts || []).forEach((doc) => {
-        if (!documentStats[doc.business_id]) {
-          documentStats[doc.business_id] = {
-            total: 0,
-            verified: 0,
-            pending: 0,
-            rejected: 0,
-            under_review: 0,
-          };
-        }
-        documentStats[doc.business_id].total++;
-        if (doc.verification_status === "verified") {
-          documentStats[doc.business_id].verified++;
-        } else if (doc.verification_status === "pending") {
-          documentStats[doc.business_id].pending++;
-        } else if (doc.verification_status === "rejected") {
-          documentStats[doc.business_id].rejected++;
-        } else if (doc.verification_status === "under_review") {
-          documentStats[doc.business_id].under_review++;
-        }
-      });
-
-      console.log(
-        "Document stats calculated:",
-        Object.keys(documentStats).length,
-        "businesses have documents",
-      );
-
-      // Prepare verification data with actual document counts
+      // Prepare verification data - document counts are already included in the view!
       console.log("Preparing verification data...");
       const verificationData: BusinessVerification[] = (businessData || []).map(
         (business) => {
@@ -281,12 +224,13 @@ export default function AdminVerification() {
 
           // Determine priority based on status, application submission, and document status
           let priority: "normal" | "high" | "urgent" = "normal";
-          const businessStats = documentStats[business.id] || {
-            total: 0,
-            verified: 0,
-            pending: 0,
-            rejected: 0,
-            under_review: 0,
+          // Document stats now come directly from the view
+          const businessStats = {
+            total: business.total_documents || 0,
+            verified: business.verified_documents || 0,
+            pending: business.pending_documents || 0,
+            rejected: business.rejected_documents || 0,
+            under_review: business.under_review_documents || 0,
           };
 
           const now = new Date();
