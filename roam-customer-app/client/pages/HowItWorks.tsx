@@ -114,8 +114,14 @@ export default function HowItWorks() {
             <Badge variant="secondary" className="mb-6 text-sm px-4 py-2 bg-white/20 text-white border-white/30 backdrop-blur-sm animate-fade-in">
               Platform Overview
             </Badge>
-            <h1 className="text-5xl md:text-6xl font-bold mb-6 text-white animate-slide-up">
-              How ROAM Works
+            <h1 className="text-5xl md:text-6xl font-bold mb-6 text-white flex items-center justify-center gap-4 animate-slide-up">
+              How 
+              <img
+                src="/logo-white-notagline.png"
+                alt="ROAM"
+                className="h-12 md:h-[3.75rem] w-auto inline-block"
+              />
+              Works
             </h1>
             <p className="text-xl md:text-2xl text-white/90 mb-10 leading-relaxed animate-fade-in">
               Connecting customers with trusted local service providers has never been easier. 

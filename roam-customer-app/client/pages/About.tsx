@@ -154,7 +154,7 @@ export default function About() {
               <img
                 src="/logo-white-notagline.png"
                 alt="ROAM"
-                className="h-12 md:h-16 w-auto inline-block"
+                className="h-12 md:h-[3.75rem] w-auto inline-block"
               />
             </h1>
             <h2 className="text-2xl md:text-3xl font-semibold text-white/90 mb-8 animate-fade-in">
