@@ -10,113 +10,95 @@ export async function handleReportMetrics(req: Request, res: Response) {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - parseInt(dateRange as string));
     
-    // Fetch customer metrics (customer_profiles table instead of auth.users)
-    const { data: customers, error: customersError } = await supabase
-      .from('customer_profiles')
-      .select('created_at')
-      .gte('created_at', startDate.toISOString());
-    
-    if (customersError) {
-      console.error('Error fetching customer metrics:', customersError);
-      // Don't throw - continue with empty data
-    }
-    
-    // Fetch provider metrics
-    const { data: providers, error: providersError } = await supabase
-      .from('providers')
-      .select('created_at')
-      .gte('created_at', startDate.toISOString());
-    
-    if (providersError) {
-      console.error('Error fetching provider metrics:', providersError);
-      // Don't throw - continue with empty data
-    }
-    
-    // Combine customers and providers for total user count
-    const users = [...(customers || []), ...(providers || [])];
-    
-    // Fetch booking metrics
-    const { data: bookings, error: bookingsError } = await supabase
-      .from('bookings')
-      .select('total_amount, created_at, booking_status')
-      .gte('created_at', startDate.toISOString());
-    
-    if (bookingsError) throw bookingsError;
-    
-    // Fetch previous period for comparison
+    // Calculate previous period for comparison
     const prevStartDate = new Date(startDate);
     prevStartDate.setDate(prevStartDate.getDate() - parseInt(dateRange as string));
     
-    // Fetch previous period customers
-    const { data: prevCustomers, error: prevCustomersError } = await supabase
-      .from('customer_profiles')
-      .select('created_at')
-      .gte('created_at', prevStartDate.toISOString())
-      .lt('created_at', startDate.toISOString());
+    // Run all queries in parallel for maximum performance
+    const [
+      customerCount,
+      providerCount,
+      bookingsData,
+      reviewsData,
+      prevCustomerCount,
+      prevProviderCount,
+      prevBookingsData,
+      prevReviewsData
+    ] = await Promise.all([
+      // Current period counts
+      supabase
+        .from('customer_profiles')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', startDate.toISOString()),
+      
+      supabase
+        .from('providers')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', startDate.toISOString()),
+      
+      // Current period bookings - using enriched view for better performance
+      supabase
+        .from('admin_bookings_enriched')
+        .select('total_amount, booking_status')
+        .gte('created_at', startDate.toISOString()),
+      
+      // Current period reviews - just need overall_rating for average
+      supabase
+        .from('reviews')
+        .select('overall_rating')
+        .gte('created_at', startDate.toISOString()),
+      
+      // Previous period counts
+      supabase
+        .from('customer_profiles')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', prevStartDate.toISOString())
+        .lt('created_at', startDate.toISOString()),
+      
+      supabase
+        .from('providers')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', prevStartDate.toISOString())
+        .lt('created_at', startDate.toISOString()),
+      
+      // Previous period bookings
+      supabase
+        .from('admin_bookings_enriched')
+        .select('total_amount, booking_status')
+        .gte('created_at', prevStartDate.toISOString())
+        .lt('created_at', startDate.toISOString()),
+      
+      // Previous period reviews
+      supabase
+        .from('reviews')
+        .select('overall_rating')
+        .gte('created_at', prevStartDate.toISOString())
+        .lt('created_at', startDate.toISOString())
+    ]);
     
-    if (prevCustomersError) {
-      console.error('Error fetching previous customer metrics:', prevCustomersError);
-    }
-    
-    // Fetch previous period providers
-    const { data: prevProviders, error: prevProvidersError } = await supabase
-      .from('providers')
-      .select('created_at')
-      .gte('created_at', prevStartDate.toISOString())
-      .lt('created_at', startDate.toISOString());
-    
-    if (prevProvidersError) {
-      console.error('Error fetching previous provider metrics:', prevProvidersError);
-    }
-    
-    // Combine for previous period total
-    const prevUsers = [...(prevCustomers || []), ...(prevProviders || [])];
-    
-    const { data: prevBookings, error: prevBookingsError } = await supabase
-      .from('bookings')
-      .select('total_amount, created_at')
-      .gte('created_at', prevStartDate.toISOString())
-      .lt('created_at', startDate.toISOString());
-    
-    if (prevBookingsError) throw prevBookingsError;
-    
-    // Calculate metrics
-    const totalUsers = users?.length || 0;
-    const prevTotalUsers = prevUsers?.length || 0;
+    // Calculate metrics using database-returned data
+    const totalUsers = (customerCount.count || 0) + (providerCount.count || 0);
+    const prevTotalUsers = (prevCustomerCount.count || 0) + (prevProviderCount.count || 0);
     const userChange = prevTotalUsers > 0 ? ((totalUsers - prevTotalUsers) / prevTotalUsers) * 100 : 0;
     
-    const totalBookings = bookings?.length || 0;
-    const prevTotalBookings = prevBookings?.length || 0;
+    const totalBookings = bookingsData.data?.length || 0;
+    const prevTotalBookings = prevBookingsData.data?.length || 0;
     const bookingChange = prevTotalBookings > 0 ? ((totalBookings - prevTotalBookings) / prevTotalBookings) * 100 : 0;
     
-    const totalRevenue = bookings?.reduce((sum, booking) => 
+    // Calculate revenue - only client-side aggregation we still need (could be moved to view)
+    const totalRevenue = bookingsData.data?.reduce((sum, booking: any) => 
       sum + (booking.total_amount || 0), 0) || 0;
-    const prevRevenue = prevBookings?.reduce((sum, booking) => 
+    const prevRevenue = prevBookingsData.data?.reduce((sum, booking: any) => 
       sum + (booking.total_amount || 0), 0) || 0;
     const revenueChange = prevRevenue > 0 ? ((totalRevenue - prevRevenue) / prevRevenue) * 100 : 0;
     
-    // Calculate average rating
-    const { data: reviews, error: reviewsError } = await supabase
-      .from('reviews')
-      .select('overall_rating, created_at')
-      .gte('created_at', startDate.toISOString());
-    
-    if (reviewsError) throw reviewsError;
-    
-    const avgRating = reviews && reviews.length > 0 
-      ? reviews.reduce((sum, review) => sum + (review.overall_rating || 0), 0) / reviews.length 
+    // Calculate average rating - only client-side aggregation we still need
+    const avgRating = reviewsData.data && reviewsData.data.length > 0 
+      ? reviewsData.data.reduce((sum: number, review: any) => sum + (review.overall_rating || 0), 0) / reviewsData.data.length 
       : 0;
     
-    const { data: prevReviews, error: prevReviewsError } = await supabase
-      .from('reviews')
-      .select('overall_rating, created_at')
-      .gte('created_at', prevStartDate.toISOString())
-      .lt('created_at', startDate.toISOString());
-    
-    if (prevReviewsError) throw prevReviewsError;
-    
-    const prevAvgRating = prevReviews && prevReviews.length > 0 
-      ? prevReviews.reduce((sum, review) => sum + (review.overall_rating || 0), 0) / prevReviews.length 
+    const prevAvgRating = prevReviewsData.data && prevReviewsData.data.length > 0 
+      ? prevReviewsData.data.reduce((sum: number, review: any) => sum + (review.overall_rating || 0), 0) / prevReviewsData.data.length 
       : 0;
     
     const ratingChange = prevAvgRating > 0 ? ((avgRating - prevAvgRating) / prevAvgRating) * 100 : 0;
