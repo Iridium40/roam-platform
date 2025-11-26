@@ -69,7 +69,7 @@ function Hero() {
         <div className="relative">
           <div className="mx-auto w-full max-w-lg overflow-hidden rounded-2xl border bg-white">
             <img
-              src="https://cdn.builder.io/api/v1/image/assets%2Fa42b6f9ec53e4654a92af75aad56d14f%2F5f142dc2e1bb4ff9a38e852d1c77daf7?format=webp&width=800"
+              src="/landing-dashboard-preview.png"
               alt="ROAM provider dashboard example"
               className="w-full h-auto"
             />

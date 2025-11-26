@@ -25,14 +25,17 @@ export default function TermsAndConditions() {
             <Badge variant="secondary" className="mb-6 text-sm px-4 py-2 bg-white/20 text-white border-white/30 backdrop-blur-sm animate-fade-in">
               Legal
             </Badge>
-            <h1 className="text-4xl md:text-5xl font-bold mb-4 text-white animate-slide-up">
+            <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-md">
+              <FileText className="w-8 h-8 text-white" />
+            </div>
+            <h1 className="text-4xl md:text-5xl font-bold mb-6 text-white animate-slide-up">
               Terms and Conditions
             </h1>
-            <p className="text-lg text-white/90 mb-2 animate-fade-in">
-              Last updated: January 2025
-            </p>
+            <div className="flex items-center justify-center gap-3 text-sm flex-wrap mb-4">
+              <Badge className="bg-white/20 text-white border-white/30 backdrop-blur-sm">Effective January 2025</Badge>
+            </div>
             <p className="text-base text-white/80 animate-fade-in">
-              Please read these terms carefully before using ROAM's services
+              Please read these terms carefully before using our services
             </p>
           </div>
         </div>
@@ -72,10 +75,10 @@ export default function TermsAndConditions() {
               <div className="prose prose-lg max-w-none">
                 <section id="booking" className="mb-12 scroll-mt-24">
                   <div className="flex items-center gap-3 mb-6">
-                    <div className="w-12 h-12 bg-gradient-to-br from-roam-blue to-roam-light-blue rounded-xl flex items-center justify-center shadow-md">
-                      <DollarSign className="w-6 h-6 text-white" />
+                    <div className="w-10 h-10 bg-gradient-to-br from-roam-blue to-roam-light-blue rounded-xl flex items-center justify-center shadow-sm">
+                      <DollarSign className="w-5 h-5 text-white" />
                     </div>
-                    <h2 className="text-3xl font-bold mb-0">1. Booking and Payment Terms</h2>
+                    <h2 className="text-2xl font-bold mb-0">1. Booking and Payment Terms</h2>
                   </div>
                   
                   <div className="space-y-6">
@@ -97,10 +100,10 @@ export default function TermsAndConditions() {
 
                 <section id="cancellation" className="mb-12 scroll-mt-24">
                   <div className="flex items-center gap-3 mb-6">
-                    <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center shadow-md">
-                      <Calendar className="w-6 h-6 text-white" />
+                    <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center shadow-sm">
+                      <Calendar className="w-5 h-5 text-white" />
                     </div>
-                    <h2 className="text-3xl font-bold mb-0">2. Cancellation Policy</h2>
+                    <h2 className="text-2xl font-bold mb-0">2. Cancellation Policy</h2>
                   </div>
                   
                   <div className="space-y-6">
@@ -141,10 +144,10 @@ export default function TermsAndConditions() {
 
                 <section id="disputes" className="mb-12 scroll-mt-24">
                   <div className="flex items-center gap-3 mb-6">
-                    <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center shadow-md">
-                      <Shield className="w-6 h-6 text-white" />
+                    <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center shadow-sm">
+                      <Shield className="w-5 h-5 text-white" />
                     </div>
-                    <h2 className="text-3xl font-bold mb-0">3. Disputes and Contact</h2>
+                    <h2 className="text-2xl font-bold mb-0">3. Disputes and Contact</h2>
                   </div>
                   
                   <div className="bg-purple-50 p-6 rounded-xl border border-purple-200">
@@ -165,10 +168,10 @@ export default function TermsAndConditions() {
 
                 <section id="general" className="mb-8 scroll-mt-24">
                   <div className="flex items-center gap-3 mb-6">
-                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center shadow-md">
-                      <FileText className="w-6 h-6 text-white" />
+                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center shadow-sm">
+                      <FileText className="w-5 h-5 text-white" />
                     </div>
-                    <h2 className="text-3xl font-bold mb-0">4. General Terms</h2>
+                    <h2 className="text-2xl font-bold mb-0">4. General Terms</h2>
                   </div>
                   
                   <div className="bg-blue-50 p-6 rounded-xl border border-blue-200">

@@ -10,6 +10,7 @@ import { User, Edit, Save, X, Camera, Mail, Phone, Calendar, Loader2, ArrowLeft 
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
+import { Footer } from '@/components/Footer';
 
 export default function CustomerProfile() {
   const { customer } = useAuth();
@@ -360,6 +361,9 @@ export default function CustomerProfile() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Footer */}
+      <Footer />
     </div>
   );
 }

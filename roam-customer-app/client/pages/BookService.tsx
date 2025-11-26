@@ -23,6 +23,7 @@ import { CheckoutForm } from '../components/CheckoutForm';
 import { getDeliveryTypeLabel, getDeliveryTypeIcon } from '@/utils/deliveryTypeHelpers';
 import { CustomerAuthModal } from '@/components/CustomerAuthModal';
 import GooglePlacesAutocomplete from '@/components/GooglePlacesAutocomplete';
+import { Footer } from '@/components/Footer';
 
 type BookingStep = 'datetime' | 'business' | 'provider' | 'delivery-location' | 'summary' | 'checkout';
 
@@ -2612,6 +2613,9 @@ export default function BookService() {
         }}
         defaultTab="signin"
       />
+
+      {/* Footer */}
+      <Footer />
     </div>
   );
 }

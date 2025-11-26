@@ -24,12 +24,10 @@ export default function Privacy() {
               Privacy Policy
             </h1>
             <div className="flex items-center justify-center gap-3 text-sm flex-wrap mb-4">
-              <Badge className="bg-white/20 text-white border-white/30 backdrop-blur-sm">Version {P.version}</Badge>
               <Badge className="bg-white/20 text-white border-white/30 backdrop-blur-sm">Effective {P.effectiveDate}</Badge>
-              <Badge className="bg-white/20 text-white border-white/30 backdrop-blur-sm">Updated {P.lastUpdated}</Badge>
             </div>
             <p className="text-base text-white/80 animate-fade-in">
-              Your privacy is important to us. Learn how we protect your data.
+              Learn how we protect your privacy and data
             </p>
           </div>
         </div>

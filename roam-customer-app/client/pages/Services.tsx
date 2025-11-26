@@ -41,7 +41,10 @@ function Hero() {
           <Badge className="mb-6 text-sm px-4 py-2 bg-white/20 text-white border-white/30 backdrop-blur-sm animate-fade-in">
             Our Services
           </Badge>
-          <h1 className="text-5xl md:text-6xl font-bold tracking-tight mb-6 animate-slide-up">Wellness Without Boundaries</h1>
+          <h1 className="text-5xl md:text-6xl font-bold tracking-tight mb-6 animate-slide-up flex items-center justify-center gap-4 flex-wrap">
+            <img src="/logo-white-notagline.png" alt="ROAM" className="h-12 md:h-[3.75rem] w-auto inline-block" />
+            <span>Without Boundaries</span>
+          </h1>
           <p className="mt-3 text-xl md:text-2xl text-white/90 leading-relaxed animate-fade-in">
             Discover a curated marketplace of mobile, in-studio, and virtual services created for the 30A lifestyle.
           </p>

@@ -11,6 +11,7 @@ import {
   EyeOff,
   Shield,
   ArrowRight,
+  Home,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
@@ -89,6 +90,35 @@ export default function ProviderLogin() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-accent/5 to-roam-light-blue/10">
+      {/* Header with Back to Home */}
+      <div className="border-b bg-white/50 backdrop-blur-sm">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-center justify-between">
+            <Link to="/roampro" className="flex items-center gap-2">
+              <img 
+                src="/logo.png" 
+                alt="ROAM" 
+                className="h-8 w-auto"
+                onError={(e) => {
+                  const target = e.currentTarget;
+                  target.style.display = 'none';
+                  if (!target.dataset.triedAlt) {
+                    target.dataset.triedAlt = 'true';
+                    target.src = '/roam-icon.png';
+                    target.style.display = 'block';
+                  }
+                }}
+              />
+            </Link>
+            <Button asChild variant="ghost" size="sm">
+              <Link to="/roampro" className="flex items-center gap-2">
+                <Home className="w-4 h-4" />
+                <span>Back to Home</span>
+              </Link>
+            </Button>
+          </div>
+        </div>
+      </div>
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-12">
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-center min-h-[60vh] lg:min-h-[80vh]">

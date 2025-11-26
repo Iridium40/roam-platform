@@ -10,6 +10,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { FavoriteButton } from "@/components/FavoriteButton";
+import { Footer } from "@/components/Footer";
 
 // Lazy load ShareModal
 const ShareModal = lazy(() => import("@/components/ShareModal"));
@@ -725,6 +726,9 @@ export default function BusinessProfile() {
           />
         </Suspense>
       )}
+
+      {/* Footer */}
+      <Footer />
     </div>
   );
 }

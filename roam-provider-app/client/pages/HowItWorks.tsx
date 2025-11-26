@@ -95,20 +95,20 @@ function Features() {
       description:
         "Track revenue, bookings, conversations, and key performance metrics in real-time. Get insights that help you make smarter business decisions.",
       image:
-        "https://cdn.builder.io/api/v1/image/assets%2Fa42b6f9ec53e4654a92af75aad56d14f%2F46c0519ef20245b8a8c5be18abd7aec1?format=webp&width=800",
+        "/dashboard-screenshot.png",
       fullImage:
-        "https://cdn.builder.io/api/v1/image/assets%2Fa42b6f9ec53e4654a92af75aad56d14f%2F46c0519ef20245b8a8c5be18abd7aec1?format=webp&width=1600",
+        "/dashboard-screenshot.png",
       points: ["Real-time analytics", "Revenue tracking", "Performance metrics"],
     },
     {
-      title: "My Bookings",
+      title: "Bookings",
       icon: Calendar,
       description:
         "Manage booking acceptance, status updates, provider assignments, and scheduling with an intuitive calendar interface.",
       image:
-        "https://cdn.builder.io/api/v1/image/assets%2Fa42b6f9ec53e4654a92af75aad56d14f%2F0f92df2869a342e0b1d4d2f76c9eda2a?format=webp&width=800",
+        "/bookings-screenshot.png",
       fullImage:
-        "https://cdn.builder.io/api/v1/image/assets%2Fa42b6f9ec53e4654a92af75aad56d14f%2F0f92df2869a342e0b1d4d2f76c9eda2a?format=webp&width=1600",
+        "/bookings-screenshot.png",
       points: ["One-click acceptance", "Calendar sync", "Auto-reminders"],
     },
     {
@@ -117,9 +117,9 @@ function Features() {
       description:
         "Communicate with customers who booked services with you without sharing personal contact information.",
       image:
-        "https://cdn.builder.io/api/v1/image/assets%2Fa42b6f9ec53e4654a92af75aad56d14f%2Fc4985d154e364ada9b56af028fcbbefc?format=webp&width=800",
+        "/messages-screenshot.png",
       fullImage:
-        "https://cdn.builder.io/api/v1/image/assets%2Fa42b6f9ec53e4654a92af75aad56d14f%2Fc4985d154e364ada9b56af028fcbbefc?format=webp&width=1600",
+        "/messages-screenshot.png",
       points: ["Secure messaging", "Privacy protected", "Real-time notifications"],
     },
     {
@@ -128,9 +128,9 @@ function Features() {
       description:
         "Manage services and add-ons, pricing, and delivery options (mobile, business location, virtual).",
       image:
-        "https://cdn.builder.io/api/v1/image/assets%2Fa42b6f9ec53e4654a92af75aad56d14f%2F6e8978f8e0ab4666900f2b76335979b5?format=webp&width=800",
+        "/services-screenshot.png",
       fullImage:
-        "https://cdn.builder.io/api/v1/image/assets%2Fa42b6f9ec53e4654a92af75aad56d14f%2F6e8978f8e0ab4666900f2b76335979b5?format=webp&width=1600",
+        "/services-screenshot.png",
       points: ["Custom pricing", "Add-on management", "Multi-delivery options"],
     },
     {
@@ -139,21 +139,21 @@ function Features() {
       description:
         "Onboard staff like dispatchers or providers. Define their services, locations, and availability to scale your business.",
       image:
-        "https://cdn.builder.io/api/v1/image/assets%2Fa42b6f9ec53e4654a92af75aad56d14f%2Fd4ce64c88b02411cafa59b32ed3dd8aa?format=webp&width=800",
+        "/staff-screenshot.png",
       fullImage:
-        "https://cdn.builder.io/api/v1/image/assets%2Fa42b6f9ec53e4654a92af75aad56d14f%2Fd4ce64c88b02411cafa59b32ed3dd8aa?format=webp&width=1600",
+        "/staff-screenshot.png",
       points: ["Easy onboarding", "Role management", "Availability tracking"],
     },
     {
-      title: "Business Profile",
-      icon: Building2,
+      title: "Financials",
+      icon: TrendingUp,
       description:
-        "Customize your brand, set business hours, and publish a dedicated services page.",
+        "View your earnings and payouts, update tax and banking information, and track business performance metrics.",
       image:
-        "https://cdn.builder.io/api/v1/image/assets%2Fa42b6f9ec53e4654a92af75aad56d14f%2F38595d4c528d490ea6bc1d779d9c4fb8?format=webp&width=800",
+        "/financials-screenshot.png",
       fullImage:
-        "https://cdn.builder.io/api/v1/image/assets%2Fa42b6f9ec53e4654a92af75aad56d14f%2F38595d4c528d490ea6bc1d779d9c4fb8?format=webp&width=1600",
-      points: ["Custom branding", "Business hours", "Dedicated page"],
+        "/financials-screenshot.png",
+      points: ["Earnings tracking", "Payout management", "Performance analytics"],
     },
   ];
 

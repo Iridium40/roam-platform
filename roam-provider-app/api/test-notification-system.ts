@@ -132,7 +132,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           <body>
             <div class="container">
               <div class="logo">
-                <img src="https://cdn.builder.io/api/v1/image/assets%2Fa42b6f9ec53e4654a92af75aad56d14f%2F993952d908754e5dbe0cceda03eb2224?format=webp&width=200" alt="ROAM Logo" />
+                <img src="/logo-email.png" alt="ROAM Logo" />
               </div>
               <h1>✅ Notification System Test</h1>
               <div class="success">

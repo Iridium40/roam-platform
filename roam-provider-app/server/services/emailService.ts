@@ -15,7 +15,7 @@ export class EmailService {
   private static fromEmail = "providersupport@roamyourbestlife.com";
   private static fromName = "ROAM Provider Support";
   private static logoUrl =
-    "https://cdn.builder.io/api/v1/image/assets%2Fa42b6f9ec53e4654a92af75aad56d14f%2F993952d908754e5dbe0cceda03eb2224?format=webp&width=800";
+    "/logo-email.png";
   private static brandColor = "#4F46E5"; // roam-blue
   private static supportEmail = "providersupport@roamyourbestlife.com";
   private static resendAudienceId = "4c85891b-bc03-4e67-a744-30b92e43206f"; // Provider audience ID

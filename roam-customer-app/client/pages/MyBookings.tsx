@@ -30,6 +30,7 @@ import {
   useBookingFilters,
   useBookingActions,
 } from "./MyBookings/hooks";
+import { Footer } from "@/components/Footer";
 
 export default function MyBookings() {
   const { customer, loading: authLoading } = useAuth();
@@ -346,6 +347,9 @@ export default function MyBookings() {
           />
         </Suspense>
       )}
+
+      {/* Footer */}
+      <Footer />
     </div>
   );
 }

@@ -8,6 +8,7 @@ import { ArrowLeft, Mail, Lock, Eye, EyeOff, Loader2, AlertCircle } from "lucide
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
+import { Footer } from "@/components/Footer";
 
 export default function SignIn() {
   const [email, setEmail] = useState("");
@@ -309,6 +310,9 @@ export default function SignIn() {
           </Card>
         </div>
       </div>
+
+      {/* Footer */}
+      <Footer />
     </div>
   );
 }

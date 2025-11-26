@@ -24,7 +24,7 @@ function MarketingHeader() {
       <div className="container flex h-16 items-center justify-between">
         <Link to="/roampro" className="flex items-center">
           <img
-            src="https://cdn.builder.io/api/v1/image/assets%2Fa42b6f9ec53e4654a92af75aad56d14f%2F531be16729404882bb7cc0ddef6620dd?format=webp&width=800"
+            src="/og-share-image.png"
             alt="ROAM"
             className="h-10 w-auto"
           />
@@ -156,7 +156,7 @@ function MarketingFooter() {
         <div>
           <div className="flex items-center">
             <img
-              src="https://cdn.builder.io/api/v1/image/assets%2Fa42b6f9ec53e4654a92af75aad56d14f%2F531be16729404882bb7cc0ddef6620dd?format=webp&width=800"
+              src="/og-share-image.png"
               alt="ROAM"
               className="h-8 w-auto"
             />

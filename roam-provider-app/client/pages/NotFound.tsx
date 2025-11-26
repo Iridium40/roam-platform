@@ -12,7 +12,7 @@ export default function NotFound() {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
               <img
-                src="https://cdn.builder.io/api/v1/image/assets%2Fa42b6f9ec53e4654a92af75aad56d14f%2F38446bf6c22b453fa45caf63b0513e21?format=webp&width=800"
+                src="/default-placeholder.png"
                 alt="ROAM - Your Best Life. Everywhere."
                 className="h-8 w-auto"
               />

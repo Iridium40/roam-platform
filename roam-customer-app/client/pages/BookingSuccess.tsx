@@ -19,6 +19,7 @@ import { CheckCircle, Calendar, Clock, Mail, Home, Eye, Bell } from 'lucide-reac
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { Header } from '@/components/Header';
+import { Footer } from '@/components/Footer';
 
 interface BookingDetails {
   id: string;
@@ -316,6 +317,9 @@ export default function BookingSuccess() {
           </div>
         </div>
       </div>
+
+      {/* Footer */}
+      <Footer />
     </div>
   );
 }

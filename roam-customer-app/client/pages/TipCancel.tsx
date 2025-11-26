@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { XCircle, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Footer } from '@/components/Footer';
 
 export default function TipCancel() {
   const [searchParams] = useSearchParams();
@@ -58,6 +59,9 @@ export default function TipCancel() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Footer */}
+      <Footer />
     </div>
   );
 }

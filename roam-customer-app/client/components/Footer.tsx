@@ -43,15 +43,38 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="border-t pt-8 mt-12 flex flex-col gap-4 text-sm text-foreground/60 text-center md:flex-row md:items-center md:justify-between md:text-left">
-          <p>
-            &copy; 2024 ROAM. All rights reserved. Proudly serving Florida with
-            premium on-demand services.
-          </p>
-          <div className="flex items-center justify-center gap-4 text-foreground/70">
-            <span className="text-roam-blue font-medium">Made in Florida</span>
-            <span className="hidden md:inline">•</span>
-            <span>Available statewide</span>
+        <div className="border-t pt-8 mt-12 flex flex-col gap-4 text-sm text-foreground/60 text-center md:text-left">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <p>
+              &copy; 2024 ROAM. All rights reserved. Proudly serving Florida with
+              premium on-demand services.
+            </p>
+            <div className="flex items-center justify-center gap-4 text-foreground/70">
+              <span className="text-roam-blue font-medium">Made in Florida</span>
+              <span className="hidden md:inline">•</span>
+              <span>Available statewide</span>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 md:gap-6 text-foreground/70">
+            <Link to="/terms-and-conditions" className="hover:text-roam-blue transition-colors">
+              Terms & Conditions
+            </Link>
+            <span>•</span>
+            <Link to="/privacy" className="hover:text-roam-blue transition-colors">
+              Privacy Policy
+            </Link>
+            <span>•</span>
+            <Link to="/refund-policy" className="hover:text-roam-blue transition-colors">
+              Refund Policy
+            </Link>
+            <span>•</span>
+            <Link to="/cookie-policy" className="hover:text-roam-blue transition-colors">
+              Cookie Policy
+            </Link>
+            <span>•</span>
+            <Link to="/accessibility" className="hover:text-roam-blue transition-colors">
+              Accessibility
+            </Link>
           </div>
         </div>
       </div>
