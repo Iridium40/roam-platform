@@ -1,9 +1,37 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
-
-// Import notification function
-import { notifyProvidersBookingCancelled } from '../../lib/notifications/notify-providers-booking-cancelled';
 import { handleBookingCancellation } from './payment-processor';
+
+// Helper function to dynamically import notification function
+// Uses dynamic import to handle module resolution issues in Vercel's serverless environment
+async function getNotifyProvidersBookingCancelled() {
+  try {
+    const importPaths = [
+      '../../lib/notifications/notify-providers-booking-cancelled.js',
+      '../../lib/notifications/notify-providers-booking-cancelled',
+      './lib/notifications/notify-providers-booking-cancelled.js',
+      './lib/notifications/notify-providers-booking-cancelled',
+    ];
+
+    for (const importPath of importPaths) {
+      try {
+        const module = await import(importPath);
+        const fn = module.notifyProvidersBookingCancelled || module.default;
+        if (fn && typeof fn === 'function') {
+          return fn;
+        }
+      } catch (err) {
+        continue;
+      }
+    }
+
+    console.warn('Could not load notify-providers-booking-cancelled module');
+    return null;
+  } catch (err) {
+    console.warn('Error loading notify-providers-booking-cancelled module:', err);
+    return null;
+  }
+}
 
 const supabase = createClient(
   process.env.VITE_PUBLIC_SUPABASE_URL!,
@@ -27,14 +55,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const { bookingId, cancellationReason, cancellationFee, refundAmount, cancelledBy } = req.body;
 
-    console.log('📋 Cancellation request received:', { bookingId, cancellationReason, cancellationFee, refundAmount });
-
     if (!bookingId) {
       return res.status(400).json({ error: 'bookingId is required' });
     }
 
     // Process payment refund based on acceptance status and timing
-    console.log('💰 Processing payment refund for cancellation...');
     const paymentResult = await handleBookingCancellation(
       bookingId,
       cancelledBy || 'customer',
@@ -42,12 +67,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     );
 
     if (!paymentResult.success) {
-      console.error('⚠️ Payment refund processing failed:', paymentResult.error);
+      console.error('Payment refund processing failed:', paymentResult.error);
       // Continue with cancellation even if refund fails - can be retried manually
-    } else {
-      console.log('✅ Payment refund processed:', {
-        refundAmount: paymentResult.refundAmount,
-      });
     }
 
     // Use refund amount from payment processor if available, otherwise use provided values
@@ -86,19 +107,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         ),
         business_profiles (
           id,
-          name
+          business_name
         )
       `)
       .single();
 
     if (updateError) {
-      console.error('❌ Error cancelling booking:', {
-        error: updateError,
-        message: updateError.message,
-        details: updateError.details,
-        hint: updateError.hint,
-        code: updateError.code,
-      });
+      console.error('Error cancelling booking:', updateError.message);
       return res.status(500).json({ 
         error: 'Failed to cancel booking',
         details: updateError.message 
@@ -106,25 +121,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     if (!booking) {
-      console.error('❌ No booking returned after update:', { bookingId });
       return res.status(404).json({ error: 'Booking not found' });
     }
 
-    console.log('✅ Booking cancelled successfully:', booking.id);
-
     // Notify providers about the cancellation (non-blocking)
     try {
+      const notifyFn = await getNotifyProvidersBookingCancelled();
+      if (notifyFn) {
         const service = Array.isArray(booking.services) ? booking.services[0] : booking.services;
         const customer = Array.isArray(booking.customer_profiles) ? booking.customer_profiles[0] : booking.customer_profiles;
         const business = Array.isArray(booking.business_profiles) ? booking.business_profiles[0] : booking.business_profiles;
 
-        if (!service || !customer || !business) {
-          console.warn('⚠️ Missing booking data for notifications:', {
-            hasService: !!service,
-            hasCustomer: !!customer,
-            hasBusiness: !!business,
-          });
-        } else {
+        if (service && customer && business) {
           // Fetch business location to get address
           let businessAddress = '';
           try {
@@ -148,42 +156,37 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               businessAddress = addressParts.join(', ');
             }
           } catch (locationError) {
-            console.warn('⚠️ Could not fetch business location:', locationError);
+            // Non-fatal
           }
 
-          console.log('📧 Sending cancellation notifications...');
-          await notifyProvidersBookingCancelled({
-          booking: {
-            id: booking.id,
-            business_id: booking.business_id,
-            provider_id: booking.provider_id,
-            booking_date: booking.booking_date,
-            start_time: booking.start_time,
-            cancellation_reason: booking.cancellation_reason,
-          },
-          service: {
-            name: service.name,
-          },
-          customer: {
-            first_name: customer.first_name || '',
-            last_name: customer.last_name || '',
-            email: customer.email,
-            phone: customer.phone,
-          },
-          business: {
-            name: business.name,
-            business_address: businessAddress,
-          },
+          await notifyFn({
+            booking: {
+              id: booking.id,
+              business_id: booking.business_id,
+              provider_id: booking.provider_id,
+              booking_date: booking.booking_date,
+              start_time: booking.start_time,
+              cancellation_reason: booking.cancellation_reason,
+            },
+            service: {
+              name: service.name,
+            },
+            customer: {
+              first_name: customer.first_name || '',
+              last_name: customer.last_name || '',
+              email: customer.email,
+              phone: customer.phone,
+            },
+            business: {
+              name: business.business_name,
+              business_address: businessAddress,
+            },
           });
-          console.log('✅ Cancellation notifications sent');
         }
-      } catch (notificationError) {
-        console.error('⚠️ Error sending cancellation notifications (non-fatal):', {
-          error: notificationError instanceof Error ? notificationError.message : String(notificationError),
-          stack: notificationError instanceof Error ? notificationError.stack : undefined,
-        });
-        // Continue - don't fail the cancellation if notifications fail
       }
+    } catch (notificationError) {
+      // Non-fatal - continue even if notifications fail
+    }
 
     return res.status(200).json({
       success: true,
