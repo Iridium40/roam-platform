@@ -55,6 +55,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useFavorites } from "@/hooks/useFavorites";
 import { Header } from "@/components/Header";
 import { HomeHero } from "@/components/home/HomeHero";
+import { Footer } from "@/components/Footer";
 import { Loader2 } from "lucide-react";
 import type { 
   FeaturedService, 
@@ -1878,6 +1879,9 @@ export default function Index() {
 
       {/* Floating Chat Button */}
       <FloatingChatButton />
+
+      {/* Footer */}
+      <Footer />
     </div>
   );
 }
