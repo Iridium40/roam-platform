@@ -6,6 +6,37 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+// Helper function to dynamically import notification function
+async function getNotifyProvidersNewBooking() {
+  try {
+    const importPaths = [
+      '../lib/notifications/notify-providers-new-booking.js',
+      '../lib/notifications/notify-providers-new-booking',
+      './lib/notifications/notify-providers-new-booking.js',
+      './lib/notifications/notify-providers-new-booking',
+    ];
+
+    for (const importPath of importPaths) {
+      try {
+        const module = await import(importPath);
+        const fn = module.notifyProvidersNewBooking || module.default;
+        if (fn && typeof fn === 'function') {
+          console.log(`✅ Successfully loaded notify-providers-new-booking from: ${importPath}`);
+          return fn;
+        }
+      } catch (err) {
+        continue;
+      }
+    }
+
+    console.warn('⚠️ Could not load notify-providers-new-booking module');
+    return null;
+  } catch (err) {
+    console.warn('⚠️ Error loading notify-providers-new-booking module:', err);
+    return null;
+  }
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Enable CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -139,9 +170,64 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({ error: 'Failed to create booking' });
     }
 
-    // TODO: Implement notification service
-    // For now, we'll skip notifications to avoid build errors
     console.log('Booking created successfully:', booking.id);
+
+    // Send notifications to business users (non-blocking)
+    // This will notify the assigned provider OR all owners/dispatchers
+    try {
+      const notifyFn = await getNotifyProvidersNewBooking();
+      
+      if (notifyFn) {
+        // Get customer details
+        const customer = Array.isArray(booking.customers) ? booking.customers[0] : booking.customers;
+        
+        // Get business location for address
+        const { data: businessLocation } = await supabase
+          .from('business_locations')
+          .select('address_line1, address_line2, city, state, postal_code')
+          .eq('business_id', service.business_profiles.id)
+          .eq('is_primary', true)
+          .maybeSingle();
+
+        // Format business address
+        const businessAddress = businessLocation 
+          ? `${businessLocation.address_line1 || ''}${businessLocation.address_line2 ? ` ${businessLocation.address_line2}` : ''}, ${businessLocation.city || ''}, ${businessLocation.state || ''} ${businessLocation.postal_code || ''}`.trim()
+          : '';
+        
+        // Send notification (this is non-blocking and won't fail the booking if it errors)
+        await notifyFn({
+          booking: {
+            id: booking.id,
+            business_id: service.business_profiles.id,
+            provider_id: assignedProviderId,
+            booking_date: booking.booking_date,
+            start_time: booking.start_time,
+            total_amount: booking.total_amount,
+            special_instructions: booking.special_instructions,
+          },
+          service: {
+            name: service.name,
+          },
+          customer: {
+            first_name: customer?.first_name || guestName?.split(' ')[0] || 'Guest',
+            last_name: customer?.last_name || guestName?.split(' ').slice(1).join(' ') || '',
+            email: customer?.email || guestEmail,
+            phone: customer?.phone || guestPhone,
+          },
+          business: {
+            name: service.business_profiles.business_name,
+            business_address: businessAddress,
+          },
+        });
+
+        console.log('✅ Notification sent for booking:', booking.id);
+      } else {
+        console.warn('⚠️ Notification function not available');
+      }
+    } catch (notificationError) {
+      // Notifications are non-critical, log but don't fail the booking
+      console.error('⚠️ Failed to send notifications (non-fatal):', notificationError);
+    }
 
     return res.status(201).json({
       success: true,
