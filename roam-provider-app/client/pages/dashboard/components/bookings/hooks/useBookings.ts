@@ -113,8 +113,11 @@ export function useBookings(providerData: any, business: any) {
   }, [business?.id, dateRangePastDays, dateRangeFutureDays]);
 
   // Fetch unread message counts for all bookings
+  // Note: provider from useAuth() has nested structure: provider.provider.user_id
+  const providerUserId = provider?.provider?.user_id || provider?.provider?.id;
+  
   useEffect(() => {
-    if (!bookings.length || !provider?.user_id) return;
+    if (!bookings.length || !providerUserId) return;
 
     const fetchUnreadCounts = async () => {
       try {
@@ -139,7 +142,7 @@ export function useBookings(providerData: any, business: any) {
           .from('message_notifications')
           .select('conversation_id')
           .in('conversation_id', conversationIds)
-          .eq('user_id', provider.user_id)
+          .eq('user_id', providerUserId)
           .eq('is_read', false);
 
         if (notifError) {
@@ -173,7 +176,7 @@ export function useBookings(providerData: any, business: any) {
     // Poll for updates every 30 seconds
     const interval = setInterval(fetchUnreadCounts, 30000);
     return () => clearInterval(interval);
-  }, [bookings, provider?.user_id]);
+  }, [bookings, providerUserId]);
 
   // Reset pagination when tab changes
   useEffect(() => {

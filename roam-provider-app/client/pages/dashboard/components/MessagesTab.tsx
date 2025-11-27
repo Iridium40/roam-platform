@@ -1,15 +1,18 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MessageCircle, MessageSquare, Search } from "lucide-react";
+import { MessageCircle, MessageSquare, Search, RefreshCw } from "lucide-react";
 import { useProviderAuth } from "@/contexts/auth/ProviderAuthContext";
 import { useToast } from "@/hooks/use-toast";
 import ConversationChat from "@/components/ConversationChat";
 import { formatDistanceToNow } from "date-fns";
+
+// Polling interval for new messages (15 seconds)
+const MESSAGE_POLL_INTERVAL = 15000;
 
 interface ConversationUserProfile {
   id?: string;
@@ -65,14 +68,19 @@ export default function MessagesTab({ providerData, business }: MessagesTabProps
 
   const providerRole = user?.provider_role || "provider";
   const canSeeAllConversations = providerRole === "owner" || providerRole === "dispatcher";
+  const isPollingRef = useRef(false);
 
-  useEffect(() => {
-    loadConversations();
-  }, [user?.user_id, providerRole, business?.id]);
-
-  const loadConversations = async () => {
+  // Load conversations (with optional silent mode for polling)
+  const loadConversations = useCallback(async (silent: boolean = false) => {
     if (!user?.user_id) return;
-    setLoading(true);
+    
+    // Prevent overlapping requests
+    if (isPollingRef.current && silent) return;
+    
+    if (!silent) {
+      setLoading(true);
+    }
+    isPollingRef.current = true;
 
     try {
       const response = await fetch("/api/twilio-conversations/list-conversations", {
@@ -93,15 +101,32 @@ export default function MessagesTab({ providerData, business }: MessagesTabProps
       setConversations(data.conversations || []);
     } catch (error) {
       console.error("Error loading conversations:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load conversations",
-        variant: "destructive",
-      });
+      if (!silent) {
+        toast({
+          title: "Error",
+          description: "Failed to load conversations",
+          variant: "destructive",
+        });
+      }
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
+      isPollingRef.current = false;
     }
-  };
+  }, [user?.user_id, providerRole, canSeeAllConversations, business?.id, toast]);
+
+  // Initial load and polling for new messages
+  useEffect(() => {
+    loadConversations();
+
+    // Poll for new messages every 15 seconds
+    const pollInterval = setInterval(() => {
+      loadConversations(true); // Silent polling (no loading state)
+    }, MESSAGE_POLL_INTERVAL);
+
+    return () => clearInterval(pollInterval);
+  }, [loadConversations]);
 
   const filteredConversations = useMemo(() => {
     let filtered = conversations;
@@ -180,10 +205,21 @@ export default function MessagesTab({ providerData, business }: MessagesTabProps
           <h2 className="text-2xl font-semibold">Messages</h2>
           <p className="text-gray-600">{`Conversations (${conversations.length})`}</p>
         </div>
-        <Badge variant="outline" className="flex items-center gap-1">
-          <MessageSquare className="h-4 w-4" />
-          {hasUnread} unread
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => loadConversations()}
+            className="flex items-center gap-1"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Refresh
+          </Button>
+          <Badge variant="outline" className="flex items-center gap-1">
+            <MessageSquare className="h-4 w-4" />
+            {hasUnread} unread
+          </Badge>
+        </div>
       </div>
 
       <Card>
