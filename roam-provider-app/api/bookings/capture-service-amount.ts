@@ -71,7 +71,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           booking_reference,
           business_profiles!inner (
             id,
-            stripe_connect_account_id
+            stripe_connect_accounts (
+              account_id,
+              charges_enabled,
+              payouts_enabled
+            )
           )
         )
       `)
@@ -239,7 +243,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 net_payment_amount: serviceAmount,
                 tax_year: currentYear,
                 stripe_payment_intent_id: paymentIntent.id,
-                stripe_connect_account_id: business?.stripe_connect_account_id || null,
+                stripe_account_id: (Array.isArray(business?.stripe_connect_accounts) ? business?.stripe_connect_accounts[0] : business?.stripe_connect_accounts)?.account_id || null,
                 booking_reference: booking.booking_reference || null,
                 transaction_description: `Service payment for booking ${booking.booking_reference || schedule.booking_id}`,
                 transaction_type: 'initial_booking', // Will be added after migration

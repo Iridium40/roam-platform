@@ -37,7 +37,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Get business profile with stripe account
     const { data: business, error: businessError } = await supabase
       .from('business_profiles')
-      .select('stripe_account_id, stripe_connect_account_id, owner_id')
+      .select('stripe_account_id, owner_id')
       .eq('id', business_id)
       .single();
 
@@ -45,8 +45,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(404).json({ error: 'Business not found' });
     }
 
-    // Use stripe_connect_account_id if available, otherwise fall back to stripe_account_id
-    const stripeAccountId = business.stripe_connect_account_id || business.stripe_account_id;
+    // Use stripe_account_id from business_profiles
+    const stripeAccountId = business.stripe_account_id;
 
     if (!stripeAccountId) {
       return res.status(400).json({ error: 'Stripe account not connected' });

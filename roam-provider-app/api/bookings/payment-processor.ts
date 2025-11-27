@@ -63,7 +63,11 @@ export async function processBookingAcceptance(
         remaining_balance_charged,
         business_profiles!inner (
           id,
-          stripe_connect_account_id
+          stripe_connect_accounts (
+            account_id,
+            charges_enabled,
+            payouts_enabled
+          )
         )
       `)
       .eq('id', bookingId)
@@ -254,7 +258,10 @@ export async function processBookingAcceptance(
             ? booking.business_profiles[0] 
             : booking.business_profiles;
           const businessId = booking.business_id;
-          const stripeConnectAccountId = business?.stripe_connect_account_id || null;
+          const stripeConnectAccount = Array.isArray(business?.stripe_connect_accounts)
+            ? business?.stripe_connect_accounts[0]
+            : business?.stripe_connect_accounts;
+          const stripeConnectAccountId = stripeConnectAccount?.account_id || null;
           const currentYear = new Date().getFullYear();
           const paymentDate = new Date().toISOString().split('T')[0];
 
@@ -286,7 +293,7 @@ export async function processBookingAcceptance(
                 net_payment_amount: netPaymentAmount,
                 tax_year: currentYear,
                 stripe_payment_intent_id: capturedPaymentIntent.id,
-                stripe_connect_account_id: stripeConnectAccountId,
+                stripe_account_id: stripeConnectAccountId,
                 transaction_description: 'Platform service payment',
                 booking_reference: booking.booking_reference || null,
                 transaction_type: 'initial_booking',
@@ -456,7 +463,10 @@ export async function processBookingAcceptance(
       ? booking.business_profiles[0] 
       : booking.business_profiles;
     const businessId = booking.business_id;
-    const stripeConnectAccountId = business?.stripe_connect_account_id || null;
+    const stripeConnectAccount = Array.isArray(business?.stripe_connect_accounts)
+      ? business?.stripe_connect_accounts[0]
+      : business?.stripe_connect_accounts;
+    const stripeConnectAccountId = stripeConnectAccount?.account_id || null;
     const currentYear = new Date().getFullYear();
     const paymentDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
 
@@ -506,7 +516,7 @@ export async function processBookingAcceptance(
         net_payment_amount: serviceAmount,
         tax_year: currentYear,
         stripe_payment_intent_id: serviceAmountPaymentIntent.id,
-        stripe_connect_account_id: stripeConnectAccountId,
+        stripe_account_id: stripeConnectAccountId,
         booking_reference: booking.booking_reference || null,
         transaction_description: `Service payment for booking ${booking.booking_reference || bookingId}`,
         transaction_type: 'initial_booking', // Will be added after migration
@@ -696,7 +706,7 @@ export async function handleBookingCancellation(
         business_id,
         business_profiles!inner (
           id,
-          stripe_connect_account_id
+          stripe_account_id
         )
       `)
       .eq('id', bookingId)
@@ -854,7 +864,7 @@ export async function handleBookingCancellation(
     // Check if business received a Stripe Connect transfer that needs to be reversed
     const { data: businessPaymentTransaction, error: bptError } = await supabase
       .from('business_payment_transactions')
-      .select('id, stripe_transfer_id, net_payment_amount, stripe_connect_account_id')
+      .select('id, stripe_transfer_id, net_payment_amount, stripe_account_id')
       .eq('booking_id', bookingId)
       .maybeSingle();
 
@@ -867,7 +877,10 @@ export async function handleBookingCancellation(
         ? booking.business_profiles[0] 
         : booking.business_profiles;
       
-      const stripeConnectAccountId = businessPaymentTransaction.stripe_connect_account_id || business?.stripe_connect_account_id;
+      const stripeConnectAccount = Array.isArray(business?.stripe_connect_accounts)
+        ? business?.stripe_connect_accounts[0]
+        : business?.stripe_connect_accounts;
+      const stripeConnectAccountId = businessPaymentTransaction.stripe_account_id || stripeConnectAccount?.account_id;
 
       if (stripeConnectAccountId) {
         try {
