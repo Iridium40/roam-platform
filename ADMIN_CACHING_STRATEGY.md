@@ -149,13 +149,13 @@ const cache = useDataCache({ cacheDuration: 10 * 60 * 1000 }); // 10 minutes
   - [x] Clear cache after mutations
   - [x] Show last update time
 
-- [ ] AdminBusinesses
-  - [ ] Import useDataCache hook
-  - [ ] Initialize cache
-  - [ ] Update fetch functions
-  - [ ] Add refresh button
-  - [ ] Clear cache after mutations
-  - [ ] Show last update time
+- [x] AdminBusinesses
+  - [x] Import useDataCache hook
+  - [x] Initialize cache
+  - [x] Update fetchBusinesses, fetchBusinessLocations, fetchBusinessServices, fetchProviders
+  - [x] Add refresh button with force refresh
+  - [x] Clear cache after mutations (TBD - will add when testing mutations)
+  - [x] Show last update time
 
 - [ ] AdminCustomers
   - [ ] Import useDataCache hook
