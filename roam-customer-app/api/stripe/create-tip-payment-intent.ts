@@ -52,11 +52,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // Validate tip amount (minimum $10)
-    if (tip_amount < 10) {
+    // Validate tip amount (minimum $1.00)
+    if (tip_amount < 1) {
       return res.status(400).json({ 
         error: 'Invalid tip amount',
-        details: 'Tip amount must be at least $10'
+        details: 'Tip amount must be at least $1.00'
       });
     }
 

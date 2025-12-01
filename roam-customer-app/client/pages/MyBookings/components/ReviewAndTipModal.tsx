@@ -540,14 +540,14 @@ const ReviewAndTipModal: React.FC<ReviewAndTipModalProps> = ({
                 {/* Custom Amount Input */}
                 <div className="space-y-2">
                   <Label htmlFor="custom-tip" className="text-sm font-medium">
-                    Custom Amount (Minimum $10)
+                    Custom Amount (Minimum $1.00)
                   </Label>
                   <div className="relative">
                     <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                     <Input
                       id="custom-tip"
                       type="number"
-                      placeholder="10.00"
+                      placeholder="1.00"
                       value={customTipAmount}
                       onChange={(e) => {
                         const value = e.target.value;
@@ -556,12 +556,12 @@ const ReviewAndTipModal: React.FC<ReviewAndTipModalProps> = ({
                         setTipData(prev => ({ ...prev, tip_amount: numValue }));
                       }}
                       className="pl-10"
-                      min="10"
+                      min="1"
                       step="0.01"
                     />
                   </div>
-                  {tipData.tip_amount > 0 && tipData.tip_amount < 10 && (
-                    <p className="text-sm text-red-600">Minimum tip amount is $10</p>
+                  {tipData.tip_amount > 0 && tipData.tip_amount < 1 && (
+                    <p className="text-sm text-red-600">Minimum tip amount is $1.00</p>
                   )}
                 </div>
 
