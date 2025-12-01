@@ -244,7 +244,7 @@ export default function MyBookings() {
                   onPageChange={(page) => {
                     // This would need to be implemented in the hook
                   }}
-                  emptyStateMessage="No current bookings. Your bookings for today or overdue will appear here."
+                  emptyStateMessage="No active bookings. All bookings that are pending or in progress will appear here."
                   emptyStateIcon={CheckCircle}
                 />
               </TabsContent>

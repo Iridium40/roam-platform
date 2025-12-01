@@ -24,7 +24,10 @@ export const useBookingFilters = (bookings: BookingWithDetails[]) => {
   
   const ITEMS_PER_PAGE = itemsPerPage;
 
-  // Filter bookings by status - Updated to match provider app logic
+  // Filter bookings by status
+  // PRESENT: All non-final bookings (not completed, cancelled, or no_show) regardless of date
+  // FUTURE: Active bookings (pending, confirmed) scheduled after today
+  // PAST: Final state bookings (completed, cancelled, no_show) regardless of date
   const filteredBookings = useMemo(() => {
     // Ensure bookings is an array
     const safeBookings = Array.isArray(bookings) ? bookings : [];
@@ -34,8 +37,7 @@ export const useBookingFilters = (bookings: BookingWithDetails[]) => {
       timestamp: new Date().toISOString()
     });
     
-    const finalStatuses = new Set(['completed', 'cancelled', 'declined', 'no_show']);
-    const activeStatuses = new Set(['pending', 'confirmed']); // PENDING or ACCEPTED (confirmed = accepted)
+    const activeStatuses = new Set(['pending', 'confirmed']); // For future tab filtering
     
     // Calculate date objects for proper comparison in CST timezone
     const now = new Date();
@@ -78,111 +80,38 @@ export const useBookingFilters = (bookings: BookingWithDetails[]) => {
       const status = booking.booking_status || 'pending';
       const dateStr = booking.booking_date || '';
       
-      const isFinalStatus = finalStatuses.has(status);
+      const excludedStatuses = new Set(['completed', 'cancelled', 'no_show']);
       const isActiveStatus = activeStatuses.has(status);
-      const isInProgress = status === 'in_progress';
-      
-      // Use proper date comparison - comparing date strings for accuracy
-      const isToday = dateStr === todayStr;
-      const isYesterday = dateStr === yesterdayStr;
-      const isTodayOrYesterday = isToday || isYesterday;
-      const isBeforeYesterday = dateStr && dateStr < yesterdayStr;
+      const isFinalState = excludedStatuses.has(status);
       const isAfterToday = dateStr && dateStr > todayStr;
-      
-      // Special debug for the problematic booking
-      if (dateStr === '2025-10-17' || dateStr === '2025-10-14' || booking.id?.includes('BK25TEST11111')) {
-        console.log("🚨 PROBLEMATIC BOOKING DEBUG:", {
-          id: booking.id,
-          booking_date: booking.booking_date,
-          date: booking.date,
-          status: status,
-          dateStr,
-          todayStr,
-          yesterdayStr,
-          isFinalStatus,
-          isActiveStatus,
-          isInProgress,
-          isToday,
-          isYesterday,
-          isTodayOrYesterday,
-          isBeforeYesterday,
-          isAfterToday,
-          stringComparison: {
-            dateStr_less_than_yesterday: dateStr < yesterdayStr,
-            dateStr_greater_than_today: dateStr > todayStr,
-            dateStr_equals_today: dateStr === todayStr,
-            dateStr_equals_yesterday: dateStr === yesterdayStr
-          },
-          shouldBeInPresent: isInProgress || (isFinalStatus && isTodayOrYesterday) || (isActiveStatus && isTodayOrYesterday),
-          shouldBeInFuture: isActiveStatus && isAfterToday,
-          shouldBeInPast: (isFinalStatus && isBeforeYesterday) || (isActiveStatus && isBeforeYesterday),
-          // Add specific tab logic checks
-          presentLogic: {
-            isInProgress,
-            isFinalStatusAndTodayOrYesterday: isFinalStatus && isTodayOrYesterday,
-            isActiveStatusAndTodayOrYesterday: isActiveStatus && isTodayOrYesterday,
-            result: isInProgress || (isFinalStatus && isTodayOrYesterday) || (isActiveStatus && isTodayOrYesterday)
-          },
-          futureLogic: {
-            isActiveStatus,
-            isAfterToday,
-            result: isActiveStatus && isAfterToday
-          },
-          pastLogic: {
-            isFinalStatusAndBeforeYesterday: isFinalStatus && isBeforeYesterday,
-            isActiveStatusAndBeforeYesterday: isActiveStatus && isBeforeYesterday,
-            result: (isFinalStatus && isBeforeYesterday) || (isActiveStatus && isBeforeYesterday)
-          }
-        });
-      }
       
       console.log(`Booking ${index}:`, {
         id: booking.id,
         booking_date: booking.booking_date,
-        date: booking.date,
         status: status,
-        isFinalStatus,
+        isFinalState,
         isActiveStatus,
-        isInProgress,
-        isToday,
-        isYesterday,
-        isTodayOrYesterday,
-        isBeforeYesterday,
         isAfterToday,
-        shouldBeInPresent: isInProgress || (isFinalStatus && isTodayOrYesterday) || (isActiveStatus && isTodayOrYesterday),
+        shouldBeInPresent: !isFinalState,
         shouldBeInFuture: isActiveStatus && isAfterToday,
-        shouldBeInPast: (isFinalStatus && isBeforeYesterday) || (isActiveStatus && isBeforeYesterday)
+        shouldBeInPast: isFinalState
       });
     });
 
     const result = {
       // PRESENT TAB:
-      // - IN_PROGRESS (any date)
-      // - COMPLETED, CANCELLED, DECLINED, NO_SHOW scheduled for TODAY or YESTERDAY
-      // - PENDING or ACCEPTED scheduled for TODAY or YESTERDAY
+      // - All bookings that are NOT in a final state (completed, cancelled, no_show)
+      // - Includes: pending, confirmed, in_progress, declined - regardless of date
       present: safeBookings.filter((booking) => {
         const status = booking.booking_status || 'pending';
-        const dateStr = booking.booking_date || '';
         
-        const isInProgress = status === 'in_progress';
-        const isFinalStatus = finalStatuses.has(status);
-        const isActiveStatus = activeStatuses.has(status);
-        const isToday = dateStr === todayStr;
-        const isYesterday = dateStr === yesterdayStr;
-        const isTodayOrYesterday = isToday || isYesterday;
+        // Exclude only final states: completed, cancelled, no_show
+        const excludedStatuses = new Set(['completed', 'cancelled', 'no_show']);
         
-        // IN_PROGRESS (any date)
-        if (isInProgress) return true;
-        
-        // COMPLETED, CANCELLED, DECLINED, NO_SHOW scheduled for TODAY or YESTERDAY
-        if (isFinalStatus && isTodayOrYesterday) return true;
-        
-        // PENDING or ACCEPTED scheduled for TODAY or YESTERDAY
-        if (isActiveStatus && isTodayOrYesterday) return true;
-        
-        return false;
+        // Show all bookings that are NOT in a final state
+        return !excludedStatuses.has(status);
       }).sort((a, b) => {
-        // Sort present bookings: 'in_progress' first, then by date
+        // Sort present bookings: 'in_progress' first, then by date (most recent first)
         const statusA = a.booking_status || 'pending';
         const statusB = b.booking_status || 'pending';
         
@@ -215,39 +144,14 @@ export const useBookingFilters = (bookings: BookingWithDetails[]) => {
       }),
       
       // PAST TAB:
-      // - COMPLETED, CANCELLED, DECLINED, NO_SHOW scheduled BEFORE YESTERDAY
-      // - PENDING or ACCEPTED scheduled BEFORE YESTERDAY
+      // - All bookings in final states (completed, cancelled, no_show) regardless of date
       past: safeBookings.filter((booking) => {
         const status = booking.booking_status || 'pending';
-        const dateStr = booking.booking_date || '';
         
-        const isFinalStatus = finalStatuses.has(status);
-        const isActiveStatus = activeStatuses.has(status);
-        const isBeforeYesterday = dateStr && dateStr < yesterdayStr;
+        // Show only final state bookings
+        const finalStates = new Set(['completed', 'cancelled', 'no_show']);
         
-        // Debug for the problematic booking
-        if (dateStr === '2025-10-17') {
-          console.log("🔍 PAST FILTER DEBUG:", {
-            id: booking.id,
-            status,
-            dateStr,
-            isFinalStatus,
-            isActiveStatus,
-            isBeforeYesterday,
-            yesterdayStr,
-            finalStatuses: Array.from(finalStatuses),
-            activeStatuses: Array.from(activeStatuses),
-            shouldBeInPast: (isFinalStatus && isBeforeYesterday) || (isActiveStatus && isBeforeYesterday)
-          });
-        }
-        
-        // COMPLETED, CANCELLED, DECLINED, NO_SHOW scheduled BEFORE YESTERDAY
-        if (isFinalStatus && isBeforeYesterday) return true;
-        
-        // PENDING or ACCEPTED scheduled BEFORE YESTERDAY
-        if (isActiveStatus && isBeforeYesterday) return true;
-        
-        return false;
+        return finalStates.has(status);
       }).sort((a, b) => {
         // Sort past bookings by date (most recent first)
         const dateA = a.booking_date || '';
@@ -260,26 +164,10 @@ export const useBookingFilters = (bookings: BookingWithDetails[]) => {
       present: result.present.length,
       future: result.future.length,
       past: result.past.length,
-      samplePresent: result.present[0],
-      sampleFuture: result.future[0],
-      samplePast: result.past[0]
+      presentStatuses: result.present.map(b => ({ id: b.id, date: b.booking_date, status: b.booking_status })).slice(0, 3),
+      futureStatuses: result.future.map(b => ({ id: b.id, date: b.booking_date, status: b.booking_status })).slice(0, 3),
+      pastStatuses: result.past.map(b => ({ id: b.id, date: b.booking_date, status: b.booking_status })).slice(0, 3)
     });
-
-    // Debug: Check if the problematic booking is in any of the filtered results
-    const problematicBooking = safeBookings.find(b => b.booking_date === '2025-10-17');
-    if (problematicBooking) {
-      console.log("🔍 FINAL RESULT DEBUG:", {
-        bookingId: problematicBooking.id,
-        bookingDate: problematicBooking.booking_date,
-        bookingStatus: problematicBooking.booking_status,
-        isInPresent: result.present.some(b => b.id === problematicBooking.id),
-        isInFuture: result.future.some(b => b.id === problematicBooking.id),
-        isInPast: result.past.some(b => b.id === problematicBooking.id),
-        presentIds: result.present.map(b => ({ id: b.id, date: b.booking_date, status: b.booking_status })),
-        futureIds: result.future.map(b => ({ id: b.id, date: b.booking_date, status: b.booking_status })),
-        pastIds: result.past.map(b => ({ id: b.id, date: b.booking_date, status: b.booking_status }))
-      });
-    }
 
     return result;
   }, [bookings]);
@@ -347,22 +235,6 @@ export const useBookingFilters = (bookings: BookingWithDetails[]) => {
       totalPages: getTotalPages(filteredBookings.past.length)
     }
   });
-
-  // Debug: Check if the problematic booking is in the paginated results
-  const problematicBooking = filteredBookings.present.find(b => b.booking_date === '2025-10-17');
-  if (problematicBooking) {
-    console.log("🔍 PAGINATION DEBUG:", {
-      bookingId: problematicBooking.id,
-      bookingDate: problematicBooking.booking_date,
-      isInPaginatedPresent: paginatedBookings.present.some(b => b.id === problematicBooking.id),
-      presentFilteredCount: filteredBookings.present.length,
-      presentPaginatedCount: paginatedBookings.present.length,
-      currentPagePresent: currentPage.present,
-      itemsPerPage: ITEMS_PER_PAGE,
-      presentFilteredIds: filteredBookings.present.map(b => ({ id: b.id, date: b.booking_date })),
-      presentPaginatedIds: paginatedBookings.present.map(b => ({ id: b.id, date: b.booking_date }))
-    });
-  }
 
   // Get total pages for each category
   const totalPages = {
