@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useDataCache } from "@/hooks/useDataCache";
 import { AdminLayout } from "@/components/layout/admin-layout";
 import { ROAMDataTable, Column } from "@/components/ui/roam-data-table";
 import {
@@ -900,6 +901,7 @@ interface ProviderForLocation {
 
 export default function AdminBusinesses() {
   const { toast } = useToast();
+  const cache = useDataCache(); // Initialize data cache (5 minute cache duration)
   const [businesses, setBusinesses] = useState<BusinessProfile[]>([]);
   const [businessLocations, setBusinessLocations] = useState<
     BusinessLocation[]
@@ -966,8 +968,19 @@ export default function AdminBusinesses() {
     fetchProviders();
   }, []);
 
-  const fetchBusinesses = async () => {
+  const fetchBusinesses = async (forceRefresh = false) => {
     try {
+      // Check cache first unless force refresh
+      if (!forceRefresh && !cache.shouldRefetch('businesses')) {
+        const cached = cache.getCachedData('businesses');
+        if (cached) {
+          console.log("Using cached businesses data");
+          setBusinesses(cached);
+          setLoading(false);
+          return;
+        }
+      }
+
       setLoading(true);
       setError(null);
 
@@ -1027,7 +1040,9 @@ export default function AdminBusinesses() {
             })),
           );
         }
-        setBusinesses(result.data || []);
+        const businessesData = result.data || [];
+        setBusinesses(businessesData);
+        cache.setCachedData('businesses', businessesData);
         if (result.data.length === 0) {
           setError(
             "API connected successfully but no business records found.",
@@ -1048,8 +1063,18 @@ export default function AdminBusinesses() {
     }
   };
 
-  const fetchBusinessLocations = async () => {
+  const fetchBusinessLocations = async (forceRefresh = false) => {
     try {
+      // Check cache first unless force refresh
+      if (!forceRefresh && !cache.shouldRefetch('businessLocations')) {
+        const cached = cache.getCachedData('businessLocations');
+        if (cached) {
+          console.log("Using cached business locations data");
+          setBusinessLocations(cached);
+          return;
+        }
+      }
+
       console.log("Fetching business locations from API...");
 
       const response = await fetch('/api/business-locations');
@@ -1065,7 +1090,9 @@ export default function AdminBusinesses() {
         console.log(
           `Successfully fetched ${result.data?.length || 0} business locations`,
         );
-        setBusinessLocations(result.data || []);
+        const locationsData = result.data || [];
+        setBusinessLocations(locationsData);
+        cache.setCachedData('businessLocations', locationsData);
       }
     } catch (err) {
       console.error("Unexpected error fetching business locations:", err);
@@ -1076,8 +1103,18 @@ export default function AdminBusinesses() {
     }
   };
 
-  const fetchBusinessServices = async () => {
+  const fetchBusinessServices = async (forceRefresh = false) => {
     try {
+      // Check cache first unless force refresh
+      if (!forceRefresh && !cache.shouldRefetch('businessServices')) {
+        const cached = cache.getCachedData('businessServices');
+        if (cached) {
+          console.log("Using cached business services data");
+          setBusinessServices(cached);
+          return;
+        }
+      }
+
       console.log("Fetching business services from API...");
 
       const response = await fetch('/api/business-services');
@@ -1093,7 +1130,9 @@ export default function AdminBusinesses() {
         console.log(
           `Successfully fetched ${result.data?.length || 0} business services`,
         );
-        setBusinessServices(result.data || []);
+        const servicesData = result.data || [];
+        setBusinessServices(servicesData);
+        cache.setCachedData('businessServices', servicesData);
       }
     } catch (err) {
       console.error("Unexpected error fetching business services:", err);
@@ -1379,8 +1418,18 @@ export default function AdminBusinesses() {
     }
   };
 
-  const fetchProviders = async () => {
+  const fetchProviders = async (forceRefresh = false) => {
     try {
+      // Check cache first unless force refresh
+      if (!forceRefresh && !cache.shouldRefetch('providers')) {
+        const cached = cache.getCachedData('providers');
+        if (cached) {
+          console.log("Using cached providers data");
+          setProviders(cached);
+          return;
+        }
+      }
+
       console.log("Fetching providers from Supabase...");
 
       const { data, error } = await supabase
@@ -1400,7 +1449,9 @@ export default function AdminBusinesses() {
         console.log(
           `Successfully fetched ${data?.length || 0} providers from database`,
         );
-        setProviders(data || []);
+        const providersData = data || [];
+        setProviders(providersData);
+        cache.setCachedData('providers', providersData);
       }
     } catch (err) {
       console.error("Unexpected error fetching providers:", err);
@@ -2419,26 +2470,31 @@ export default function AdminBusinesses() {
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                  fetchBusinesses();
-                  fetchBusinessLocations();
-                  fetchBusinessServices();
-                  fetchProviders();
+                  fetchBusinesses(true);
+                  fetchBusinessLocations(true);
+                  fetchBusinessServices(true);
+                  fetchProviders(true);
                 }}
                 disabled={loading}
                 className="flex items-center gap-2"
               >
                 {loading ? (
-                  <div className="w-4 h-4 border-2 border-roam-blue border-t-transparent rounded-full animate-spin" />
+                  <RefreshCw className="w-4 h-4 animate-spin" />
                 ) : (
-                  <TrendingUp className="w-4 h-4" />
+                  <RefreshCw className="w-4 h-4" />
                 )}
-                Refresh Data
+                Refresh
               </Button>
 
               <div className="text-sm text-muted-foreground">
                 {loading
                   ? "Loading..."
                   : `Showing ${filteredBusinesses.length} of ${businesses.length} businesses`}
+                {cache.getTimeSinceLastFetch('businesses') && (
+                  <span className="text-xs text-muted-foreground ml-2">
+                    (Updated {cache.getTimeSinceLastFetch('businesses')})
+                  </span>
+                )}
                 {error && (
                   <div className="text-orange-600 text-xs mt-1">{error}</div>
                 )}
