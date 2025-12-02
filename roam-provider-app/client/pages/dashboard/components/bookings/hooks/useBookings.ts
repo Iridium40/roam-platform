@@ -362,7 +362,7 @@ export function useBookings(providerData: any, business: any) {
   const updatingStatuses = useRef<Set<string>>(new Set());
 
   // Update booking status
-  const updateBookingStatus = async (bookingId: string, newStatus: string) => {
+  const updateBookingStatus = async (bookingId: string, newStatus: string, reason?: string) => {
     // Prevent duplicate requests for the same booking
     const requestKey = `${bookingId}-${newStatus}`;
     if (updatingStatuses.current.has(requestKey)) {
@@ -376,11 +376,16 @@ export function useBookings(providerData: any, business: any) {
       
       // Use API endpoint instead of direct Supabase call
       // Wrap in Promise.race to handle potential Stripe timeout issues
+      // For declines, use the provided reason; otherwise use a generic message
+      const statusReason = reason || (newStatus === 'declined' 
+        ? 'Booking declined by provider' 
+        : `Status updated to ${newStatus}`);
+      
       const apiCall = api.bookings.updateStatus({
         bookingId,
         status: newStatus,
         updatedBy: userId,
-        reason: `Status updated to ${newStatus}`
+        reason: statusReason
       });
 
       // Set a timeout to prevent hanging on network issues

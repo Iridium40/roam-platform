@@ -389,15 +389,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    console.log('✅ Updating booking status:', { bookingId, newStatus, updatedBy, timestamp: new Date().toISOString() });
+    console.log('✅ Updating booking status:', { bookingId, newStatus, updatedBy, reason, timestamp: new Date().toISOString() });
+
+    // Build update data - include decline_reason if declining
+    const updateData: Record<string, any> = {
+      booking_status: newStatus
+    };
+    
+    // If declining, save the decline reason
+    if (newStatus === 'declined' && reason) {
+      updateData.decline_reason = reason;
+      console.log('📝 Saving decline reason:', reason);
+    }
 
     // Update booking status in Supabase
     console.log('🔍 Executing Supabase update query...');
     const { data: booking, error: updateError } = await supabase
       .from('bookings')
-      .update({
-        booking_status: newStatus
-      })
+      .update(updateData)
       .eq('id', bookingId)
       .select(`
         *,

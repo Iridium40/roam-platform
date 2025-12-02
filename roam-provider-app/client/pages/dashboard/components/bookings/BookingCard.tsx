@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import BookingStatusIndicator from "@/components/BookingStatusIndicator";
 import ConversationChat from "@/components/ConversationChat";
+import DeclineBookingModal from "./DeclineBookingModal";
 import { useProviderAuth } from "@/contexts/auth/ProviderAuthContext";
 import { supabase } from "@/lib/supabase";
 import {
@@ -27,7 +28,7 @@ import {
 interface BookingCardProps {
   booking: any;
   onViewDetails: (booking: any) => void;
-  onUpdateStatus: (bookingId: string, status: string) => Promise<void>;
+  onUpdateStatus: (bookingId: string, status: string, reason?: string) => Promise<void>;
   formatDisplayTime: (time: string) => string;
   showActions?: boolean;
   unreadCount?: number;
@@ -42,9 +43,15 @@ export default function BookingCard({
   unreadCount: propUnreadCount = 0,
 }: BookingCardProps) {
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isDeclineModalOpen, setIsDeclineModalOpen] = useState(false);
   // Use prop value if provided, otherwise default to 0
   const unreadCount = propUnreadCount;
   const { provider } = useProviderAuth();
+
+  // Handle decline with reason
+  const handleDeclineConfirm = async (reason: string) => {
+    await onUpdateStatus(booking.id, "declined", reason);
+  };
 
   // Note: Unread count is now passed from parent component for better performance
   // Individual fetching per card has been removed
@@ -399,7 +406,14 @@ export default function BookingCard({
                   key={action.status}
                   variant={action.variant}
                   size="sm"
-                  onClick={() => onUpdateStatus(booking.id, action.status)}
+                  onClick={() => {
+                    // For decline action, open the modal to capture reason
+                    if (action.status === "declined") {
+                      setIsDeclineModalOpen(true);
+                    } else {
+                      onUpdateStatus(booking.id, action.status);
+                    }
+                  }}
                   className="flex items-center space-x-2 px-4 py-2"
                 >
                   <Icon className="w-4 h-4" />
@@ -416,6 +430,20 @@ export default function BookingCard({
         isOpen={isChatOpen}
         onClose={() => setIsChatOpen(false)}
         booking={booking}
+      />
+
+      {/* Decline Booking Modal */}
+      <DeclineBookingModal
+        isOpen={isDeclineModalOpen}
+        onClose={() => setIsDeclineModalOpen(false)}
+        onConfirm={handleDeclineConfirm}
+        bookingDetails={{
+          serviceName: booking.services?.name,
+          customerName: booking.customer_profiles 
+            ? `${booking.customer_profiles.first_name || ""} ${booking.customer_profiles.last_name || ""}`.trim()
+            : undefined,
+          bookingDate: booking.booking_date,
+        }}
       />
     </Card>
   );
