@@ -1212,6 +1212,38 @@ The ROAM Team
         }
       }
     }
+
+    // Notify customer when booking is marked as no_show
+    if (newStatus === 'no_show' && options.notifyCustomer && customer?.user_id) {
+      console.log('📧 Sending no_show notification to customer:', customer.user_id);
+      try {
+        await sendNotificationViaService(
+          customer.user_id,
+          'customer_booking_no_show',
+          {
+            customer_name: customerName,
+            service_name: serviceName,
+            provider_name: provider ? `${provider.first_name} ${provider.last_name}` : 'Provider',
+            booking_date: bookingDate,
+            booking_time: bookingTime,
+            booking_location: locationAddress,
+            total_amount: totalAmountFormatted,
+            booking_id: booking.id,
+          },
+          {
+            booking_id: booking.id,
+            event_type: 'booking_no_show',
+          }
+        );
+        console.log('✅ No-show notification sent successfully');
+      } catch (noShowError) {
+        console.error('❌ Error sending no-show notification:', {
+          error: noShowError,
+          message: noShowError instanceof Error ? noShowError.message : String(noShowError),
+          stack: noShowError instanceof Error ? noShowError.stack : undefined,
+        });
+      }
+    }
     
     // Notify providers when booking is cancelled by customer
     if (newStatus === 'cancelled' && options.notifyProvider && business) {

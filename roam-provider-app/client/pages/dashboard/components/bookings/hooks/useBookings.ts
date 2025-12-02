@@ -416,11 +416,21 @@ export function useBookings(providerData: any, business: any) {
     } catch (error: any) {
       console.error("Error updating booking status:", error);
       
-      // Filter out Stripe-related errors that are not relevant to booking status updates
+      // Extract error details from various possible locations in the response
+      const responseData = error?.response?.data || error?.data || {};
+      const apiErrorMessage = responseData?.details || responseData?.error || '';
       const errorMessage = error?.message || '';
+      
+      // Check for specific provider assignment error
+      const isProviderAssignmentError = 
+        apiErrorMessage.toLowerCase().includes('provider') ||
+        apiErrorMessage.toLowerCase().includes('assigned') ||
+        responseData?.error === 'Cannot accept booking without assigned provider';
+      
+      // Filter out Stripe-related errors that are not relevant to booking status updates
       const isStripeError = errorMessage.includes('stripe') || 
                            errorMessage.includes('Stripe') ||
-                           error?.response?.data?.error?.includes('stripe');
+                           responseData?.error?.includes?.('stripe');
       
       // Ignore Stripe timeout errors as they're likely unrelated to the booking update
       if (isStripeError && (errorMessage.includes('timeout') || errorMessage.includes('TIMED_OUT'))) {
@@ -439,13 +449,23 @@ export function useBookings(providerData: any, business: any) {
         }
       }
       
-      // Show error for non-Stripe errors or if optimistic update didn't work
+      // Determine the best error message to show
+      let displayMessage = "Failed to update booking status. Please try again.";
+      
+      if (isProviderAssignmentError) {
+        displayMessage = "Please assign a provider to this booking before accepting it. Use 'Details & Assignment' to assign a provider.";
+      } else if (apiErrorMessage) {
+        displayMessage = apiErrorMessage;
+      } else if (isStripeError) {
+        displayMessage = "Booking status may have been updated. Please refresh to confirm.";
+      } else if (errorMessage && errorMessage !== 'Failed to update booking status') {
+        displayMessage = errorMessage;
+      }
+      
+      // Show error with descriptive message
       toast({
-        title: "Error",
-        description: error?.response?.data?.details || 
-                   error?.response?.data?.error ||
-                   (isStripeError ? "Booking status may have been updated. Please refresh to confirm." : errorMessage) ||
-                   "Failed to update booking status. Please try again.",
+        title: isProviderAssignmentError ? "Provider Required" : "Error",
+        description: displayMessage,
         variant: "destructive",
       });
       

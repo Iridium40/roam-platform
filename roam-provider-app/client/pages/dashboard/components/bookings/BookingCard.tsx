@@ -56,6 +56,9 @@ export default function BookingCard({
   // Note: Unread count is now passed from parent component for better performance
   // Individual fetching per card has been removed
 
+  // Check if a provider is assigned to the booking
+  const hasProviderAssigned = Boolean(booking.providers && booking.providers.id) || Boolean(booking.provider_id);
+
   const getStatusActions = (status: string) => {
     // Check if booking is scheduled for today or in the past
     const isBookingDateTodayOrPast = () => {
@@ -66,13 +69,22 @@ export default function BookingCard({
 
     switch (status) {
       case "pending":
+        // Only show Accept button if a provider is assigned
+        // Always show Decline button
         return [
-          { label: "Accept", status: "confirmed", icon: CheckCircle, variant: "default" as const },
+          { 
+            label: hasProviderAssigned ? "Accept" : "Accept (Assign Provider First)", 
+            status: "confirmed", 
+            icon: CheckCircle, 
+            variant: "default" as const,
+            disabled: !hasProviderAssigned,
+            tooltip: !hasProviderAssigned ? "Please assign a provider before accepting this booking" : undefined
+          },
           { label: "Decline", status: "declined", icon: XCircle, variant: "destructive" as const },
         ];
       case "confirmed":
         // Only show "Start Service" if booking is scheduled for today or in the past AND has an assigned provider
-        if (isBookingDateTodayOrPast() && booking.providers && booking.providers.id) {
+        if (isBookingDateTodayOrPast() && hasProviderAssigned) {
           return [
             { label: "Start Service", status: "in_progress", icon: Clock, variant: "default" as const },
           ];
@@ -398,29 +410,41 @@ export default function BookingCard({
 
         {/* Action Buttons */}
         {showActions && statusActions.length > 0 && (
-          <div className="flex items-center justify-center space-x-2 mb-4">
-            {statusActions.map((action) => {
-              const Icon = action.icon;
-              return (
-                <Button
-                  key={action.status}
-                  variant={action.variant}
-                  size="sm"
-                  onClick={() => {
-                    // For decline action, open the modal to capture reason
-                    if (action.status === "declined") {
-                      setIsDeclineModalOpen(true);
-                    } else {
-                      onUpdateStatus(booking.id, action.status);
-                    }
-                  }}
-                  className="flex items-center space-x-2 px-4 py-2"
-                >
-                  <Icon className="w-4 h-4" />
-                  <span>{action.label}</span>
-                </Button>
-              );
-            })}
+          <div className="flex flex-col items-center space-y-2 mb-4">
+            <div className="flex items-center justify-center space-x-2">
+              {statusActions.map((action: any) => {
+                const Icon = action.icon;
+                const isDisabled = action.disabled || false;
+                return (
+                  <Button
+                    key={action.status}
+                    variant={action.variant}
+                    size="sm"
+                    disabled={isDisabled}
+                    onClick={() => {
+                      if (isDisabled) return;
+                      // For decline action, open the modal to capture reason
+                      if (action.status === "declined") {
+                        setIsDeclineModalOpen(true);
+                      } else {
+                        onUpdateStatus(booking.id, action.status);
+                      }
+                    }}
+                    className={`flex items-center space-x-2 px-4 py-2 ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    title={action.tooltip}
+                  >
+                    <Icon className="w-4 h-4" />
+                    <span>{action.label}</span>
+                  </Button>
+                );
+              })}
+            </div>
+            {/* Show helpful message if Accept is disabled */}
+            {!hasProviderAssigned && booking.booking_status === "pending" && (
+              <p className="text-xs text-amber-600 text-center">
+                ⚠️ Assign a provider using "Details & Assignment" before accepting
+              </p>
+            )}
           </div>
         )}
       </div>
