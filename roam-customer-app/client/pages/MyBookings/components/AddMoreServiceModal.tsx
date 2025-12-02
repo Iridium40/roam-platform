@@ -213,7 +213,7 @@ export const AddMoreServiceModal: React.FC<AddMoreServiceModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className={showPayment ? "sm:max-w-[700px] max-h-[90vh] overflow-y-auto" : "sm:max-w-[500px]"}>
+      <DialogContent className={showPayment ? "sm:max-w-[700px] max-h-[90vh] overflow-y-auto pt-10" : "sm:max-w-[500px]"}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Plus className="w-5 h-5" />
@@ -310,26 +310,44 @@ export const AddMoreServiceModal: React.FC<AddMoreServiceModalProps> = ({
         </form>
         ) : (
           clientSecret && stripePromise && (
-            <Elements stripe={stripePromise} options={{ clientSecret }}>
-              <CheckoutForm
-                bookingDetails={{
-                  id: booking?.id,
-                  serviceName: paymentDescription,
-                  providerName: booking?.provider_name || '',
-                  businessName: booking?.business_name || '',
-                  scheduledDate: booking?.booking_date || '',
-                  serviceAmount: paymentAmount,
-                  platformFee: paymentBreakdown?.platformFee || paymentAmount * 0.2,
-                  discountAmount: paymentBreakdown?.discountAmount || 0,
-                  taxAmount: paymentBreakdown?.taxAmount || 0,
-                  taxRate: paymentBreakdown?.taxRate || null,
-                  total: paymentBreakdown?.total || (paymentAmount * 1.2), // Include platform fee in total
-                }}
-                clientSecret={clientSecret}
-                onSuccess={handlePaymentSuccess}
-                onError={handlePaymentError}
-              />
-            </Elements>
+            <div className="space-y-4">
+              <Elements stripe={stripePromise} options={{ clientSecret }}>
+                <CheckoutForm
+                  bookingDetails={{
+                    id: booking?.id,
+                    serviceName: paymentDescription,
+                    providerName: booking?.provider_name || '',
+                    businessName: booking?.business_name || '',
+                    scheduledDate: booking?.booking_date || '',
+                    serviceAmount: paymentAmount,
+                    platformFee: paymentBreakdown?.platformFee || paymentAmount * 0.2,
+                    discountAmount: paymentBreakdown?.discountAmount || 0,
+                    taxAmount: paymentBreakdown?.taxAmount || 0,
+                    taxRate: paymentBreakdown?.taxRate || null,
+                    total: paymentBreakdown?.total || (paymentAmount * 1.2), // Include platform fee in total
+                  }}
+                  clientSecret={clientSecret}
+                  onSuccess={handlePaymentSuccess}
+                  onError={handlePaymentError}
+                />
+              </Elements>
+              
+              {/* Cancel button for payment view */}
+              <div className="flex justify-start pt-2 border-t">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setShowPayment(false);
+                    setClientSecret(null);
+                    setIsSubmitting(false);
+                  }}
+                  disabled={isSubmitting}
+                >
+                  ← Back
+                </Button>
+              </div>
+            </div>
           )
         )}
       </DialogContent>
