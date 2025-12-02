@@ -96,11 +96,23 @@ export async function processBookingAcceptance(
     if (!booking.stripe_payment_intent_id) {
       console.error('❌ PAYMENT PROCESSING ERROR: No stripe_payment_intent_id on booking');
       console.error('❌ This booking was created without a payment intent - customer may not have completed checkout');
+      console.error('❌ Booking details:', {
+        bookingId: booking.id,
+        bookingStatus: booking.booking_status,
+        paymentStatus: booking.payment_status,
+        totalAmount: booking.total_amount,
+        serviceFee: booking.service_fee,
+        customerId: booking.customer_id,
+        businessId: booking.business_id,
+      });
+      console.error('❌ This is likely a webhook issue - the stripe_payment_intent_id should have been saved by the checkout.session.completed webhook');
       return {
         success: false,
-        error: 'No payment intent found for this booking. Customer may not have completed checkout.',
+        error: 'No payment intent found for this booking. Customer may not have completed checkout. The webhook may have failed to save the payment intent ID.',
       };
     }
+    
+    console.log('✅ Payment intent ID found on booking:', booking.stripe_payment_intent_id);
 
     // Retrieve payment intent from Stripe
     const paymentIntent = await stripe.paymentIntents.retrieve(booking.stripe_payment_intent_id);

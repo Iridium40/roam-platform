@@ -343,7 +343,8 @@ async function handleBookingPayment(session: Stripe.Checkout.Session) {
   }
 
   // Find the booking that matches this checkout session
-  // The booking should have been created with pending_payment status
+  // The booking should have been created with pending or pending_payment status
+  // Note: BookService.tsx creates bookings with 'pending' status, but some flows may use 'pending_payment'
   const { data: booking, error: bookingError } = await supabase
     .from('bookings')
     .select(`
@@ -360,6 +361,7 @@ async function handleBookingPayment(session: Stripe.Checkout.Session) {
       booking_status,
       payment_status,
       special_instructions,
+      stripe_payment_intent_id,
       services (
         name
       ),
@@ -386,7 +388,7 @@ async function handleBookingPayment(session: Stripe.Checkout.Session) {
     `)
     .eq('customer_id', customerId)
     .eq('service_id', serviceId)
-    .eq('booking_status', 'pending_payment')
+    .in('booking_status', ['pending', 'pending_payment'])  // Support both statuses
     .order('created_at', { ascending: false })
     .limit(1)
     .single();
@@ -428,6 +430,7 @@ async function handleBookingPayment(session: Stripe.Checkout.Session) {
   // Check if booking is already confirmed to avoid race conditions
   if (booking.booking_status === 'confirmed' && booking.payment_status === 'paid') {
     // Already processed
+    console.log('✅ Booking already confirmed and paid, skipping update');
   } else {
     const updateData: any = {
       booking_status: isCharged ? 'confirmed' : 'pending', // Only confirm if already charged
@@ -440,17 +443,22 @@ async function handleBookingPayment(session: Stripe.Checkout.Session) {
       updateData.remaining_balance = remainingBalance;
     }
     
-    // Store payment intent ID if not already stored
-    if (paymentIntentId && !(booking as any).stripe_payment_intent_id) {
-      try {
-        await supabase
-          .from('bookings')
-          .update({ stripe_payment_intent_id: paymentIntentId })
-          .eq('id', booking.id);
-      } catch (err) {
-        // Column may not exist
-      }
+    // CRITICAL: Store payment intent ID - this is required for payment capture when booking is confirmed
+    // Include it in the main update to ensure it's always saved
+    if (paymentIntentId && !booking.stripe_payment_intent_id) {
+      updateData.stripe_payment_intent_id = paymentIntentId;
+      console.log('💳 Storing stripe_payment_intent_id on booking:', paymentIntentId);
+    } else if (booking.stripe_payment_intent_id) {
+      console.log('ℹ️ Booking already has stripe_payment_intent_id:', booking.stripe_payment_intent_id);
     }
+    
+    console.log('📋 Updating booking with data:', {
+      bookingId: booking.id,
+      updateData,
+      isAuthorized,
+      isCharged,
+      paymentIntentId,
+    });
     
     const { error: updateError } = await supabase
       .from('bookings')
@@ -458,19 +466,23 @@ async function handleBookingPayment(session: Stripe.Checkout.Session) {
       .eq('id', booking.id);
 
     if (updateError) {
+      console.error('❌ Error updating booking:', updateError);
       // Handle race condition errors gracefully
       if (updateError.code === '42P10' || updateError.message?.includes('ON CONFLICT')) {
         const { data: verifyBooking } = await supabase
           .from('bookings')
-          .select('booking_status, payment_status')
+          .select('booking_status, payment_status, stripe_payment_intent_id')
           .eq('id', booking.id)
           .single();
         if (!(verifyBooking && verifyBooking.booking_status === 'confirmed' && verifyBooking.payment_status === 'paid')) {
           throw updateError;
         }
+        console.log('✅ Booking was already updated by another process');
       } else {
         throw updateError;
       }
+    } else {
+      console.log('✅ Booking updated successfully with payment intent ID');
     }
   }
 
@@ -753,6 +765,7 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
         booking_status,
         payment_status,
         special_instructions,
+        stripe_payment_intent_id,
         services (
           name
         ),
@@ -815,6 +828,7 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
     // Check if booking is already confirmed to avoid race conditions
     if (booking.booking_status === 'confirmed' && booking.payment_status === 'paid') {
       // Already processed
+      console.log('✅ Booking already confirmed and paid in handlePaymentIntentSucceeded');
     } else {
       const updateData: any = {
         booking_status: isCharged ? 'confirmed' : 'pending', // Only confirm if already charged
@@ -827,25 +841,43 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
         updateData.remaining_balance = remainingBalance;
       }
       
+      // CRITICAL: Store payment intent ID - this is required for payment capture when booking is confirmed
+      if (paymentIntent.id && !booking.stripe_payment_intent_id) {
+        updateData.stripe_payment_intent_id = paymentIntent.id;
+        console.log('💳 Storing stripe_payment_intent_id on booking (from payment_intent.succeeded):', paymentIntent.id);
+      }
+      
+      console.log('📋 Updating booking in handlePaymentIntentSucceeded:', {
+        bookingId,
+        updateData,
+        isAuthorized,
+        isCharged,
+        paymentIntentId: paymentIntent.id,
+      });
+      
     const { error: updateError } = await supabase
       .from('bookings')
         .update(updateData)
       .eq('id', bookingId);
 
     if (updateError) {
+        console.error('❌ Error updating booking in handlePaymentIntentSucceeded:', updateError);
         // Handle race condition errors gracefully
         if (updateError.code === '42P10' || updateError.message?.includes('ON CONFLICT')) {
           const { data: verifyBooking } = await supabase
             .from('bookings')
-            .select('booking_status, payment_status')
+            .select('booking_status, payment_status, stripe_payment_intent_id')
             .eq('id', bookingId)
             .single();
           if (!(verifyBooking && verifyBooking.booking_status === 'confirmed' && verifyBooking.payment_status === 'paid')) {
       throw updateError;
           }
+          console.log('✅ Booking was already updated by another process');
         } else {
           throw updateError;
         }
+      } else {
+        console.log('✅ Booking updated successfully in handlePaymentIntentSucceeded');
       }
     }
 
