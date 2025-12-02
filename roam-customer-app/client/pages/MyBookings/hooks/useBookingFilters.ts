@@ -25,9 +25,9 @@ export const useBookingFilters = (bookings: BookingWithDetails[]) => {
   const ITEMS_PER_PAGE = itemsPerPage;
 
   // Filter bookings by status
-  // PRESENT: All non-final bookings PLUS completed bookings from today or future
+  // PRESENT: All non-final bookings PLUS completed bookings from today or future (excludes declined)
   // FUTURE: Active bookings (pending, confirmed) scheduled after today
-  // PAST: Final state bookings (completed, cancelled, no_show) ONLY if booking date is before today
+  // PAST: Final state bookings (completed, cancelled, no_show, declined) ONLY if booking date is before today
   const filteredBookings = useMemo(() => {
     // Ensure bookings is an array
     const safeBookings = Array.isArray(bookings) ? bookings : [];
@@ -100,15 +100,15 @@ export const useBookingFilters = (bookings: BookingWithDetails[]) => {
 
     const result = {
       // PRESENT TAB:
-      // - All bookings that are NOT in a final state (completed, cancelled, no_show)
+      // - All bookings that are NOT in a final state (completed, cancelled, no_show, declined)
       // - PLUS final state bookings if booking date is TODAY or FUTURE
       // - This keeps completed bookings visible until the day after
       present: safeBookings.filter((booking) => {
         const status = booking.booking_status || 'pending';
         const dateStr = booking.booking_date || '';
         
-        // Exclude only final states: completed, cancelled, no_show
-        const excludedStatuses = new Set(['completed', 'cancelled', 'no_show']);
+        // Exclude final states: completed, cancelled, no_show, declined
+        const excludedStatuses = new Set(['completed', 'cancelled', 'no_show', 'declined']);
         const isFinalState = excludedStatuses.has(status);
         
         // If not a final state, always show in present
@@ -151,14 +151,14 @@ export const useBookingFilters = (bookings: BookingWithDetails[]) => {
       }),
       
       // PAST TAB:
-      // - Only bookings in final states (completed, cancelled, no_show) where booking date is BEFORE today
+      // - Only bookings in final states (completed, cancelled, no_show, declined) where booking date is BEFORE today
       // - This way completed bookings stay in "Present" until the day after
       past: safeBookings.filter((booking) => {
         const status = booking.booking_status || 'pending';
         const dateStr = booking.booking_date || '';
         
         // Show only final state bookings that occurred BEFORE today
-        const finalStates = new Set(['completed', 'cancelled', 'no_show']);
+        const finalStates = new Set(['completed', 'cancelled', 'no_show', 'declined']);
         const isFinalState = finalStates.has(status);
         const isBeforeToday = dateStr < todayStr;
         

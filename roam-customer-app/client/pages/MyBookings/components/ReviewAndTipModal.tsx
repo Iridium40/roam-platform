@@ -234,7 +234,7 @@ const ReviewAndTipModal: React.FC<ReviewAndTipModalProps> = ({
   };
 
   const handleTipSubmit = async () => {
-    if (!booking || !booking.providers || tipData.tip_amount < 10) return;
+    if (!booking || !booking.providers || tipData.tip_amount < 1) return;
 
     setTipCheckoutLoading(true);
     try {
@@ -590,7 +590,7 @@ const ReviewAndTipModal: React.FC<ReviewAndTipModalProps> = ({
                 </Button>
                 <Button
                   onClick={handleTipSubmitClick}
-                  disabled={tipCheckoutLoading || tipData.tip_amount < 10}
+                  disabled={tipCheckoutLoading || tipData.tip_amount < 1}
                   className="flex-1"
                 >
                   {tipCheckoutLoading ? (
