@@ -172,6 +172,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
         break;
 
+      case 'payment_intent.requires_capture':
+        try {
+          const paymentIntent = event.data.object as Stripe.PaymentIntent;
+          console.log('💳 Payment intent requires capture:', paymentIntent.id);
+          // Handle payment intent that requires capture (authorized but not yet charged)
+          // This happens for manual capture payments
+          await handlePaymentIntentRequiresCapture(paymentIntent);
+          processed = true;
+        } catch (err: any) {
+          console.error('Error handling payment_intent.requires_capture:', err);
+          throw err;
+        }
+        break;
+
       case 'charge.updated':
       case 'charge.succeeded':
         // Fallback: if payment_intent.succeeded wasn't received, process from charge
@@ -670,6 +684,178 @@ async function handleBookingPayment(session: Stripe.Checkout.Session) {
         console.error('Error creating business_payment_transactions record:', businessPaymentError);
       }
     }
+  }
+}
+
+async function handlePaymentIntentRequiresCapture(paymentIntent: Stripe.PaymentIntent) {
+  console.log('🔐 Payment intent requires capture:', paymentIntent.id);
+  console.log('💳 Payment metadata:', paymentIntent.metadata);
+  
+  try {
+    // Check if this is a tip payment
+    if (paymentIntent.metadata?.type === 'tip') {
+      console.log('💰 Processing as tip payment');
+      await handleTipPaymentIntent(paymentIntent);
+      return;
+    }
+
+    // Check if this payment intent was already processed
+    const { data: existingBusinessTransaction } = await supabase
+      .from('business_payment_transactions')
+      .select('id, booking_id')
+      .eq('stripe_payment_intent_id', paymentIntent.id)
+      .limit(1)
+      .maybeSingle();
+
+    const { data: existingFinancialTransaction } = await supabase
+      .from('financial_transactions')
+      .select('id')
+      .eq('stripe_transaction_id', paymentIntent.id)
+      .limit(1)
+      .maybeSingle();
+
+    // If both transactions exist, payment was already processed
+    if (existingBusinessTransaction && existingFinancialTransaction) {
+      console.log('✅ Payment intent already processed');
+      return;
+    }
+
+    // Payment is authorized but not yet captured - create records with 'pending' status
+    let bookingId = paymentIntent.metadata.bookingId;
+    
+    if (!bookingId) {
+      console.error('❌ Missing bookingId in payment intent metadata');
+      return;
+    }
+
+    // Get booking details
+    const { data: booking, error: bookingError } = await supabase
+      .from('bookings')
+      .select(`
+        id,
+        customer_id,
+        business_id,
+        provider_id,
+        total_amount,
+        service_fee,
+        remaining_balance,
+        booking_reference,
+        booking_status,
+        payment_status,
+        business_profiles (
+          stripe_connect_account_id
+        )
+      `)
+      .eq('id', bookingId)
+      .single();
+
+    if (bookingError || !booking) {
+      console.error('❌ Booking not found:', bookingId, bookingError);
+      throw bookingError || new Error(`Booking ${bookingId} not found`);
+    }
+
+    // Record in financial_transactions with 'pending' status (payment authorized but not captured)
+    const totalAmount = paymentIntent.amount / 100;
+    const currency = (paymentIntent.currency.toUpperCase() || 'USD').substring(0, 3);
+    
+    if (!existingFinancialTransaction) {
+      const { data: financialTransaction, error: financialError } = await supabase
+        .from('financial_transactions')
+        .insert({
+          booking_id: bookingId,
+          amount: totalAmount,
+          currency: currency,
+          stripe_transaction_id: paymentIntent.id,
+          payment_method: 'card',
+          description: 'Service booking payment authorized (pending capture)',
+          transaction_type: 'booking_payment',
+          status: 'pending', // Pending because payment is authorized but not captured
+          processed_at: new Date().toISOString(),
+          metadata: {
+            charge_id: paymentIntent.latest_charge,
+            customer_id: paymentIntent.customer,
+            payment_method_types: paymentIntent.payment_method_types,
+            booking_reference: booking.booking_reference || null,
+            booking_customer_id: booking.customer_id || null,
+            captured_by: 'webhook',
+            capture_status: 'requires_capture',
+          }
+        })
+        .select()
+        .single();
+
+      if (financialError) {
+        if (financialError.code === '23503') {
+          throw new Error(`Booking ${bookingId} not found or invalid`);
+        } else if (financialError.code !== '23505') {
+          console.error('❌ Error recording financial transaction:', financialError);
+          throw financialError;
+        }
+      } else {
+        console.log('✅ Financial transaction created (pending capture):', financialTransaction?.id);
+      }
+    }
+
+    // Calculate platform fee for business_payment_transactions
+    const platformFeePercentage = parseFloat(paymentIntent.metadata?.platformFee || '0.2');
+    const serviceAmountFromMetadata = paymentIntent.metadata?.serviceAmount 
+      ? parseFloat(paymentIntent.metadata.serviceAmount) 
+      : null;
+    
+    const serviceAmount = serviceAmountFromMetadata || (totalAmount / (1 + platformFeePercentage));
+    const platformFee = serviceAmount * platformFeePercentage;
+    const netPaymentAmount = serviceAmount;
+
+    // Get business profile for stripe_connect_account_id
+    const businessProfile = Array.isArray(booking.business_profiles) 
+      ? booking.business_profiles[0] 
+      : booking.business_profiles;
+
+    // Create business_payment_transaction with 'pending' status
+    if (!existingBusinessTransaction) {
+      const paymentDate = new Date().toISOString().split('T')[0];
+      const taxYear = new Date().getFullYear();
+      const transactionType = paymentIntent.metadata?.paymentType === 'additional_service' 
+        ? 'additional_service' 
+        : 'initial_booking';
+
+      const { data: businessTransaction, error: businessError } = await supabase
+        .from('business_payment_transactions')
+        .insert({
+          booking_id: bookingId,
+          business_id: booking.business_id,
+          payment_date: paymentDate,
+          gross_payment_amount: totalAmount,
+          platform_fee: platformFee,
+          net_payment_amount: netPaymentAmount,
+          tax_year: taxYear,
+          stripe_payment_intent_id: paymentIntent.id,
+          stripe_connect_account_id: businessProfile?.stripe_connect_account_id || null,
+          transaction_description: transactionType === 'additional_service' 
+            ? 'Additional service payment (pending capture)' 
+            : 'Platform service payment (pending capture)',
+          booking_reference: booking.booking_reference || null,
+          transaction_type: transactionType,
+        } as any)
+        .select()
+        .single();
+
+      if (businessError) {
+        if (businessError.code === '23503') {
+          throw new Error(`Booking ${bookingId} not found or invalid`);
+        } else if (businessError.code !== '23505') {
+          console.error('❌ Error recording business payment transaction:', businessError);
+          throw businessError;
+        }
+      } else {
+        console.log('✅ Business payment transaction created (pending capture):', businessTransaction?.id);
+      }
+    }
+
+    console.log('✅ Payment intent requires_capture processed successfully');
+  } catch (error: any) {
+    console.error('❌ Error handling payment_intent.requires_capture:', error);
+    throw error;
   }
 }
 
