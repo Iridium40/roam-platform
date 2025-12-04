@@ -35,14 +35,13 @@ function SectionWrapper({ children, className = "" }: { children: React.ReactNod
 function Hero() {
   return (
     <div className="relative overflow-hidden bg-gradient-to-br from-roam-blue via-roam-blue/90 to-roam-light-blue text-white">
-      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS1vcGFjaXR5PSIwLjA1IiBzdHJva2Utd2lkdGg9IjEiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZ3JpZCkiLz48L3N2Zz4=')] opacity-30"></div>
       <SectionWrapper className="relative z-10">
         <div className="mx-auto max-w-3xl text-center">
           <Badge className="mb-6 text-sm px-4 py-2 bg-white/20 text-white border-white/30 backdrop-blur-sm animate-fade-in">
             Our Services
           </Badge>
           <h1 className="text-5xl md:text-6xl font-bold tracking-tight mb-6 animate-slide-up flex items-center justify-center gap-4 flex-wrap">
-            <img src="/logo-white-notagline.png" alt="ROAM" className="h-12 md:h-[3.75rem] w-auto inline-block" />
+            <img src="/logo-white-notagline.png" alt="ROAM" className="h-[2.7rem] md:h-[3.375rem] w-auto inline-block" />
             <span>Without Boundaries</span>
           </h1>
           <p className="mt-3 text-xl md:text-2xl text-white/90 leading-relaxed animate-fade-in">

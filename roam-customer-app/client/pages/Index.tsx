@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 // ShareModal will be lazy loaded below
 import { FavoriteButton } from "@/components/FavoriteButton";
 import { AnnouncementPopup } from "@/components/AnnouncementPopup";
-import FloatingChatButton from "@/components/FloatingChatButton";
 import {
   Select,
   SelectContent,
@@ -1880,9 +1879,6 @@ export default function Index() {
           />
         </Suspense>
       )}
-
-      {/* Floating Chat Button */}
-      <FloatingChatButton />
 
       {/* Footer */}
       <Footer />

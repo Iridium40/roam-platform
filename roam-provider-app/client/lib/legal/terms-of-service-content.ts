@@ -157,9 +157,7 @@ Either party may seek injunctive relief in court for intellectual property or co
       title: "18. Contact Information",
       content: `Questions? Contact ROAM:
 
-- Email: legal@roamwellness.com
-- Phone: (850) 555-ROAM
-- Address: ROAM Wellness Services, LLC, Covington, LA`,
+- Email: providersupport@roamyourbestlife.com`,
     },
   ],
 };

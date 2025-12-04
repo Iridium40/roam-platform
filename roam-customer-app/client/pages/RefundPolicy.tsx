@@ -72,7 +72,7 @@ export default function RefundPolicy() {
                   <div className="w-1.5 h-1.5 rounded-full bg-roam-blue mt-2.5 flex-shrink-0"></div>
                   <div>
                     <strong className="text-foreground">Platform Service Fee:</strong>
-                    <span className="text-foreground/70"> A fee charged by ROAM (12-15% of the service amount) for platform services including booking management, payment processing, customer support, provider vetting, and quality assurance.</span>
+                    <span className="text-foreground/70"> A fee charged by ROAM (20% of the service amount) for platform services including booking management, payment processing, customer support, provider vetting, and quality assurance.</span>
                   </div>
                 </li>
               </ul>
@@ -342,10 +342,6 @@ export default function RefundPolicy() {
                       www.roamyourbestlife.com
                     </a>
                   </div>
-                </li>
-                <li className="flex items-start gap-3">
-                  <div className="w-1.5 h-1.5 rounded-full bg-roam-blue mt-2.5 flex-shrink-0"></div>
-                  <span className="text-foreground/70"><strong className="text-foreground">In-App Support:</strong> Available through the ROAM mobile app</span>
                 </li>
               </ul>
               <div className="border-t border-roam-blue/20 pt-6 text-center">

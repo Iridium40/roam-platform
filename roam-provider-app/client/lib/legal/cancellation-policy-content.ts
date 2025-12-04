@@ -83,15 +83,14 @@ Our team may waive fees or penalties in documented emergency situations. We may 
 3. Selecting the booking you wish to cancel or change.
 4. Choosing **Cancel** or **Reschedule** and following the prompts.
 
-If you need help, contact ROAM Support at contactus@roamyourbestlife.com.`,
+If you need help, contact ROAM Support at providersupport@roamyourbestlife.com.`,
     },
     {
       id: "support",
       title: "8. Need Assistance?",
       content: `We're here to help. If you have questions about this policy or believe a fee was applied in error, please contact ROAM Support.
 
-- Email: contactus@roamyourbestlife.com
-- Live chat: Available in the ROAM app
+- Email: providersupport@roamyourbestlife.com
 
 We review all concerns within one business day and aim to resolve cancellation-related requests quickly and fairly.`,
     },
