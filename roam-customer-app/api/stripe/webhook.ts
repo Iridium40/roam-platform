@@ -741,10 +741,7 @@ async function handlePaymentIntentRequiresCapture(paymentIntent: Stripe.PaymentI
         remaining_balance,
         booking_reference,
         booking_status,
-        payment_status,
-        business_profiles (
-          stripe_connect_account_id
-        )
+        payment_status
       `)
       .eq('id', bookingId)
       .single();
@@ -806,10 +803,14 @@ async function handlePaymentIntentRequiresCapture(paymentIntent: Stripe.PaymentI
     const platformFee = serviceAmount * platformFeePercentage;
     const netPaymentAmount = serviceAmount;
 
-    // Get business profile for stripe_connect_account_id
-    const businessProfile = Array.isArray(booking.business_profiles) 
-      ? booking.business_profiles[0] 
-      : booking.business_profiles;
+    // Get stripe_connect_account_id from stripe_connect_accounts table
+    const { data: stripeConnectAccount } = await supabase
+      .from('stripe_connect_accounts')
+      .select('account_id')
+      .eq('business_id', booking.business_id)
+      .maybeSingle();
+    
+    const stripeConnectAccountId = stripeConnectAccount?.account_id || null;
 
     // Create business_payment_transaction with 'pending' status
     if (!existingBusinessTransaction) {
@@ -830,7 +831,7 @@ async function handlePaymentIntentRequiresCapture(paymentIntent: Stripe.PaymentI
           net_payment_amount: netPaymentAmount,
           tax_year: taxYear,
           stripe_payment_intent_id: paymentIntent.id,
-          stripe_connect_account_id: businessProfile?.stripe_connect_account_id || null,
+          stripe_connect_account_id: stripeConnectAccountId,
           transaction_description: transactionType === 'additional_service' 
             ? 'Additional service payment (pending capture)' 
             : 'Platform service payment (pending capture)',
