@@ -48,7 +48,6 @@ export async function processBookingAcceptance(
       .from('bookings')
       .select(`
         id,
-        stripe_payment_intent_id,
         stripe_service_amount_payment_intent_id,
         total_amount,
         service_fee,
@@ -81,10 +80,26 @@ export async function processBookingAcceptance(
       };
     }
 
+    // Look up payment intent from business_payment_transactions table
+    // Note: stripe_payment_intent_id is NOT stored on bookings table
+    const { data: businessPaymentTransaction, error: transactionError } = await supabase
+      .from('business_payment_transactions')
+      .select('stripe_payment_intent_id')
+      .eq('booking_id', bookingId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (transactionError) {
+      console.error('❌ Error fetching payment transaction:', transactionError);
+    }
+
+    const paymentIntentId = businessPaymentTransaction?.stripe_payment_intent_id;
+
     // Log booking payment details
     console.log('📋 Booking payment details:', {
       bookingId: booking.id,
-      stripe_payment_intent_id: booking.stripe_payment_intent_id || 'NOT SET',
+      stripe_payment_intent_id: paymentIntentId || 'NOT FOUND',
       stripe_service_amount_payment_intent_id: booking.stripe_service_amount_payment_intent_id || 'NOT SET',
       total_amount: booking.total_amount,
       service_fee: booking.service_fee,
@@ -93,8 +108,8 @@ export async function processBookingAcceptance(
     });
 
     // Check if payment intent exists
-    if (!booking.stripe_payment_intent_id) {
-      console.error('❌ PAYMENT PROCESSING ERROR: No stripe_payment_intent_id on booking');
+    if (!paymentIntentId) {
+      console.error('❌ PAYMENT PROCESSING ERROR: No stripe_payment_intent_id found in business_payment_transactions');
       console.error('❌ This booking was created without a payment intent - customer may not have completed checkout');
       console.error('❌ Booking details:', {
         bookingId: booking.id,
@@ -105,17 +120,17 @@ export async function processBookingAcceptance(
         customerId: booking.customer_id,
         businessId: booking.business_id,
       });
-      console.error('❌ This is likely a webhook issue - the stripe_payment_intent_id should have been saved by the checkout.session.completed webhook');
+      console.error('❌ This is likely a webhook issue - the stripe_payment_intent_id should have been saved in business_payment_transactions by the webhook');
       return {
         success: false,
-        error: 'No payment intent found for this booking. Customer may not have completed checkout. The webhook may have failed to save the payment intent ID.',
+        error: 'No payment intent found for this booking. Customer may not have completed checkout. The webhook may have failed to save the payment intent ID in business_payment_transactions.',
       };
     }
     
-    console.log('✅ Payment intent ID found on booking:', booking.stripe_payment_intent_id);
+    console.log('✅ Payment intent ID found in business_payment_transactions:', paymentIntentId);
 
     // Retrieve payment intent from Stripe
-    const paymentIntent = await stripe.paymentIntents.retrieve(booking.stripe_payment_intent_id);
+    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
 
     console.log('💳 Payment Intent Status:', paymentIntent.status);
 
@@ -581,7 +596,7 @@ export async function processBookingDecline(
     // Fetch booking details
     const { data: booking, error: bookingError } = await supabase
       .from('bookings')
-      .select('id, stripe_payment_intent_id, stripe_service_amount_payment_intent_id, booking_status')
+      .select('id, stripe_service_amount_payment_intent_id, booking_status')
       .eq('id', bookingId)
       .single();
 
@@ -592,6 +607,17 @@ export async function processBookingDecline(
       };
     }
 
+    // Fetch payment intent from business_payment_transactions
+    const { data: businessPaymentTransaction } = await supabase
+      .from('business_payment_transactions')
+      .select('stripe_payment_intent_id')
+      .eq('booking_id', bookingId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const mainPaymentIntentId = businessPaymentTransaction?.stripe_payment_intent_id;
+
     // Check if booking is already declined
     if (booking.booking_status === 'declined') {
       console.log('⚠️ Booking already declined, checking payment intent status');
@@ -599,7 +625,7 @@ export async function processBookingDecline(
 
     // Cancel both payment intents if they exist
     const paymentIntentIds = [
-      { id: booking.stripe_payment_intent_id, type: 'service_fee' },
+      { id: mainPaymentIntentId, type: 'service_fee' },
       { id: booking.stripe_service_amount_payment_intent_id, type: 'service_amount' },
     ].filter(pi => pi.id);
 
@@ -739,9 +765,20 @@ export async function handleBookingCancellation(
       // Booking was cancelled before acceptance - cancel payment intents
       console.log('📋 Booking cancelled before acceptance - cancelling payment intents');
 
-      if (booking.stripe_payment_intent_id) {
+      // Fetch payment intent from business_payment_transactions
+      const { data: businessPaymentTransaction } = await supabase
+        .from('business_payment_transactions')
+        .select('stripe_payment_intent_id')
+        .eq('booking_id', bookingId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const paymentIntentId = businessPaymentTransaction?.stripe_payment_intent_id;
+
+      if (paymentIntentId) {
         try {
-          const paymentIntent = await stripe.paymentIntents.retrieve(booking.stripe_payment_intent_id);
+          const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
 
           if (paymentIntent.status !== 'succeeded' && paymentIntent.status !== 'canceled') {
             await stripe.paymentIntents.cancel(paymentIntent.id);
@@ -816,8 +853,17 @@ export async function handleBookingCancellation(
       refundAmount,
     });
 
-    // Use service amount payment intent if available, otherwise try main payment intent
-    const paymentIntentIdToRefund = booking.stripe_service_amount_payment_intent_id || booking.stripe_payment_intent_id;
+    // Fetch payment intent from business_payment_transactions
+    const { data: businessPaymentTransaction } = await supabase
+      .from('business_payment_transactions')
+      .select('stripe_payment_intent_id')
+      .eq('booking_id', bookingId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    // Use service amount payment intent if available, otherwise try main payment intent from business_payment_transactions
+    const paymentIntentIdToRefund = booking.stripe_service_amount_payment_intent_id || businessPaymentTransaction?.stripe_payment_intent_id;
 
     if (!paymentIntentIdToRefund) {
       return {

@@ -443,14 +443,9 @@ async function handleBookingPayment(session: Stripe.Checkout.Session) {
       updateData.remaining_balance = remainingBalance;
     }
     
-    // CRITICAL: Store payment intent ID - this is required for payment capture when booking is confirmed
-    // Include it in the main update to ensure it's always saved
-    if (paymentIntentId && !booking.stripe_payment_intent_id) {
-      updateData.stripe_payment_intent_id = paymentIntentId;
-      console.log('💳 Storing stripe_payment_intent_id on booking:', paymentIntentId);
-    } else if (booking.stripe_payment_intent_id) {
-      console.log('ℹ️ Booking already has stripe_payment_intent_id:', booking.stripe_payment_intent_id);
-    }
+    // Note: stripe_payment_intent_id is NOT stored on bookings table
+    // It is stored in business_payment_transactions table (created below)
+    console.log('💳 Payment intent ID will be stored in business_payment_transactions:', paymentIntentId);
     
     console.log('📋 Updating booking with data:', {
       bookingId: booking.id,
@@ -471,7 +466,7 @@ async function handleBookingPayment(session: Stripe.Checkout.Session) {
       if (updateError.code === '42P10' || updateError.message?.includes('ON CONFLICT')) {
         const { data: verifyBooking } = await supabase
           .from('bookings')
-          .select('booking_status, payment_status, stripe_payment_intent_id')
+          .select('booking_status, payment_status')
           .eq('id', booking.id)
           .single();
         if (!(verifyBooking && verifyBooking.booking_status === 'confirmed' && verifyBooking.payment_status === 'paid')) {
@@ -535,20 +530,22 @@ async function handleBookingPayment(session: Stripe.Checkout.Session) {
 
   // Record in financial_transactions
   const totalAmount = paymentIntent.amount / 100;
+  // Ensure currency is exactly 3 characters (schema: varchar(3))
+  const currency = (paymentIntent.currency.toUpperCase() || 'USD').substring(0, 3);
   
   const { data: financialTransaction, error: financialError } = await supabase
     .from('financial_transactions')
     .insert({
       booking_id: booking.id,
-      amount: totalAmount,
-      currency: paymentIntent.currency.toUpperCase(),
-      stripe_transaction_id: paymentIntent.id,
-      payment_method: 'card',
-      description: 'Service booking payment received',
-      transaction_type: 'booking_payment',
-      status: 'completed',
-      processed_at: new Date().toISOString(),
-      metadata: {
+      amount: totalAmount, // numeric(10, 2)
+      currency: currency, // varchar(3)
+      stripe_transaction_id: paymentIntent.id, // varchar(255)
+      payment_method: 'card', // varchar(50)
+      description: 'Service booking payment received', // text
+      transaction_type: 'booking_payment', // transaction_type enum
+      status: 'completed', // status enum
+      processed_at: new Date().toISOString(), // timestamp
+      metadata: { // jsonb
         charge_id: paymentIntent.latest_charge,
         customer_id: paymentIntent.customer,
         payment_method_types: paymentIntent.payment_method_types,
@@ -616,24 +613,23 @@ async function handleBookingPayment(session: Stripe.Checkout.Session) {
 
   if (!existingByPaymentIntent) {
     const businessPaymentTransactionData: any = {
-      booking_id: booking.id,
-      business_id: booking.business_id,
-      payment_date: paymentDate,
-      gross_payment_amount: totalAmount, // Total amount customer paid
-      platform_fee: platformFee, // 20% of service amount
-      net_payment_amount: netPaymentAmount, // Full service amount (what business receives)
-      tax_year: taxYear,
-      stripe_payment_intent_id: paymentIntent.id,
-      stripe_connect_account_id: businessProfile?.stripe_connect_account_id || null,
+      booking_id: booking.id, // uuid NOT NULL
+      business_id: booking.business_id, // uuid NOT NULL
+      payment_date: paymentDate, // date NOT NULL (YYYY-MM-DD format)
+      gross_payment_amount: totalAmount, // numeric(10, 2) NOT NULL - Total amount customer paid
+      platform_fee: platformFee, // numeric(10, 2) NOT NULL default 0 - 20% of service amount
+      net_payment_amount: netPaymentAmount, // numeric(10, 2) NOT NULL - Full service amount (what business receives)
+      tax_year: taxYear, // integer NOT NULL
+      stripe_payment_intent_id: paymentIntent.id, // text
+      stripe_connect_account_id: businessProfile?.stripe_connect_account_id || null, // text
       transaction_description: transactionType === 'additional_service' 
         ? 'Additional service payment' 
-        : 'Platform service payment',
-      booking_reference: booking.booking_reference || null,
+        : 'Platform service payment', // text default 'Platform service payment'
+      booking_reference: booking.booking_reference || null, // text
+      transaction_type: transactionType, // business_payment_transaction_type NOT NULL default 'initial_booking'
     };
 
-    // Try inserting with transaction_type first (if migration has been run)
-    // If it fails due to missing column, retry without it
-    businessPaymentTransactionData.transaction_type = transactionType;
+    // transaction_type is already set above (required field with default)
 
     let businessPaymentTransaction: any = null;
     let businessPaymentError: any = null;
@@ -765,7 +761,6 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
         booking_status,
         payment_status,
         special_instructions,
-        stripe_payment_intent_id,
         services (
           name
         ),
@@ -841,11 +836,9 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
         updateData.remaining_balance = remainingBalance;
       }
       
-      // CRITICAL: Store payment intent ID - this is required for payment capture when booking is confirmed
-      if (paymentIntent.id && !booking.stripe_payment_intent_id) {
-        updateData.stripe_payment_intent_id = paymentIntent.id;
-        console.log('💳 Storing stripe_payment_intent_id on booking (from payment_intent.succeeded):', paymentIntent.id);
-      }
+      // Note: stripe_payment_intent_id is NOT stored on bookings table
+      // It is stored in business_payment_transactions table (created below)
+      console.log('💳 Payment intent ID will be stored in business_payment_transactions:', paymentIntent.id);
       
       console.log('📋 Updating booking in handlePaymentIntentSucceeded:', {
         bookingId,
@@ -866,7 +859,7 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
         if (updateError.code === '42P10' || updateError.message?.includes('ON CONFLICT')) {
           const { data: verifyBooking } = await supabase
             .from('bookings')
-            .select('booking_status, payment_status, stripe_payment_intent_id')
+            .select('booking_status, payment_status')
             .eq('id', bookingId)
             .single();
           if (!(verifyBooking && verifyBooking.booking_status === 'confirmed' && verifyBooking.payment_status === 'paid')) {
@@ -935,6 +928,8 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
 
     // Record in financial_transactions
     const totalAmount = paymentIntent.amount / 100;
+    // Ensure currency is exactly 3 characters (schema: varchar(3))
+    const currency = (paymentIntent.currency.toUpperCase() || 'USD').substring(0, 3);
     
     // Only create if it doesn't already exist (idempotent)
     if (!existingFinancialTransaction) {
@@ -942,16 +937,16 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
       const { data: financialTransaction, error: financialError } = await supabase
         .from('financial_transactions')
         .insert({
-      booking_id: bookingId,
-      amount: totalAmount,
-      currency: paymentIntent.currency.toUpperCase(),
-      stripe_transaction_id: paymentIntent.id,
-      payment_method: 'card',
-      description: 'Service booking payment received',
-          transaction_type: 'booking_payment',
-      status: 'completed',
-      processed_at: new Date().toISOString(),
-      metadata: {
+      booking_id: bookingId, // uuid NOT NULL
+      amount: totalAmount, // numeric(10, 2) NOT NULL
+      currency: currency, // varchar(3) default 'USD'
+      stripe_transaction_id: paymentIntent.id, // varchar(255)
+      payment_method: 'card', // varchar(50)
+      description: 'Service booking payment received', // text
+          transaction_type: 'booking_payment', // transaction_type enum
+      status: 'completed', // status enum
+      processed_at: new Date().toISOString(), // timestamp
+      metadata: { // jsonb default '{}'
         charge_id: paymentIntent.latest_charge,
         customer_id: paymentIntent.customer,
             payment_method_types: paymentIntent.payment_method_types,
@@ -1040,23 +1035,21 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
       console.log('ℹ️ Skipping duplicate insert - payment was already recorded');
     } else {
       // Always create a new record (maintains audit trail for multiple payments)
-      // Note: After migration removes unique constraint and adds transaction_type column,
-      // this will work correctly. Until then, it may fail on unique constraint for "add more service"
       const businessPaymentTransactionData: any = {
-      booking_id: bookingId,
-        business_id: booking.business_id,
-        payment_date: paymentDate,
-        gross_payment_amount: totalAmount, // Total amount customer paid
-        platform_fee: platformFee, // 20% of service amount
-        net_payment_amount: netPaymentAmount, // Full service amount (what business receives)
-        tax_year: taxYear,
-      stripe_payment_intent_id: paymentIntent.id,
-        stripe_connect_account_id: businessProfile?.stripe_connect_account_id || null,
+      booking_id: bookingId, // uuid NOT NULL
+        business_id: booking.business_id, // uuid NOT NULL
+        payment_date: paymentDate, // date NOT NULL (YYYY-MM-DD format)
+        gross_payment_amount: totalAmount, // numeric(10, 2) NOT NULL - Total amount customer paid
+        platform_fee: platformFee, // numeric(10, 2) NOT NULL default 0 - 20% of service amount
+        net_payment_amount: netPaymentAmount, // numeric(10, 2) NOT NULL - Full service amount (what business receives)
+        tax_year: taxYear, // integer NOT NULL
+      stripe_payment_intent_id: paymentIntent.id, // text
+        stripe_connect_account_id: businessProfile?.stripe_connect_account_id || null, // text
         transaction_description: transactionType === 'additional_service' 
           ? 'Additional service payment' 
-          : 'Platform service payment',
-        booking_reference: booking.booking_reference || null,
-        transaction_type: transactionType, // Will be added after migration
+          : 'Platform service payment', // text default 'Platform service payment'
+        booking_reference: booking.booking_reference || null, // text
+        transaction_type: transactionType, // business_payment_transaction_type NOT NULL default 'initial_booking'
       };
 
       let businessPaymentTransaction: any = null;
@@ -1344,17 +1337,20 @@ async function handleTipPaymentIntent(paymentIntent: Stripe.PaymentIntent) {
       .eq('id', booking_id);
 
     // Record in financial_transactions
+    // Ensure currency is exactly 3 characters (schema: varchar(3))
+    const currency = (paymentIntent.currency.toUpperCase() || 'USD').substring(0, 3);
+    
     await supabase.from('financial_transactions').insert({
-      booking_id,
-      amount: parseFloat(tip_amount),
-      currency: paymentIntent.currency.toUpperCase(),
-      stripe_transaction_id: paymentIntent.id,
-      payment_method: 'card',
-      description: 'Tip payment received',
-      transaction_type: 'tip', // Fixed: use enum value 'tip' instead of 'tip_payment'
-      status: 'completed',
-      processed_at: new Date().toISOString(),
-      metadata: {
+      booking_id, // uuid NOT NULL
+      amount: parseFloat(tip_amount), // numeric(10, 2) NOT NULL
+      currency: currency, // varchar(3) default 'USD'
+      stripe_transaction_id: paymentIntent.id, // varchar(255)
+      payment_method: 'card', // varchar(50)
+      description: 'Tip payment received', // text
+      transaction_type: 'tip', // transaction_type enum
+      status: 'completed', // status enum
+      processed_at: new Date().toISOString(), // timestamp
+      metadata: { // jsonb default '{}'
         charge_id: paymentIntent.latest_charge,
         customer_id: paymentIntent.customer,
         provider_id,

@@ -350,12 +350,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Tax calculation for Payment Intents must be done manually on the backend
     });
 
-    // If bookingId provided, update booking with payment intent
+    // If bookingId provided, update booking with payment details
+    // Note: stripe_payment_intent_id is NOT stored on bookings table
+    // It will be stored in business_payment_transactions by the webhook
     if (bookingId) {
       await supabase
         .from('bookings')
         .update({
-          stripe_payment_intent_id: paymentIntent.id,
           total_amount: totalAmount / 100,
           service_fee: platformFee / 100,
           payment_status: 'pending'
