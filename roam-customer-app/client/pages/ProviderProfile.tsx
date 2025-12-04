@@ -1,7 +1,8 @@
 import { useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, User, Calendar, Star, MapPin, Share2, Clock, MessageSquare, Search } from "lucide-react";
+import { ArrowLeft, User, Calendar, Star, MapPin, Share2, Clock, MessageSquare, Search, Home, Video } from "lucide-react";
+import { getDeliveryTypeLabel, getDeliveryTypeIcon } from "@/utils/deliveryTypeHelpers";
 import { useState, useEffect, lazy, Suspense } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -37,6 +38,9 @@ interface Service {
   min_price: number;
   duration_minutes: number;
   image_url?: string;
+  business_price?: number;
+  business_duration_minutes?: number;
+  delivery_type?: string;
 }
 
 interface Review {
@@ -125,8 +129,43 @@ export default function ProviderProfile() {
           .eq('is_active', true);
 
         if (!providerServicesError && providerServicesData) {
+          // Get service IDs to fetch business_services data
+          const serviceIds = providerServicesData.map((ps: any) => ps.service_id).filter(Boolean);
+          
+          // Fetch business_services for pricing and delivery type
+          let businessServicesMap: Record<string, { business_price?: number; business_duration_minutes?: number; delivery_type?: string }> = {};
+          
+          if (serviceIds.length > 0 && providerData.business_id) {
+            const { data: businessServicesData } = await supabase
+              .from('business_services')
+              .select('service_id, business_price, business_duration_minutes, delivery_type')
+              .eq('business_id', providerData.business_id)
+              .in('service_id', serviceIds)
+              .eq('is_active', true);
+            
+            if (businessServicesData) {
+              businessServicesData.forEach((bs: any) => {
+                businessServicesMap[bs.service_id] = {
+                  business_price: bs.business_price,
+                  business_duration_minutes: bs.business_duration_minutes,
+                  delivery_type: bs.delivery_type,
+                };
+              });
+            }
+          }
+          
+          // Merge provider services with business services data
           const providerServices = providerServicesData
-            .map((ps: any) => ps.services)
+            .map((ps: any) => {
+              if (!ps.services) return null;
+              const businessData = businessServicesMap[ps.service_id] || {};
+              return {
+                ...ps.services,
+                business_price: businessData.business_price,
+                business_duration_minutes: businessData.business_duration_minutes,
+                delivery_type: businessData.delivery_type,
+              };
+            })
             .filter(Boolean);
           setServices(providerServices);
         }
@@ -223,9 +262,9 @@ export default function ProviderProfile() {
                 size="sm"
                 className="text-foreground hover:text-roam-blue"
               >
-                <Link to="/booknow">
+                <Link to={provider?.business?.id ? `/business/${provider.business.id}` : "/booknow"}>
                   <ArrowLeft className="w-4 h-4 mr-2" />
-                  Back to Home
+                  {provider?.business ? "Back to Business" : "Back to Home"}
                 </Link>
               </Button>
               <img
@@ -395,15 +434,45 @@ export default function ProviderProfile() {
                         <div className="flex items-start justify-between mb-3">
                           <h3 className="font-semibold text-xl flex-1">{service.name}</h3>
                           <Badge variant="secondary" className="text-sm ml-4 flex-shrink-0">
-                            ${service.min_price} Starting
+                            ${service.business_price || service.min_price}
                           </Badge>
                         </div>
                         
-                        {/* Duration Badge */}
-                        <div className="mb-4">
+                        {/* Duration and Delivery Type Badges */}
+                        <div className="mb-4 flex flex-wrap gap-2">
                           <Badge variant="outline" className="text-sm">
-                            {service.duration_minutes} Minutes
+                            <Clock className="w-3 h-3 mr-1" />
+                            {service.business_duration_minutes || service.duration_minutes} Minutes
                           </Badge>
+                          {service.delivery_type && (
+                            (() => {
+                              // Handle "both" or "both_locations" - show separate badges
+                              if (service.delivery_type === 'both' || service.delivery_type === 'both_locations') {
+                                const BusinessIcon = getDeliveryTypeIcon('business_location');
+                                const MobileIcon = getDeliveryTypeIcon('customer_location');
+                                return (
+                                  <>
+                                    <Badge variant="outline" className="text-sm bg-roam-blue/5 border-roam-blue/20 text-roam-blue">
+                                      <BusinessIcon className="w-3 h-3 mr-1" />
+                                      {getDeliveryTypeLabel('business_location')}
+                                    </Badge>
+                                    <Badge variant="outline" className="text-sm bg-roam-blue/5 border-roam-blue/20 text-roam-blue">
+                                      <MobileIcon className="w-3 h-3 mr-1" />
+                                      {getDeliveryTypeLabel('customer_location')}
+                                    </Badge>
+                                  </>
+                                );
+                              }
+                              // Single delivery type
+                              const DeliveryIcon = getDeliveryTypeIcon(service.delivery_type);
+                              return (
+                                <Badge variant="outline" className="text-sm bg-roam-blue/5 border-roam-blue/20 text-roam-blue">
+                                  <DeliveryIcon className="w-3 h-3 mr-1" />
+                                  {getDeliveryTypeLabel(service.delivery_type)}
+                                </Badge>
+                              );
+                            })()
+                          )}
                         </div>
                         
                         {/* Description */}

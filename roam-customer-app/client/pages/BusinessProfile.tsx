@@ -1,7 +1,9 @@
 import { useParams, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Calendar, Clock, Building, User, CreditCard, Tag, ExternalLink, Share2, Search } from "lucide-react";
+import { ArrowLeft, Calendar, Clock, Building, User, CreditCard, Tag, Share2, Search, Star, MessageSquare, MapPin, Home, Video } from "lucide-react";
+import { getDeliveryTypeLabel, getDeliveryTypeIcon } from "@/utils/deliveryTypeHelpers";
+import { format } from "date-fns";
 import { Link } from "react-router-dom";
 import { useState, useEffect, lazy, Suspense } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -43,6 +45,7 @@ interface Service {
   business_price?: number;
   business_duration_minutes?: number;
   image_url?: string;
+  delivery_type?: string;
 }
 
 interface Provider {
@@ -56,6 +59,20 @@ interface Provider {
   provider_role: 'owner' | 'provider' | 'dispatcher';
   rating?: number;
   review_count?: number;
+}
+
+interface Review {
+  id: string;
+  booking_id: string;
+  overall_rating: number;
+  service_rating?: number;
+  communication_rating?: number;
+  punctuality_rating?: number;
+  review_text?: string;
+  is_featured?: boolean;
+  created_at: string;
+  services?: { name: string };
+  customer_profiles?: { first_name: string; last_name: string };
 }
 
 // Helper function to format time from 24-hour to 12-hour format
@@ -87,6 +104,7 @@ export default function BusinessProfile() {
   const [business, setBusiness] = useState<Business | null>(null);
   const [services, setServices] = useState<Service[]>([]);
   const [staff, setStaff] = useState<Provider[]>([]);
+  const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   // Set active tab based on query parameter, default to 'services' if coming from search, otherwise 'overview'
   const [activeTab, setActiveTab] = useState(
@@ -123,6 +141,55 @@ export default function BusinessProfile() {
 
         if (businessError) throw businessError;
         
+        // Fetch actual reviews for this business (with customer and service info)
+        const { data: reviewsData, error: reviewsError } = await supabase
+          .from('reviews')
+          .select(`
+            id,
+            booking_id,
+            overall_rating,
+            service_rating,
+            communication_rating,
+            punctuality_rating,
+            review_text,
+            is_featured,
+            created_at,
+            bookings (
+              service_id,
+              customer_id,
+              services (
+                name
+              ),
+              customer_profiles (
+                first_name,
+                last_name
+              )
+            )
+          `)
+          .eq('business_id', businessId)
+          .eq('is_approved', true)
+          .order('is_featured', { ascending: false })
+          .order('created_at', { ascending: false });
+        
+        let calculatedRating = 0;
+        let reviewCount = 0;
+        
+        if (!reviewsError && reviewsData && reviewsData.length > 0) {
+          reviewCount = reviewsData.length;
+          const totalRating = reviewsData.reduce((sum, review) => sum + (review.overall_rating || 0), 0);
+          calculatedRating = totalRating / reviewCount;
+          
+          // Transform reviews to include service name and customer info
+          const transformedReviews = reviewsData.map((review: any) => ({
+            ...review,
+            services: review.bookings?.services,
+            customer_profiles: review.bookings?.customer_profiles,
+          }));
+          setReviews(transformedReviews);
+        } else {
+          setReviews([]);
+        }
+        
         setBusiness({
           id: businessData.id,
           business_name: businessData.business_name,
@@ -130,8 +197,8 @@ export default function BusinessProfile() {
           image_url: businessData.image_url,
           logo_url: businessData.logo_url,
           cover_image_url: businessData.cover_image_url,
-          rating: 4.5, // Mock data
-          review_count: 25, // Mock data
+          rating: calculatedRating,
+          review_count: reviewCount,
           business_hours: businessData.business_hours || undefined,
         });
 
@@ -142,6 +209,7 @@ export default function BusinessProfile() {
           .select(`
             business_price,
             business_duration_minutes,
+            delivery_type,
             services (
               id,
               name,
@@ -175,6 +243,7 @@ export default function BusinessProfile() {
             business_price: item.business_price,
             business_duration_minutes: item.business_duration_minutes,
             image_url: item.services.image_url,
+            delivery_type: item.delivery_type,
           }));
           console.log('✅ Transformed services:', transformedServices);
           setServices(transformedServices);
@@ -211,12 +280,43 @@ export default function BusinessProfile() {
 
         if (!staffError && staffData) {
           console.log('✅ Found staff members:', staffData.length);
-          // Add mock ratings for now
-          const staffWithRatings = staffData.map((provider) => ({
-            ...provider,
-            rating: 4.8,
-            review_count: Math.floor(Math.random() * 50) + 10,
-          }));
+          
+          // Fetch actual ratings for staff members from reviews
+          const staffIds = staffData.map(s => s.id);
+          const { data: staffReviewsData } = await supabase
+            .from('reviews')
+            .select('provider_id, overall_rating')
+            .in('provider_id', staffIds)
+            .eq('is_approved', true);
+          
+          // Calculate ratings per staff member
+          const staffRatings: Record<string, { total: number; count: number }> = {};
+          if (staffReviewsData) {
+            staffReviewsData.forEach(review => {
+              if (review.provider_id) {
+                if (!staffRatings[review.provider_id]) {
+                  staffRatings[review.provider_id] = { total: 0, count: 0 };
+                }
+                staffRatings[review.provider_id].total += review.overall_rating || 0;
+                staffRatings[review.provider_id].count += 1;
+              }
+            });
+          }
+
+          // Add actual ratings to staff members
+          const staffWithRatings = staffData.map((provider) => {
+            const ratingData = staffRatings[provider.id];
+            const rating = ratingData && ratingData.count > 0 
+              ? ratingData.total / ratingData.count 
+              : 0;
+            const reviewCount = ratingData?.count || 0;
+            
+            return {
+              ...provider,
+              rating: rating,
+              review_count: reviewCount,
+            };
+          });
           setStaff(staffWithRatings);
         } else if (!staffError && !staffData) {
           console.log('⚠️ No staff data returned (null)');
@@ -353,8 +453,14 @@ export default function BusinessProfile() {
                 <div className="flex items-center gap-4">
                   <div className="flex items-center">
                     <span className="text-yellow-500">★</span>
-                    <span className="ml-1">{business.rating}</span>
-                    <span className="text-gray-500 ml-1">({business.review_count} reviews)</span>
+                    {business.review_count > 0 ? (
+                      <>
+                        <span className="ml-1">{business.rating.toFixed(1)}</span>
+                        <span className="text-gray-500 ml-1">({business.review_count} {business.review_count === 1 ? 'review' : 'reviews'})</span>
+                      </>
+                    ) : (
+                      <span className="text-gray-500 ml-1">No reviews yet</span>
+                    )}
                   </div>
                   <Badge variant="outline" className="text-sm">
                     Verified Business
@@ -541,15 +647,45 @@ export default function BusinessProfile() {
                               <div className="flex items-start justify-between mb-3">
                                 <h3 className="font-semibold text-xl flex-1">{service.name}</h3>
                                 <Badge variant="secondary" className="text-sm ml-4 flex-shrink-0">
-                                  ${service.business_price || service.min_price} Starting
+                                  ${service.business_price || service.min_price}
                                 </Badge>
                               </div>
                               
-                              {/* Duration Badge */}
-                              <div className="mb-4">
+                              {/* Duration and Delivery Type Badges */}
+                              <div className="mb-4 flex flex-wrap gap-2">
                                 <Badge variant="outline" className="text-sm">
+                                  <Clock className="w-3 h-3 mr-1" />
                                   {service.business_duration_minutes || service.duration_minutes} Minutes
                                 </Badge>
+                                {service.delivery_type && (
+                                  (() => {
+                                    // Handle "both" or "both_locations" - show separate badges
+                                    if (service.delivery_type === 'both' || service.delivery_type === 'both_locations') {
+                                      const BusinessIcon = getDeliveryTypeIcon('business_location');
+                                      const MobileIcon = getDeliveryTypeIcon('customer_location');
+                                      return (
+                                        <>
+                                          <Badge variant="outline" className="text-sm bg-roam-blue/5 border-roam-blue/20 text-roam-blue">
+                                            <BusinessIcon className="w-3 h-3 mr-1" />
+                                            {getDeliveryTypeLabel('business_location')}
+                                          </Badge>
+                                          <Badge variant="outline" className="text-sm bg-roam-blue/5 border-roam-blue/20 text-roam-blue">
+                                            <MobileIcon className="w-3 h-3 mr-1" />
+                                            {getDeliveryTypeLabel('customer_location')}
+                                          </Badge>
+                                        </>
+                                      );
+                                    }
+                                    // Single delivery type
+                                    const DeliveryIcon = getDeliveryTypeIcon(service.delivery_type);
+                                    return (
+                                      <Badge variant="outline" className="text-sm bg-roam-blue/5 border-roam-blue/20 text-roam-blue">
+                                        <DeliveryIcon className="w-3 h-3 mr-1" />
+                                        {getDeliveryTypeLabel(service.delivery_type)}
+                                      </Badge>
+                                    );
+                                  })()
+                                )}
                               </div>
                               
                               {/* Description */}
@@ -648,14 +784,13 @@ export default function BusinessProfile() {
                                       </Badge>
                                     )}
                                   </div>
-                                  <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                                  <div onClick={(e) => e.stopPropagation()}>
                                     <FavoriteButton
                                       type="provider"
                                       itemId={provider.id}
                                       size="sm"
                                       variant="ghost"
                                     />
-                                    <ExternalLink className="w-5 h-5 text-gray-400 group-hover:text-roam-blue transition-colors flex-shrink-0" />
                                   </div>
                                 </div>
                                 {provider.bio && (
@@ -666,10 +801,16 @@ export default function BusinessProfile() {
                                 <div className="flex items-center gap-4">
                                   <div className="flex items-center">
                                     <span className="text-yellow-500">★</span>
-                                    <span className="ml-1 text-sm font-medium">{provider.rating}</span>
-                                    <span className="text-gray-500 ml-1 text-sm">
-                                      ({provider.review_count} reviews)
-                                    </span>
+                                    {provider.review_count && provider.review_count > 0 ? (
+                                      <>
+                                        <span className="ml-1 text-sm font-medium">{provider.rating?.toFixed(1)}</span>
+                                        <span className="text-gray-500 ml-1 text-sm">
+                                          ({provider.review_count} {provider.review_count === 1 ? 'review' : 'reviews'})
+                                        </span>
+                                      </>
+                                    ) : (
+                                      <span className="text-gray-500 ml-1 text-sm">No reviews yet</span>
+                                    )}
                                   </div>
                                 </div>
                               </div>
@@ -695,18 +836,137 @@ export default function BusinessProfile() {
               {activeTab === 'reviews' && (
                 <div>
                   <h2 className="text-2xl font-semibold mb-6">Customer Reviews</h2>
-                  <div className="text-center py-8">
-                    <div className="flex items-center justify-center mb-4">
-                      <span className="text-yellow-500 text-2xl">★</span>
-                      <span className="text-2xl font-semibold ml-2">{business.rating}</span>
+                  
+                  {/* Rating Summary */}
+                  {business.review_count > 0 && (
+                    <div className="bg-gray-50 rounded-lg p-6 mb-6">
+                      <div className="flex items-center justify-center gap-4">
+                        <div className="text-center">
+                          <div className="flex items-center justify-center mb-2">
+                            <span className="text-4xl font-bold text-gray-900">{business.rating.toFixed(1)}</span>
+                            <Star className="w-8 h-8 fill-roam-yellow text-roam-yellow ml-2" />
+                          </div>
+                          <p className="text-gray-600">
+                            Based on {business.review_count} {business.review_count === 1 ? 'review' : 'reviews'}
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                    <p className="text-gray-600 mb-4">
-                      Based on {business.review_count} reviews
-                    </p>
-                    <p className="text-gray-500">
-                      Reviews coming soon! Be the first to review this business.
-                    </p>
-                  </div>
+                  )}
+                  
+                  {/* Reviews List */}
+                  {reviews.length > 0 ? (
+                    <div className="space-y-6">
+                      {reviews.map((review) => {
+                        const customerName = review.customer_profiles
+                          ? `${review.customer_profiles.first_name} ${review.customer_profiles.last_name}`
+                          : 'Anonymous';
+                        const serviceName = review.services?.name || 'Service';
+                        
+                        // Render stars helper
+                        const renderStars = (rating: number) => {
+                          return (
+                            <div className="flex items-center gap-0.5">
+                              {[1, 2, 3, 4, 5].map((star) => (
+                                <Star
+                                  key={star}
+                                  className={`w-4 h-4 ${
+                                    star <= rating
+                                      ? 'fill-roam-yellow text-roam-yellow'
+                                      : 'text-gray-300'
+                                  }`}
+                                />
+                              ))}
+                            </div>
+                          );
+                        };
+
+                        return (
+                          <Card key={review.id} className="hover:shadow-md transition-shadow">
+                            <CardContent className="p-6">
+                              <div className="flex items-start justify-between mb-4">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-3 mb-2">
+                                    <div className="w-10 h-10 bg-roam-blue/10 rounded-full flex items-center justify-center">
+                                      <User className="w-5 h-5 text-roam-blue" />
+                                    </div>
+                                    <div className="flex-1">
+                                      <div className="flex items-center gap-2">
+                                        <h4 className="font-semibold text-lg">{customerName}</h4>
+                                        {review.is_featured && (
+                                          <Badge className="bg-roam-yellow text-roam-blue border-roam-yellow">
+                                            Featured
+                                          </Badge>
+                                        )}
+                                      </div>
+                                      <p className="text-sm text-gray-500">
+                                        {serviceName} • {format(new Date(review.created_at), 'MMMM d, yyyy')}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2 mb-3">
+                                    {renderStars(review.overall_rating)}
+                                    <span className="text-sm font-medium text-gray-700">
+                                      {review.overall_rating}/5
+                                    </span>
+                                  </div>
+                                  {review.review_text && (
+                                    <div className="mt-3">
+                                      <p className="text-gray-700 leading-relaxed italic">
+                                        "{review.review_text}"
+                                      </p>
+                                    </div>
+                                  )}
+                                  {/* Additional ratings if available */}
+                                  {(review.service_rating || review.communication_rating || review.punctuality_rating) && (
+                                    <div className="mt-4 pt-4 border-t border-gray-200 grid grid-cols-1 md:grid-cols-3 gap-4">
+                                      {review.service_rating && (
+                                        <div>
+                                          <p className="text-xs text-gray-500 mb-1">Service</p>
+                                          <div className="flex items-center gap-1">
+                                            {renderStars(review.service_rating)}
+                                            <span className="text-xs text-gray-600">{review.service_rating}/5</span>
+                                          </div>
+                                        </div>
+                                      )}
+                                      {review.communication_rating && (
+                                        <div>
+                                          <p className="text-xs text-gray-500 mb-1">Communication</p>
+                                          <div className="flex items-center gap-1">
+                                            {renderStars(review.communication_rating)}
+                                            <span className="text-xs text-gray-600">{review.communication_rating}/5</span>
+                                          </div>
+                                        </div>
+                                      )}
+                                      {review.punctuality_rating && (
+                                        <div>
+                                          <p className="text-xs text-gray-500 mb-1">Punctuality</p>
+                                          <div className="flex items-center gap-1">
+                                            {renderStars(review.punctuality_rating)}
+                                            <span className="text-xs text-gray-600">{review.punctuality_rating}/5</span>
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <MessageSquare className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                      <h3 className="text-lg font-semibold text-gray-600 mb-2">
+                        No Reviews Yet
+                      </h3>
+                      <p className="text-gray-500">
+                        This business doesn't have any reviews at the moment. Be the first to review!
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

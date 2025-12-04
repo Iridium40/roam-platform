@@ -1462,7 +1462,7 @@ export default function Index() {
                               <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-roam-blue transition-colors">
                                 {service.title}
                               </h3>
-                              <span className="inline-block px-3 py-1 text-xs font-medium bg-roam-blue/10 text-roam-blue rounded-full">
+                              <span className="inline-block px-3 py-1 text-xs font-medium bg-roam-blue/10 text-roam-blue rounded-full capitalize">
                                 {service.category}
                               </span>
                             </div>
@@ -1595,8 +1595,8 @@ export default function Index() {
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent"></div>
                               )}
 
-                              {/* Favorite and Share Icons - Bottom Right (where rating badge was) */}
-                              <div className="absolute -bottom-4 right-6 flex items-center gap-2 z-20">
+                              {/* Favorite Icon - Top Right */}
+                              <div className="absolute top-4 right-4 z-20">
                                 <FavoriteButton
                                   type="business"
                                   itemId={business.id}
@@ -1604,6 +1604,10 @@ export default function Index() {
                                   variant="ghost"
                                   className="w-10 h-10 rounded-full bg-white/95 hover:bg-white shadow-lg border-0 text-gray-600 hover:text-red-500 hover:scale-110 transition-all backdrop-blur-sm"
                                 />
+                              </div>
+
+                              {/* Share Icon - Bottom Right */}
+                              <div className="absolute -bottom-4 right-6 z-20">
                                 <Button
                                   size="sm"
                                   variant="ghost"

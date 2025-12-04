@@ -372,6 +372,21 @@ export default function BookService() {
             .single();
 
           if (!businessError && businessData) {
+            // Fetch actual rating for this business
+            const { data: businessReviews } = await supabase
+              .from('reviews')
+              .select('overall_rating')
+              .eq('business_id', businessData.id)
+              .eq('is_approved', true);
+            
+            let businessRating = 0;
+            let businessReviewCount = 0;
+            if (businessReviews && businessReviews.length > 0) {
+              businessReviewCount = businessReviews.length;
+              const totalRating = businessReviews.reduce((sum, r) => sum + (r.overall_rating || 0), 0);
+              businessRating = totalRating / businessReviewCount;
+            }
+
             const business = {
               id: businessData.id,
               business_name: businessData.business_name,
@@ -379,8 +394,8 @@ export default function BookService() {
               image_url: businessData.image_url,
               logo_url: businessData.logo_url,
               business_type: businessData.business_type,
-              rating: 4.5, // Mock data
-              review_count: 25, // Mock data
+              rating: businessRating,
+              review_count: businessReviewCount,
             };
             setSelectedBusiness(business);
             setBusinesses([business]); // Only show this business
@@ -516,6 +531,7 @@ export default function BookService() {
           business_id,
           business_price,
           business_duration_minutes,
+          delivery_type,
           is_active,
           business_profiles (
             id,
@@ -576,10 +592,37 @@ export default function BookService() {
           if (fallbackError) throw fallbackError;
 
           if (fallbackBusinesses && fallbackBusinesses.length > 0) {
-            // Transform fallback data
+            // Fetch ratings for fallback businesses
+            const fallbackBusinessIds = fallbackBusinesses.map(b => b.id);
+            const { data: fallbackReviewsData } = await supabase
+              .from('reviews')
+              .select('business_id, overall_rating')
+              .in('business_id', fallbackBusinessIds)
+              .eq('is_approved', true);
+            
+            const fallbackBusinessRatings: Record<string, { total: number; count: number }> = {};
+            if (fallbackReviewsData) {
+              fallbackReviewsData.forEach(review => {
+                if (review.business_id) {
+                  if (!fallbackBusinessRatings[review.business_id]) {
+                    fallbackBusinessRatings[review.business_id] = { total: 0, count: 0 };
+                  }
+                  fallbackBusinessRatings[review.business_id].total += review.overall_rating || 0;
+                  fallbackBusinessRatings[review.business_id].count += 1;
+                }
+              });
+            }
+
+            // Transform fallback data with actual ratings
             const transformedFallback = fallbackBusinesses.map(business => {
               const locations = business.business_locations || [];
               const primaryLocation = locations.find(loc => loc.is_primary) || locations[0];
+              
+              const ratingData = fallbackBusinessRatings[business.id];
+              const rating = ratingData && ratingData.count > 0 
+                ? ratingData.total / ratingData.count 
+                : 0;
+              const reviewCount = ratingData?.count || 0;
               
               return {
                 id: business.id,
@@ -590,8 +633,8 @@ export default function BookService() {
                 business_type: business.business_type,
                 service_price: service?.min_price || 100, // Use service default price
                 business_hours: business.business_hours,
-                rating: 4.5,
-                review_count: 25,
+                rating: rating,
+                review_count: reviewCount,
                 city: primaryLocation?.city,
                 state: primaryLocation?.state,
                 postal_code: primaryLocation?.postal_code,
@@ -624,11 +667,51 @@ export default function BookService() {
         return true;
       });
 
-      // Transform data to match Business interface
+      // Fetch ratings for each business from reviews table
+      const businessIds = availableBusinesses.map(item => item.business_profiles.id);
+      
+      const { data: businessReviewsData } = await supabase
+        .from('reviews')
+        .select('business_id, overall_rating')
+        .in('business_id', businessIds)
+        .eq('is_approved', true);
+      
+      // Calculate ratings per business
+      const businessRatings: Record<string, { total: number; count: number }> = {};
+      if (businessReviewsData) {
+        businessReviewsData.forEach(review => {
+          if (review.business_id) {
+            if (!businessRatings[review.business_id]) {
+              businessRatings[review.business_id] = { total: 0, count: 0 };
+            }
+            businessRatings[review.business_id].total += review.overall_rating || 0;
+            businessRatings[review.business_id].count += 1;
+          }
+        });
+      }
+
+      // Transform data to match Business interface with actual ratings
       const transformedBusinesses = availableBusinesses.map(item => {
         // Get primary location data
         const locations = item.business_profiles.business_locations || [];
         const primaryLocation = locations.find(loc => loc.is_primary) || locations[0];
+        
+        // Get actual rating data
+        const ratingData = businessRatings[item.business_profiles.id];
+        const rating = ratingData && ratingData.count > 0 
+          ? ratingData.total / ratingData.count 
+          : 0;
+        const reviewCount = ratingData?.count || 0;
+        
+        // Map delivery_type to delivery_types array
+        let deliveryTypes: string[] = [];
+        if (item.delivery_type) {
+          if (item.delivery_type === 'both' || item.delivery_type === 'both_locations') {
+            deliveryTypes = ['business_location', 'customer_location'];
+          } else {
+            deliveryTypes = [item.delivery_type];
+          }
+        }
         
         return {
           id: item.business_profiles.id,
@@ -640,8 +723,9 @@ export default function BookService() {
           service_price: item.business_price || service?.min_price || 0,
           service_duration_minutes: item.business_duration_minutes || service?.duration_minutes || 60,
           business_hours: item.business_profiles.business_hours,
-          rating: 4.5, // Mock data - would come from reviews table
-          review_count: 25, // Mock data
+          rating: rating,
+          review_count: reviewCount,
+          delivery_types: deliveryTypes,
           // Location data from primary business location
           city: primaryLocation?.city,
           state: primaryLocation?.state,
@@ -719,9 +803,36 @@ export default function BookService() {
             .limit(5);
 
           if (!simpleError && simpleBusinesses) {
+            // Fetch ratings for simplified businesses
+            const simpleBusinessIds = simpleBusinesses.map(b => b.id);
+            const { data: simpleReviewsData } = await supabase
+              .from('reviews')
+              .select('business_id, overall_rating')
+              .in('business_id', simpleBusinessIds)
+              .eq('is_approved', true);
+            
+            const simpleBusinessRatings: Record<string, { total: number; count: number }> = {};
+            if (simpleReviewsData) {
+              simpleReviewsData.forEach(review => {
+                if (review.business_id) {
+                  if (!simpleBusinessRatings[review.business_id]) {
+                    simpleBusinessRatings[review.business_id] = { total: 0, count: 0 };
+                  }
+                  simpleBusinessRatings[review.business_id].total += review.overall_rating || 0;
+                  simpleBusinessRatings[review.business_id].count += 1;
+                }
+              });
+            }
+
             const transformedSimple = simpleBusinesses.map(business => {
               const locations = business.business_locations || [];
               const primaryLocation = locations.find(loc => loc.is_primary) || locations[0];
+              
+              const ratingData = simpleBusinessRatings[business.id];
+              const rating = ratingData && ratingData.count > 0 
+                ? ratingData.total / ratingData.count 
+                : 0;
+              const reviewCount = ratingData?.count || 0;
               
               return {
                 id: business.id,
@@ -731,8 +842,8 @@ export default function BookService() {
                 logo_url: business.logo_url,
                 business_type: business.business_type,
                 service_price: service?.min_price || 100,
-                rating: 4.5,
-                review_count: 25,
+                rating: rating,
+                review_count: reviewCount,
                 city: primaryLocation?.city,
                 state: primaryLocation?.state,
                 postal_code: primaryLocation?.postal_code,
@@ -796,17 +907,49 @@ export default function BookService() {
         console.log('No business type available, showing all providers');
       }
 
-      // Transform data to match Provider interface
-      const providerData = filteredProviders.map(provider => ({
-        id: provider.id,
-        user_id: provider.user_id,
-        first_name: provider.first_name,
-        last_name: provider.last_name,
-        image_url: provider.image_url,
-        provider_role: provider.provider_role,
-        rating: 4.8, // Mock data - would come from reviews table
-        review_count: 15, // Mock data
-      }));
+      // Fetch ratings for each provider from reviews table
+      const providerIds = filteredProviders.map(p => p.id);
+      
+      // Get all reviews for these providers
+      const { data: reviewsData } = await supabase
+        .from('reviews')
+        .select('provider_id, overall_rating')
+        .in('provider_id', providerIds)
+        .eq('is_approved', true);
+      
+      // Calculate ratings per provider
+      const providerRatings: Record<string, { total: number; count: number }> = {};
+      if (reviewsData) {
+        reviewsData.forEach(review => {
+          if (review.provider_id) {
+            if (!providerRatings[review.provider_id]) {
+              providerRatings[review.provider_id] = { total: 0, count: 0 };
+            }
+            providerRatings[review.provider_id].total += review.overall_rating || 0;
+            providerRatings[review.provider_id].count += 1;
+          }
+        });
+      }
+
+      // Transform data to match Provider interface with actual ratings
+      const providerData = filteredProviders.map(provider => {
+        const ratingData = providerRatings[provider.id];
+        const rating = ratingData && ratingData.count > 0 
+          ? ratingData.total / ratingData.count 
+          : 0;
+        const reviewCount = ratingData?.count || 0;
+        
+        return {
+          id: provider.id,
+          user_id: provider.user_id,
+          first_name: provider.first_name,
+          last_name: provider.last_name,
+          image_url: provider.image_url,
+          provider_role: provider.provider_role,
+          rating: rating,
+          review_count: reviewCount,
+        };
+      });
 
       setProviders(providerData);
 
@@ -1853,8 +1996,14 @@ export default function BookService() {
                                 <div className="flex items-center space-x-4 text-sm text-gray-600">
                                   <div className="flex items-center">
                                     <Star className="w-4 h-4 text-yellow-500 mr-1" />
-                                    <span className="font-medium">{business.rating || '4.5'}</span>
-                                    <span className="ml-1">({business.review_count || 0} reviews)</span>
+                                    {business.review_count > 0 ? (
+                                      <>
+                                        <span className="font-medium">{business.rating.toFixed(1)}</span>
+                                        <span className="ml-1">({business.review_count} {business.review_count === 1 ? 'review' : 'reviews'})</span>
+                                      </>
+                                    ) : (
+                                      <span className="text-gray-500">No reviews yet</span>
+                                    )}
                                   </div>
                                   {business.city && business.state && (
                                     <div className="flex items-center">
@@ -1923,21 +2072,6 @@ export default function BookService() {
                               </div>
                             </div>
 
-                            {/* Business Highlights */}
-                            <div className="flex flex-wrap gap-2">
-                              <Badge variant="secondary" className="text-xs">
-                                <Clock className="w-3 h-3 mr-1" />
-                                Same-day booking
-                              </Badge>
-                              <Badge variant="secondary" className="text-xs">
-                                <Building className="w-3 h-3 mr-1" />
-                                Licensed & Insured
-                              </Badge>
-                              <Badge variant="secondary" className="text-xs">
-                                <Star className="w-3 h-3 mr-1" />
-                                Top-rated
-                              </Badge>
-                            </div>
                           </div>
                         </div>
 
@@ -2279,8 +2413,14 @@ export default function BookService() {
                             )}
                             <div className="flex items-center mt-2">
                               <span className="text-yellow-500">★</span>
-                              <span className="text-sm ml-1">{provider.rating}</span>
-                              <span className="text-sm text-gray-500 ml-1">({provider.review_count} reviews)</span>
+                              {provider.review_count > 0 ? (
+                                <>
+                                  <span className="text-sm ml-1">{provider.rating.toFixed(1)}</span>
+                                  <span className="text-sm text-gray-500 ml-1">({provider.review_count} {provider.review_count === 1 ? 'review' : 'reviews'})</span>
+                                </>
+                              ) : (
+                                <span className="text-sm text-gray-500 ml-1">No reviews yet</span>
+                              )}
                             </div>
                           </div>
                         </div>
