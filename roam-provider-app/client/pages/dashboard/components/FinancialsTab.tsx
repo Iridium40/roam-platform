@@ -95,6 +95,24 @@ export default function FinancialsTab({
   const [tipsData, setTipsData] = useState<any[]>([]);
   const [tipsLoading, setTipsLoading] = useState(false);
 
+  // Filter state for transactions and tips
+  const [transactionFilters, setTransactionFilters] = useState({
+    startDate: '',
+    endDate: '',
+    providerId: 'all',
+    serviceId: 'all',
+  });
+  const [tipFilters, setTipFilters] = useState({
+    startDate: '',
+    endDate: '',
+    providerId: 'all',
+  });
+
+  // Providers and services for filters
+  const [providers, setProviders] = useState<any[]>([]);
+  const [services, setServices] = useState<any[]>([]);
+  const [loadingFilters, setLoadingFilters] = useState(false);
+
   const businessId = business?.id || providerData?.business_id;
   const isOwner = providerData?.provider_role === 'owner';
 
@@ -176,7 +194,17 @@ export default function FinancialsTab({
         .from('financial_transactions')
         .select(`
           *,
-          bookings!inner(business_id)
+          bookings!inner(
+            business_id,
+            booking_reference,
+            customer_profiles (
+              first_name,
+              last_name
+            ),
+            services (
+              name
+            )
+          )
         `)
         .eq('bookings.business_id', businessId)
         .order('processed_at', { ascending: false })
@@ -284,6 +312,46 @@ export default function FinancialsTab({
     }
   };
 
+  // Load providers and services for filters
+  const loadFilterData = async () => {
+    if (!businessId) return;
+
+    try {
+      setLoadingFilters(true);
+
+      // Load providers
+      const { data: providersData, error: providersError } = await supabase
+        .from('providers')
+        .select('id, first_name, last_name')
+        .eq('business_id', businessId)
+        .eq('is_active', true)
+        .order('first_name');
+
+      if (providersError) {
+        console.error('Error loading providers:', providersError);
+      } else {
+        setProviders(providersData || []);
+      }
+
+      // Load services
+      const { data: servicesData, error: servicesError } = await supabase
+        .from('services')
+        .select('id, name')
+        .eq('business_id', businessId)
+        .order('name');
+
+      if (servicesError) {
+        console.error('Error loading services:', servicesError);
+      } else {
+        setServices(servicesData || []);
+      }
+    } catch (error) {
+      console.error('Error loading filter data:', error);
+    } finally {
+      setLoadingFilters(false);
+    }
+  };
+
   // Open Stripe Dashboard
   const openStripeDashboard = async () => {
     try {
@@ -351,6 +419,7 @@ export default function FinancialsTab({
     loadStripePayouts();
     loadStripeTransactions();
     loadSupabaseFinancialData(); // Load Supabase financial data
+    loadFilterData(); // Load providers and services for filters
     if (isOwner) {
       loadTipsData(); // Load tips data for owners only
     }
@@ -890,113 +959,244 @@ export default function FinancialsTab({
               <CardDescription>All charges, fees, and balance changes from your bookings</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {financialSummary?.recent_transactions && financialSummary.recent_transactions.length > 0 ? (
-                  financialSummary.recent_transactions.map((transaction: any) => (
-                    <div key={transaction.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                      <div className="flex items-center space-x-3">
-                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                          transaction.transaction_type === 'initial_booking' ? 'bg-green-100' :
-                          transaction.transaction_type === 'additional_service' ? 'bg-blue-100' :
-                          'bg-gray-100'
-                        }`}>
-                          {transaction.transaction_type === 'initial_booking' || transaction.transaction_type === 'additional_service' ? (
-                            <ArrowDownRight className="w-5 h-5 text-green-600" />
-                          ) : (
-                            <Receipt className="w-5 h-5 text-gray-600" />
-                          )}
-                        </div>
-                        <div>
-                          <p className="font-medium text-sm">
-                            {transaction.transaction_description || 
-                             (transaction.transaction_type === 'initial_booking' ? 'Initial Booking Payment' :
-                              transaction.transaction_type === 'additional_service' ? 'Additional Service' :
-                              'Payment')}
-                          </p>
-                          {transaction.service_name && (
-                            <p className="text-xs text-gray-600">{transaction.service_name}</p>
-                          )}
-                          {transaction.booking_reference && (
-                            <p className="text-xs text-gray-600">Booking: {transaction.booking_reference}</p>
-                          )}
-                          {transaction.customer_first_name && transaction.customer_last_name && (
-                            <p className="text-xs text-gray-500">
-                              Customer: {transaction.customer_first_name} {transaction.customer_last_name}
-                            </p>
-                          )}
-                          <p className="text-xs text-gray-500">
-                            {new Date(transaction.payment_date).toLocaleDateString()}
-                          </p>
-                        </div>
+              {/* Filters */}
+              <div className="mb-6 p-4 bg-gray-50 rounded-lg border">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+                  {/* Date Range */}
+                  <div className="md:col-span-5 space-y-2">
+                    <label className="text-xs font-medium text-gray-700">Date Range</label>
+                    <div className="flex gap-2">
+                      <div className="relative flex-1 min-w-0">
+                        <Input
+                          type="date"
+                          value={transactionFilters.startDate}
+                          onChange={(e) => setTransactionFilters(prev => ({ ...prev, startDate: e.target.value }))}
+                          className="text-xs pr-10"
+                          placeholder="From"
+                        />
+                        <Calendar className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
                       </div>
-                      <div className="text-right">
-                        <p className="font-semibold text-green-600">
-                          +${parseFloat(transaction.net_payment_amount || 0).toFixed(2)}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          Gross: ${parseFloat(transaction.gross_payment_amount || 0).toFixed(2)}
-                        </p>
-                        <p className="text-xs text-gray-400">
-                          Fee: ${parseFloat(transaction.platform_fee || 0).toFixed(2)}
-                        </p>
-                        {transaction.transaction_type && (
-                          <Badge variant="outline" className="text-xs mt-1">
-                            {transaction.transaction_type === 'initial_booking' ? 'Initial' : 'Additional'}
-                          </Badge>
-                        )}
+                      <div className="relative flex-1 min-w-0">
+                        <Input
+                          type="date"
+                          value={transactionFilters.endDate}
+                          onChange={(e) => setTransactionFilters(prev => ({ ...prev, endDate: e.target.value }))}
+                          className="text-xs pr-10"
+                          placeholder="To"
+                        />
+                        <Calendar className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
                       </div>
                     </div>
-                  ))
-                ) : financialTransactions.length > 0 ? (
-                  financialTransactions.map((transaction) => (
-                    <div key={transaction.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                      <div className="flex items-center space-x-3">
-                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                          transaction.transaction_type === 'service_payment' ? 'bg-green-100' :
-                          transaction.transaction_type === 'tip_payment' ? 'bg-blue-100' :
-                          transaction.transaction_type === 'refund' ? 'bg-red-100' :
-                          'bg-gray-100'
-                        }`}>
-                          {transaction.transaction_type === 'service_payment' ? (
-                            <ArrowDownRight className="w-5 h-5 text-green-600" />
-                          ) : transaction.transaction_type === 'tip_payment' ? (
-                            <DollarSign className="w-5 h-5 text-blue-600" />
-                          ) : (
-                            <Receipt className="w-5 h-5 text-gray-600" />
-                          )}
-                        </div>
-                        <div>
-                          <p className="font-medium text-sm">
-                            {transaction.description || transaction.transaction_type?.replace('_', ' ')}
-                          </p>
-                          <p className="text-xs text-gray-600">
-                            {transaction.booking_id && `Booking ID: ${transaction.booking_id}`}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {new Date(transaction.processed_at).toLocaleDateString()}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className={`font-semibold ${transaction.amount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {transaction.amount >= 0 ? '+' : ''}${Math.abs(transaction.amount).toFixed(2)}
-                        </p>
-                        <p className="text-xs text-gray-500">{transaction.currency}</p>
-                        <p className="text-xs text-gray-400">
-                          {transaction.status === 'completed' ? '✓ Completed' : 
-                           transaction.status === 'pending' ? '⏳ Pending' : 
-                           transaction.status}
-                        </p>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-8">
-                    <Receipt className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                    <p className="text-sm text-gray-500">No transactions yet</p>
-                    <p className="text-xs text-gray-400 mt-1">Complete your first booking to see transactions here</p>
                   </div>
-                )}
+
+                  {/* Provider Filter */}
+                  <div className="md:col-span-3 space-y-2">
+                    <label className="text-xs font-medium text-gray-700">Provider</label>
+                    <Select
+                      value={transactionFilters.providerId}
+                      onValueChange={(value) => setTransactionFilters(prev => ({ ...prev, providerId: value }))}
+                    >
+                      <SelectTrigger className="text-xs">
+                        <SelectValue placeholder="All Providers" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Providers</SelectItem>
+                        {providers.map((provider) => (
+                          <SelectItem key={provider.id} value={provider.id}>
+                            {provider.first_name} {provider.last_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Service Filter */}
+                  <div className="md:col-span-2 space-y-2">
+                    <label className="text-xs font-medium text-gray-700">Service Type</label>
+                    <Select
+                      value={transactionFilters.serviceId}
+                      onValueChange={(value) => setTransactionFilters(prev => ({ ...prev, serviceId: value }))}
+                    >
+                      <SelectTrigger className="text-xs">
+                        <SelectValue placeholder="All Services" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Services</SelectItem>
+                        {services.map((service) => (
+                          <SelectItem key={service.id} value={service.id}>
+                            {service.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Clear Filters */}
+                  <div className="md:col-span-2 space-y-2">
+                    <label className="text-xs font-medium text-gray-700 opacity-0">Clear</label>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setTransactionFilters({
+                        startDate: '',
+                        endDate: '',
+                        providerId: 'all',
+                        serviceId: 'all',
+                      })}
+                      className="text-xs w-full"
+                    >
+                      Clear
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {(() => {
+                  // Determine which data source to use
+                  const transactionsToFilter = financialSummary?.recent_transactions && financialSummary.recent_transactions.length > 0
+                    ? financialSummary.recent_transactions
+                    : financialTransactions;
+
+                  // Apply filters
+                  let filtered = transactionsToFilter.filter((transaction: any) => {
+                    // Filter by date range
+                    if (transactionFilters.startDate) {
+                      const transactionDate = new Date(transaction.payment_date || transaction.processed_at || transaction.created_at);
+                      if (transactionDate < new Date(transactionFilters.startDate)) return false;
+                    }
+                    if (transactionFilters.endDate) {
+                      const transactionDate = new Date(transaction.payment_date || transaction.processed_at || transaction.created_at);
+                      const endDate = new Date(transactionFilters.endDate);
+                      endDate.setHours(23, 59, 59, 999);
+                      if (transactionDate > endDate) return false;
+                    }
+
+                    // Filter by provider (for financialTransactions with bookings join)
+                    if (transactionFilters.providerId !== 'all') {
+                      const booking = Array.isArray(transaction.bookings) ? transaction.bookings[0] : transaction.bookings;
+                      if (booking?.provider_id !== transactionFilters.providerId) return false;
+                    }
+
+                    // Filter by service
+                    if (transactionFilters.serviceId !== 'all') {
+                      // For business_payment_transactions, check service_name or service_id
+                      if (transaction.service_name) {
+                        const service = services.find(s => s.id === transactionFilters.serviceId);
+                        if (service && transaction.service_name !== service.name) return false;
+                      } else {
+                        const booking = Array.isArray(transaction.bookings) ? transaction.bookings[0] : transaction.bookings;
+                        if (booking?.service_id !== transactionFilters.serviceId) return false;
+                      }
+                    }
+
+                    return true;
+                  });
+
+                  if (filtered.length === 0) {
+                    return (
+                      <div className="text-center py-8">
+                        <Receipt className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                        <p className="text-sm text-gray-500">No transactions match your filters</p>
+                        <p className="text-xs text-gray-400 mt-1">Try adjusting your filter criteria</p>
+                      </div>
+                    );
+                  }
+
+                  return filtered.map((transaction: any) => {
+                    // Handle different data structures
+                    const isBusinessPaymentTransaction = !!transaction.transaction_description;
+                    const booking = Array.isArray(transaction.bookings) 
+                      ? transaction.bookings[0] 
+                      : transaction.bookings;
+                    
+                    const customerFirstName = isBusinessPaymentTransaction 
+                      ? transaction.customer_first_name 
+                      : booking?.customer_profiles?.first_name;
+                    const customerLastName = isBusinessPaymentTransaction 
+                      ? transaction.customer_last_name 
+                      : booking?.customer_profiles?.last_name;
+                    const serviceName = isBusinessPaymentTransaction 
+                      ? transaction.service_name 
+                      : booking?.services?.name;
+                    const bookingReference = transaction.booking_reference || booking?.booking_reference || transaction.metadata?.booking_reference;
+                    const transactionDate = transaction.payment_date || transaction.processed_at || transaction.created_at;
+                    const amount = isBusinessPaymentTransaction 
+                      ? parseFloat(transaction.net_payment_amount || 0)
+                      : transaction.amount;
+                    const currency = transaction.currency || 'USD';
+                    const status = transaction.status || transaction.payment_status;
+                    
+                    return (
+                      <div key={transaction.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2">
+                            <p className="font-medium text-sm">
+                              {customerFirstName && customerLastName
+                                ? `${customerFirstName} ${customerLastName}`
+                                : transaction.transaction_description || transaction.description || transaction.transaction_type?.replace('_', ' ')
+                              }
+                            </p>
+                            {serviceName && (
+                              <Badge variant="outline" className="text-xs">
+                                {serviceName}
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center space-x-4 mt-1 text-xs text-gray-500">
+                            {bookingReference && (
+                              <span>Booking: {bookingReference}</span>
+                            )}
+                            {transactionDate && (
+                              <span>
+                                {new Date(transactionDate).toLocaleDateString()}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-right ml-4">
+                          {isBusinessPaymentTransaction ? (
+                            <>
+                              <p className="font-semibold text-green-600">
+                                +${amount.toFixed(2)}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                Gross: ${parseFloat(transaction.gross_payment_amount || 0).toFixed(2)}
+                              </p>
+                              <p className="text-xs text-gray-400">
+                                Fee: ${parseFloat(transaction.platform_fee || 0).toFixed(2)}
+                              </p>
+                              {transaction.transaction_type && (
+                                <Badge variant="outline" className="text-xs mt-1">
+                                  {transaction.transaction_type === 'initial_booking' ? 'Initial' : 'Additional'}
+                                </Badge>
+                              )}
+                            </>
+                          ) : (
+                            <>
+                              <p className={`font-semibold ${amount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {amount >= 0 ? '+' : ''}${Math.abs(amount).toFixed(2)}
+                              </p>
+                              <p className="text-xs text-gray-500">{currency}</p>
+                              {status && (
+                                <Badge 
+                                  variant={
+                                    status === 'completed' ? 'default' :
+                                    status === 'pending' ? 'secondary' :
+                                    'destructive'
+                                  }
+                                  className="text-xs mt-1"
+                                >
+                                  {status}
+                                </Badge>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  });
+                })()}
               </div>
             </CardContent>
           </Card>
@@ -1023,70 +1223,126 @@ export default function FinancialsTab({
                     <p className="text-sm text-gray-500 mt-2">Loading tips data...</p>
                   </div>
                 ) : tipsData.length > 0 ? (
-                  <div className="space-y-6">
-                    {/* Summary Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <Card className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm text-gray-600">Total Tips</p>
-                            <p className="text-2xl font-bold text-gray-900 mt-1">
-                              ${tipsData.reduce((sum, tip) => sum + parseFloat(tip.tip_amount || 0), 0).toFixed(2)}
-                            </p>
-                            <p className="text-xs text-gray-500 mt-1">{tipsData.length} tips</p>
-                          </div>
-                          <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-                            <Star className="w-6 h-6 text-yellow-600" />
-                          </div>
-                        </div>
-                      </Card>
-                      <Card className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm text-gray-600">Provider Net</p>
-                            <p className="text-2xl font-bold text-gray-900 mt-1">
-                              ${tipsData.reduce((sum, tip) => sum + parseFloat(tip.provider_net_amount || 0), 0).toFixed(2)}
-                            </p>
-                            <p className="text-xs text-gray-500 mt-1">After platform fees</p>
-                          </div>
-                          <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                            <Wallet className="w-6 h-6 text-green-600" />
-                          </div>
-                        </div>
-                      </Card>
-                      <Card className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm text-gray-600">Platform Fees</p>
-                            <p className="text-2xl font-bold text-gray-900 mt-1">
-                              ${tipsData.reduce((sum, tip) => sum + parseFloat(tip.platform_fee_amount || 0), 0).toFixed(2)}
-                            </p>
-                            <p className="text-xs text-gray-500 mt-1">From tips</p>
-                          </div>
-                          <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                            <DollarSign className="w-6 h-6 text-blue-600" />
+                  <>
+                    {/* Tips Filters */}
+                    <div className="mb-6 p-4 bg-gray-50 rounded-lg border">
+                      <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+                        {/* Date Range */}
+                        <div className="md:col-span-5 space-y-2">
+                          <label className="text-xs font-medium text-gray-700">Date Range</label>
+                          <div className="flex gap-2">
+                            <div className="relative flex-1">
+                              <Input
+                                type="date"
+                                value={tipFilters.startDate}
+                                onChange={(e) => setTipFilters(prev => ({ ...prev, startDate: e.target.value }))}
+                                className="text-xs pr-10"
+                                placeholder="From"
+                              />
+                              <Calendar className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                            </div>
+                            <div className="relative flex-1">
+                              <Input
+                                type="date"
+                                value={tipFilters.endDate}
+                                onChange={(e) => setTipFilters(prev => ({ ...prev, endDate: e.target.value }))}
+                                className="text-xs pr-10"
+                                placeholder="To"
+                              />
+                              <Calendar className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                            </div>
                           </div>
                         </div>
-                      </Card>
+
+                        {/* Provider Filter */}
+                        <div className="md:col-span-4 space-y-2">
+                          <label className="text-xs font-medium text-gray-700">Provider</label>
+                          <Select
+                            value={tipFilters.providerId}
+                            onValueChange={(value) => setTipFilters(prev => ({ ...prev, providerId: value }))}
+                          >
+                            <SelectTrigger className="text-xs">
+                              <SelectValue placeholder="All Providers" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All Providers</SelectItem>
+                              {providers.map((provider) => (
+                                <SelectItem key={provider.id} value={provider.id}>
+                                  {provider.first_name} {provider.last_name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        {/* Clear Filters */}
+                        <div className="md:col-span-3 space-y-2">
+                          <label className="text-xs font-medium text-gray-700 opacity-0">Clear</label>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setTipFilters({
+                              startDate: '',
+                              endDate: '',
+                              providerId: 'all',
+                            })}
+                            className="text-xs w-full"
+                          >
+                            Clear
+                          </Button>
+                        </div>
+                      </div>
                     </div>
 
-                    {/* Tips by Provider */}
+                    {/* Filtered Tips */}
                     {(() => {
-                      const tipsByProvider = tipsData.reduce((acc: any, tip: any) => {
+                      // Apply filters to tips
+                      let filtered = tipsData.filter((tip: any) => {
+                        // Filter by date range
+                        if (tipFilters.startDate) {
+                          const tipDate = new Date(tip.tip_given_at || tip.created_at);
+                          if (tipDate < new Date(tipFilters.startDate)) return false;
+                        }
+                        if (tipFilters.endDate) {
+                          const tipDate = new Date(tip.tip_given_at || tip.created_at);
+                          const endDate = new Date(tipFilters.endDate);
+                          endDate.setHours(23, 59, 59, 999);
+                          if (tipDate > endDate) return false;
+                        }
+
+                        // Filter by provider
+                        if (tipFilters.providerId !== 'all') {
+                          if (tip.provider_id !== tipFilters.providerId) return false;
+                        }
+
+                        return true;
+                      });
+
+                      if (filtered.length === 0) {
+                        return (
+                          <div className="text-center py-8">
+                            <Star className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                            <p className="text-sm text-gray-500">No tips match your filters</p>
+                            <p className="text-xs text-gray-400 mt-1">Try adjusting your filter criteria</p>
+                          </div>
+                        );
+                      }
+
+                      // Group tips by provider
+                      const tipsByProvider = filtered.reduce((acc: any, tip: any) => {
                         const providerId = tip.provider_id;
-                        const providerName = `${tip.provider_first_name || ''} ${tip.provider_last_name || ''}`.trim() || 'Unknown Provider';
-                        
                         if (!acc[providerId]) {
                           acc[providerId] = {
                             providerId,
-                            providerName,
+                            providerName: tip.provider_first_name && tip.provider_last_name
+                              ? `${tip.provider_first_name} ${tip.provider_last_name}`
+                              : 'Unknown Provider',
                             tips: [],
                             totalAmount: 0,
                             totalNet: 0,
                             totalFees: 0,
                           };
                         }
-                        
                         acc[providerId].tips.push(tip);
                         acc[providerId].totalAmount += parseFloat(tip.tip_amount || 0);
                         acc[providerId].totalNet += parseFloat(tip.provider_net_amount || 0);
@@ -1176,7 +1432,7 @@ export default function FinancialsTab({
                         </div>
                       );
                     })()}
-                  </div>
+                  </>
                 ) : (
                   <div className="text-center py-8">
                     <Star className="w-12 h-12 text-gray-300 mx-auto mb-3" />

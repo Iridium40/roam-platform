@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, Plus, Edit, Trash2, Navigation } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import GooglePlacesAutocomplete from "@/components/GooglePlacesAutocomplete";
 
 interface BusinessLocation {
   id: string;
@@ -47,6 +48,8 @@ interface LocationFormData {
   country: string;
   offers_mobile_services: boolean;
   mobile_service_radius: number;
+  latitude?: number;
+  longitude?: number;
 }
 
 const DEFAULT_FORM_DATA: LocationFormData = {
@@ -81,6 +84,80 @@ export function LocationsSection({
     setEditingLocation(null);
   };
 
+  // Parse Google Places result and populate form fields (when place is selected)
+  // Memoized to prevent re-renders that cause focus loss
+  const handlePlaceSelect = useCallback((address: string, place?: google.maps.places.PlaceResult) => {
+    // If no place data, just update the address (user is typing)
+    if (!place || !place.address_components || place.address_components.length === 0) {
+      setFormData(prev => ({ ...prev, address_line1: address }));
+      return;
+    }
+
+    // Extract address components
+    const addressComponents = place.address_components || [];
+    let streetNumber = '';
+    let route = '';
+    let city = '';
+    let state = '';
+    let zipCode = '';
+    let unitNumber = '';
+
+    addressComponents.forEach((component) => {
+      const types = component.types;
+      
+      if (types.includes('street_number')) {
+        streetNumber = component.long_name;
+      } else if (types.includes('route')) {
+        route = component.long_name;
+      } else if (types.includes('locality') || types.includes('sublocality')) {
+        city = component.long_name;
+      } else if (types.includes('administrative_area_level_1')) {
+        state = component.short_name; // Use short name for state (e.g., "FL")
+      } else if (types.includes('postal_code')) {
+        zipCode = component.long_name;
+      } else if (types.includes('subpremise')) {
+        unitNumber = component.long_name; // Apartment/unit number
+      }
+    });
+
+    // Build street address
+    const streetAddress = [streetNumber, route].filter(Boolean).join(' ').trim();
+
+    // Get coordinates
+    const lat = place.geometry?.location?.lat() || null;
+    const lng = place.geometry?.location?.lng() || null;
+
+    // Update form data with parsed address components
+    setFormData(prev => {
+      const updated: LocationFormData = {
+        ...prev,
+        address_line1: streetAddress || address,
+        city: city || prev.city,
+        state: state || prev.state,
+        postal_code: zipCode || prev.postal_code,
+        latitude: lat || undefined,
+        longitude: lng || undefined,
+      };
+
+      // Only update address_line2 if we found a unit number from Google Places
+      if (unitNumber) {
+        updated.address_line2 = unitNumber;
+      }
+
+      // Auto-suggest location name if empty
+      if (!prev.location_name) {
+        const premise = addressComponents.find(c => 
+          c.types.includes('premise') || c.types.includes('subpremise')
+        );
+        if (premise) {
+          updated.location_name = premise.long_name;
+        }
+      }
+
+      return updated;
+    });
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
@@ -110,6 +187,8 @@ export function LocationsSection({
       country: location.country || "US",
       offers_mobile_services: location.offers_mobile_services || false,
       mobile_service_radius: location.mobile_service_radius || 10,
+      latitude: location.latitude,
+      longitude: location.longitude,
     });
     setEditingLocation(location.id);
     setShowAddForm(true);
@@ -210,12 +289,11 @@ export function LocationsSection({
 
                   <div className="col-span-2">
                     <Label htmlFor="address_line1">Street Address</Label>
-                    <Input
-                      id="address_line1"
+                    <GooglePlacesAutocomplete
                       value={formData.address_line1}
-                      onChange={(e) => setFormData(prev => ({ ...prev, address_line1: e.target.value }))}
+                      onChange={handlePlaceSelect}
                       placeholder="123 Main Street"
-                      required
+                      disabled={submitting}
                     />
                   </div>
 
