@@ -303,13 +303,9 @@ const GooglePlacesAutocomplete: React.FC<GooglePlacesAutocompleteProps> = ({
     const newValue = e.target.value;
     setInternalValue(newValue);
     
-    // Only call onChange if Google Places is not available or if user is manually typing
-    // When Google Places is active, we let it handle the input and only notify parent on place selection
-    if (!isGoogleMapsLoaded || billingError || !autocompleteRef.current) {
-      // Fallback: call onChange for manual entry when Google Places isn't available
-      onChange(newValue);
-    }
-    // Otherwise, let Google Places handle it and only notify parent when place is selected
+    // Always call onChange to allow manual typing
+    // Google Places will still provide autocomplete suggestions, but won't block manual input
+    onChange(newValue);
   };
 
   // Initialize internal value on mount

@@ -4,16 +4,18 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { 
   CreditCard, 
-  Download, 
   Calendar, 
   DollarSign, 
   Loader2,
   ArrowUpRight,
   ArrowDownRight,
   Receipt,
-  ArrowLeft
+  ArrowLeft,
+  Download,
+  X
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -31,8 +33,10 @@ interface Transaction {
   status: string | null;
   created_at: string;
   processed_at: string | null;
+  stripe_transaction_id?: string | null;
   bookings?: {
     booking_date: string;
+    booking_reference: string | null;
     services: {
       name: string;
     };
@@ -48,6 +52,8 @@ export default function CustomerTransactions() {
   const [loading, setLoading] = useState(true);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [filter, setFilter] = useState<'all' | 'payment' | 'refund' | 'tip'>('all');
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [receiptOpen, setReceiptOpen] = useState(false);
 
   useEffect(() => {
     if (customer) {
@@ -85,6 +91,7 @@ export default function CustomerTransactions() {
           *,
           bookings!inner (
             booking_date,
+            booking_reference,
             service_id,
             business_id,
             services!left (
@@ -113,6 +120,7 @@ export default function CustomerTransactions() {
           ...tx,
           bookings: booking ? {
             booking_date: booking.booking_date,
+            booking_reference: booking.booking_reference,
             services: booking.services ? {
               name: Array.isArray(booking.services) ? booking.services[0]?.name : booking.services.name
             } : null,
@@ -244,17 +252,11 @@ export default function CustomerTransactions() {
         </div>
 
         {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold mb-2">Transaction History</h1>
-            <p className="text-muted-foreground">
-              View and manage your payment transactions
-            </p>
-          </div>
-          <Button variant="outline">
-            <Download className="w-4 h-4 mr-2" />
-            Export
-          </Button>
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold mb-2">Transaction History</h1>
+          <p className="text-muted-foreground">
+            View and manage your payment transactions
+          </p>
         </div>
 
         {/* Summary Cards */}
@@ -360,6 +362,13 @@ export default function CustomerTransactions() {
                                 <span>
                                   {formatTransactionType(transaction.transaction_type)}
                                 </span>
+                                {(transaction.transaction_type?.toLowerCase() === 'payment' || 
+                                  transaction.transaction_type?.toLowerCase() === 'service_payment') &&
+                                  transaction.bookings?.booking_reference && (
+                                  <span className="font-mono text-roam-blue">
+                                    Ref: {transaction.bookings.booking_reference}
+                                  </span>
+                                )}
                               </div>
                               {transaction.description && (
                                 <p className="text-sm text-muted-foreground mt-2">
@@ -377,7 +386,15 @@ export default function CustomerTransactions() {
                               {transaction.transaction_type?.toLowerCase() === 'refund' ? '+' : '-'}
                               {formatCurrency(Number(transaction.amount), transaction.currency)}
                             </p>
-                            <Button variant="ghost" size="sm" className="mt-2">
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="mt-2"
+                              onClick={() => {
+                                setSelectedTransaction(transaction);
+                                setReceiptOpen(true);
+                              }}
+                            >
                               View Receipt
                             </Button>
                           </div>
@@ -391,6 +408,159 @@ export default function CustomerTransactions() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Receipt Modal */}
+      <Dialog open={receiptOpen} onOpenChange={setReceiptOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Receipt className="w-5 h-5" />
+              Transaction Receipt
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedTransaction && (
+            <div className="space-y-6">
+              {/* Receipt Header */}
+              <div className="border-b pb-4">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h2 className="text-2xl font-bold">ROAM</h2>
+                    <p className="text-sm text-muted-foreground">Transaction Receipt</p>
+                  </div>
+                  <Badge className={getStatusColor(selectedTransaction.status)}>
+                    {selectedTransaction.status || 'Unknown'}
+                  </Badge>
+                </div>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Transaction Date</p>
+                    <p className="font-medium">
+                      {format(new Date(selectedTransaction.created_at), 'MMM dd, yyyy h:mm a')}
+                    </p>
+                  </div>
+                  {selectedTransaction.processed_at && (
+                    <div>
+                      <p className="text-muted-foreground">Processed Date</p>
+                      <p className="font-medium">
+                        {format(new Date(selectedTransaction.processed_at), 'MMM dd, yyyy h:mm a')}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Transaction Details */}
+              <div className="space-y-4">
+                <div>
+                  <h3 className="font-semibold mb-3">Transaction Details</h3>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Transaction ID:</span>
+                      <span className="font-mono text-xs">{selectedTransaction.id.slice(0, 8)}...</span>
+                    </div>
+                    {selectedTransaction.bookings?.booking_reference && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Booking Reference:</span>
+                        <span className="font-mono">{selectedTransaction.bookings.booking_reference}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Transaction Type:</span>
+                      <span>{formatTransactionType(selectedTransaction.transaction_type)}</span>
+                    </div>
+                    {selectedTransaction.payment_method && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Payment Method:</span>
+                        <span>{selectedTransaction.payment_method}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Service Details */}
+                {selectedTransaction.bookings && (
+                  <div>
+                    <h3 className="font-semibold mb-3">Service Details</h3>
+                    <div className="space-y-2 text-sm">
+                      {selectedTransaction.bookings.services?.name && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Service:</span>
+                          <span>{selectedTransaction.bookings.services.name}</span>
+                        </div>
+                      )}
+                      {selectedTransaction.bookings.business_profiles?.business_name && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Business:</span>
+                          <span>{selectedTransaction.bookings.business_profiles.business_name}</span>
+                        </div>
+                      )}
+                      {selectedTransaction.bookings.booking_date && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Booking Date:</span>
+                          <span>{format(new Date(selectedTransaction.bookings.booking_date), 'MMM dd, yyyy')}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Description */}
+                {selectedTransaction.description && (
+                  <div>
+                    <h3 className="font-semibold mb-2">Description</h3>
+                    <p className="text-sm text-muted-foreground">{selectedTransaction.description}</p>
+                  </div>
+                )}
+
+                {/* Amount */}
+                <div className="border-t pt-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-lg font-semibold">
+                      {selectedTransaction.transaction_type?.toLowerCase() === 'refund' ? 'Refund Amount' : 'Total Amount'}
+                    </span>
+                    <span className={`text-2xl font-bold ${
+                      selectedTransaction.transaction_type?.toLowerCase() === 'refund' 
+                        ? 'text-green-600' 
+                        : 'text-gray-900'
+                    }`}>
+                      {selectedTransaction.transaction_type?.toLowerCase() === 'refund' ? '+' : '-'}
+                      {formatCurrency(Number(selectedTransaction.amount), selectedTransaction.currency)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-2 pt-4 border-t">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => {
+                    // Print receipt
+                    window.print();
+                  }}
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Print Receipt
+                </Button>
+                {selectedTransaction.stripe_transaction_id && (
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => {
+                      // Open Stripe receipt in new tab
+                      window.open(`https://dashboard.stripe.com/payments/${selectedTransaction.stripe_transaction_id}`, '_blank');
+                    }}
+                  >
+                    View on Stripe
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
