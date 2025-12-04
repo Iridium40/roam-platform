@@ -37,7 +37,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         supabase_url: process.env.VITE_PUBLIC_SUPABASE_URL ? 'configured' : 'missing',
         service_role_key: process.env.SUPABASE_SERVICE_ROLE_KEY ? 'configured' : 'missing',
         stripe_key: process.env.STRIPE_SECRET_KEY ? 'configured' : 'missing',
-        plaid_client_id: process.env.PLAID_CLIENT_ID ? 'configured' : 'missing',
       },
       api_endpoints: {
         business_services: '/api/business/services',

@@ -244,7 +244,6 @@ export default function Phase2Test() {
             onBack={handleBack}
             initialData={{
               stripeConnected: false,
-              plaidConnected: false,
             }}
           />
         );

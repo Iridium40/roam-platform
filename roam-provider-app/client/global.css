@@ -33,32 +33,6 @@
   .text-roam-warning { color: hsl(49 100% 65%) !important; }
 }
 
-/* Plaid Link Modal Fixes */
-[data-plaid-link-modal] {
-  z-index: 9999 !important;
-  pointer-events: auto !important;
-}
-
-[data-plaid-link-modal] input,
-[data-plaid-link-modal] button,
-[data-plaid-link-modal] select {
-  pointer-events: auto !important;
-  -webkit-user-select: text !important;
-  user-select: text !important;
-}
-
-[data-plaid-link-modal] input[type="text"],
-[data-plaid-link-modal] input[type="search"],
-[data-plaid-link-modal] input[type="email"],
-[data-plaid-link-modal] input[type="password"] {
-  -webkit-appearance: none !important;
-  appearance: none !important;
-  background-color: white !important;
-  border: 1px solid #ccc !important;
-  padding: 8px !important;
-  font-size: 16px !important; /* Prevents zoom on iOS */
-}
-
 @layer base {
   /**
    * Tailwind CSS theme

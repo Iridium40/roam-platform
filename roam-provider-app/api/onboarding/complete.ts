@@ -12,7 +12,6 @@ interface CompletionRequest {
   businessId: string;
   phase2Data?: {
     stripeAccountId?: string;
-    plaidAccountId?: string;
     identityVerified?: boolean;
     paymentSetupComplete?: boolean;
   };

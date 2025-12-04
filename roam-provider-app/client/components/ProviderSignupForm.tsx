@@ -421,8 +421,7 @@ export function ProviderSignupForm({
             <AlertDescription>
               <strong>Phase 1:</strong> This creates your account. After
               approval, you'll receive a secure link to complete identity
-              verification and financial setup (Stripe Identity, bank connection
-              via Plaid).
+              verification and financial setup via Stripe Connect.
             </AlertDescription>
           </Alert>
 

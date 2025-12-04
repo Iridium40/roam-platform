@@ -103,7 +103,7 @@ function getApplicationSubmittedEmailTemplate(firstName: string, applicationId: 
             <li><strong>Background Check & Document Verification</strong> (2-3 business days)</li>
             <li><strong>Admin Review</strong> (1-2 business days)</li>
             <li><strong>Email Notification</strong> with secure link for Phase 2 setup</li>
-            <li><strong>Identity Verification & Financial Setup</strong> (Stripe & Plaid)</li>
+            <li><strong>Identity Verification & Financial Setup</strong> (Stripe Connect)</li>
           </ul>
           
           <div class="info-box">

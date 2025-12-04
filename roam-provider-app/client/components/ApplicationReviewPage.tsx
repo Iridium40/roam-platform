@@ -525,7 +525,7 @@ export function ApplicationReviewPage({
                 <li>Admin review of your application (1-2 business days)</li>
                 <li>Email notification with secure link for Phase 2 setup</li>
                 <li>
-                  Identity verification and financial setup (Stripe & Plaid)
+                  Identity verification and financial setup (Stripe Connect)
                 </li>
               </ul>
             </AlertDescription>
