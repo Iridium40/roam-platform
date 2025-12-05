@@ -285,10 +285,24 @@ export async function processBookingAcceptance(
             ? booking.business_profiles[0] 
             : booking.business_profiles;
           const businessId = booking.business_id;
+          
+          // Get stripe_connect_account_id from stripe_connect_accounts table
+          // Try from nested relationship first, then query directly if needed
+          let stripeConnectAccountId: string | null = null;
           const stripeConnectAccount = Array.isArray(business?.stripe_connect_accounts)
             ? business?.stripe_connect_accounts[0]
             : business?.stripe_connect_accounts;
-          const stripeConnectAccountId = stripeConnectAccount?.account_id || null;
+          stripeConnectAccountId = stripeConnectAccount?.account_id || null;
+          
+          // Fallback: Query stripe_connect_accounts table directly if not found in relationship
+          if (!stripeConnectAccountId && businessId) {
+            const { data: directStripeAccount } = await supabase
+              .from('stripe_connect_accounts')
+              .select('account_id')
+              .eq('business_id', businessId)
+              .maybeSingle();
+            stripeConnectAccountId = directStripeAccount?.account_id || null;
+          }
           const currentYear = new Date().getFullYear();
           const paymentDate = new Date().toISOString().split('T')[0];
 
@@ -492,10 +506,24 @@ export async function processBookingAcceptance(
       ? booking.business_profiles[0] 
       : booking.business_profiles;
     const businessId = booking.business_id;
+    
+    // Get stripe_connect_account_id from stripe_connect_accounts table
+    // Try from nested relationship first, then query directly if needed
+    let stripeConnectAccountId: string | null = null;
     const stripeConnectAccount = Array.isArray(business?.stripe_connect_accounts)
       ? business?.stripe_connect_accounts[0]
       : business?.stripe_connect_accounts;
-    const stripeConnectAccountId = stripeConnectAccount?.account_id || null;
+    stripeConnectAccountId = stripeConnectAccount?.account_id || null;
+    
+    // Fallback: Query stripe_connect_accounts table directly if not found in relationship
+    if (!stripeConnectAccountId && businessId) {
+      const { data: directStripeAccount } = await supabase
+        .from('stripe_connect_accounts')
+        .select('account_id')
+        .eq('business_id', businessId)
+        .maybeSingle();
+      stripeConnectAccountId = directStripeAccount?.account_id || null;
+    }
     const currentYear = new Date().getFullYear();
     const paymentDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
 
@@ -941,10 +969,25 @@ export async function handleBookingCancellation(
         ? booking.business_profiles[0] 
         : booking.business_profiles;
       
-      const stripeConnectAccount = Array.isArray(business?.stripe_connect_accounts)
-        ? business?.stripe_connect_accounts[0]
-        : business?.stripe_connect_accounts;
-      const stripeConnectAccountId = businessPaymentTransaction.stripe_connect_account_id || stripeConnectAccount?.account_id;
+      // Get stripe_connect_account_id - prefer from transaction, then from relationship, then direct query
+      let stripeConnectAccountId: string | null = businessPaymentTransaction.stripe_connect_account_id || null;
+      
+      if (!stripeConnectAccountId) {
+        const stripeConnectAccount = Array.isArray(business?.stripe_connect_accounts)
+          ? business?.stripe_connect_accounts[0]
+          : business?.stripe_connect_accounts;
+        stripeConnectAccountId = stripeConnectAccount?.account_id || null;
+      }
+      
+      // Fallback: Query stripe_connect_accounts table directly if still not found
+      if (!stripeConnectAccountId && booking.business_id) {
+        const { data: directStripeAccount } = await supabase
+          .from('stripe_connect_accounts')
+          .select('account_id')
+          .eq('business_id', booking.business_id)
+          .maybeSingle();
+        stripeConnectAccountId = directStripeAccount?.account_id || null;
+      }
 
       if (stripeConnectAccountId) {
         try {
