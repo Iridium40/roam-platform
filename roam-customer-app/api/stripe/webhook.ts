@@ -220,19 +220,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
         break;
 
-      case 'payment_intent.requires_capture':
-        try {
-          const paymentIntent = event.data.object as Stripe.PaymentIntent;
-          console.log('💳 Payment intent requires capture:', paymentIntent.id);
-          // Handle payment intent that requires capture (authorized but not yet charged)
-          // This happens for manual capture payments
-          await handlePaymentIntentRequiresCapture(paymentIntent);
-          processed = true;
-        } catch (err: any) {
-          console.error('Error handling payment_intent.requires_capture:', err);
-          throw err;
-        }
-        break;
+      // Note: 'payment_intent.requires_capture' is NOT a valid Stripe event type
+      // The requires_capture status is handled via payment_intent.created and
+      // payment_intent.amount_capturable_updated events above
 
       case 'charge.updated':
       case 'charge.succeeded':
@@ -976,10 +966,11 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
       throw new Error(`Cannot process payment: No booking ID found for payment intent ${paymentIntent.id}`);
     }
 
-    // Check payment intent status
-    const status = paymentIntent.status;
-    const isAuthorized = status === 'requires_capture';
-    const isCharged = status === 'succeeded';
+    // This function is only called for payment_intent.succeeded events
+    // So we know the payment has been charged (status is 'succeeded')
+    // isAuthorized would only be true for 'requires_capture' status, which is handled
+    // by handlePaymentIntentRequiresCapture function, not this one
+    const isCharged = true; // Always true in handlePaymentIntentSucceeded
 
     // Get booking details for transaction recording and notifications
     const { data: booking, error: bookingError } = await supabase
@@ -1080,7 +1071,6 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
       console.log('📋 Updating booking in handlePaymentIntentSucceeded:', {
         bookingId,
         updateData,
-        isAuthorized,
         isCharged,
         paymentIntentId: paymentIntent.id,
       });
