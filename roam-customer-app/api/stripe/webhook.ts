@@ -100,6 +100,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'Event verification failed' });
   }
 
+  // Log the event type for debugging
+  console.log(`🔔 Webhook received: ${event.type} (ID: ${event.id})`);
+  if (event.data?.object && 'status' in event.data.object) {
+    console.log(`📋 Payment Intent Status: ${(event.data.object as any).status}`);
+  }
+  if (event.data?.object && 'metadata' in event.data.object) {
+    const metadata = (event.data.object as any).metadata;
+    if (metadata?.bookingId) {
+      console.log(`📋 Booking ID from metadata: ${metadata.bookingId}`);
+    }
+  }
+
   // Record webhook event in database for audit trail
   // Check if event already exists to handle duplicates gracefully
   try {
@@ -172,6 +184,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
         break;
 
+      case 'payment_intent.created':
+        try {
+          const paymentIntent = event.data.object as Stripe.PaymentIntent;
+          console.log('💳 Payment intent created:', paymentIntent.id, 'Status:', paymentIntent.status);
+          // If payment intent is created with requires_capture status, handle it
+          if (paymentIntent.status === 'requires_capture') {
+            console.log('🔐 Payment intent created with requires_capture status, processing...');
+            await handlePaymentIntentRequiresCapture(paymentIntent);
+          } else {
+            console.log(`⚠️ Payment intent created with status ${paymentIntent.status}, not processing yet`);
+          }
+          processed = true;
+        } catch (err: any) {
+          console.error('Error handling payment_intent.created:', err);
+          throw err;
+        }
+        break;
+
       case 'payment_intent.requires_capture':
         try {
           const paymentIntent = event.data.object as Stripe.PaymentIntent;
@@ -217,6 +247,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         break;
 
       default:
+        // Log unhandled events for debugging
+        console.log(`⚠️ Unhandled webhook event type: ${event.type}`);
         processed = true; // Acknowledge unhandled events to prevent retries
     }
 
