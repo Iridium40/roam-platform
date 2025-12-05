@@ -9,7 +9,21 @@ export const ROAM_EMAIL_CONFIG = {
   resendAudienceId: "4c85891b-bc03-4e67-a744-30b92e43206f"
 };
 
-export function getROAMEmailTemplate(content: string): string {
+export function getROAMEmailTemplate(content: string, baseUrl?: string): string {
+  // Construct absolute logo URL for email compatibility
+  // Emails require absolute URLs, not relative paths
+  let logoUrl = ROAM_EMAIL_CONFIG.logoUrl;
+  if (baseUrl) {
+    logoUrl = `${baseUrl}${ROAM_EMAIL_CONFIG.logoUrl}`;
+  } else {
+    // Fallback: try to construct from environment variables
+    const fallbackBaseUrl = 
+      process.env.VERCEL_URL 
+        ? `https://${process.env.VERCEL_URL}` 
+        : process.env.PROVIDER_APP_API_URL || 'https://provider.roamyourbestlife.com';
+    logoUrl = `${fallbackBaseUrl}${ROAM_EMAIL_CONFIG.logoUrl}`;
+  }
+
   return `
     <!DOCTYPE html>
     <html lang="en">
@@ -98,7 +112,7 @@ export function getROAMEmailTemplate(content: string): string {
       <div class="email-container">
         <div class="header">
           <div class="logo">
-            <img src="${ROAM_EMAIL_CONFIG.logoUrl}" alt="ROAM - Your Best Life. Everywhere." />
+            <img src="${logoUrl}" alt="ROAM - Your Best Life. Everywhere." />
           </div>
         </div>
         <div class="content">
@@ -119,7 +133,7 @@ export function getROAMEmailTemplate(content: string): string {
 
 // Pre-built email templates for common use cases
 export const ROAM_EMAIL_TEMPLATES = {
-  bookingConfirmed: (customerName: string, serviceName: string, providerName: string, bookingDate: string, bookingTime: string, location: string, totalAmount: string) => {
+  bookingConfirmed: (customerName: string, serviceName: string, providerName: string, bookingDate: string, bookingTime: string, location: string, totalAmount: string, calendarLinks?: { google?: string; outlook?: string; ics?: string }, baseUrl?: string) => {
     const content = `
       <h1>🎉 Your Booking Has Been Confirmed!</h1>
       <p>Hi ${customerName},</p>
@@ -154,7 +168,7 @@ export const ROAM_EMAIL_TEMPLATES = {
         <em>If you have any questions or concerns about your booking, please reply to this email or contact us at support@roamyourbestlife.com</em>
       </p>
     `;
-    return getROAMEmailTemplate(content);
+    return getROAMEmailTemplate(content, baseUrl);
   },
 
   bookingCompleted: (customerName: string, serviceName: string, providerName: string, bookingId: string) => {

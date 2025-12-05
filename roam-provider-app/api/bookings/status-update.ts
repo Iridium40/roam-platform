@@ -707,10 +707,9 @@ async function sendStatusNotifications(
     
     const serviceName = service?.name || booking.service_name || 'Service';
 
-    const totalAmountValue =
-      (booking.total_amount ?? 0) +
-      (booking.service_fee ?? 0) +
-      (booking.remaining_balance ?? 0);
+    // total_amount already includes service_fee, so we don't need to add it again
+    // remaining_balance is for future payments, not part of the current total
+    const totalAmountValue = booking.total_amount ?? 0;
 
     const totalAmountFormatted = totalAmountValue.toFixed(2);
 
@@ -847,6 +846,11 @@ async function sendStatusNotifications(
           // Send direct email with calendar attachment
           if (customerEmail && icalContent) {
             try {
+              // Get base URL for logo (same logic as calendar links)
+              const baseUrl = process.env.VERCEL_URL 
+                ? `https://${process.env.VERCEL_URL}` 
+                : process.env.PROVIDER_APP_API_URL || 'https://provider.roamyourbestlife.com';
+              
               const { ROAM_EMAIL_TEMPLATES } = await import('../../shared/emailTemplates.js');
               const emailHtml = ROAM_EMAIL_TEMPLATES.bookingConfirmed(
                 customerName,
@@ -856,7 +860,8 @@ async function sendStatusNotifications(
                 bookingTime,
                 locationAddress,
                 totalAmountFormatted,
-                calendarLinks
+                calendarLinks,
+                baseUrl
               );
 
               const { data: emailData, error: emailError } = await resend.emails.send({
