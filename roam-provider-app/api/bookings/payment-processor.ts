@@ -766,7 +766,7 @@ export async function handleBookingCancellation(
       console.log('📋 Booking cancelled before acceptance - cancelling payment intents');
 
       // Fetch payment intent from business_payment_transactions
-      const { data: businessPaymentTransaction } = await supabase
+      const { data: cancelledBookingTransaction } = await supabase
         .from('business_payment_transactions')
         .select('stripe_payment_intent_id')
         .eq('booking_id', bookingId)
@@ -774,7 +774,7 @@ export async function handleBookingCancellation(
         .limit(1)
         .maybeSingle();
 
-      const paymentIntentId = businessPaymentTransaction?.stripe_payment_intent_id;
+      const paymentIntentId = cancelledBookingTransaction?.stripe_payment_intent_id;
 
       if (paymentIntentId) {
         try {
