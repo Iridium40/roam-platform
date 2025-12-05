@@ -4,6 +4,7 @@ import path from "path";
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  base: '/',
   plugins: [
     react({
       jsxRuntime: 'automatic',
@@ -40,11 +41,19 @@ export default defineConfig({
   },
   build: {
     outDir: "dist/spa",
+    assetsDir: "assets",
+    emptyOutDir: true,
     commonjsOptions: {
       include: [/date-fns/, /node_modules/],
       transformMixedEsModules: true,
     },
     rollupOptions: {
+      output: {
+        manualChunks: undefined,
+        chunkFileNames: 'assets/[name]-[hash].js',
+        entryFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash].[ext]',
+      },
       external: (id) => {
         // Exclude Twilio and Node.js-specific modules from browser bundle
         if (
