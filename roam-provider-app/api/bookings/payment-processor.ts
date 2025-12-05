@@ -94,7 +94,26 @@ export async function processBookingAcceptance(
       console.error('❌ Error fetching payment transaction:', transactionError);
     }
 
-    const paymentIntentId = businessPaymentTransaction?.stripe_payment_intent_id;
+    let paymentIntentId = businessPaymentTransaction?.stripe_payment_intent_id;
+
+    // Fallback: Check financial_transactions table if not found in business_payment_transactions
+    // The webhook may have created financial_transactions before business_payment_transactions
+    if (!paymentIntentId) {
+      console.log('⚠️ Payment intent not found in business_payment_transactions, checking financial_transactions...');
+      const { data: financialTransaction } = await supabase
+        .from('financial_transactions')
+        .select('stripe_transaction_id')
+        .eq('booking_id', bookingId)
+        .eq('transaction_type', 'booking_payment')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      if (financialTransaction?.stripe_transaction_id) {
+        paymentIntentId = financialTransaction.stripe_transaction_id;
+        console.log('✅ Payment intent ID found in financial_transactions:', paymentIntentId);
+      }
+    }
 
     // Log booking payment details
     console.log('📋 Booking payment details:', {
@@ -109,7 +128,7 @@ export async function processBookingAcceptance(
 
     // Check if payment intent exists
     if (!paymentIntentId) {
-      console.error('❌ PAYMENT PROCESSING ERROR: No stripe_payment_intent_id found in business_payment_transactions');
+      console.error('❌ PAYMENT PROCESSING ERROR: No stripe_payment_intent_id found in business_payment_transactions or financial_transactions');
       console.error('❌ This booking was created without a payment intent - customer may not have completed checkout');
       console.error('❌ Booking details:', {
         bookingId: booking.id,
@@ -120,14 +139,14 @@ export async function processBookingAcceptance(
         customerId: booking.customer_id,
         businessId: booking.business_id,
       });
-      console.error('❌ This is likely a webhook issue - the stripe_payment_intent_id should have been saved in business_payment_transactions by the webhook');
+      console.error('❌ This is likely a webhook issue - the stripe_payment_intent_id should have been saved by the webhook');
       return {
         success: false,
-        error: 'No payment intent found for this booking. Customer may not have completed checkout. The webhook may have failed to save the payment intent ID in business_payment_transactions.',
+        error: 'No payment intent found for this booking. Customer may not have completed checkout. The webhook may have failed to save the payment intent ID.',
       };
     }
     
-    console.log('✅ Payment intent ID found in business_payment_transactions:', paymentIntentId);
+    console.log('✅ Payment intent ID found:', paymentIntentId);
 
     // Retrieve payment intent from Stripe
     const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
