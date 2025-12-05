@@ -76,16 +76,33 @@ async function sendNotificationViaService(
   templateVariables: Record<string, any>,
   metadata?: Record<string, any>
 ) {
+  console.log('🚀 sendNotificationViaService CALLED:', {
+    userId,
+    notificationType,
+    templateVariables,
+    metadata
+  });
+  
   try {
+    console.log('🔍 Inside try block - checking Supabase credentials...');
     const supabaseUrl = process.env.VITE_PUBLIC_SUPABASE_URL;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    console.log('🔍 Supabase credentials:', {
+      hasUrl: !!supabaseUrl,
+      hasKey: !!supabaseServiceKey,
+      urlLength: supabaseUrl?.length,
+      keyLength: supabaseServiceKey?.length,
+    });
 
     if (!supabaseUrl || !supabaseServiceKey) {
       console.error('❌ Missing Supabase credentials for notification service');
       return;
     }
 
+    console.log('🔍 Creating Supabase client...');
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    console.log('✅ Supabase client created');
 
     // 1. Get user settings (includes notification preferences)
     const { data: settings } = await supabase
@@ -285,7 +302,14 @@ async function sendNotificationViaService(
     }
 
   } catch (error) {
-    console.error('❌ Notification service error:', error);
+    console.error('❌ ==================== NOTIFICATION SERVICE ERROR ====================');
+    console.error('❌ Error Type:', error instanceof Error ? error.constructor.name : typeof error);
+    console.error('❌ Error Message:', error instanceof Error ? error.message : String(error));
+    console.error('❌ Error Stack:', error instanceof Error ? error.stack : 'No stack trace');
+    console.error('❌ Full Error Object:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
+    console.error('❌ Notification Type:', notificationType);
+    console.error('❌ User ID:', userId);
+    console.error('❌ ================================================================');
   }
 }
 
