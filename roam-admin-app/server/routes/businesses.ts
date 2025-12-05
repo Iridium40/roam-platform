@@ -3,16 +3,21 @@ import { supabase } from '../lib/supabase.js';
 
 export async function handleBusinesses(req: Request, res: Response) {
   try {
+    console.log('[handleBusinesses] Request received:', req.method, req.url);
+    console.log('[handleBusinesses] Request body:', req.body);
+    
     switch (req.method) {
       case 'GET':
         return await getBusinesses(req, res);
       case 'PUT':
         return await updateBusinessVerification(req, res);
       default:
+        console.warn('[handleBusinesses] Method not allowed:', req.method);
         return res.status(405).json({ error: 'Method not allowed' });
     }
   } catch (error) {
     console.error('Unexpected error in businesses API:', error);
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
     const errorMessage = error instanceof Error ? error.message : 'Internal server error';
     return res.status(500).json({ error: errorMessage });
   }
@@ -230,11 +235,19 @@ async function getBusinesses(req: Request, res: Response) {
 
 async function updateBusinessVerification(req: Request, res: Response) {
   try {
-    const businessId = req.query.id || req.body.id || req.body.business_id;
+    console.log('[updateBusinessVerification] PUT request received');
+    console.log('[updateBusinessVerification] Request body:', JSON.stringify(req.body, null, 2));
+    console.log('[updateBusinessVerification] Request query:', req.query);
+    
+    // Prioritize body.id over query.id for PUT requests
+    const businessId = req.body.id || req.body.business_id || req.query.id;
     
     if (!businessId) {
+      console.error('[updateBusinessVerification] Missing business ID');
       return res.status(400).json({ error: 'Business ID is required' });
     }
+
+    console.log('[updateBusinessVerification] Updating business:', businessId);
 
     // Extract all possible update fields
     const {
@@ -287,6 +300,14 @@ async function updateBusinessVerification(req: Request, res: Response) {
     if (logo_url !== undefined) updateData.logo_url = logo_url;
     if (cover_image_url !== undefined) updateData.cover_image_url = cover_image_url;
     if (image_url !== undefined) updateData.image_url = image_url;
+
+    // Check if there are any fields to update
+    if (Object.keys(updateData).length === 0) {
+      console.warn('[updateBusinessVerification] No fields to update');
+      return res.status(400).json({ error: 'No fields provided for update' });
+    }
+
+    console.log('[updateBusinessVerification] Update data:', JSON.stringify(updateData, null, 2));
 
     // Update business profile
     const { data: business, error: updateError } = await supabase
