@@ -320,7 +320,7 @@ export async function processBookingAcceptance(
                 net_payment_amount: netPaymentAmount,
                 tax_year: currentYear,
                 stripe_payment_intent_id: capturedPaymentIntent.id,
-                stripe_account_id: stripeConnectAccountId,
+                stripe_connect_account_id: stripeConnectAccountId,
                 transaction_description: 'Platform service payment',
                 booking_reference: booking.booking_reference || null,
                 transaction_type: 'initial_booking',
@@ -408,7 +408,9 @@ export async function processBookingAcceptance(
     // Cancel the original payment intent since we're creating two separate ones
     try {
       const piStatus = paymentIntent.status;
-      if (piStatus !== 'succeeded' && piStatus !== 'canceled') {
+      // At this point, payment intent is not 'succeeded' (we returned early if it was)
+      // So we only need to check if it's not already canceled
+      if (piStatus !== 'canceled') {
         await stripe.paymentIntents.cancel(paymentIntent.id);
         console.log('✅ Cancelled original payment intent:', paymentIntent.id);
       }
@@ -543,7 +545,7 @@ export async function processBookingAcceptance(
         net_payment_amount: serviceAmount,
         tax_year: currentYear,
         stripe_payment_intent_id: serviceAmountPaymentIntent.id,
-        stripe_account_id: stripeConnectAccountId,
+        stripe_connect_account_id: stripeConnectAccountId,
         booking_reference: booking.booking_reference || null,
         transaction_description: `Service payment for booking ${booking.booking_reference || bookingId}`,
         transaction_type: 'initial_booking', // Will be added after migration
@@ -744,7 +746,11 @@ export async function handleBookingCancellation(
         business_id,
         business_profiles!inner (
           id,
-          stripe_account_id
+          stripe_connect_accounts (
+            account_id,
+            charges_enabled,
+            payouts_enabled
+          )
         )
       `)
       .eq('id', bookingId)
@@ -854,7 +860,7 @@ export async function handleBookingCancellation(
     });
 
     // Fetch payment intent from business_payment_transactions
-    const { data: businessPaymentTransaction } = await supabase
+    const { data: refundPaymentTransaction } = await supabase
       .from('business_payment_transactions')
       .select('stripe_payment_intent_id')
       .eq('booking_id', bookingId)
@@ -863,7 +869,7 @@ export async function handleBookingCancellation(
       .maybeSingle();
 
     // Use service amount payment intent if available, otherwise try main payment intent from business_payment_transactions
-    const paymentIntentIdToRefund = booking.stripe_service_amount_payment_intent_id || businessPaymentTransaction?.stripe_payment_intent_id;
+    const paymentIntentIdToRefund = booking.stripe_service_amount_payment_intent_id || refundPaymentTransaction?.stripe_payment_intent_id;
 
     if (!paymentIntentIdToRefund) {
       return {
@@ -922,7 +928,7 @@ export async function handleBookingCancellation(
     // Check if business received a Stripe Connect transfer that needs to be reversed
     const { data: businessPaymentTransaction, error: bptError } = await supabase
       .from('business_payment_transactions')
-      .select('id, stripe_transfer_id, net_payment_amount, stripe_account_id')
+      .select('id, stripe_transfer_id, net_payment_amount, stripe_connect_account_id')
       .eq('booking_id', bookingId)
       .maybeSingle();
 
@@ -938,7 +944,7 @@ export async function handleBookingCancellation(
       const stripeConnectAccount = Array.isArray(business?.stripe_connect_accounts)
         ? business?.stripe_connect_accounts[0]
         : business?.stripe_connect_accounts;
-      const stripeConnectAccountId = businessPaymentTransaction.stripe_account_id || stripeConnectAccount?.account_id;
+      const stripeConnectAccountId = businessPaymentTransaction.stripe_connect_account_id || stripeConnectAccount?.account_id;
 
       if (stripeConnectAccountId) {
         try {

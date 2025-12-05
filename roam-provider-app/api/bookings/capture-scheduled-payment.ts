@@ -129,7 +129,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               net_payment_amount: serviceAmount,
               tax_year: currentYear,
               stripe_payment_intent_id: payment_intent_id,
-              stripe_account_id: (Array.isArray(business?.stripe_connect_accounts) ? business?.stripe_connect_accounts[0] : business?.stripe_connect_accounts)?.account_id || null,
+              stripe_connect_account_id: (Array.isArray(business?.stripe_connect_accounts) ? business?.stripe_connect_accounts[0] : business?.stripe_connect_accounts)?.account_id || null,
               booking_reference: bookingData.booking_reference || null,
               transaction_description: `Service payment for booking ${bookingData.booking_reference || booking_id}`,
             });
@@ -187,6 +187,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           ? bookingData.business_profiles[0] 
           : bookingData.business_profiles;
         
+        // Get stripe_connect_account_id from stripe_connect_accounts table
+        const stripeConnectAccount = Array.isArray(business?.stripe_connect_accounts)
+          ? business?.stripe_connect_accounts[0]
+          : business?.stripe_connect_accounts;
+        const stripeConnectAccountId = stripeConnectAccount?.account_id || null;
+        
         const { data: existingTransaction } = await supabase
           .from('business_payment_transactions')
           .select('id')
@@ -209,7 +215,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             net_payment_amount: serviceAmount,
             tax_year: currentYear,
             stripe_payment_intent_id: payment_intent_id,
-            stripe_account_id: business?.stripe_account_id || null,
+            stripe_connect_account_id: stripeConnectAccountId,
             booking_reference: bookingData.booking_reference || null,
             transaction_description: `Service payment for booking ${bookingData.booking_reference || booking_id}`,
             transaction_type: 'initial_booking', // Will be added after migration
