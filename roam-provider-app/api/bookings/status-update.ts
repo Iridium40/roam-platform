@@ -1308,7 +1308,7 @@ The ROAM Team
           review_url: reviewLink,
         },
         {
-          booking_id: bookingId,
+          booking_id: booking.id,
           completed_by: updatedBy,
         }
       );
@@ -1340,7 +1340,7 @@ The ROAM Team
           booking_url: 'https://roamyourbestlife.com/customer/bookings',
         },
         {
-          booking_id: bookingId,
+          booking_id: booking.id,
           declined_by: updatedBy,
           decline_reason: declineReason,
         }
