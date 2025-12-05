@@ -998,12 +998,22 @@ async function sendStatusNotifications(
                 calendarLinks.ics = `${baseUrl}/api/bookings/calendar-invite/${booking.id}`;
               }
             } catch (calendarError) {
-              console.warn('⚠️ Error generating calendar links:', calendarError);
+              console.error('❌ Error generating calendar links:', {
+                error: calendarError,
+                message: calendarError instanceof Error ? calendarError.message : String(calendarError),
+                stack: calendarError instanceof Error ? calendarError.stack : undefined,
+              });
             }
           }
 
-          // Send direct email with calendar attachment
-          if (recipientEmail && icalContent) {
+          console.log('📧 Calendar generation result:', {
+            hasIcalContent: !!icalContent,
+            hasRecipientEmail: !!recipientEmail,
+            icalContentLength: icalContent?.length || 0,
+          });
+
+          // Send direct email with calendar attachment (send even if calendar fails)
+          if (recipientEmail) {
             try {
               // Get base URL for logo (same logic as calendar links)
               const baseUrl = process.env.VERCEL_URL 
@@ -1023,19 +1033,32 @@ async function sendStatusNotifications(
                 baseUrl
               );
 
-              const { data: emailData, error: emailError } = await resend.emails.send({
+              console.log('📧 Preparing to send email:', {
+                hasIcalContent: !!icalContent,
+                willAttachCalendar: !!icalContent,
+              });
+
+              const emailPayload: any = {
                 from: 'ROAM Support <support@roamyourbestlife.com>',
                 to: [recipientEmail],
                 subject: `✅ Your Booking is Confirmed! - ${serviceName}`,
                 html: emailHtml,
                 text: `Hi ${customerName},\n\nYour booking has been confirmed!\n\nService: ${serviceName}\nProvider: ${provider ? `${provider.first_name} ${provider.last_name}` : 'Provider'}\nDate: ${bookingDate}\nTime: ${bookingTime}\nLocation: ${locationAddress}\nTotal: $${totalAmountFormatted}\n\nView your bookings: https://roamyourbestlife.com/my-bookings\n\nBest regards,\nThe ROAM Team`,
-                attachments: [
+              };
+
+              // Only attach calendar if generation succeeded
+              if (icalContent) {
+                emailPayload.attachments = [
                   {
                     filename: 'booking.ics',
                     content: Buffer.from(icalContent).toString('base64'),
                   },
-                ],
-              });
+                ];
+              } else {
+                console.warn('⚠️ Sending email without calendar attachment (generation failed)');
+              }
+
+              const { data: emailData, error: emailError } = await resend.emails.send(emailPayload);
 
               if (emailError) {
                 console.error('❌ Error sending customer booking email:', emailError);
@@ -1046,20 +1069,30 @@ async function sendStatusNotifications(
                 });
               }
             } catch (emailError) {
-              console.error('❌ Error sending direct email to customer:', emailError);
+              console.error('❌ Error sending direct email to customer:', {
+                error: emailError,
+                message: emailError instanceof Error ? emailError.message : String(emailError),
+                stack: emailError instanceof Error ? emailError.stack : undefined,
+                hasRecipientEmail: !!recipientEmail,
+                hasIcalContent: !!icalContent,
+              });
             }
+          } else {
+            console.warn('⚠️ Skipping email send: no recipient email');
           }
 
-          console.log('✅ Customer booking confirmation email sent successfully');
+          console.log('✅ Customer booking confirmation email process completed');
         } catch (notificationError) {
-          console.error('❌ Error sending confirmation email:', {
+          console.error('❌ Error in confirmation email process:', {
             error: notificationError,
             message: notificationError instanceof Error ? notificationError.message : String(notificationError),
             stack: notificationError instanceof Error ? notificationError.stack : undefined,
+            customerUserId: customer?.user_id,
+            recipientEmail: recipientEmail?.substring(0, 10) + '...',
           });
         }
       } else {
-        console.log('ℹ️ Customer notification skipped: no recipient email');
+        console.log('ℹ️ Customer notification skipped: no recipient email or emailAllowed=false');
       }
     } else {
       console.log('ℹ️ Customer notification skipped:', {
