@@ -4,9 +4,15 @@
  * Logic:
  * - If booking.provider_id is null: Notify all providers with provider_role = 'owner' or 'dispatcher' for the business
  * - If booking.provider_id is set: Notify that specific provider
+ * 
+ * Uses direct Resend email sending for reliability and simplicity
  */
 
 import { createClient } from '@supabase/supabase-js';
+import { Resend } from 'resend';
+
+// Initialize Resend
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const getSupabaseServiceClient = () => {
   if (!process.env.VITE_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
@@ -124,58 +130,157 @@ export async function notifyProvidersNewBooking(data: BookingNotificationData): 
     const customerName = `${customer.first_name} ${customer.last_name}`.trim();
     const location = business.business_address || 'Location TBD';
     const totalAmount = booking.total_amount?.toFixed(2) || '0.00';
+    const specialInstructions = booking.special_instructions || 'None';
 
-    // Call the provider app's notification API for each provider
-    // Note: We use the provider app's notification service which handles email/SMS based on user preferences
+    // Get base URL for logo
+    const baseUrl = process.env.VERCEL_URL 
+      ? `https://${process.env.VERCEL_URL}` 
+      : process.env.PROVIDER_APP_API_URL || 'https://provider.roamyourbestlife.com';
+
+    // Send email directly to each provider via Resend
     const notificationPromises = providersToNotify.map(async (provider) => {
       try {
-        // Determine the provider app API URL
-        // In production, this should be set via environment variable
-        const providerApiUrl = process.env.PROVIDER_APP_API_URL 
-          || process.env.VITE_PROVIDER_APP_URL 
-          || 'https://provider.roamyourbestlife.com';
-        
-        const apiEndpoint = `${providerApiUrl}/api/notifications/send`;
-        
-        console.log(`📤 Calling notification API for provider ${provider.id}: ${apiEndpoint}`);
+        // Get provider email from database
+        const { data: providerData } = await supabase
+          .from('providers')
+          .select('email, notification_email')
+          .eq('id', provider.id)
+          .single();
 
-        const response = await fetch(apiEndpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            userId: provider.user_id,
-            notificationType: 'provider_new_booking',
-            templateVariables: {
-              provider_name: provider.provider_role === 'owner' ? 'Owner' : provider.provider_role === 'dispatcher' ? 'Dispatcher' : 'Provider',
-              customer_name: customerName,
-              service_name: service.name,
-              booking_date: bookingDate,
-              booking_time: bookingTime,
-              booking_location: location,
-              total_amount: totalAmount,
-              booking_id: booking.id,
-              business_name: business.name,
-              special_instructions: booking.special_instructions || 'None',
-            },
-            metadata: {
-              booking_id: booking.id,
-              business_id: booking.business_id,
-              provider_id: provider.id,
-              provider_role: provider.provider_role,
-              assigned: !!booking.provider_id,
-            },
-          }),
-        });
+        const providerEmail = providerData?.notification_email || providerData?.email;
 
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`Notification API error: ${response.status} - ${errorText}`);
+        if (!providerEmail) {
+          console.warn(`⚠️ No email found for provider ${provider.id}, skipping notification`);
+          return;
         }
 
-        const result = await response.json();
-        console.log(`✅ Notification sent to provider ${provider.id} (${provider.provider_role}):`, result);
+        const providerRoleLabel = provider.provider_role === 'owner' 
+          ? 'Owner' 
+          : provider.provider_role === 'dispatcher' 
+          ? 'Dispatcher' 
+          : 'Provider';
+
+        console.log(`📧 Sending new booking email to ${providerRoleLabel} (${provider.id}): ${providerEmail}`);
+
+        // Build HTML email
+        const emailHtml = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+    <div style="background-color: #2C5F7D; padding: 30px 20px; text-align: center;">
+      <img src="${baseUrl}/logo-email.png" alt="ROAM Logo" style="max-width: 200px; height: auto;">
+    </div>
+    
+    <div style="padding: 40px 30px;">
+      <div style="color: #F4A300; font-size: 24px; font-weight: bold; margin: 0 0 20px 0;">🔔 New Booking Request!</div>
+      
+      <p style="color: #333333; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">Hi ${providerRoleLabel},</p>
+      
+      <p style="color: #333333; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">You have a new booking request for <strong>${business.name}</strong>.</p>
+      
+      <div style="background-color: #FFF8E1; border-left: 4px solid #F4A300; padding: 20px; margin: 30px 0; border-radius: 4px;">
+        <div style="color: #F57F17; font-weight: bold; font-size: 14px; margin-bottom: 5px;">Service:</div>
+        <div style="color: #333333; font-size: 16px; margin-bottom: 15px;">${service.name}</div>
+        
+        <div style="color: #F57F17; font-weight: bold; font-size: 14px; margin-bottom: 5px;">Customer:</div>
+        <div style="color: #333333; font-size: 16px; margin-bottom: 15px;">${customerName}</div>
+        
+        <div style="color: #F57F17; font-weight: bold; font-size: 14px; margin-bottom: 5px;">Date:</div>
+        <div style="color: #333333; font-size: 16px; margin-bottom: 15px;">${bookingDate}</div>
+        
+        <div style="color: #F57F17; font-weight: bold; font-size: 14px; margin-bottom: 5px;">Time:</div>
+        <div style="color: #333333; font-size: 16px; margin-bottom: 15px;">${bookingTime}</div>
+        
+        <div style="color: #F57F17; font-weight: bold; font-size: 14px; margin-bottom: 5px;">Location:</div>
+        <div style="color: #333333; font-size: 16px; margin-bottom: 15px;">${location}</div>
+        
+        <div style="color: #F57F17; font-weight: bold; font-size: 14px; margin-bottom: 5px;">Total Amount:</div>
+        <div style="color: #333333; font-size: 16px; margin-bottom: 15px;">$${totalAmount}</div>
+        
+        <div style="color: #F57F17; font-weight: bold; font-size: 14px; margin-bottom: 5px;">Special Instructions:</div>
+        <div style="color: #333333; font-size: 16px;">${specialInstructions}</div>
+      </div>
+      
+      <p style="color: #333333; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">Please log in to your provider dashboard to review and accept or decline this booking request.</p>
+      
+      <div style="text-align: center;">
+        <a href="https://provider.roamyourbestlife.com/bookings" style="display: inline-block; padding: 15px 30px; background-color: #F4A300; color: #ffffff; text-decoration: none; border-radius: 5px; font-weight: bold; margin: 20px 0;">View Booking</a>
+      </div>
+      
+      <div style="border-top: 1px solid #e0e0e0; margin: 30px 0;"></div>
+      
+      <p style="color: #666666; font-size: 14px; line-height: 1.6; margin-bottom: 10px;">
+        <strong>Booking ID:</strong> ${booking.id}
+      </p>
+      <p style="color: #666666; font-size: 14px; line-height: 1.6; margin-bottom: 20px;">
+        For questions or issues, contact ROAM support.
+      </p>
+    </div>
+    
+    <div style="background-color: #f8f9fa; padding: 30px; text-align: center; color: #666666; font-size: 14px;">
+      <p style="margin: 0 0 10px 0;"><strong>ROAM - Your Best Life. Everywhere.</strong></p>
+      <p style="margin: 0 0 10px 0;">
+        Need help? Contact us at 
+        <a href="mailto:support@roamyourbestlife.com" style="color: #2C5F7D;">support@roamyourbestlife.com</a>
+      </p>
+      <p style="margin: 0; font-size: 12px; color: #999999;">
+        © 2024 ROAM. All rights reserved.
+      </p>
+    </div>
+  </div>
+</body>
+</html>
+        `;
+
+        // Send email via Resend
+        const { data: emailData, error: emailError } = await resend.emails.send({
+          from: 'ROAM Support <support@roamyourbestlife.com>',
+          to: [providerEmail],
+          subject: `New Booking Request - ${service.name}`,
+          html: emailHtml,
+          text: `New Booking Request!
+
+Hi ${providerRoleLabel},
+
+You have a new booking request for ${business.name}.
+
+BOOKING DETAILS:
+Service: ${service.name}
+Customer: ${customerName}
+Date: ${bookingDate}
+Time: ${bookingTime}
+Location: ${location}
+Total Amount: $${totalAmount}
+Special Instructions: ${specialInstructions}
+
+Please log in to your provider dashboard to review and accept or decline this booking request.
+
+View booking: https://provider.roamyourbestlife.com/bookings
+
+Booking ID: ${booking.id}
+
+For questions or issues, contact ROAM support at support@roamyourbestlife.com.
+
+Best regards,
+The ROAM Team
+
+© 2024 ROAM. All rights reserved.`,
+        });
+
+        if (emailError) {
+          console.error(`❌ Error sending email to provider ${provider.id}:`, emailError);
+          throw emailError;
+        }
+
+        console.log(`✅ Email sent to provider ${provider.id} (${providerRoleLabel}):`, {
+          email: providerEmail,
+          resendId: emailData?.id,
+        });
       } catch (error) {
         console.error(`❌ Failed to notify provider ${provider.id}:`, error);
         // Continue with other providers even if one fails
