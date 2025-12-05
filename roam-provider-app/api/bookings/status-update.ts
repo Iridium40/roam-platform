@@ -679,12 +679,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Don't await - let it run in background
     if (notifyCustomer || notifyProvider) {
       console.log('📧 Queueing notifications for status:', newStatus, { notifyCustomer, notifyProvider });
-      // Fire and forget - don't block the response
-      sendStatusNotifications(booking, newStatus, { notifyCustomer, notifyProvider })
-        .catch((notificationError) => {
+      // IMPORTANT: Must await in serverless - function can terminate after response sent
+      try {
+        await sendStatusNotifications(booking, newStatus, { notifyCustomer, notifyProvider });
+        console.log('✅ Notifications sent successfully');
+      } catch (notificationError) {
         console.error('⚠️ Notification error (non-fatal):', notificationError);
         console.error('⚠️ Notification error stack:', notificationError instanceof Error ? notificationError.stack : 'No stack');
-        });
+        // Continue - don't fail the booking status update if notifications fail
+      }
     } else {
       console.log('⚠️ Notifications skipped - both notifyCustomer and notifyProvider are false');
     }
@@ -1342,7 +1345,7 @@ The ROAM Team
         },
         {
           booking_id: booking.id,
-          completed_by: updatedBy,
+          status: newStatus,
         }
       );
     }
@@ -1374,7 +1377,7 @@ The ROAM Team
         },
         {
           booking_id: booking.id,
-          declined_by: updatedBy,
+          status: newStatus,
           decline_reason: declineReason,
         }
       );
