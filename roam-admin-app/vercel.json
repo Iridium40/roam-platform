@@ -235,6 +235,10 @@
       "destination": "/api/index.ts"
     },
     {
+      "source": "/api/services/(.*)",
+      "destination": "/api/index.ts"
+    },
+    {
       "source": "/api/services",
       "destination": "/api/index.ts"
     },

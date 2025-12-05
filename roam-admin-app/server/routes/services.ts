@@ -3,6 +3,9 @@ import { supabase } from "../lib/supabase.js";
 
 export async function handleServices(req: Request, res: Response) {
   try {
+    console.log('[handleServices] Request received:', req.method, req.url);
+    console.log('[handleServices] Params:', req.params);
+    
     switch (req.method) {
       case 'GET':
         return await getServices(req, res);
@@ -13,10 +16,12 @@ export async function handleServices(req: Request, res: Response) {
       case 'DELETE':
         return await deleteService(req, res);
       default:
+        console.warn('[handleServices] Method not allowed:', req.method);
         return res.status(405).json({ error: 'Method not allowed' });
     }
   } catch (error) {
     console.error('Unexpected error in services API:', error);
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
     const errorMessage = error instanceof Error ? error.message : 'Internal server error';
     return res.status(500).json({ error: errorMessage });
   }
@@ -182,13 +187,23 @@ async function createService(req: Request, res: Response) {
 
 async function updateService(req: Request, res: Response) {
   try {
+    console.log('[updateService] PUT request received');
+    console.log('[updateService] URL:', req.url);
+    console.log('[updateService] Params:', req.params);
+    console.log('[updateService] Body:', req.body);
+    
+    // Extract ID from URL path (e.g., /api/services/:id)
     const serviceId = req.params?.id || req.body?.id;
+    
     if (!serviceId) {
+      console.error('[updateService] Missing service ID');
       return res.status(400).json({ 
         success: false,
         error: 'Service ID is required' 
       });
     }
+
+    console.log('[updateService] Updating service:', serviceId);
 
     const {
       name,
