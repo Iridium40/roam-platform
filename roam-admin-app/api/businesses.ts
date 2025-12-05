@@ -93,6 +93,57 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         return res.status(200).json({ data: transformedBusinesses });
 
+      case 'PUT':
+        // Update a business profile
+        const {
+          id,
+          business_name,
+          contact_email,
+          phone,
+          verification_status,
+          verification_notes,
+          is_active,
+          is_featured,
+          business_type,
+        } = req.body;
+
+        if (!id) {
+          return res.status(400).json({ error: 'Business ID is required' });
+        }
+
+        // Build the update object with only provided fields
+        const updateData: Record<string, any> = {};
+        if (business_name !== undefined) updateData.business_name = business_name;
+        if (contact_email !== undefined) updateData.contact_email = contact_email;
+        if (phone !== undefined) updateData.phone = phone;
+        if (verification_status !== undefined) updateData.verification_status = verification_status;
+        if (verification_notes !== undefined) updateData.verification_notes = verification_notes;
+        if (is_active !== undefined) updateData.is_active = is_active;
+        if (is_featured !== undefined) updateData.is_featured = is_featured;
+        if (business_type !== undefined) updateData.business_type = business_type;
+
+        // Add approval tracking if status changes to approved
+        if (verification_status === 'approved') {
+          updateData.approved_at = new Date().toISOString();
+        }
+
+        const { data: updatedBusiness, error: updateError } = await supabase
+          .from('business_profiles')
+          .update(updateData)
+          .eq('id', id)
+          .select()
+          .single();
+
+        if (updateError) {
+          console.error('Error updating business:', updateError);
+          return res.status(500).json({ 
+            error: updateError.message,
+            details: updateError.details || 'Failed to update business'
+          });
+        }
+
+        return res.status(200).json({ data: updatedBusiness });
+
       default:
         return res.status(405).json({ error: 'Method not allowed' });
     }
