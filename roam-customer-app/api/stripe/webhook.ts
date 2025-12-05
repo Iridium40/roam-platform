@@ -202,6 +202,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
         break;
 
+      case 'payment_intent.amount_capturable_updated':
+        try {
+          const paymentIntent = event.data.object as Stripe.PaymentIntent;
+          console.log('💳 Payment intent amount capturable updated:', paymentIntent.id, 'Status:', paymentIntent.status);
+          // When payment is authorized, Stripe sends amount_capturable_updated with requires_capture status
+          if (paymentIntent.status === 'requires_capture') {
+            console.log('🔐 Payment intent is now requires_capture, processing...');
+            await handlePaymentIntentRequiresCapture(paymentIntent);
+          } else {
+            console.log(`⚠️ Payment intent amount_capturable_updated with status ${paymentIntent.status}, not processing`);
+          }
+          processed = true;
+        } catch (err: any) {
+          console.error('Error handling payment_intent.amount_capturable_updated:', err);
+          throw err;
+        }
+        break;
+
       case 'payment_intent.requires_capture':
         try {
           const paymentIntent = event.data.object as Stripe.PaymentIntent;
