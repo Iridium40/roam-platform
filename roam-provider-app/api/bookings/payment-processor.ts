@@ -82,10 +82,12 @@ export async function processBookingAcceptance(
 
     // Look up payment intent from business_payment_transactions table
     // Note: stripe_payment_intent_id is NOT stored on bookings table
+    // Filter by transaction_type='initial_booking' to get the correct payment intent
     const { data: businessPaymentTransaction, error: transactionError } = await supabase
       .from('business_payment_transactions')
       .select('stripe_payment_intent_id')
       .eq('booking_id', bookingId)
+      .eq('transaction_type', 'initial_booking')
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
