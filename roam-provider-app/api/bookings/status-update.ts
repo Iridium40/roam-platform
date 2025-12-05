@@ -942,28 +942,9 @@ async function sendStatusNotifications(
             }
           }
 
-          // Also send via notification service (for in-app notifications)
-          const notificationResult = await sendNotificationViaService(
-            customer.user_id,
-            'customer_booking_accepted',
-            {
-              customer_name: customerName,
-              service_name: serviceName,
-              provider_name: provider ? `${provider.first_name} ${provider.last_name}` : 'Provider',
-              booking_date: bookingDate,
-              booking_time: bookingTime,
-              booking_location: locationAddress,
-              total_amount: totalAmountFormatted,
-              booking_id: booking.id,
-            },
-            {
-              booking_id: booking.id,
-              event_type: 'booking_accepted',
-            }
-          );
-          console.log('✅ Notification sent successfully. Result:', notificationResult);
+          console.log('✅ Customer booking confirmation email sent successfully');
         } catch (notificationError) {
-          console.error('❌ Error sending notification:', {
+          console.error('❌ Error sending confirmation email:', {
             error: notificationError,
             message: notificationError instanceof Error ? notificationError.message : String(notificationError),
             stack: notificationError instanceof Error ? notificationError.stack : undefined,
@@ -1192,26 +1173,135 @@ The ROAM Team
     }
     
     // Notify customer when booking is completed
-    if (newStatus === 'completed' && options.notifyCustomer && customer?.user_id) {
-      await sendNotificationViaService(
-        customer.user_id,
-        'customer_booking_completed',
-        {
-          customer_name: customerName,
-          service_name: serviceName,
-          provider_name: provider ? `${provider.first_name} ${provider.last_name}` : 'Provider',
-          provider_id: provider?.id || '',
-          booking_id: booking.id,
-          booking_date: bookingDate,
-          booking_time: bookingTime,
-          booking_location: locationAddress,
-          total_amount: totalAmountFormatted,
-        },
-        {
-          booking_id: booking.id,
-          event_type: 'booking_completed',
+    if (newStatus === 'completed' && options.notifyCustomer && customerEmail) {
+      console.log('📧 Sending completed email to customer:', {
+        customerEmail,
+        customerName,
+        serviceName,
+        bookingId: booking.id,
+      });
+      
+      try {
+        // Get base URL for logo
+        const baseUrl = process.env.VERCEL_URL 
+          ? `https://${process.env.VERCEL_URL}` 
+          : process.env.PROVIDER_APP_API_URL || 'https://provider.roamyourbestlife.com';
+        
+        const providerName = provider ? `${provider.first_name} ${provider.last_name}` : business?.business_name || 'Provider';
+        const reviewLink = `https://roamyourbestlife.com/customer/review/${booking.id}`;
+        
+        // Build the completed email HTML
+        const completedEmailHtml = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+    <div style="background-color: #2C5F7D; padding: 30px 20px; text-align: center;">
+      <img src="${baseUrl}/logo-email.png" alt="ROAM Logo" style="max-width: 200px; height: auto;">
+    </div>
+    
+    <div style="padding: 40px 30px;">
+      <div style="color: #28A745; font-size: 24px; font-weight: bold; margin: 0 0 20px 0;">✅ Service Completed!</div>
+      
+      <p style="color: #333333; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">Hi ${customerName},</p>
+      
+      <p style="color: #333333; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">Your service with ${providerName} has been completed. We hope you had a great experience!</p>
+      
+      <div style="background-color: #E8F5E9; border-left: 4px solid #28A745; padding: 20px; margin: 30px 0; border-radius: 4px;">
+        <div style="color: #1B5E20; font-weight: bold; font-size: 14px; margin-bottom: 5px;">Service:</div>
+        <div style="color: #333333; font-size: 16px; margin-bottom: 15px;">${serviceName}</div>
+        
+        <div style="color: #1B5E20; font-weight: bold; font-size: 14px; margin-bottom: 5px;">Provider:</div>
+        <div style="color: #333333; font-size: 16px; margin-bottom: 15px;">${providerName}</div>
+        
+        <div style="color: #1B5E20; font-weight: bold; font-size: 14px; margin-bottom: 5px;">Date:</div>
+        <div style="color: #333333; font-size: 16px; margin-bottom: 15px;">${bookingDate}</div>
+        
+        <div style="color: #1B5E20; font-weight: bold; font-size: 14px; margin-bottom: 5px;">Time:</div>
+        <div style="color: #333333; font-size: 16px; margin-bottom: 15px;">${bookingTime}</div>
+        
+        <div style="color: #1B5E20; font-weight: bold; font-size: 14px; margin-bottom: 5px;">Location:</div>
+        <div style="color: #333333; font-size: 16px; margin-bottom: 15px;">${locationAddress}</div>
+        
+        <div style="color: #1B5E20; font-weight: bold; font-size: 14px; margin-bottom: 5px;">Total:</div>
+        <div style="color: #333333; font-size: 16px;">$${totalAmountFormatted}</div>
+      </div>
+      
+      <p style="color: #333333; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">We'd love to hear about your experience! Your feedback helps us maintain high-quality service providers.</p>
+      
+      <div style="text-align: center;">
+        <a href="${reviewLink}" style="display: inline-block; padding: 15px 30px; background-color: #F4A300; color: #ffffff; text-decoration: none; border-radius: 5px; font-weight: bold; margin: 20px 0;">Leave a Review</a>
+      </div>
+      
+      <div style="border-top: 1px solid #e0e0e0; margin: 30px 0;"></div>
+      
+      <p style="color: #333333; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">Thank you for choosing ROAM! We look forward to serving you again.</p>
+    </div>
+    
+    <div style="background-color: #f8f9fa; padding: 30px; text-align: center; color: #666666; font-size: 14px;">
+      <p style="margin: 0 0 10px 0;"><strong>ROAM - Your Best Life. Everywhere.</strong></p>
+      <p style="margin: 0 0 10px 0;">
+        Need help? Contact us at 
+        <a href="mailto:support@roamyourbestlife.com" style="color: #2C5F7D;">support@roamyourbestlife.com</a>
+      </p>
+      <p style="margin: 0; font-size: 12px; color: #999999;">
+        © 2024 ROAM. All rights reserved.
+      </p>
+    </div>
+  </div>
+</body>
+</html>
+        `;
+
+        // Send email directly via Resend
+        const { data: emailData, error: emailError } = await resend.emails.send({
+          from: 'ROAM Support <support@roamyourbestlife.com>',
+          to: [customerEmail],
+          subject: `Service Completed - ${serviceName}`,
+          html: completedEmailHtml,
+          text: `Hi ${customerName},
+
+Your service with ${providerName} has been completed. We hope you had a great experience!
+
+BOOKING DETAILS:
+Service: ${serviceName}
+Provider: ${providerName}
+Date: ${bookingDate}
+Time: ${bookingTime}
+Location: ${locationAddress}
+Total: $${totalAmountFormatted}
+
+We'd love to hear about your experience! Your feedback helps us maintain high-quality service providers.
+
+Leave a review: ${reviewLink}
+
+Thank you for choosing ROAM! We look forward to serving you again.
+
+Best regards,
+The ROAM Team
+
+© 2024 ROAM. All rights reserved.`,
+        });
+
+        if (emailError) {
+          console.error('❌ Error sending completed email:', emailError);
+        } else {
+          console.log('✅ Completed email sent successfully:', {
+            email: customerEmail,
+            resendId: emailData?.id,
+          });
         }
-      );
+      } catch (completedError) {
+        console.error('❌ Error sending completed notification:', {
+          error: completedError,
+          message: completedError instanceof Error ? completedError.message : String(completedError),
+          stack: completedError instanceof Error ? completedError.stack : undefined,
+        });
+      }
     }
     
     // Notify customer when booking is declined
