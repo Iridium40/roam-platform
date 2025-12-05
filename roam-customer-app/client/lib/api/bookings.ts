@@ -106,7 +106,6 @@ class BookingsAPI extends BaseAPI {
       original_booking_date: string;
       original_start_time: string;
       reschedule_count: number;
-      last_reschedule_date: string;
     },
     accessToken?: string
   ): Promise<void> {

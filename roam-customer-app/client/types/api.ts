@@ -170,7 +170,7 @@ export interface BookingRecord {
   original_booking_date?: string;
   original_start_time?: string;
   reschedule_count?: number;
-  last_reschedule_date?: string;
+  rescheduled_at?: string;
 }
 
 export interface BookingWithRelations extends BookingRecord {

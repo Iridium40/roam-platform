@@ -88,7 +88,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       original_booking_date: originalDate,
       original_start_time: originalTime,
       reschedule_count: rescheduleCount,
-      last_reschedule_date: new Date().toISOString(),
     };
 
     // If booking was accepted, change status back to pending
