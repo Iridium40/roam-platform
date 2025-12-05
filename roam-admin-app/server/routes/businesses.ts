@@ -3,17 +3,27 @@ import { supabase } from '../lib/supabase.js';
 
 export async function handleBusinesses(req: Request, res: Response) {
   try {
-    console.log('[handleBusinesses] Request received:', req.method, req.url);
-    console.log('[handleBusinesses] Request body:', req.body);
+    console.log('[handleBusinesses] Request received');
+    console.log('[handleBusinesses] Method:', req.method);
+    console.log('[handleBusinesses] Method type:', typeof req.method);
+    console.log('[handleBusinesses] Method uppercase:', req.method?.toUpperCase());
+    console.log('[handleBusinesses] URL:', req.url);
+    console.log('[handleBusinesses] Path:', req.path);
+    console.log('[handleBusinesses] Original URL:', req.originalUrl);
+    console.log('[handleBusinesses] Request body:', JSON.stringify(req.body, null, 2));
+    console.log('[handleBusinesses] Headers:', JSON.stringify(req.headers, null, 2));
     
-    switch (req.method) {
+    const method = req.method?.toUpperCase();
+    
+    switch (method) {
       case 'GET':
         return await getBusinesses(req, res);
       case 'PUT':
         return await updateBusinessVerification(req, res);
       default:
-        console.warn('[handleBusinesses] Method not allowed:', req.method);
-        return res.status(405).json({ error: 'Method not allowed' });
+        console.warn('[handleBusinesses] Method not allowed:', method);
+        console.warn('[handleBusinesses] Available methods: GET, PUT');
+        return res.status(405).json({ error: 'Method not allowed', receivedMethod: method });
     }
   } catch (error) {
     console.error('Unexpected error in businesses API:', error);
