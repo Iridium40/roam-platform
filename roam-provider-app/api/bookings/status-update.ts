@@ -323,9 +323,107 @@ async function sendNotificationViaService(
       });
     }
 
-    // 8. SMS sending would go here (similar pattern)
+    // 8. Send SMS if enabled and recipient exists
+    console.log(`📱 SMS sending check:`, {
+      smsAllowed,
+      hasRecipientPhone: !!recipientPhone,
+      recipientPhone: recipientPhone ? recipientPhone.substring(0, 5) + '***' : null,
+      hasTemplateBody: !!template.sms_body,
+      notificationType,
+      userId,
+    });
+
+    if (!smsAllowed) {
+      console.log(`ℹ️ SMS not allowed for ${notificationType} - user preferences or quiet hours`);
+    }
+    if (!recipientPhone) {
+      console.warn(`⚠️ No recipient phone found for user ${userId}`);
+    }
+    if (!template.sms_body) {
+      console.warn(`⚠️ Template ${notificationType} has no SMS body`);
+    }
+
     if (smsAllowed && recipientPhone && template.sms_body) {
-      console.log(`📱 SMS notifications not yet implemented for ${notificationType}`);
+      try {
+        console.log(`📱 Preparing to send SMS to: ${recipientPhone.substring(0, 5)}***`);
+        
+        // Check for Twilio credentials
+        const twilioAccountSid = process.env.TWILIO_ACCOUNT_SID;
+        const twilioAuthToken = process.env.TWILIO_AUTH_TOKEN;
+        const twilioPhoneNumber = process.env.TWILIO_PHONE_NUMBER;
+
+        if (!twilioAccountSid || !twilioAuthToken || !twilioPhoneNumber) {
+          console.warn('⚠️ Twilio credentials not configured, skipping SMS');
+          return;
+        }
+
+        // Replace template variables in SMS body
+        let smsBody = template.sms_body || '';
+        
+        console.log(`📱 SMS Template variables:`, templateVariables);
+        
+        for (const [key, value] of Object.entries(templateVariables)) {
+          const regex = new RegExp(`{{${key}}}`, 'g');
+          smsBody = smsBody.replace(regex, String(value ?? ''));
+        }
+
+        console.log(`📱 Sending SMS via Twilio...`);
+
+        // Send SMS via Twilio
+        const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${twilioAccountSid}/Messages.json`;
+        const twilioResponse = await fetch(twilioUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Basic ${Buffer.from(`${twilioAccountSid}:${twilioAuthToken}`).toString('base64')}`,
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: new URLSearchParams({
+            To: recipientPhone,
+            From: twilioPhoneNumber,
+            Body: smsBody,
+          }),
+        });
+
+        const twilioData = await twilioResponse.json();
+
+        if (!twilioResponse.ok) {
+          throw new Error(`Twilio API error: ${twilioData.message || 'Unknown error'}`);
+        }
+
+        // Log success
+        await supabase.from('notification_logs').insert({
+          user_id: userId,
+          recipient_phone: recipientPhone,
+          notification_type: notificationType,
+          channel: 'sms',
+          status: 'sent',
+          twilio_sid: twilioData.sid,
+          body: smsBody,
+          sent_at: new Date().toISOString(),
+          metadata,
+        });
+
+        console.log(`✅ SMS sent: ${notificationType} to ${recipientPhone.substring(0, 5)}***`);
+      } catch (smsError) {
+        console.error('❌ SMS send failed:', smsError);
+        
+        // Log failure
+        await supabase.from('notification_logs').insert({
+          user_id: userId,
+          recipient_phone: recipientPhone,
+          notification_type: notificationType,
+          channel: 'sms',
+          status: 'failed',
+          error_message: smsError instanceof Error ? smsError.message : String(smsError),
+          metadata,
+        });
+      }
+    } else {
+      console.log(`ℹ️ SMS skipped for ${notificationType}:`, {
+        smsAllowed,
+        hasRecipient: !!recipientPhone,
+        hasTemplate: !!template.sms_body,
+      });
     }
 
   } catch (error) {
@@ -802,7 +900,7 @@ async function sendStatusNotifications(
     // Send notifications using inline notification service (Vercel-compatible)
     
     // Notify customer when booking is confirmed
-    if (newStatus === 'confirmed' && options.notifyCustomer) {
+    if (newStatus === 'confirmed' && options.notifyCustomer && customer?.user_id) {
       console.log('📧 Checking if customer notification should be sent:', {
         newStatus,
         notifyCustomer: options.notifyCustomer,
@@ -816,15 +914,25 @@ async function sendStatusNotifications(
         serviceName,
       });
 
-      if (!customer?.user_id) {
-        console.error('❌ Cannot send notification: customer.user_id is missing', {
-          bookingId: booking.id,
-          customerId: customer?.id,
-          customerEmail: customer?.email,
-          customerName,
-          customerData: customer,
-        });
-      } else {
+      // Check user settings for email preferences
+      const { data: userSettings } = await supabase
+        .from('user_settings')
+        .select('email_notifications, customer_booking_accepted_email, notification_email')
+        .eq('user_id', customer.user_id)
+        .maybeSingle();
+
+      const emailAllowed = (userSettings?.email_notifications ?? true) && (userSettings?.customer_booking_accepted_email ?? true);
+      const recipientEmail = userSettings?.notification_email || customerEmail;
+
+      console.log('📧 User notification preferences:', {
+        emailAllowed,
+        recipientEmail: recipientEmail?.substring(0, 10) + '...',
+        userHasSettings: !!userSettings,
+      });
+
+      if (!emailAllowed) {
+        console.log('ℹ️ Customer has disabled email notifications for booking accepted');
+      } else if (recipientEmail) {
         console.log('📧 Sending customer_booking_accepted notification to user:', customer.user_id);
         console.log('📧 Notification payload:', {
           customer_name: customerName,
@@ -895,7 +1003,7 @@ async function sendStatusNotifications(
           }
 
           // Send direct email with calendar attachment
-          if (customerEmail && icalContent) {
+          if (recipientEmail && icalContent) {
             try {
               // Get base URL for logo (same logic as calendar links)
               const baseUrl = process.env.VERCEL_URL 
@@ -917,7 +1025,7 @@ async function sendStatusNotifications(
 
               const { data: emailData, error: emailError } = await resend.emails.send({
                 from: 'ROAM Support <support@roamyourbestlife.com>',
-                to: [customerEmail],
+                to: [recipientEmail],
                 subject: `✅ Your Booking is Confirmed! - ${serviceName}`,
                 html: emailHtml,
                 text: `Hi ${customerName},\n\nYour booking has been confirmed!\n\nService: ${serviceName}\nProvider: ${provider ? `${provider.first_name} ${provider.last_name}` : 'Provider'}\nDate: ${bookingDate}\nTime: ${bookingTime}\nLocation: ${locationAddress}\nTotal: $${totalAmountFormatted}\n\nView your bookings: https://roamyourbestlife.com/my-bookings\n\nBest regards,\nThe ROAM Team`,
@@ -933,7 +1041,7 @@ async function sendStatusNotifications(
                 console.error('❌ Error sending customer booking email:', emailError);
               } else {
                 console.log('✅ Customer booking email sent successfully:', {
-                  email: customerEmail,
+                  email: recipientEmail,
                   resendId: emailData?.id,
                 });
               }
@@ -950,6 +1058,8 @@ async function sendStatusNotifications(
             stack: notificationError instanceof Error ? notificationError.stack : undefined,
           });
         }
+      } else {
+        console.log('ℹ️ Customer notification skipped: no recipient email');
       }
     } else {
       console.log('ℹ️ Customer notification skipped:', {
@@ -1173,278 +1283,68 @@ The ROAM Team
     }
     
     // Notify customer when booking is completed
-    if (newStatus === 'completed' && options.notifyCustomer && customerEmail) {
-      console.log('📧 Sending completed email to customer:', {
+    if (newStatus === 'completed' && options.notifyCustomer && customer?.user_id) {
+      console.log('📧 Notifying customer of completed booking via service:', {
+        userId: customer.user_id,
         customerEmail,
         customerName,
         serviceName,
-        bookingId: booking.id,
       });
       
-      try {
-        // Get base URL for logo
-        const baseUrl = process.env.VERCEL_URL 
-          ? `https://${process.env.VERCEL_URL}` 
-          : process.env.PROVIDER_APP_API_URL || 'https://provider.roamyourbestlife.com';
-        
-        const providerName = provider ? `${provider.first_name} ${provider.last_name}` : business?.business_name || 'Provider';
-        const reviewLink = `https://roamyourbestlife.com/customer/review/${booking.id}`;
-        
-        // Build the completed email HTML
-        const completedEmailHtml = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
-  <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
-    <div style="background-color: #2C5F7D; padding: 30px 20px; text-align: center;">
-      <img src="${baseUrl}/logo-email.png" alt="ROAM Logo" style="max-width: 200px; height: auto;">
-    </div>
-    
-    <div style="padding: 40px 30px;">
-      <div style="color: #28A745; font-size: 24px; font-weight: bold; margin: 0 0 20px 0;">✅ Service Completed!</div>
+      const providerName = provider ? `${provider.first_name} ${provider.last_name}` : business?.business_name || 'Provider';
+      const reviewLink = `https://roamyourbestlife.com/customer/review/${booking.id}`;
       
-      <p style="color: #333333; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">Hi ${customerName},</p>
-      
-      <p style="color: #333333; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">Your service with ${providerName} has been completed. We hope you had a great experience!</p>
-      
-      <div style="background-color: #E8F5E9; border-left: 4px solid #28A745; padding: 20px; margin: 30px 0; border-radius: 4px;">
-        <div style="color: #1B5E20; font-weight: bold; font-size: 14px; margin-bottom: 5px;">Service:</div>
-        <div style="color: #333333; font-size: 16px; margin-bottom: 15px;">${serviceName}</div>
-        
-        <div style="color: #1B5E20; font-weight: bold; font-size: 14px; margin-bottom: 5px;">Provider:</div>
-        <div style="color: #333333; font-size: 16px; margin-bottom: 15px;">${providerName}</div>
-        
-        <div style="color: #1B5E20; font-weight: bold; font-size: 14px; margin-bottom: 5px;">Date:</div>
-        <div style="color: #333333; font-size: 16px; margin-bottom: 15px;">${bookingDate}</div>
-        
-        <div style="color: #1B5E20; font-weight: bold; font-size: 14px; margin-bottom: 5px;">Time:</div>
-        <div style="color: #333333; font-size: 16px; margin-bottom: 15px;">${bookingTime}</div>
-        
-        <div style="color: #1B5E20; font-weight: bold; font-size: 14px; margin-bottom: 5px;">Location:</div>
-        <div style="color: #333333; font-size: 16px; margin-bottom: 15px;">${locationAddress}</div>
-        
-        <div style="color: #1B5E20; font-weight: bold; font-size: 14px; margin-bottom: 5px;">Total:</div>
-        <div style="color: #333333; font-size: 16px;">$${totalAmountFormatted}</div>
-      </div>
-      
-      <p style="color: #333333; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">We'd love to hear about your experience! Your feedback helps us maintain high-quality service providers.</p>
-      
-      <div style="text-align: center;">
-        <a href="${reviewLink}" style="display: inline-block; padding: 15px 30px; background-color: #F4A300; color: #ffffff; text-decoration: none; border-radius: 5px; font-weight: bold; margin: 20px 0;">Leave a Review</a>
-      </div>
-      
-      <div style="border-top: 1px solid #e0e0e0; margin: 30px 0;"></div>
-      
-      <p style="color: #333333; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">Thank you for choosing ROAM! We look forward to serving you again.</p>
-    </div>
-    
-    <div style="background-color: #f8f9fa; padding: 30px; text-align: center; color: #666666; font-size: 14px;">
-      <p style="margin: 0 0 10px 0;"><strong>ROAM - Your Best Life. Everywhere.</strong></p>
-      <p style="margin: 0 0 10px 0;">
-        Need help? Contact us at 
-        <a href="mailto:support@roamyourbestlife.com" style="color: #2C5F7D;">support@roamyourbestlife.com</a>
-      </p>
-      <p style="margin: 0; font-size: 12px; color: #999999;">
-        © 2024 ROAM. All rights reserved.
-      </p>
-    </div>
-  </div>
-</body>
-</html>
-        `;
-
-        // Send email directly via Resend
-        const { data: emailData, error: emailError } = await resend.emails.send({
-          from: 'ROAM Support <support@roamyourbestlife.com>',
-          to: [customerEmail],
-          subject: `Service Completed - ${serviceName}`,
-          html: completedEmailHtml,
-          text: `Hi ${customerName},
-
-Your service with ${providerName} has been completed. We hope you had a great experience!
-
-BOOKING DETAILS:
-Service: ${serviceName}
-Provider: ${providerName}
-Date: ${bookingDate}
-Time: ${bookingTime}
-Location: ${locationAddress}
-Total: $${totalAmountFormatted}
-
-We'd love to hear about your experience! Your feedback helps us maintain high-quality service providers.
-
-Leave a review: ${reviewLink}
-
-Thank you for choosing ROAM! We look forward to serving you again.
-
-Best regards,
-The ROAM Team
-
-© 2024 ROAM. All rights reserved.`,
-        });
-
-        if (emailError) {
-          console.error('❌ Error sending completed email:', emailError);
-        } else {
-          console.log('✅ Completed email sent successfully:', {
-            email: customerEmail,
-            resendId: emailData?.id,
-          });
+      await sendNotificationViaService(
+        customer.user_id,
+        'customer_booking_completed',
+        {
+          customer_name: customerName,
+          provider_name: providerName,
+          service_name: serviceName,
+          booking_date: bookingDate,
+          booking_time: bookingTime,
+          location: locationAddress,
+          total_amount: totalAmountFormatted,
+          review_url: reviewLink,
+        },
+        {
+          booking_id: bookingId,
+          completed_by: updatedBy,
         }
-      } catch (completedError) {
-        console.error('❌ Error sending completed notification:', {
-          error: completedError,
-          message: completedError instanceof Error ? completedError.message : String(completedError),
-          stack: completedError instanceof Error ? completedError.stack : undefined,
-        });
-      }
+      );
     }
     
     // Notify customer when booking is declined
-    if (newStatus === 'declined' && options.notifyCustomer && customerEmail) {
-      console.log('📧 Sending declined email to customer:', {
+    if (newStatus === 'declined' && options.notifyCustomer && customer?.user_id) {
+      console.log('📧 Notifying customer of declined booking via service:', {
+        userId: customer.user_id,
         customerEmail,
         customerName,
         serviceName,
-        declineReason: booking.decline_reason,
       });
       
-      try {
-        // Get base URL for logo
-        const baseUrl = process.env.VERCEL_URL 
-          ? `https://${process.env.VERCEL_URL}` 
-          : process.env.PROVIDER_APP_API_URL || 'https://provider.roamyourbestlife.com';
-        
-        const providerName = provider ? `${provider.first_name} ${provider.last_name}` : business?.business_name || 'Provider';
-        const declineReason = booking.decline_reason || 'The provider is unavailable at the requested time.';
-        
-        // Build the declined email HTML
-        const declinedEmailHtml = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
-  <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
-    <div style="background-color: #2C5F7D; padding: 30px 20px; text-align: center;">
-      <img src="${baseUrl}/logo-email.png" alt="ROAM Logo" style="max-width: 200px; height: auto;">
-    </div>
-    
-    <div style="padding: 40px 30px;">
-      <div style="color: #DC3545; font-size: 24px; font-weight: bold; margin: 0 0 20px 0;">❌ Booking Request Declined</div>
+      const providerName = provider ? `${provider.first_name} ${provider.last_name}` : business?.business_name || 'Provider';
+      const declineReason = booking.decline_reason || 'The provider is unavailable at the requested time.';
       
-      <p style="color: #333333; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">Hi ${customerName},</p>
-      
-      <p style="color: #333333; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">Unfortunately, ${providerName} is unable to accept your booking request at this time.</p>
-      
-      <div style="background-color: #FFF3CD; border-left: 4px solid #FFC107; padding: 20px; margin: 30px 0; border-radius: 4px;">
-        <div style="color: #856404; font-weight: bold; font-size: 14px; margin-bottom: 5px;">Service:</div>
-        <div style="color: #333333; font-size: 16px; margin-bottom: 15px;">${serviceName}</div>
-        
-        <div style="color: #856404; font-weight: bold; font-size: 14px; margin-bottom: 5px;">Provider:</div>
-        <div style="color: #333333; font-size: 16px; margin-bottom: 15px;">${providerName}</div>
-        
-        <div style="color: #856404; font-weight: bold; font-size: 14px; margin-bottom: 5px;">Date:</div>
-        <div style="color: #333333; font-size: 16px; margin-bottom: 15px;">${bookingDate}</div>
-        
-        <div style="color: #856404; font-weight: bold; font-size: 14px; margin-bottom: 5px;">Time:</div>
-        <div style="color: #333333; font-size: 16px; margin-bottom: 15px;">${bookingTime}</div>
-        
-        <div style="color: #856404; font-weight: bold; font-size: 14px; margin-bottom: 5px;">Location:</div>
-        <div style="color: #333333; font-size: 16px; margin-bottom: 15px;">${locationAddress}</div>
-      </div>
-      
-      <div style="background-color: #F8F9FA; padding: 15px; border-radius: 4px; margin: 20px 0;">
-        <p style="margin: 0; color: #666;"><strong>Reason:</strong> ${declineReason}</p>
-      </div>
-      
-      <p style="color: #333333; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">We understand this may be disappointing. Here are your options:</p>
-      
-      <ul style="color: #333333; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
-        <li>Browse other available providers for this service</li>
-        <li>Try booking a different date or time</li>
-        <li>Contact our support team for assistance</li>
-      </ul>
-      
-      <div style="text-align: center;">
-        <a href="https://roamyourbestlife.com/customer/bookings" style="display: inline-block; padding: 15px 30px; background-color: #F4A300; color: #ffffff; text-decoration: none; border-radius: 5px; font-weight: bold; margin: 20px 0;">Find Another Provider</a>
-      </div>
-      
-      <div style="border-top: 1px solid #e0e0e0; margin: 30px 0;"></div>
-      
-      <p style="color: #333333; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">If you have any questions or need help finding an alternative provider, please don't hesitate to contact our support team.</p>
-    </div>
-    
-    <div style="background-color: #f8f9fa; padding: 30px; text-align: center; color: #666666; font-size: 14px;">
-      <p style="margin: 0 0 10px 0;"><strong>ROAM - Your Best Life. Everywhere.</strong></p>
-      <p style="margin: 0 0 10px 0;">
-        Need help? Contact us at 
-        <a href="mailto:support@roamyourbestlife.com" style="color: #2C5F7D;">support@roamyourbestlife.com</a>
-      </p>
-      <p style="margin: 0; font-size: 12px; color: #999999;">
-        © 2024 ROAM. All rights reserved.
-      </p>
-    </div>
-  </div>
-</body>
-</html>
-        `;
-
-        // Send email directly via Resend
-        const { data: emailData, error: emailError } = await resend.emails.send({
-          from: 'ROAM Support <support@roamyourbestlife.com>',
-          to: [customerEmail],
-          subject: `Booking Request Declined - ${serviceName}`,
-          html: declinedEmailHtml,
-          text: `Hi ${customerName},
-
-Unfortunately, ${providerName} is unable to accept your booking request at this time.
-
-BOOKING DETAILS:
-Service: ${serviceName}
-Provider: ${providerName}
-Date: ${bookingDate}
-Time: ${bookingTime}
-Location: ${locationAddress}
-
-REASON: ${declineReason}
-
-YOUR OPTIONS:
-• Browse other available providers for this service
-• Try booking a different date or time
-• Contact our support team for assistance
-
-Find another provider: https://roamyourbestlife.com/customer/bookings
-
-If you need help finding an alternative provider, please contact us at support@roamyourbestlife.com.
-
-Best regards,
-The ROAM Team
-
-© 2024 ROAM. All rights reserved.`,
-        });
-
-        if (emailError) {
-          console.error('❌ Error sending declined email:', emailError);
-        } else {
-          console.log('✅ Declined email sent successfully:', {
-            email: customerEmail,
-            resendId: emailData?.id,
-          });
+      await sendNotificationViaService(
+        customer.user_id,
+        'customer_booking_declined',
+        {
+          customer_name: customerName,
+          provider_name: providerName,
+          service_name: serviceName,
+          booking_date: bookingDate,
+          booking_time: bookingTime,
+          location: locationAddress,
+          decline_reason: declineReason,
+          booking_url: 'https://roamyourbestlife.com/customer/bookings',
+        },
+        {
+          booking_id: bookingId,
+          declined_by: updatedBy,
+          decline_reason: declineReason,
         }
-      } catch (declineError) {
-        console.error('❌ Error sending declined notification:', {
-          error: declineError,
-          message: declineError instanceof Error ? declineError.message : String(declineError),
-          stack: declineError instanceof Error ? declineError.stack : undefined,
-        });
-      }
+      );
     }
 
     // Notify customer when booking is marked as no_show
