@@ -230,46 +230,81 @@ async function getBusinesses(req: Request, res: Response) {
 
 async function updateBusinessVerification(req: Request, res: Response) {
   try {
-    const businessId = req.query.id || req.body.business_id;
-    const { 
-      verification_status, 
-      verification_notes,
-      admin_id 
-    } = req.body;
-
+    const businessId = req.query.id || req.body.id || req.body.business_id;
+    
     if (!businessId) {
       return res.status(400).json({ error: 'Business ID is required' });
     }
 
-    if (!['pending', 'approved', 'rejected', 'suspended'].includes(verification_status)) {
-      return res.status(400).json({ 
-        error: 'Invalid verification status. Must be: pending, approved, rejected, or suspended' 
-      });
+    // Extract all possible update fields
+    const {
+      verification_status,
+      verification_notes,
+      admin_id,
+      business_name,
+      contact_email,
+      phone,
+      is_active,
+      is_featured,
+      business_type,
+      website_url,
+      business_description,
+      business_hours,
+      social_media,
+      logo_url,
+      cover_image_url,
+      image_url
+    } = req.body;
+
+    // Build update object with only provided fields
+    const updateData: any = {};
+
+    // Handle verification-specific updates
+    if (verification_status !== undefined) {
+      if (!['pending', 'approved', 'rejected', 'suspended'].includes(verification_status)) {
+        return res.status(400).json({ 
+          error: 'Invalid verification status. Must be: pending, approved, rejected, or suspended' 
+        });
+      }
+      updateData.verification_status = verification_status;
+      updateData.verification_notes = verification_notes || null;
+      updateData.approved_at = verification_status === 'approved' ? new Date().toISOString() : null;
+      updateData.approved_by = verification_status === 'approved' ? (admin_id || null) : null;
+      updateData.approval_notes = verification_notes || null;
     }
 
-    // Update business verification status
+    // Handle general business profile updates
+    if (business_name !== undefined) updateData.business_name = business_name;
+    if (contact_email !== undefined) updateData.contact_email = contact_email;
+    if (phone !== undefined) updateData.phone = phone;
+    if (is_active !== undefined) updateData.is_active = is_active;
+    if (is_featured !== undefined) updateData.is_featured = is_featured;
+    if (business_type !== undefined) updateData.business_type = business_type;
+    if (website_url !== undefined) updateData.website_url = website_url;
+    if (business_description !== undefined) updateData.business_description = business_description;
+    if (business_hours !== undefined) updateData.business_hours = business_hours;
+    if (social_media !== undefined) updateData.social_media = social_media;
+    if (logo_url !== undefined) updateData.logo_url = logo_url;
+    if (cover_image_url !== undefined) updateData.cover_image_url = cover_image_url;
+    if (image_url !== undefined) updateData.image_url = image_url;
+
+    // Update business profile
     const { data: business, error: updateError } = await supabase
       .from('business_profiles')
-      .update({
-        verification_status,
-        verification_notes,
-        approved_at: verification_status === 'approved' ? new Date().toISOString() : null,
-        approved_by: verification_status === 'approved' ? admin_id : null,
-        approval_notes: verification_notes
-      })
+      .update(updateData)
       .eq('id', businessId)
       .select()
       .single();
 
     if (updateError) {
-      console.error('Error updating business verification:', updateError);
+      console.error('Error updating business:', updateError);
       return res.status(500).json({ 
         error: updateError.message,
         details: updateError.details 
       });
     }
 
-    // If approved, also approve all associated providers
+    // If verification status was approved, also approve all associated providers
     if (verification_status === 'approved') {
       const { error: providerUpdateError } = await supabase
         .from('providers')
@@ -284,18 +319,20 @@ async function updateBusinessVerification(req: Request, res: Response) {
     }
 
     return res.status(200).json({ 
-      message: `Business verification ${verification_status} successfully`,
+      message: verification_status ? `Business verification ${verification_status} successfully` : 'Business updated successfully',
       business: {
         id: business.id,
         business_name: business.business_name,
         verification_status: business.verification_status,
-        approved_at: business.approved_at
+        approved_at: business.approved_at,
+        is_active: business.is_active,
+        is_featured: business.is_featured
       }
     });
 
   } catch (error) {
     console.error('Error in updateBusinessVerification:', error);
-    return res.status(500).json({ error: 'Failed to update business verification' });
+    return res.status(500).json({ error: 'Failed to update business' });
   }
 }
 

@@ -1500,9 +1500,12 @@ export default function AdminServices() {
 
     try {
       setSaving(true);
-      const { error } = await supabase
-        .from("services")
-        .update({
+      const response = await fetch(`/api/services/${editingService.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           name: editingService.name,
           description: editingService.description,
           subcategory_id: editingService.subcategory_id,
@@ -1512,10 +1515,14 @@ export default function AdminServices() {
           is_active: editingService.is_active,
           is_featured: editingService.is_featured,
           is_popular: editingService.is_popular,
-        })
-        .eq("id", editingService.id);
+        }),
+      });
 
-      if (error) throw error;
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to update service');
+      }
 
       setEditingService(null);
       setIsEditServiceOpen(false);
@@ -1540,12 +1547,18 @@ export default function AdminServices() {
 
     try {
       setSaving(true);
-      const { error } = await supabase
-        .from("services")
-        .delete()
-        .eq("id", serviceToDelete.id);
+      const response = await fetch(`/api/services/${serviceToDelete.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
 
-      if (error) throw error;
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to delete service');
+      }
 
       await fetchAllData(); // Refresh the data
       setIsDeleteConfirmOpen(false);
