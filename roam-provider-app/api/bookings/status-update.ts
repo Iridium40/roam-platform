@@ -105,24 +105,43 @@ async function sendNotificationViaService(
     console.log('✅ Supabase client created');
 
     // 1. Get user settings (includes notification preferences)
-    const { data: settings } = await supabase
+    console.log('🔍 Step 1: Fetching user settings for user:', userId);
+    const { data: settings, error: settingsError } = await supabase
       .from('user_settings')
       .select('*')
       .eq('user_id', userId)
       .maybeSingle();
+    
+    console.log('🔍 User settings fetch result:', {
+      hasSettings: !!settings,
+      hasError: !!settingsError,
+      error: settingsError,
+      settings: settings,
+    });
 
     // 2. Check master toggles
+    console.log('🔍 Step 2: Checking master toggles...');
     const emailEnabled = settings?.email_notifications ?? true;
     const smsEnabled = settings?.sms_notifications ?? false;
+    console.log('🔍 Master toggles:', { emailEnabled, smsEnabled });
 
     // 3. Check granular preferences
+    console.log('🔍 Step 3: Checking granular preferences...');
     const emailPrefKey = `${notificationType}_email`;
     const smsPrefKey = `${notificationType}_sms`;
     
     const emailAllowed = emailEnabled && (settings?.[emailPrefKey] ?? true);
     const smsAllowed = smsEnabled && (settings?.[smsPrefKey] ?? false);
+    console.log('🔍 Granular preferences:', {
+      emailPrefKey,
+      smsPrefKey,
+      emailAllowed,
+      smsAllowed,
+      settingValue: settings?.[emailPrefKey],
+    });
 
     // 4. Check quiet hours
+    console.log('🔍 Step 4: Checking quiet hours...');
     if (settings?.quiet_hours_enabled) {
       const now = new Date();
       const currentTime = now.toTimeString().slice(0, 5); // HH:MM
@@ -142,13 +161,21 @@ async function sendNotificationViaService(
     }
 
     // 5. Get notification template from database
-    console.log(`🔍 Looking up notification template: ${notificationType} for user: ${userId}`);
+    console.log('🔍 Step 5: Looking up notification template...');
+    console.log(`🔍 Template details: ${notificationType} for user: ${userId}`);
     const { data: template, error: templateError } = await supabase
       .from('notification_templates')
       .select('*')
       .eq('template_key', notificationType)
       .eq('is_active', true)
       .single();
+
+    console.log('🔍 Template fetch result:', {
+      hasTemplate: !!template,
+      hasError: !!templateError,
+      error: templateError,
+      templateKey: template?.template_key,
+    });
 
     if (templateError) {
       console.error(`❌ Error fetching template: ${notificationType}`, {
