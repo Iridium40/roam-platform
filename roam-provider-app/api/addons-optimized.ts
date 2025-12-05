@@ -106,12 +106,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
+    // Type guard: ensure data is an object before accessing properties
+    const responseData = data && typeof data === 'object' && !Array.isArray(data)
+      ? data as Record<string, any>
+      : {};
+
     // Return the optimized response
     return res.status(200).json({
       business_id,
-      eligible_addons: data?.addons || [],
-      addon_count: data?.total_count || 0,
-      stats: data?.stats || {
+      eligible_addons: responseData.addons || [],
+      addon_count: responseData.total_count || 0,
+      stats: responseData.stats || {
         total_addons: 0,
         available_addons: 0,
         configured_addons: 0,
@@ -122,7 +127,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       pagination: {
         limit: parseInt(typeof limit === 'string' ? limit : '50', 10),
         offset: parseInt(typeof offset === 'string' ? offset : '0', 10),
-        total: data?.total_count || 0
+        total: responseData.total_count || 0
       }
     });
 

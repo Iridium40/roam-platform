@@ -101,8 +101,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Return stats with performance metadata
+    // Type guard to ensure stats is an object before spreading
+    const statsObject = stats && typeof stats === 'object' && !Array.isArray(stats) 
+      ? stats as Record<string, any>
+      : {};
+    
     return res.status(200).json({
-      ...(stats || {}),
+      ...statsObject,
       _meta: {
         query_time_ms: queryTime,
         business_id,
