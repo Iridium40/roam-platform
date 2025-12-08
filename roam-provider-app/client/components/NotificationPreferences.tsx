@@ -77,11 +77,25 @@ export function NotificationPreferences() {
   async function saveSettings() {
     setSaving(true);
     try {
+      // Automatically enable master toggles if any individual notification is enabled
+      const hasAnyEmailEnabled = 
+        settings?.provider_new_booking_email ||
+        settings?.provider_booking_cancelled_email ||
+        settings?.provider_booking_rescheduled_email;
+      
+      const hasAnySmsEnabled = 
+        settings?.provider_new_booking_sms ||
+        settings?.provider_booking_cancelled_sms ||
+        settings?.provider_booking_rescheduled_sms;
+
       const { error } = await supabase
         .from('user_settings')
         .upsert({
           user_id: userId,
           ...settings,
+          // Auto-enable master toggles if any individual notification is on
+          email_notifications: hasAnyEmailEnabled,
+          sms_notifications: hasAnySmsEnabled,
           updated_at: new Date().toISOString(),
         });
 
@@ -174,41 +188,6 @@ export function NotificationPreferences() {
             </div>
           </div>
 
-          {/* Master Switches */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium">Notification Channels</h3>
-            
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="font-medium">Email Notifications</div>
-                <div className="text-sm text-gray-500">
-                  Receive notifications via email
-                </div>
-              </div>
-              <Switch
-                checked={settings?.email_notifications ?? true}
-                onCheckedChange={(checked) =>
-                  setSettings({ ...settings, email_notifications: checked })
-                }
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="font-medium">SMS Notifications</div>
-                <div className="text-sm text-gray-500">
-                  Receive notifications via text message
-                </div>
-              </div>
-              <Switch
-                checked={settings?.sms_notifications ?? false}
-                onCheckedChange={(checked) =>
-                  setSettings({ ...settings, sms_notifications: checked })
-                }
-              />
-            </div>
-          </div>
-
           {/* Customer Notifications */}
           {userType === 'CUSTOMER' && (
             <div className="space-y-4 pt-6 border-t">
@@ -277,6 +256,49 @@ export function NotificationPreferences() {
           {['PROVIDER', 'BUSINESS_OWNER', 'DISPATCHER'].includes(userType) && (
             <div className="space-y-4 pt-6 border-t">
               <h3 className="text-lg font-medium">Provider Notifications</h3>
+              
+              {/* Quick Enable All Toggles */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
+                <p className="text-sm font-medium text-blue-900">Quick Controls</p>
+                <div className="flex gap-6">
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={
+                        settings?.provider_new_booking_email &&
+                        settings?.provider_booking_cancelled_email &&
+                        settings?.provider_booking_rescheduled_email
+                      }
+                      onCheckedChange={(checked) =>
+                        setSettings({
+                          ...settings,
+                          provider_new_booking_email: checked,
+                          provider_booking_cancelled_email: checked,
+                          provider_booking_rescheduled_email: checked,
+                        })
+                      }
+                    />
+                    <span className="text-sm font-medium">Enable All Email Notifications</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={
+                        settings?.provider_new_booking_sms &&
+                        settings?.provider_booking_cancelled_sms &&
+                        settings?.provider_booking_rescheduled_sms
+                      }
+                      onCheckedChange={(checked) =>
+                        setSettings({
+                          ...settings,
+                          provider_new_booking_sms: checked,
+                          provider_booking_cancelled_sms: checked,
+                          provider_booking_rescheduled_sms: checked,
+                        })
+                      }
+                    />
+                    <span className="text-sm font-medium">Enable All SMS Notifications</span>
+                  </div>
+                </div>
+              </div>
               
               <NotificationToggle
                 label="New Booking Request"
