@@ -1,37 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 import { handleBookingCancellation } from './payment-processor.js';
-
-// Helper function to dynamically import notification function
-// Uses dynamic import to handle module resolution issues in Vercel's serverless environment
-async function getNotifyProvidersBookingCancelled() {
-  try {
-    const importPaths = [
-      '../../lib/notifications/notify-providers-booking-cancelled.js',
-      '../../lib/notifications/notify-providers-booking-cancelled',
-      './lib/notifications/notify-providers-booking-cancelled.js',
-      './lib/notifications/notify-providers-booking-cancelled',
-    ];
-
-    for (const importPath of importPaths) {
-      try {
-        const module = await import(importPath);
-        const fn = module.notifyProvidersBookingCancelled || module.default;
-        if (fn && typeof fn === 'function') {
-          return fn;
-        }
-      } catch (err) {
-        continue;
-      }
-    }
-
-    console.warn('Could not load notify-providers-booking-cancelled module');
-    return null;
-  } catch (err) {
-    console.warn('Error loading notify-providers-booking-cancelled module:', err);
-    return null;
-  }
-}
+import { sendNotification } from '../../shared/notifications/index.js';
 
 const supabase = createClient(
   process.env.VITE_PUBLIC_SUPABASE_URL!,
@@ -126,65 +96,98 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Notify providers about the cancellation (non-blocking)
     try {
-      const notifyFn = await getNotifyProvidersBookingCancelled();
-      if (notifyFn) {
-        const service = Array.isArray(booking.services) ? booking.services[0] : booking.services;
-        const customer = Array.isArray(booking.customer_profiles) ? booking.customer_profiles[0] : booking.customer_profiles;
-        const business = Array.isArray(booking.business_profiles) ? booking.business_profiles[0] : booking.business_profiles;
+      const service = Array.isArray(booking.services) ? booking.services[0] : booking.services;
+      const customer = Array.isArray(booking.customer_profiles) ? booking.customer_profiles[0] : booking.customer_profiles;
+      const business = Array.isArray(booking.business_profiles) ? booking.business_profiles[0] : booking.business_profiles;
 
-        if (service && customer && business) {
-          // Fetch business location to get address
-          let businessAddress = '';
-          try {
-            const { data: businessLocation } = await supabase
-              .from('business_locations')
-              .select('address_line1, address_line2, city, state, postal_code')
-              .eq('business_id', booking.business_id)
-              .eq('is_primary', true)
-              .eq('is_active', true)
-              .limit(1)
-              .maybeSingle();
+      if (service && customer && business) {
+        // Fetch business location to get address
+        let businessAddress = '';
+        try {
+          const { data: businessLocation } = await supabase
+            .from('business_locations')
+            .select('address_line1, address_line2, city, state, postal_code')
+            .eq('business_id', booking.business_id)
+            .eq('is_primary', true)
+            .eq('is_active', true)
+            .limit(1)
+            .maybeSingle();
 
-            if (businessLocation) {
-              const addressParts = [
-                businessLocation.address_line1,
-                businessLocation.address_line2,
-                businessLocation.city,
-                businessLocation.state,
-                businessLocation.postal_code,
-              ].filter(Boolean);
-              businessAddress = addressParts.join(', ');
-            }
-          } catch (locationError) {
-            // Non-fatal
+          if (businessLocation) {
+            const addressParts = [
+              businessLocation.address_line1,
+              businessLocation.address_line2,
+              businessLocation.city,
+              businessLocation.state,
+              businessLocation.postal_code,
+            ].filter(Boolean);
+            businessAddress = addressParts.join(', ');
           }
+        } catch (locationError) {
+          // Non-fatal
+        }
 
-          await notifyFn({
-            booking: {
-              id: booking.id,
-              business_id: booking.business_id,
-              provider_id: booking.provider_id,
-              booking_date: booking.booking_date,
-              start_time: booking.start_time,
-              cancellation_reason: booking.cancellation_reason,
-            },
-            service: {
-              name: service.name,
-            },
-            customer: {
-              first_name: customer.first_name || '',
-              last_name: customer.last_name || '',
-              email: customer.email,
-              phone: customer.phone,
-            },
-            business: {
-              name: business.business_name,
-              business_address: businessAddress,
-            },
-          });
+        // Format booking date and time
+        const bookingDate = new Date(booking.booking_date).toLocaleDateString('en-US', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        });
+
+        const [hours, minutes] = booking.start_time.split(':');
+        const hour = parseInt(hours);
+        const ampm = hour >= 12 ? 'PM' : 'AM';
+        const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+        const bookingTime = `${displayHour}:${minutes} ${ampm}`;
+
+        const customerName = `${customer.first_name} ${customer.last_name}`.trim() || 'Customer';
+        const cancellationReason = booking.cancellation_reason || 'No reason provided';
+
+        // Query provider profiles to find who should be notified
+        const { data: providers } = await supabase
+          .from('provider_profiles')
+          .select('user_id, provider_role, first_name, last_name')
+          .eq('business_id', booking.business_id)
+          .eq('is_active', true);
+
+        if (providers && providers.length > 0) {
+          // Notify each relevant provider
+          for (const provider of providers) {
+            // Always notify owner and dispatcher
+            // Only notify assigned provider if they're assigned to this booking
+            const shouldNotify =
+              provider.provider_role === 'owner' ||
+              provider.provider_role === 'dispatcher' ||
+              (provider.provider_role === 'assigned_provider' && booking.provider_id === provider.user_id);
+
+            if (shouldNotify) {
+              await sendNotification({
+                userId: provider.user_id,
+                notificationType: 'provider_booking_cancelled',
+                variables: {
+                  provider_name: provider.provider_role === 'owner' ? 'Owner' : provider.provider_role === 'dispatcher' ? 'Dispatcher' : 'Provider',
+                  customer_name: customerName,
+                  service_name: service.name,
+                  booking_date: bookingDate,
+                  booking_time: bookingTime,
+                  booking_location: businessAddress || 'Location TBD',
+                  cancellation_reason: cancellationReason,
+                  booking_id: booking.id,
+                  business_name: business.business_name,
+                  booking_reference: booking.booking_reference || 'N/A',
+                },
+                metadata: {
+                  booking_id: booking.id,
+                  action: 'cancelled',
+                },
+              });
+            }
+          }
         }
       }
     } catch (notificationError) {
+      console.error('Error sending cancellation notifications:', notificationError);
       // Non-fatal - continue even if notifications fail
     }
 

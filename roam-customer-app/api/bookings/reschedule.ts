@@ -1,16 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
-
-// Helper function to dynamically import notification function
-async function getNotifyProvidersBookingRescheduled() {
-  try {
-    const module = await import('../../lib/notifications/notify-providers-booking-rescheduled.js');
-    return module.notifyProvidersBookingRescheduled;
-  } catch (err) {
-    console.info('Notification module not available, reschedule will proceed without notifications');
-    return null;
-  }
-}
+import { sendNotification } from '../../shared/notifications/index.js';
 
 const supabase = createClient(
   process.env.VITE_PUBLIC_SUPABASE_URL!,
@@ -154,76 +144,127 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Business users (owners/dispatchers) will be notified via email/SMS
     // Booking status has been changed to 'pending' so business must accept again
     try {
-      const notifyProvidersBookingRescheduled = await getNotifyProvidersBookingRescheduled();
-      
-      if (notifyProvidersBookingRescheduled) {
-        const service = Array.isArray(booking.services) ? booking.services[0] : booking.services;
-        const customer = Array.isArray(booking.customer_profiles) ? booking.customer_profiles[0] : booking.customer_profiles;
-        const business = Array.isArray(booking.business_profiles) ? booking.business_profiles[0] : booking.business_profiles;
+      const service = Array.isArray(booking.services) ? booking.services[0] : booking.services;
+      const customer = Array.isArray(booking.customer_profiles) ? booking.customer_profiles[0] : booking.customer_profiles;
+      const business = Array.isArray(booking.business_profiles) ? booking.business_profiles[0] : booking.business_profiles;
 
-        if (!service || !customer || !business) {
-          console.warn('⚠️ Missing booking data for notifications:', {
-            hasService: !!service,
-            hasCustomer: !!customer,
-            hasBusiness: !!business,
-          });
-        } else {
-          // Fetch business location to get address
-          let businessAddress = '';
-          try {
-            const { data: businessLocation } = await supabase
-              .from('business_locations')
-              .select('address_line1, address_line2, city, state, postal_code')
-              .eq('business_id', booking.business_id)
-              .eq('is_primary', true)
-              .eq('is_active', true)
-              .limit(1)
-              .maybeSingle();
+      if (!service || !customer || !business) {
+        console.warn('⚠️ Missing booking data for notifications:', {
+          hasService: !!service,
+          hasCustomer: !!customer,
+          hasBusiness: !!business,
+        });
+      } else {
+        // Fetch business location to get address
+        let businessAddress = '';
+        try {
+          const { data: businessLocation } = await supabase
+            .from('business_locations')
+            .select('address_line1, address_line2, city, state, postal_code')
+            .eq('business_id', booking.business_id)
+            .eq('is_primary', true)
+            .eq('is_active', true)
+            .limit(1)
+            .maybeSingle();
 
-            if (businessLocation) {
-              const addressParts = [
-                businessLocation.address_line1,
-                businessLocation.address_line2,
-                businessLocation.city,
-                businessLocation.state,
-                businessLocation.postal_code,
-              ].filter(Boolean);
-              businessAddress = addressParts.join(', ');
-            }
-          } catch (locationError) {
-            console.warn('⚠️ Could not fetch business location:', locationError);
+          if (businessLocation) {
+            const addressParts = [
+              businessLocation.address_line1,
+              businessLocation.address_line2,
+              businessLocation.city,
+              businessLocation.state,
+              businessLocation.postal_code,
+            ].filter(Boolean);
+            businessAddress = addressParts.join(', ');
           }
+        } catch (locationError) {
+          console.warn('⚠️ Could not fetch business location:', locationError);
+        }
 
-          console.log('📧 Sending reschedule notifications...');
-          await notifyProvidersBookingRescheduled({
-            booking: {
-              id: booking.id,
-              business_id: booking.business_id,
-              provider_id: booking.provider_id,
-              booking_date: booking.booking_date,
-              start_time: booking.start_time,
-              original_booking_date: booking.original_booking_date,
-              original_start_time: booking.original_start_time,
-              reschedule_reason: booking.reschedule_reason,
-            },
-            service: {
-              name: service.name,
-            },
-            customer: {
-              first_name: customer.first_name || '',
-              last_name: customer.last_name || '',
-              email: customer.email,
-              phone: customer.phone,
-            },
-            business: {
-              name: business.business_name,
-              business_address: businessAddress,
-            },
-          });
+        // Format booking dates and times
+        const newBookingDate = new Date(booking.booking_date).toLocaleDateString('en-US', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        });
+
+        const [hours, minutes] = booking.start_time.split(':');
+        const hour = parseInt(hours);
+        const ampm = hour >= 12 ? 'PM' : 'AM';
+        const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+        const newBookingTime = `${displayHour}:${minutes} ${ampm}`;
+
+        // Format original booking date and time
+        const oldBookingDate = booking.original_booking_date
+          ? new Date(booking.original_booking_date).toLocaleDateString('en-US', {
+              weekday: 'long',
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+            })
+          : 'N/A';
+
+        const oldBookingTime = booking.original_start_time
+          ? (() => {
+              const [h, m] = booking.original_start_time.split(':');
+              const hr = parseInt(h);
+              const ap = hr >= 12 ? 'PM' : 'AM';
+              const dh = hr === 0 ? 12 : hr > 12 ? hr - 12 : hr;
+              return `${dh}:${m} ${ap}`;
+            })()
+          : 'N/A';
+
+        const customerName = `${customer.first_name} ${customer.last_name}`.trim() || 'Customer';
+        const rescheduleReason = booking.reschedule_reason || 'No reason provided';
+
+        // Query provider profiles to find who should be notified
+        const { data: providers } = await supabase
+          .from('provider_profiles')
+          .select('user_id, provider_role, first_name, last_name')
+          .eq('business_id', booking.business_id)
+          .eq('is_active', true);
+
+        if (providers && providers.length > 0) {
+          console.log('📧 Sending reschedule notifications to providers...');
+          
+          // Notify each relevant provider
+          for (const provider of providers) {
+            // Always notify owner and dispatcher
+            // Only notify assigned provider if they're assigned to this booking
+            const shouldNotify =
+              provider.provider_role === 'owner' ||
+              provider.provider_role === 'dispatcher' ||
+              (provider.provider_role === 'assigned_provider' && booking.provider_id === provider.user_id);
+
+            if (shouldNotify) {
+              await sendNotification({
+                userId: provider.user_id,
+                notificationType: 'provider_booking_rescheduled',
+                variables: {
+                  provider_name: provider.provider_role === 'owner' ? 'Owner' : provider.provider_role === 'dispatcher' ? 'Dispatcher' : 'Provider',
+                  customer_name: customerName,
+                  service_name: service.name,
+                  old_booking_date: oldBookingDate,
+                  old_booking_time: oldBookingTime,
+                  new_booking_date: newBookingDate,
+                  new_booking_time: newBookingTime,
+                  booking_location: businessAddress || 'Location TBD',
+                  reschedule_reason: rescheduleReason,
+                  booking_id: booking.id,
+                  business_name: business.business_name,
+                  booking_reference: booking.booking_reference || 'N/A',
+                },
+                metadata: {
+                  booking_id: booking.id,
+                  action: 'rescheduled',
+                },
+              });
+            }
+          }
+          
           console.log('✅ Reschedule notifications sent');
         }
-      } else {
-        console.log('ℹ️ Notification function not available, skipping provider notifications');
       }
     } catch (notificationError) {
       console.error('⚠️ Error sending reschedule notifications (non-fatal):', {
