@@ -170,6 +170,7 @@ export default function CustomerTransactions() {
     switch (type?.toLowerCase()) {
       case 'payment':
       case 'service_payment':
+      case 'booking_payment':
         return <ArrowUpRight className="w-4 h-4 text-red-500" />;
       case 'refund':
         return <ArrowDownRight className="w-4 h-4 text-green-500" />;
@@ -190,7 +191,7 @@ export default function CustomerTransactions() {
   const formatTransactionType = (type: string | null) => {
     switch (type?.toLowerCase()) {
       case 'service_payment':
-        return 'Payment';
+      case 'booking_payment':
       case 'payment':
         return 'Payment';
       case 'refund':
@@ -208,7 +209,7 @@ export default function CustomerTransactions() {
     
     // Map transaction types to filter categories
     if (filter === 'payment') {
-      return txType === 'payment' || txType === 'service_payment';
+      return txType === 'payment' || txType === 'service_payment' || txType === 'booking_payment';
     }
     return txType === filter;
   });
@@ -216,7 +217,7 @@ export default function CustomerTransactions() {
   const totalSpent = transactions
     .filter(t => {
       const txType = t.transaction_type?.toLowerCase();
-      return (txType === 'payment' || txType === 'service_payment') && t.status?.toLowerCase() === 'completed';
+      return (txType === 'payment' || txType === 'service_payment' || txType === 'booking_payment') && t.status?.toLowerCase() === 'completed';
     })
     .reduce((sum, t) => sum + Number(t.amount), 0);
 
@@ -363,7 +364,8 @@ export default function CustomerTransactions() {
                                   {formatTransactionType(transaction.transaction_type)}
                                 </span>
                                 {(transaction.transaction_type?.toLowerCase() === 'payment' || 
-                                  transaction.transaction_type?.toLowerCase() === 'service_payment') &&
+                                  transaction.transaction_type?.toLowerCase() === 'service_payment' ||
+                                  transaction.transaction_type?.toLowerCase() === 'booking_payment') &&
                                   transaction.bookings?.booking_reference && (
                                   <span className="font-mono text-roam-blue">
                                     Ref: {transaction.bookings.booking_reference}
@@ -544,18 +546,6 @@ export default function CustomerTransactions() {
                   <Download className="w-4 h-4 mr-2" />
                   Print Receipt
                 </Button>
-                {selectedTransaction.stripe_transaction_id && (
-                  <Button
-                    variant="outline"
-                    className="flex-1"
-                    onClick={() => {
-                      // Open Stripe receipt in new tab
-                      window.open(`https://dashboard.stripe.com/payments/${selectedTransaction.stripe_transaction_id}`, '_blank');
-                    }}
-                  >
-                    View on Stripe
-                  </Button>
-                )}
               </div>
             </div>
           )}
