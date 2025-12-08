@@ -964,7 +964,7 @@ The ROAM Team
           service_name: serviceName,
           booking_date: bookingDate,
           booking_time: bookingTime,
-          location: locationAddress,
+          booking_location: locationAddress,
           decline_reason: declineReason,
           booking_url: 'https://roamyourbestlife.com/customer/bookings',
         },

@@ -1,4 +1,6 @@
 import React, { useState, lazy, Suspense } from "react";
+import { RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 // Import modular components
 import BookingStatsSection from "./bookings/BookingStatsSection";
@@ -34,6 +36,7 @@ interface BookingsTabProps {
 export function BookingsTab({ providerData, business }: BookingsTabProps) {
   const [viewType, setViewType] = useState<"list" | "week" | "month">("list");
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const {
     // Data
@@ -73,6 +76,16 @@ export function BookingsTab({ providerData, business }: BookingsTabProps) {
     updateBookingStatus,
     formatDisplayTime,
   } = useBookings(providerData, business);
+
+  // Handle manual refresh
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await loadBookings();
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   // Check if user can view unassigned bookings (owner or dispatcher)
   const canViewUnassigned = providerData?.provider_role === 'owner' || providerData?.provider_role === 'dispatcher';
@@ -130,8 +143,18 @@ export function BookingsTab({ providerData, business }: BookingsTabProps) {
         canViewUnassigned={canViewUnassigned}
       />
 
-        {/* View Toggle */}
+        {/* View Toggle and Refresh Button */}
         <div className="flex items-center justify-end gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={isRefreshing || loading}
+            className="flex items-center gap-2"
+          >
+            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
           <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
             <button
               onClick={() => setViewType("list")}

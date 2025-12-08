@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api/endpoints";
 import { useAuth } from "@/contexts/auth/AuthProvider";
@@ -61,7 +61,7 @@ export function useBookings(providerData: any, business: any) {
 
   // Load bookings data with date range filtering
   // Note: We load bookings from past AND future, then let categorization handle grouping
-  const loadBookings = async () => {
+  const loadBookings = useCallback(async () => {
     if (!business?.id) return;
 
     setLoading(true);
@@ -105,12 +105,21 @@ export function useBookings(providerData: any, business: any) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [business?.id, dateRangePastDays, dateRangeFutureDays, toast]);
 
   // Load bookings on mount and when business or date range changes
   useEffect(() => {
     loadBookings();
   }, [business?.id, dateRangePastDays, dateRangeFutureDays]);
+
+  // Auto-refresh bookings every 5 minutes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      loadBookings();
+    }, 5 * 60 * 1000); // 5 minutes in milliseconds
+
+    return () => clearInterval(interval);
+  }, [loadBookings]);
 
   // Fetch unread message counts for all bookings
   // Note: provider from useAuth() has nested structure: provider.provider.user_id
