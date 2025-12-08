@@ -149,6 +149,7 @@ export async function notifyProvidersBookingRescheduled(data: BookingRescheduleN
             reschedule_reason: rescheduleReason,
             booking_id: booking.id,
             business_name: business.name,
+            booking_reference: booking.booking_reference || 'N/A',
           },
           metadata: {
             booking_id: booking.id,

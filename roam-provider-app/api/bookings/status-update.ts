@@ -669,6 +669,7 @@ async function sendStatusNotifications(
               booking_time: bookingTime,
               booking_location: locationAddress,
               total_amount: totalAmountFormatted,
+              booking_reference: booking.booking_reference || 'N/A',
             },
             attachment,
             metadata: {
@@ -935,6 +936,7 @@ The ROAM Team
           location: locationAddress,
           total_amount: totalAmountFormatted,
           review_url: reviewLink,
+          booking_reference: booking.booking_reference || 'N/A',
         },
         metadata: {
           booking_id: booking.id,
@@ -967,6 +969,7 @@ The ROAM Team
           booking_location: locationAddress,
           decline_reason: declineReason,
           booking_url: 'https://roamyourbestlife.com/customer/bookings',
+          booking_reference: booking.booking_reference || 'N/A',
         },
         metadata: {
           booking_id: booking.id,
@@ -992,6 +995,7 @@ The ROAM Team
             booking_location: locationAddress,
             total_amount: totalAmountFormatted,
             booking_id: booking.id,
+            booking_reference: booking.booking_reference || 'N/A',
           },
           metadata: {
             booking_id: booking.id,
@@ -1056,6 +1060,7 @@ The ROAM Team
               booking_location: locationAddress,
               cancellation_reason: booking.cancellation_reason || 'No reason provided',
               booking_id: booking.id,
+              booking_reference: booking.booking_reference || 'N/A',
             },
             metadata: {
               booking_id: booking.id,
@@ -1143,6 +1148,7 @@ The ROAM Team
               booking_location: locationAddress,
               reschedule_reason: booking.reschedule_reason || 'No reason provided',
               booking_id: booking.id,
+              booking_reference: booking.booking_reference || 'N/A',
             },
             metadata: {
               booking_id: booking.id,

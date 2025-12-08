@@ -153,6 +153,7 @@ export async function notifyProvidersNewBooking(data: BookingNotificationData): 
             total_amount: totalAmount,
             special_instructions: specialInstructions,
             booking_id: booking.id,
+            booking_reference: booking.booking_reference || 'N/A',
           },
           metadata: {
             booking_id: booking.id,
