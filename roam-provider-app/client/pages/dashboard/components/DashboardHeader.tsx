@@ -20,6 +20,7 @@ import {
   Crown,
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth/AuthProvider";
+import { useNotificationCount } from "@/hooks/useNotificationCount";
 import type { Provider } from "@roam/shared";
 import type { BusinessProfile } from "@roam/shared";
 
@@ -36,6 +37,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
 }) => {
   const { signOut } = useAuth();
   const navigate = useNavigate();
+  const { count: notificationCount } = useNotificationCount(business?.id);
 
   const handleSignOut = async () => {
     try {
@@ -108,9 +110,11 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
           {/* Notifications */}
           <Button variant="ghost" size="sm" className="relative">
             <Bell className="w-5 h-5" />
-            <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full text-xs text-white flex items-center justify-center">
-              3
-            </span>
+            {notificationCount.total > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-[1.25rem] h-5 px-1 bg-red-500 rounded-full text-xs text-white flex items-center justify-center font-medium">
+                {notificationCount.total > 99 ? '99+' : notificationCount.total}
+              </span>
+            )}
           </Button>
 
           {/* User menu */}
