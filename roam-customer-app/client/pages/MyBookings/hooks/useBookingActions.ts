@@ -45,7 +45,7 @@ export const useBookingActions = (
           cancellationReason: cancellationReason.trim() || "Cancelled by customer",
           cancellationFee,
           refundAmount,
-          cancelledBy: currentUser.id,
+          cancelledBy: currentUser.user_id, // Use user_id, not profile id
         }),
       });
 
@@ -154,7 +154,7 @@ export const useBookingActions = (
           bookingDate: newBookingDate,
           startTime: newBookingTime,
           rescheduleReason: rescheduleReason.trim() || "Rescheduled by customer",
-          rescheduledBy: currentUser.id,
+          rescheduledBy: currentUser.user_id, // Use user_id, not profile id
           originalBookingDate: originalBookingDate,
           originalStartTime: originalStartTime,
         }),
