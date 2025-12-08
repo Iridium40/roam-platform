@@ -48,6 +48,8 @@ export function NotificationPreferences() {
           sms_notifications: false,
           customer_booking_accepted_email: true,
           customer_booking_accepted_sms: false,
+          customer_booking_declined_email: true,
+          customer_booking_declined_sms: false,
           customer_booking_completed_email: true,
           customer_booking_completed_sms: false,
           customer_booking_reminder_email: true,
@@ -240,6 +242,25 @@ export function NotificationPreferences() {
                   setSettings({
                     ...settings,
                     customer_booking_accepted_sms: checked,
+                  })
+                }
+              />
+
+              <NotificationToggle
+                label="Booking Declined"
+                description="When a provider declines your request"
+                emailValue={settings?.customer_booking_declined_email ?? true}
+                smsValue={settings?.customer_booking_declined_sms ?? false}
+                onEmailChange={(checked) =>
+                  setSettings({
+                    ...settings,
+                    customer_booking_declined_email: checked,
+                  })
+                }
+                onSmsChange={(checked) =>
+                  setSettings({
+                    ...settings,
+                    customer_booking_declined_sms: checked,
                   })
                 }
               />
