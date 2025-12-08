@@ -1,14 +1,15 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 
-// Import notification function - make it optional to prevent build failures
-let notifyProvidersBookingRescheduled: any = null;
-try {
-  const notificationModule = require('../../lib/notifications/notify-providers-booking-rescheduled');
-  notifyProvidersBookingRescheduled = notificationModule.notifyProvidersBookingRescheduled;
-} catch (e) {
-  // Notification function not available - reschedule will still work
-  console.warn('Notification module not available, reschedule will proceed without notifications');
+// Helper function to dynamically import notification function
+async function getNotifyProvidersBookingRescheduled() {
+  try {
+    const module = await import('../../lib/notifications/notify-providers-booking-rescheduled.js');
+    return module.notifyProvidersBookingRescheduled;
+  } catch (err) {
+    console.info('Notification module not available, reschedule will proceed without notifications');
+    return null;
+  }
 }
 
 const supabase = createClient(
@@ -117,7 +118,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         ),
         business_profiles (
           id,
-          name
+          business_name
         )
       `)
       .single();
@@ -152,8 +153,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Notify providers about the reschedule (non-blocking)
     // Business users (owners/dispatchers) will be notified via email/SMS
     // Booking status has been changed to 'pending' so business must accept again
-    if (notifyProvidersBookingRescheduled) {
-      try {
+    try {
+      const notifyProvidersBookingRescheduled = await getNotifyProvidersBookingRescheduled();
+      
+      if (notifyProvidersBookingRescheduled) {
         const service = Array.isArray(booking.services) ? booking.services[0] : booking.services;
         const customer = Array.isArray(booking.customer_profiles) ? booking.customer_profiles[0] : booking.customer_profiles;
         const business = Array.isArray(booking.business_profiles) ? booking.business_profiles[0] : booking.business_profiles;
@@ -213,21 +216,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               phone: customer.phone,
             },
             business: {
-              name: business.name,
+              name: business.business_name,
               business_address: businessAddress,
             },
           });
           console.log('✅ Reschedule notifications sent');
         }
-      } catch (notificationError) {
-        console.error('⚠️ Error sending reschedule notifications (non-fatal):', {
-          error: notificationError instanceof Error ? notificationError.message : String(notificationError),
-          stack: notificationError instanceof Error ? notificationError.stack : undefined,
-        });
-        // Continue - don't fail the reschedule if notifications fail
+      } else {
+        console.log('ℹ️ Notification function not available, skipping provider notifications');
       }
-    } else {
-      console.log('ℹ️ Notification function not available, skipping provider notifications');
+    } catch (notificationError) {
+      console.error('⚠️ Error sending reschedule notifications (non-fatal):', {
+        error: notificationError instanceof Error ? notificationError.message : String(notificationError),
+        stack: notificationError instanceof Error ? notificationError.stack : undefined,
+      });
+      // Continue - don't fail the reschedule if notifications fail
     }
 
     return res.status(200).json({
