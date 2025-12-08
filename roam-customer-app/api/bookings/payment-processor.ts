@@ -52,8 +52,6 @@ export async function handleBookingCancellation(
       .from('bookings')
       .select(`
         id,
-        stripe_payment_intent_id,
-        stripe_service_amount_payment_intent_id,
         total_amount,
         service_fee,
         service_fee_charged,
@@ -80,6 +78,21 @@ export async function handleBookingCancellation(
       };
     }
 
+    // Fetch payment intent IDs from business_payment_transactions
+    const { data: paymentTransactions, error: transactionsError } = await supabase
+      .from('business_payment_transactions')
+      .select('stripe_payment_intent_id, stripe_transfer_id, stripe_connect_account_id, net_payment_amount')
+      .eq('booking_id', bookingId)
+      .order('created_at', { ascending: false });
+
+    if (transactionsError) {
+      console.warn('⚠️ Could not fetch payment transactions:', transactionsError);
+    }
+
+    // Get the most recent payment intent (in case there are multiple)
+    const latestTransaction = paymentTransactions?.[0];
+    const stripePaymentIntentId = latestTransaction?.stripe_payment_intent_id;
+
     // Check if booking was confirmed
     const wasAccepted = booking.booking_status === 'confirmed' ||
                         booking.service_fee_charged === true;
@@ -88,9 +101,9 @@ export async function handleBookingCancellation(
       // Booking was cancelled before acceptance - cancel payment intents
       console.log('📋 Booking cancelled before acceptance - cancelling payment intents');
 
-      if (booking.stripe_payment_intent_id) {
+      if (stripePaymentIntentId) {
         try {
-          const paymentIntent = await stripe.paymentIntents.retrieve(booking.stripe_payment_intent_id);
+          const paymentIntent = await stripe.paymentIntents.retrieve(stripePaymentIntentId);
 
           if (paymentIntent.status !== 'succeeded' && paymentIntent.status !== 'canceled') {
             await stripe.paymentIntents.cancel(paymentIntent.id);
@@ -150,15 +163,16 @@ export async function handleBookingCancellation(
       refundAmount,
     });
 
-    // Use service amount payment intent if available, otherwise try to refund from main payment intent
-    const paymentIntentIdToRefund = booking.stripe_service_amount_payment_intent_id || booking.stripe_payment_intent_id;
-
-    if (!paymentIntentIdToRefund) {
+    // Use payment intent from business_payment_transactions
+    if (!stripePaymentIntentId) {
+      console.error('❌ No payment intent found in transactions table');
       return {
         success: false,
         error: 'No payment intent found for refund',
       };
     }
+
+    const paymentIntentIdToRefund = stripePaymentIntentId;
 
     // Check payment intent status
     let paymentIntent;
@@ -172,7 +186,7 @@ export async function handleBookingCancellation(
     }
 
     // Cancel any scheduled payments for this booking
-    if (booking.stripe_service_amount_payment_intent_id) {
+    if (stripePaymentIntentId) {
       await supabase
         .from('booking_payment_schedules')
         .update({
@@ -222,12 +236,8 @@ export async function handleBookingCancellation(
       };
     }
 
-    // Check if business received a Stripe Connect transfer that needs to be reversed
-    const { data: businessPaymentTransaction, error: bptError } = await supabase
-      .from('business_payment_transactions')
-      .select('id, stripe_transfer_id, net_payment_amount, stripe_connect_account_id')
-      .eq('booking_id', bookingId)
-      .maybeSingle();
+    // Use the payment transaction we already fetched
+    const businessPaymentTransaction = latestTransaction;
 
     let transferReversed = false;
     let transferReversalId: string | null = null;
