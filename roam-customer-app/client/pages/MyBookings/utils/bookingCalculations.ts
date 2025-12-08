@@ -25,7 +25,15 @@ export const calculateCancellationDetails = (booking: BookingWithDetails): Cance
   let isWithin24Hours = false;
   let isPastBooking = false;
 
-  if (hoursUntilBooking <= 0) {
+  // IMPORTANT: Only charge/refund if booking was confirmed by provider
+  // If still pending, no payment has been charged yet, so no refund
+  const isConfirmed = booking.booking_status === 'confirmed';
+
+  if (!isConfirmed) {
+    // Booking not confirmed yet - no payment charged, so no refund
+    cancellationFee = 0;
+    refundAmount = 0;
+  } else if (hoursUntilBooking <= 0) {
     // Booking is in the past - no refund allowed
     isPastBooking = true;
     cancellationFee = totalAmount;

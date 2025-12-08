@@ -108,6 +108,11 @@ export const CancelBookingModal: React.FC<CancelBookingModalProps> = ({
                   <span>${cancellationDetails.refundAmount.toFixed(2)}</span>
                 </div>
               )}
+              {booking.booking_status !== 'confirmed' && cancellationDetails.refundAmount === 0 && !cancellationDetails.isPastBooking && (
+                <div className="text-sm text-gray-600 mt-2">
+                  <p className="italic">This booking has not been confirmed yet, so no payment has been charged.</p>
+                </div>
+              )}
             </div>
           </div>
 

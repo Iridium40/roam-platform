@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
-import { handleBookingCancellation } from './payment-processor';
+import { handleBookingCancellation } from './payment-processor.js';
 
 // Helper function to dynamically import notification function
 // Uses dynamic import to handle module resolution issues in Vercel's serverless environment
