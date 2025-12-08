@@ -141,8 +141,8 @@ export async function notifyProvidersBookingRescheduled(data: BookingRescheduleN
             provider_name: provider.provider_role === 'owner' ? 'Owner' : provider.provider_role === 'dispatcher' ? 'Dispatcher' : 'Provider',
             customer_name: customerName,
             service_name: service.name,
-            booking_date: oldBookingDate, // Original date
-            booking_time: oldBookingTime, // Original time
+            old_booking_date: oldBookingDate, // Original date (template expects old_booking_date)
+            old_booking_time: oldBookingTime, // Original time (template expects old_booking_time)
             new_booking_date: newBookingDate, // New date
             new_booking_time: newBookingTime, // New time
             booking_location: location,
