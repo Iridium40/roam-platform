@@ -3,9 +3,9 @@
  * Simple interface for both customer and provider apps
  */
 
-import { sendEmail } from './email-service';
-import { sendSMS } from './sms-service';
-import type { SendNotificationParams, NotificationResult } from './types';
+import { sendEmail } from './email-service.js';
+import { sendSMS } from './sms-service.js';
+import type { SendNotificationParams, NotificationResult } from './types.js';
 
 /**
  * Send a notification via email and/or SMS

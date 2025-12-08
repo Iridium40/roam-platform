@@ -3,9 +3,9 @@
  * Use this for easy imports: import { sendNotification } from '../../shared/notifications';
  */
 
-export { sendNotification } from './notification-manager';
-export { sendEmail } from './email-service';
-export { sendSMS } from './sms-service';
+export { sendNotification } from './notification-manager.js';
+export { sendEmail } from './email-service.js';
+export { sendSMS } from './sms-service.js';
 export type {
   SendNotificationParams,
   SendEmailParams,
@@ -15,5 +15,5 @@ export type {
   NotificationTemplate,
   UserSettings,
   NotificationLog,
-} from './types';
+} from './types.js';
 

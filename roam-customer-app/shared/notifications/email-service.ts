@@ -5,7 +5,7 @@
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
-import type { SendEmailParams, SendResult, NotificationTemplate, UserSettings } from './types';
+import type { SendEmailParams, SendResult, NotificationTemplate, UserSettings } from './types.js';
 
 /**
  * Send an email notification using database templates and user preferences

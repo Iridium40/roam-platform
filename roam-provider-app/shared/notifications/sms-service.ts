@@ -4,7 +4,7 @@
  */
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import type { SendSMSParams, SendResult, NotificationTemplate, UserSettings } from './types';
+import type { SendSMSParams, SendResult, NotificationTemplate, UserSettings } from './types.js';
 
 /**
  * Send an SMS notification using database templates and user preferences
