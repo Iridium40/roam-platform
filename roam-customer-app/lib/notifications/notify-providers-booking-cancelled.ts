@@ -4,9 +4,12 @@
  * Logic:
  * - Always notify all providers with provider_role = 'owner' or 'dispatcher' for the business
  * - If booking.provider_id is set: Also notify that specific provider
+ * 
+ * Uses shared notification service for consistency with confirmed/declined notifications
  */
 
 import { createClient } from '@supabase/supabase-js';
+import { sendNotification } from '../../shared/notifications/index.js';
 
 const getSupabaseServiceClient = () => {
   if (!process.env.VITE_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
@@ -117,59 +120,35 @@ export async function notifyProvidersBookingCancelled(data: BookingCancellationN
     const location = business.business_address || 'Location TBD';
     const cancellationReason = booking.cancellation_reason || 'No reason provided';
 
-    // Call the provider app's notification API for each provider
-    const providerApiUrl = process.env.PROVIDER_APP_API_URL 
-      || process.env.VITE_PROVIDER_APP_URL 
-      || 'https://provider.roamyourbestlife.com';
-    
-    // Check if fetch is available (Node.js 18+ has it, but some environments might not)
-    if (typeof fetch === 'undefined') {
-      console.warn('⚠️ fetch is not available, skipping HTTP-based notifications');
-      return;
-    }
-    
+    // Send notifications using shared notification service
     const notificationPromises = providersToNotify.map(async (provider) => {
       try {
-        const apiEndpoint = `${providerApiUrl}/api/notifications/send`;
-        
-        console.log(`📤 Calling cancellation notification API for provider ${provider.id}: ${apiEndpoint}`);
+        console.log(`📤 Sending cancellation notification to provider ${provider.id} (${provider.provider_role})`);
 
-        const response = await fetch(apiEndpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
+        await sendNotification({
+          userId: provider.user_id,
+          notificationType: 'provider_booking_cancelled',
+          variables: {
+            provider_name: provider.provider_role === 'owner' ? 'Owner' : provider.provider_role === 'dispatcher' ? 'Dispatcher' : 'Provider',
+            customer_name: customerName,
+            service_name: service.name,
+            booking_date: bookingDate,
+            booking_time: bookingTime,
+            booking_location: location,
+            cancellation_reason: cancellationReason,
+            booking_id: booking.id,
+            business_name: business.name,
           },
-          body: JSON.stringify({
-            userId: provider.user_id,
-            notificationType: 'provider_booking_cancelled',
-            templateVariables: {
-              provider_name: provider.provider_role === 'owner' ? 'Owner' : provider.provider_role === 'dispatcher' ? 'Dispatcher' : 'Provider',
-              customer_name: customerName,
-              service_name: service.name,
-              booking_date: bookingDate,
-              booking_time: bookingTime,
-              booking_location: location,
-              cancellation_reason: cancellationReason,
-              booking_id: booking.id,
-              business_name: business.name,
-            },
-            metadata: {
-              booking_id: booking.id,
-              business_id: booking.business_id,
-              provider_id: provider.id,
-              provider_role: provider.provider_role,
-              assigned: provider.id === booking.provider_id,
-            },
-          }),
+          metadata: {
+            booking_id: booking.id,
+            business_id: booking.business_id,
+            provider_id: provider.id,
+            provider_role: provider.provider_role,
+            assigned: provider.id === booking.provider_id,
+          },
         });
 
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`Notification API error: ${response.status} - ${errorText}`);
-        }
-
-        const result = await response.json();
-        console.log(`✅ Cancellation notification sent to provider ${provider.id} (${provider.provider_role}):`, result);
+        console.log(`✅ Cancellation notification sent to provider ${provider.id} (${provider.provider_role})`);
       } catch (error) {
         console.error(`❌ Failed to notify provider ${provider.id}:`, error);
         // Continue with other providers even if one fails
