@@ -208,6 +208,53 @@ export function NotificationPreferences() {
             <div className="space-y-4 pt-6 border-t">
               <h3 className="text-lg font-medium">Booking Notifications</h3>
               
+              {/* Quick Enable All Toggles */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
+                <p className="text-sm font-medium text-blue-900">Quick Controls</p>
+                <div className="flex gap-6">
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={
+                        settings?.customer_booking_accepted_email &&
+                        settings?.customer_booking_declined_email &&
+                        settings?.customer_booking_reminder_email &&
+                        settings?.customer_booking_completed_email
+                      }
+                      onCheckedChange={(checked) =>
+                        setSettings({
+                          ...settings,
+                          customer_booking_accepted_email: checked,
+                          customer_booking_declined_email: checked,
+                          customer_booking_reminder_email: checked,
+                          customer_booking_completed_email: checked,
+                        })
+                      }
+                    />
+                    <span className="text-sm font-medium">Enable All Email Notifications</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={
+                        settings?.customer_booking_accepted_sms &&
+                        settings?.customer_booking_declined_sms &&
+                        settings?.customer_booking_reminder_sms &&
+                        settings?.customer_booking_completed_sms
+                      }
+                      onCheckedChange={(checked) =>
+                        setSettings({
+                          ...settings,
+                          customer_booking_accepted_sms: checked,
+                          customer_booking_declined_sms: checked,
+                          customer_booking_reminder_sms: checked,
+                          customer_booking_completed_sms: checked,
+                        })
+                      }
+                    />
+                    <span className="text-sm font-medium">Enable All SMS Notifications</span>
+                  </div>
+                </div>
+              </div>
+              
               <NotificationToggle
                 label="Booking Accepted"
                 description="When your booking is confirmed"
