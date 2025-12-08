@@ -84,6 +84,19 @@ export function NotificationPreferences() {
   async function saveSettings() {
     setSaving(true);
     try {
+      // Automatically enable master toggles if any individual notification is enabled
+      const hasAnyEmailEnabled = 
+        settings?.customer_booking_accepted_email ||
+        settings?.customer_booking_declined_email ||
+        settings?.customer_booking_completed_email ||
+        settings?.customer_booking_reminder_email;
+      
+      const hasAnySmsEnabled = 
+        settings?.customer_booking_accepted_sms ||
+        settings?.customer_booking_declined_sms ||
+        settings?.customer_booking_completed_sms ||
+        settings?.customer_booking_reminder_sms;
+
       const response = await fetch('/api/user-settings', {
         method: 'POST',
         headers: {
@@ -92,6 +105,9 @@ export function NotificationPreferences() {
         body: JSON.stringify({
           userId,
           ...settings,
+          // Auto-enable master toggles if any individual notification is on
+          email_notifications: hasAnyEmailEnabled,
+          sms_notifications: hasAnySmsEnabled,
         }),
       });
 
@@ -184,41 +200,6 @@ export function NotificationPreferences() {
                   Leave empty to use your profile phone number
                 </p>
               </div>
-            </div>
-          </div>
-
-          {/* Master Switches */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium">Notification Channels</h3>
-            
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="font-medium">Email Notifications</div>
-                <div className="text-sm text-gray-500">
-                  Receive notifications via email
-                </div>
-              </div>
-              <Switch
-                checked={settings?.email_notifications ?? true}
-                onCheckedChange={(checked) =>
-                  setSettings({ ...settings, email_notifications: checked })
-                }
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="font-medium">SMS Notifications</div>
-                <div className="text-sm text-gray-500">
-                  Receive notifications via text message
-                </div>
-              </div>
-              <Switch
-                checked={settings?.sms_notifications ?? false}
-                onCheckedChange={(checked) =>
-                  setSettings({ ...settings, sms_notifications: checked })
-                }
-              />
             </div>
           </div>
 
