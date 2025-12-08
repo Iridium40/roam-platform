@@ -47,7 +47,7 @@ export async function handleBookingCancellation(
       reason,
     });
 
-    // Fetch booking details including business info for transfer reversal
+    // Fetch booking details including Stripe Connect account for transfer reversal
     const { data: booking, error: bookingError } = await supabase
       .from('bookings')
       .select(`
@@ -65,7 +65,9 @@ export async function handleBookingCancellation(
         business_id,
         business_profiles!inner (
           id,
-          stripe_connect_account_id
+          stripe_connect_accounts (
+            account_id
+          )
         )
       `)
       .eq('id', bookingId)
@@ -236,7 +238,13 @@ export async function handleBookingCancellation(
         ? booking.business_profiles[0] 
         : booking.business_profiles;
       
-      const stripeConnectAccountId = businessPaymentTransaction.stripe_connect_account_id || business?.stripe_connect_account_id;
+      // Get Stripe Connect account ID from the nested stripe_connect_accounts table
+      const stripeConnectAccounts = business?.stripe_connect_accounts;
+      const connectAccount = Array.isArray(stripeConnectAccounts) 
+        ? stripeConnectAccounts[0] 
+        : stripeConnectAccounts;
+      
+      const stripeConnectAccountId = businessPaymentTransaction.stripe_connect_account_id || connectAccount?.account_id;
 
       if (stripeConnectAccountId) {
         try {
