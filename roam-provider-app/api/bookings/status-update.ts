@@ -645,74 +645,37 @@ async function sendStatusNotifications(
             icalContentLength: icalContent?.length || 0,
           });
 
-          // Send direct email with calendar attachment (send even if calendar fails)
-          if (recipientEmail) {
-            try {
-              // Get base URL for logo (same logic as calendar links)
-              const baseUrl = process.env.VERCEL_URL 
-                ? `https://${process.env.VERCEL_URL}` 
-                : process.env.PROVIDER_APP_API_URL || 'https://provider.roamyourbestlife.com';
-              
-              const { ROAM_EMAIL_TEMPLATES } = await import('../../shared/emailTemplates.js');
-              const emailHtml = ROAM_EMAIL_TEMPLATES.bookingConfirmed(
-                customerName,
-                serviceName,
-                provider ? `${provider.first_name} ${provider.last_name}` : 'Provider',
-                bookingDate,
-                bookingTime,
-                locationAddress,
-                totalAmountFormatted,
-                calendarLinks,
-                baseUrl
-              );
+          // Send notification via shared service (uses database template with logo)
+          console.log('📧 Preparing to send customer_booking_accepted notification');
+          
+          // Prepare attachment if calendar was generated successfully
+          const attachment = icalContent ? {
+            filename: 'booking.ics',
+            content: Buffer.from(icalContent).toString('base64'),
+          } : undefined;
 
-              console.log('📧 Preparing to send email:', {
-                hasIcalContent: !!icalContent,
-                willAttachCalendar: !!icalContent,
-              });
-
-              const emailPayload: any = {
-                from: 'ROAM Support <support@roamyourbestlife.com>',
-                to: [recipientEmail],
-                subject: `✅ Your Booking is Confirmed! - ${serviceName}`,
-                html: emailHtml,
-                text: `Hi ${customerName},\n\nYour booking has been confirmed!\n\nService: ${serviceName}\nProvider: ${provider ? `${provider.first_name} ${provider.last_name}` : 'Provider'}\nDate: ${bookingDate}\nTime: ${bookingTime}\nLocation: ${locationAddress}\nTotal: $${totalAmountFormatted}\n\nView your bookings: https://roamyourbestlife.com/my-bookings\n\nBest regards,\nThe ROAM Team`,
-              };
-
-              // Only attach calendar if generation succeeded
-              if (icalContent) {
-                emailPayload.attachments = [
-                  {
-                    filename: 'booking.ics',
-                    content: Buffer.from(icalContent).toString('base64'),
-                  },
-                ];
-              } else {
-                console.warn('⚠️ Sending email without calendar attachment (generation failed)');
-              }
-
-              const { data: emailData, error: emailError } = await resend.emails.send(emailPayload);
-
-              if (emailError) {
-                console.error('❌ Error sending customer booking email:', emailError);
-              } else {
-                console.log('✅ Customer booking email sent successfully:', {
-                  email: recipientEmail,
-                  resendId: emailData?.id,
-                });
-              }
-            } catch (emailError) {
-              console.error('❌ Error sending direct email to customer:', {
-                error: emailError,
-                message: emailError instanceof Error ? emailError.message : String(emailError),
-                stack: emailError instanceof Error ? emailError.stack : undefined,
-                hasRecipientEmail: !!recipientEmail,
-                hasIcalContent: !!icalContent,
-              });
-            }
-          } else {
-            console.warn('⚠️ Skipping email send: no recipient email');
+          if (!icalContent) {
+            console.warn('⚠️ Calendar generation failed, sending email without attachment');
           }
+
+          await sendNotification({
+            userId: customer.user_id,
+            notificationType: 'customer_booking_accepted',
+            variables: {
+              customer_name: customerName,
+              service_name: serviceName,
+              provider_name: provider ? `${provider.first_name} ${provider.last_name}` : 'Provider',
+              booking_date: bookingDate,
+              booking_time: bookingTime,
+              booking_location: locationAddress,
+              total_amount: totalAmountFormatted,
+            },
+            attachment,
+            metadata: {
+              booking_id: booking.id,
+              status: 'confirmed',
+            },
+          });
 
           console.log('✅ Customer booking confirmation email process completed');
         } catch (notificationError) {
