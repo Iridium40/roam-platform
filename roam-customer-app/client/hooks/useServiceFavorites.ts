@@ -22,11 +22,18 @@ export const useServiceFavorites = () => {
   const [favorites, setFavorites] = useState<ServiceFavorite[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [lastCustomerId, setLastCustomerId] = useState<string | null>(null);
 
-  const loadFavorites = async () => {
+  const loadFavorites = async (force = false) => {
     if (!customer) {
       setFavorites([]);
       setLoading(false);
+      setLastCustomerId(null);
+      return;
+    }
+
+    // Don't reload if we already have data for this customer and this isn't a forced refresh
+    if (!force && favorites.length > 0 && !loading && lastCustomerId === customer.id) {
       return;
     }
 
@@ -49,6 +56,7 @@ export const useServiceFavorites = () => {
       }
 
       setFavorites(result.data || []);
+      setLastCustomerId(customer.id);
     } catch (err) {
       logger.error("Error loading service favorites:", err);
       setError(err instanceof Error ? err.message : "Failed to load service favorites");
@@ -81,7 +89,7 @@ export const useServiceFavorites = () => {
         throw new Error(result.error || 'Failed to add favorite');
       }
 
-      await loadFavorites();
+      await loadFavorites(true); // Force reload after add
     } catch (err) {
       logger.error("Error adding service favorite:", err);
       throw err;
@@ -111,7 +119,7 @@ export const useServiceFavorites = () => {
         throw new Error(result.error || 'Failed to remove favorite');
       }
 
-      await loadFavorites();
+      await loadFavorites(true); // Force reload after remove
     } catch (err) {
       logger.error("Error removing service favorite:", err);
       throw err;
@@ -132,7 +140,8 @@ export const useServiceFavorites = () => {
 
   useEffect(() => {
     loadFavorites();
-  }, [customer]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [customer?.id]); // Only depend on customer ID, not the entire customer object
 
   return {
     favorites,

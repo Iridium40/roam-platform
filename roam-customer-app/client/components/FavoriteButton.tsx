@@ -30,7 +30,8 @@ export function FavoriteButton({
   const [isCheckingStatus, setIsCheckingStatus] = useState(true);
   const [isToggling, setIsToggling] = useState(false);
 
-  // Use the appropriate hook based on type
+  // Call all hooks (React rules require hooks to be called unconditionally)
+  // But we'll optimize by using useMemo to prevent unnecessary re-renders
   const providerHook = useFavorites();
   const serviceHook = useServiceFavorites();
   const businessHook = useBusinessFavorites();

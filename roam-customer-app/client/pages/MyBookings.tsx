@@ -72,14 +72,15 @@ export default function MyBookings() {
     totalPages,
     nextPage,
     prevPage,
+    goToPage,
     ITEMS_PER_PAGE,
   } = useBookingFilters(bookings || []);
 
   // Add defensive programming to handle undefined data
-  const safeFilteredBookings = filteredBookings || { present: [], future: [], past: [] };
-  const safePaginatedBookings = paginatedBookings || { present: [], future: [], past: [] };
-  const safeCurrentPage = currentPage || { present: 1, future: 1, past: 1 };
-  const safeTotalPages = totalPages || { present: 1, future: 1, past: 1 };
+  const safeFilteredBookings = filteredBookings || { active: [], closed: [] };
+  const safePaginatedBookings = paginatedBookings || { active: [], closed: [] };
+  const safeCurrentPage = currentPage || { active: 1, closed: 1 };
+  const safeTotalPages = totalPages || { active: 1, closed: 1 };
 
   const { cancelBooking, rescheduleBooking, isCancelling, isRescheduling } = useBookingActions(
     currentUser,
@@ -193,98 +194,55 @@ export default function MyBookings() {
               Manage your service appointments and view your booking history.
             </p>
 
-            {/* Present Service Alert */}
-            {safePaginatedBookings.present.length > 0 && (
-              <Card className="mb-8 border-blue-200 bg-blue-50">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <CheckCircle className="w-5 h-5 text-blue-600" />
-                    <div>
-                      <h3 className="font-semibold text-blue-900">
-                        Current Bookings
-                      </h3>
-                      <p className="text-sm text-blue-700">
-                        You have {safePaginatedBookings.present.length} booking(s) for today or overdue.
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
             {/* Booking Tabs */}
-            <Tabs defaultValue="present" className="space-y-6">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="present" className="flex items-center gap-2">
+            <Tabs defaultValue="active" className="space-y-6">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="active" className="flex items-center gap-2">
                   <CheckCircle className="w-4 h-4" />
-                  Present ({safeFilteredBookings.present.length})
+                  Active Bookings ({safeFilteredBookings.active.length})
                 </TabsTrigger>
-                <TabsTrigger value="future" className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4" />
-                  Future ({safeFilteredBookings.future.length})
-                </TabsTrigger>
-                <TabsTrigger value="past" className="flex items-center gap-2">
+                <TabsTrigger value="closed" className="flex items-center gap-2">
                   <Clock className="w-4 h-4" />
-                  Past ({safeFilteredBookings.past.length})
+                  Closed Bookings ({safeFilteredBookings.closed.length})
                 </TabsTrigger>
               </TabsList>
 
-              <TabsContent value="present" className="space-y-4">
+              <TabsContent value="active" className="space-y-4">
                 <BookingList
-                  bookings={safePaginatedBookings.present}
-                  currentPage={safeCurrentPage.present}
-                  totalPages={safeTotalPages.present}
+                  bookings={safePaginatedBookings.active}
+                  currentPage={safeCurrentPage.active}
+                  totalPages={safeTotalPages.active}
                   itemsPerPage={ITEMS_PER_PAGE}
                   onCancel={handleCancel}
                   onReschedule={handleReschedule}
                   onMessage={handleMessage}
                   onRefresh={refreshBookings}
-                  onNextPage={() => nextPage("present")}
-                  onPrevPage={() => prevPage("present")}
+                  onNextPage={() => nextPage("active")}
+                  onPrevPage={() => prevPage("active")}
                   onPageChange={(page) => {
-                    // This would need to be implemented in the hook
+                    goToPage("active", page);
                   }}
-                  emptyStateMessage="No active bookings. All bookings that are pending or in progress will appear here."
+                  emptyStateMessage="No active bookings. All bookings that are pending, confirmed, or in progress will appear here."
                   emptyStateIcon={CheckCircle}
                 />
               </TabsContent>
 
-              <TabsContent value="future" className="space-y-4">
+              <TabsContent value="closed" className="space-y-4">
                 <BookingList
-                  bookings={safePaginatedBookings.future}
-                  currentPage={safeCurrentPage.future}
-                  totalPages={safeTotalPages.future}
+                  bookings={safePaginatedBookings.closed}
+                  currentPage={safeCurrentPage.closed}
+                  totalPages={safeTotalPages.closed}
                   itemsPerPage={ITEMS_PER_PAGE}
                   onCancel={handleCancel}
                   onReschedule={handleReschedule}
                   onMessage={handleMessage}
                   onRefresh={refreshBookings}
-                  onNextPage={() => nextPage("future")}
-                  onPrevPage={() => prevPage("future")}
+                  onNextPage={() => nextPage("closed")}
+                  onPrevPage={() => prevPage("closed")}
                   onPageChange={(page) => {
-                    // Page change handler
+                    goToPage("closed", page);
                   }}
-                  emptyStateMessage="You don't have any future bookings. Browse our services to book your next appointment."
-                  emptyStateIcon={Calendar}
-                />
-              </TabsContent>
-
-              <TabsContent value="past" className="space-y-4">
-                <BookingList
-                  bookings={safePaginatedBookings.past}
-                  currentPage={safeCurrentPage.past}
-                  totalPages={safeTotalPages.past}
-                  itemsPerPage={ITEMS_PER_PAGE}
-                  onCancel={handleCancel}
-                  onReschedule={handleReschedule}
-                  onMessage={handleMessage}
-                  onRefresh={refreshBookings}
-                  onNextPage={() => nextPage("past")}
-                  onPrevPage={() => prevPage("past")}
-                  onPageChange={(page) => {
-                    // Page change handler
-                  }}
-                  emptyStateMessage="No past bookings found. Your completed and cancelled bookings will appear here."
+                  emptyStateMessage="No closed bookings found. Your completed, cancelled, and declined bookings will appear here."
                   emptyStateIcon={Clock}
                 />
               </TabsContent>
