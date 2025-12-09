@@ -414,9 +414,10 @@ const PaymentFormContent: React.FC<PaymentFormProps> = ({
                     radios: false,
                     spacedAccordionItems: true,
                   },
+                  paymentMethodOrder: ['card'],
                   wallets: {
-                    applePay: "auto",
-                    googlePay: "auto",
+                    applePay: "never",
+                    googlePay: "never",
                   },
                 }}
               />

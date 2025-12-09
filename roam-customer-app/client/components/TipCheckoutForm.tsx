@@ -302,10 +302,10 @@ export function TipCheckoutForm({ tipAmount, providerName, clientSecret, onSucce
                     <PaymentElement 
                       options={{
                         layout: 'tabs',
-                        paymentMethodOrder: ['card', 'apple_pay', 'google_pay'],
+                        paymentMethodOrder: ['card'],
                         wallets: {
-                          applePay: 'auto',
-                          googlePay: 'auto',
+                          applePay: 'never',
+                          googlePay: 'never',
                         },
                       }}
                     />

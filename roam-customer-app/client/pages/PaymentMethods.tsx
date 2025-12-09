@@ -586,6 +586,10 @@ function AddCardForm({ customerId, onSuccess, onError, setAsDefault, onSetAsDefa
           options={{
             layout: "tabs",
             paymentMethodOrder: ['card'],
+            wallets: {
+              applePay: 'never',
+              googlePay: 'never',
+            },
           }}
         />
       </div>

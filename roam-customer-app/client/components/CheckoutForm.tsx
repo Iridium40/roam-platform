@@ -557,10 +557,10 @@ export function CheckoutForm({ bookingDetails, clientSecret, onSuccess, onError 
                 <PaymentElement 
                   options={{
                     layout: "tabs",
-                    paymentMethodOrder: ['card', 'apple_pay', 'google_pay'],
+                    paymentMethodOrder: ['card'],
                     wallets: {
-                      applePay: 'auto',
-                      googlePay: 'auto',
+                      applePay: 'never',
+                      googlePay: 'never',
                     },
                   }}
                 />
