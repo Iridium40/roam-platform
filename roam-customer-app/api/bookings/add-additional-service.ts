@@ -39,10 +39,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // Get booking details
+    // Get booking details including customer's user_id for audit trail
     const { data: booking, error: bookingError } = await supabase
       .from('bookings')
-      .select('id, booking_status, customer_id, remaining_balance, total_amount')
+      .select(`
+        id, 
+        booking_status, 
+        customer_id, 
+        remaining_balance, 
+        total_amount,
+        customer_profiles!inner (
+          user_id
+        )
+      `)
       .eq('id', booking_id)
       .single();
 
@@ -141,31 +150,43 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Create booking_changes record for audit trail
-    const { error: changeError } = await supabase
-      .from('booking_changes')
-      .insert({
-        booking_id: booking_id,
-        change_type: 'addon_added', // Using existing type from check constraint
-        additional_cost: amountNum,
-        refund_amount: 0,
-        change_reason: description.trim(),
-        old_value: { remaining_balance: currentRemainingBalance },
-        new_value: { remaining_balance: newRemainingBalance },
-        changed_by: booking.customer_id, // Customer is adding the service
-      });
+    // Extract user_id from customer_profiles (changed_by references users table, not customer_profiles)
+    const customerProfile = Array.isArray(booking.customer_profiles) 
+      ? booking.customer_profiles[0] 
+      : booking.customer_profiles;
+    
+    const userId = customerProfile?.user_id;
+    
+    // Only create booking change record if we have a valid user_id
+    if (userId) {
+      const { error: changeError } = await supabase
+        .from('booking_changes')
+        .insert({
+          booking_id: booking_id,
+          change_type: 'addon_added', // Using existing type from check constraint
+          additional_cost: amountNum,
+          refund_amount: 0,
+          change_reason: description.trim(),
+          old_value: { remaining_balance: currentRemainingBalance },
+          new_value: { remaining_balance: newRemainingBalance },
+          changed_by: userId, // Use user_id from customer_profiles, not customer_id
+        });
 
-    if (changeError) {
-      console.error('❌ Error creating booking change record:', changeError);
-      console.error('Change error details:', {
-        code: changeError.code,
-        message: changeError.message,
-        details: changeError.details,
-        hint: changeError.hint
-      });
-      // Don't fail the request - log and continue
-      console.warn('⚠️ Booking change record creation failed, but booking was updated');
+      if (changeError) {
+        console.error('❌ Error creating booking change record:', changeError);
+        console.error('Change error details:', {
+          code: changeError.code,
+          message: changeError.message,
+          details: changeError.details,
+          hint: changeError.hint
+        });
+        // Don't fail the request - log and continue
+        console.warn('⚠️ Booking change record creation failed, but booking was updated');
+      } else {
+        console.log('✅ Booking change record created successfully');
+      }
     } else {
-      console.log('✅ Booking change record created successfully');
+      console.warn('⚠️ No user_id found for customer, skipping booking_changes record');
     }
 
     console.log('✅ Additional service added successfully:', {
