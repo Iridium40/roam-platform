@@ -152,8 +152,8 @@ export const CancelBookingModal: React.FC<CancelBookingModalProps> = ({
                   </p>
                 ) : (
                   <p>
-                    This booking can be cancelled with a full refund as it's more
-                    than 24 hours away from the appointment time.
+                    This booking can be cancelled with a refund of the service amount. 
+                    The platform fee (20%) is non-refundable.
                   </p>
                 )}
               </div>

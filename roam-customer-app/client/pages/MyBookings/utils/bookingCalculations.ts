@@ -18,10 +18,17 @@ export const calculateCancellationDetails = (booking: BookingWithDetails): Cance
 
   // Extract total amount for calculations (remove $ and convert to number)
   const totalAmount = parseFloat(booking.price?.replace("$", "") || "0");
+  
+  // Calculate service amount and platform fee (20% of service amount)
+  // totalAmount = serviceAmount + (serviceAmount * 0.2) = serviceAmount * 1.2
+  // Therefore: serviceAmount = totalAmount / 1.2
+  const platformFeePercentage = 0.2; // 20% platform fee
+  const serviceAmount = totalAmount / (1 + platformFeePercentage);
+  const platformFee = serviceAmount * platformFeePercentage;
 
   // Apply cancellation policy
   let cancellationFee = 0;
-  let refundAmount = totalAmount;
+  let refundAmount = serviceAmount; // Default: refund service amount only (platform fee is non-refundable)
   let isWithin24Hours = false;
   let isPastBooking = false;
 
@@ -34,15 +41,19 @@ export const calculateCancellationDetails = (booking: BookingWithDetails): Cance
     cancellationFee = 0;
     refundAmount = 0;
   } else if (hoursUntilBooking <= 0) {
-    // Booking is in the past - no refund allowed
+    // Booking is in the past - no refund allowed, keep everything
     isPastBooking = true;
     cancellationFee = totalAmount;
     refundAmount = 0;
   } else if (hoursUntilBooking <= 24) {
-    // Within 24 hours - no refund allowed
+    // Within 24 hours - no refund allowed, keep everything
     isWithin24Hours = true;
     cancellationFee = totalAmount;
     refundAmount = 0;
+  } else {
+    // More than 24 hours - refund service amount only, keep platform fee
+    cancellationFee = platformFee;
+    refundAmount = serviceAmount;
   }
 
   return {
