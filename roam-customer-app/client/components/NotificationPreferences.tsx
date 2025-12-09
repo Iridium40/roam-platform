@@ -52,6 +52,8 @@ export function NotificationPreferences() {
           customer_booking_declined_sms: false,
           customer_booking_completed_email: true,
           customer_booking_completed_sms: false,
+          customer_booking_no_show_email: true,
+          customer_booking_no_show_sms: false,
           customer_booking_reminder_email: true,
           customer_booking_reminder_sms: true,
           customer_welcome_email: true,
@@ -89,12 +91,14 @@ export function NotificationPreferences() {
         settings?.customer_booking_accepted_email ||
         settings?.customer_booking_declined_email ||
         settings?.customer_booking_completed_email ||
+        settings?.customer_booking_no_show_email ||
         settings?.customer_booking_reminder_email;
       
       const hasAnySmsEnabled = 
         settings?.customer_booking_accepted_sms ||
         settings?.customer_booking_declined_sms ||
         settings?.customer_booking_completed_sms ||
+        settings?.customer_booking_no_show_sms ||
         settings?.customer_booking_reminder_sms;
 
       const response = await fetch('/api/user-settings', {
@@ -218,7 +222,8 @@ export function NotificationPreferences() {
                         settings?.customer_booking_accepted_email &&
                         settings?.customer_booking_declined_email &&
                         settings?.customer_booking_reminder_email &&
-                        settings?.customer_booking_completed_email
+                        settings?.customer_booking_completed_email &&
+                        settings?.customer_booking_no_show_email
                       }
                       onCheckedChange={(checked) =>
                         setSettings({
@@ -227,6 +232,7 @@ export function NotificationPreferences() {
                           customer_booking_declined_email: checked,
                           customer_booking_reminder_email: checked,
                           customer_booking_completed_email: checked,
+                          customer_booking_no_show_email: checked,
                         })
                       }
                     />
@@ -238,7 +244,8 @@ export function NotificationPreferences() {
                         settings?.customer_booking_accepted_sms &&
                         settings?.customer_booking_declined_sms &&
                         settings?.customer_booking_reminder_sms &&
-                        settings?.customer_booking_completed_sms
+                        settings?.customer_booking_completed_sms &&
+                        settings?.customer_booking_no_show_sms
                       }
                       onCheckedChange={(checked) =>
                         setSettings({
@@ -247,6 +254,7 @@ export function NotificationPreferences() {
                           customer_booking_declined_sms: checked,
                           customer_booking_reminder_sms: checked,
                           customer_booking_completed_sms: checked,
+                          customer_booking_no_show_sms: checked,
                         })
                       }
                     />
@@ -327,6 +335,25 @@ export function NotificationPreferences() {
                   setSettings({
                     ...settings,
                     customer_booking_completed_sms: checked,
+                  })
+                }
+              />
+
+              <NotificationToggle
+                label="Booking No-Show"
+                description="When you miss an appointment"
+                emailValue={settings?.customer_booking_no_show_email ?? true}
+                smsValue={settings?.customer_booking_no_show_sms ?? false}
+                onEmailChange={(checked) =>
+                  setSettings({
+                    ...settings,
+                    customer_booking_no_show_email: checked,
+                  })
+                }
+                onSmsChange={(checked) =>
+                  setSettings({
+                    ...settings,
+                    customer_booking_no_show_sms: checked,
                   })
                 }
               />

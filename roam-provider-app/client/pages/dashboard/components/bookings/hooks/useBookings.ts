@@ -125,10 +125,20 @@ export function useBookings(providerData: any, business: any) {
   const providerUserId = provider?.provider?.user_id || provider?.provider?.id;
   
   useEffect(() => {
-    if (!bookings.length || !providerUserId) return;
+    if (!bookings.length || !providerUserId) {
+      console.log('🔍 Unread fetch skipped:', { 
+        hasBookings: !!bookings.length, 
+        hasProviderUserId: !!providerUserId,
+        providerUserId,
+        provider: provider?.provider
+      });
+      return;
+    }
 
     const fetchUnreadCounts = async () => {
       try {
+        console.log('🔍 Fetching unread counts for provider:', providerUserId);
+        
         // Get all conversation IDs for these bookings
         const bookingIds = bookings.map(b => b.id);
         const { data: conversations, error: convError } = await supabase
@@ -142,9 +152,14 @@ export function useBookings(providerData: any, business: any) {
           return;
         }
 
+        console.log('🔍 Found conversations:', conversations.length);
+
         // Get unread counts for all conversations
         const conversationIds = conversations.map(c => c.id);
-        if (conversationIds.length === 0) return;
+        if (conversationIds.length === 0) {
+          console.log('🔍 No conversations found');
+          return;
+        }
 
         const { data: notifications, error: notifError } = await supabase
           .from('message_notifications')
@@ -157,6 +172,12 @@ export function useBookings(providerData: any, business: any) {
           console.error('Error fetching notifications:', notifError);
           return;
         }
+
+        console.log('🔍 Found unread notifications:', notifications?.length || 0, {
+          providerUserId,
+          conversationIds,
+          notifications
+        });
 
         // Count unread messages per conversation
         const counts: Record<string, number> = {};
@@ -173,6 +194,7 @@ export function useBookings(providerData: any, business: any) {
           }
         });
 
+        console.log('🔍 Unread counts by booking:', unreadByBooking);
         setUnreadCounts(unreadByBooking);
       } catch (error) {
         console.error('Error fetching unread counts:', error);
@@ -184,7 +206,7 @@ export function useBookings(providerData: any, business: any) {
     // Poll for updates every 30 seconds
     const interval = setInterval(fetchUnreadCounts, 30000);
     return () => clearInterval(interval);
-  }, [bookings, providerUserId]);
+  }, [bookings, providerUserId, provider]);
 
   // Reset pagination when tab changes
   useEffect(() => {
