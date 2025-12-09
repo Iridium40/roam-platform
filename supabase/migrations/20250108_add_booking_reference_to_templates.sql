@@ -40,6 +40,19 @@ SET email_body_html = REPLACE(
 WHERE template_key = 'customer_booking_completed'
   AND email_body_html NOT LIKE '%booking_reference%';
 
+-- Update customer_booking_no_show template
+UPDATE public.notification_templates
+SET email_body_html = REPLACE(
+  email_body_html,
+  '<div class="info-label">Service:</div>',
+  '<div class="info-label">Booking Reference:</div>
+        <div class="info-value">{{booking_reference}}</div>
+        
+        <div class="info-label">Service:</div>'
+)
+WHERE template_key = 'customer_booking_no_show'
+  AND email_body_html NOT LIKE '%booking_reference%';
+
 -- Update provider_new_booking template
 UPDATE public.notification_templates
 SET email_body_html = REPLACE(
@@ -81,6 +94,7 @@ WHERE template_key IN (
   'customer_booking_accepted',
   'customer_booking_declined',
   'customer_booking_completed',
+  'customer_booking_no_show',
   'provider_new_booking',
   'provider_booking_cancelled',
   'provider_booking_rescheduled'
@@ -104,6 +118,7 @@ WHERE template_key IN (
   'customer_booking_accepted',
   'customer_booking_declined',
   'customer_booking_completed',
+  'customer_booking_no_show',
   'provider_new_booking',
   'provider_booking_cancelled',
   'provider_booking_rescheduled'
