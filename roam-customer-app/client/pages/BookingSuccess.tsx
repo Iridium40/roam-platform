@@ -6,6 +6,7 @@ type BookingDataRow = {
   start_time: string;
   total_amount: number;
   payment_status: string;
+  booking_status?: string;
   services?: { name?: string } | null;
   business_profiles?: { business_name?: string } | null;
   customer_profiles?: { first_name?: string; last_name?: string } | null;
@@ -28,6 +29,7 @@ interface BookingDetails {
   start_time: string;
   total_amount: number;
   payment_status: string;
+  booking_status?: string;
   service_name?: string;
   business_name?: string;
   customer_name?: string;
@@ -102,6 +104,7 @@ export default function BookingSuccess() {
             start_time: bookingData.start_time,
             total_amount: bookingData.total_amount,
             payment_status: bookingData.payment_status,
+            booking_status: bookingData.booking_status,
             service_name: bookingData.services?.name || 'Service',
             business_name: bookingData.business_profiles?.business_name || 'Business',
             customer_name: `${bookingData.customer_profiles?.first_name || ''} ${bookingData.customer_profiles?.last_name || ''}`.trim() || 'Customer',
@@ -217,16 +220,22 @@ export default function BookingSuccess() {
                 </div>
               </div>
 
-              <Badge variant="secondary" className="mb-4 text-sm px-4 py-2 bg-green-500/10 text-green-700 border-green-200">
-                Booking Confirmed
+              <Badge variant="secondary" className={`mb-4 text-sm px-4 py-2 border ${
+                booking.booking_status === 'confirmed' 
+                  ? 'bg-green-500/10 text-green-700 border-green-200' 
+                  : 'bg-blue-500/10 text-blue-700 border-blue-200'
+              }`}>
+                {booking.booking_status === 'confirmed' ? 'Booking Confirmed' : 'Booking Requested'}
               </Badge>
 
               <h1 className="text-3xl md:text-4xl font-bold mb-4 gradient-text">
-                Booking Complete!
+                {booking.booking_status === 'confirmed' ? 'Booking Complete!' : 'Booking Requested!'}
               </h1>
               
               <p className="text-lg text-foreground/70 mb-8 leading-relaxed">
-                Thank you for booking with ROAM. Your service has been confirmed and the provider has been notified.
+                {booking.booking_status === 'confirmed' 
+                  ? 'Thank you for booking with ROAM. Your service has been confirmed and the provider has been notified.'
+                  : 'Thank you for booking with ROAM. Your booking request has been submitted and is awaiting provider acceptance. You will be notified once the provider confirms your appointment.'}
               </p>
 
               {/* Booking Reference */}
@@ -265,7 +274,9 @@ export default function BookingSuccess() {
                       <p className="font-bold text-lg">Confirmation Email</p>
                     </div>
                     <p className="text-sm text-foreground/70 leading-relaxed">
-                      You'll receive a confirmation email with all the details, including service information, provider contact, and booking instructions.
+                      {booking.booking_status === 'confirmed' 
+                        ? "You'll receive a confirmation email with all the details, including service information, provider contact, and booking instructions."
+                        : "You'll receive an email once the provider accepts your booking request. This email will include all the details, including service information, provider contact, and booking instructions."}
                     </p>
                   </div>
                 </div>
@@ -280,7 +291,9 @@ export default function BookingSuccess() {
                       <p className="font-bold text-lg">Provider Notification</p>
                     </div>
                     <p className="text-sm text-foreground/70 leading-relaxed">
-                      The service provider will be notified immediately and will prepare for your appointment.
+                      {booking.booking_status === 'confirmed' 
+                        ? "The service provider has been notified and will prepare for your appointment."
+                        : "The service provider has been notified of your booking request and will review it. You'll be notified once they accept or if any changes are needed."}
                     </p>
                   </div>
                 </div>
