@@ -29,7 +29,7 @@ export function useBookings(providerData: any, business: any) {
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
   const [showUnassignedOnly, setShowUnassignedOnly] = useState(false);
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
-  const [activeTab, setActiveTab] = useState("present");
+  const [activeTab, setActiveTab] = useState("active");
   
   // Wrapper for setActiveTab
   const handleSetActiveTab = (tab: string) => {
@@ -38,9 +38,8 @@ export function useBookings(providerData: any, business: any) {
   const [selectedBooking, setSelectedBooking] = useState<any>(null);
   
   // Pagination state
-  const [presentPage, setPresentPage] = useState(1);
-  const [futurePage, setFuturePage] = useState(1);
-  const [pastPage, setPastPage] = useState(1);
+  const [activePage, setActivePage] = useState(1);
+  const [closedPage, setClosedPage] = useState(1);
   
   // Date range state - separate for past and future
   const [dateRangePastDays, setDateRangePastDays] = useState(PAGINATION_CONFIG.defaultDateRangePast);
@@ -189,46 +188,12 @@ export function useBookings(providerData: any, business: any) {
 
   // Reset pagination when tab changes
   useEffect(() => {
-    if (activeTab === "present") setPresentPage(1);
-    if (activeTab === "future") setFuturePage(1);
-    if (activeTab === "past") setPastPage(1);
+    if (activeTab === "active") setActivePage(1);
+    if (activeTab === "closed") setClosedPage(1);
   }, [activeTab]);
 
-  // Auto-redirect functionality: Move bookings from Future to Present when date arrives
-  useEffect(() => {
-    const checkForTimeTransitions = () => {
-      const todayStr = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
-      const finalStatuses = new Set(['completed', 'cancelled', 'declined', 'no_show']);
-      
-      // Only check for transitions if we're currently on the future tab
-      if (activeTab !== 'future') return;
-      
-      // Check if any future bookings should move to present (when date becomes today or past)
-      const bookingsToMove = bookings.filter((booking: any) => {
-        const bookingDate = booking.booking_date;
-        const bookingStatus = booking.booking_status;
-        
-        if (!bookingDate || !bookingStatus) return false;
-        
-        // If booking date is today or past, and NOT in final status, it should be in present
-        return (bookingDate <= todayStr) && !finalStatuses.has(bookingStatus);
-      });
-
-      // Only redirect if there are actually bookings that need to move
-      if (bookingsToMove.length > 0) {
-        handleSetActiveTab('present');
-        toast({
-          title: "Bookings Updated",
-          description: "Some bookings have moved to the Present tab.",
-        });
-      }
-    };
-
-    // Only run the check on an interval, not immediately on every render
-    const interval = setInterval(checkForTimeTransitions, 60000); // Check every minute
-
-    return () => clearInterval(interval);
-  }, [bookings, activeTab, toast]);
+  // Note: Auto-redirect functionality removed since we now use Active/Closed tabs
+  // Active tab shows all non-final bookings regardless of date, so no redirect needed
 
   // Filter bookings based on search, status, unread messages, and assignment
   const filteredBookings = useMemo(() => {
@@ -274,41 +239,40 @@ export function useBookings(providerData: any, business: any) {
     });
   }, [bookings, searchQuery, selectedStatusFilter, showUnreadOnly, showUnassignedOnly, unreadCounts]);
 
-  // Categorize bookings into present, future, and past
+  // Categorize bookings into active and closed
   const categorizedBookings = useMemo(() => {
-    const present: any[] = [];
-    const future: any[] = [];
-    const past: any[] = [];
+    const active: any[] = [];
+    const closed: any[] = [];
     const finalStatuses = new Set(['completed', 'cancelled', 'declined', 'no_show']);
-    const todayStr = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
     
     filteredBookings.forEach((b: any) => {
       const status = b.booking_status;
-      const dateStr: string = b.booking_date || '';
       
-      // PAST = Final status states (completed, cancelled, declined, no_show)
+      // CLOSED = Final status states (completed, cancelled, declined, no_show)
       if (finalStatuses.has(status)) {
-        past.push(b);
+        closed.push(b);
         return;
       }
       
-      // FUTURE = Future dates (not in final status)
-      if (dateStr > todayStr) {
-        future.push(b);
-        return;
-      }
-      
-      // PRESENT = Today's date or in the past (not in final status)
-      if (dateStr <= todayStr) {
-        present.push(b);
-        return;
-      }
-      
-      // Fallback (should never reach here)
-      present.push(b);
+      // ACTIVE = All non-final bookings (pending, confirmed, in_progress)
+      active.push(b);
     });
 
-    return { present, future, past };
+    // Sort active bookings by date ascending (earliest first)
+    active.sort((a, b) => {
+      const dateA = a.booking_date || '';
+      const dateB = b.booking_date || '';
+      return dateA.localeCompare(dateB);
+    });
+
+    // Sort closed bookings by date ascending (earliest first)
+    closed.sort((a, b) => {
+      const dateA = a.booking_date || '';
+      const dateB = b.booking_date || '';
+      return dateA.localeCompare(dateB);
+    });
+
+    return { active, closed };
   }, [filteredBookings]);
 
   // Calculate pagination data
@@ -331,11 +295,10 @@ export function useBookings(providerData: any, business: any) {
     };
 
     return {
-      present: calculatePagination(categorizedBookings.present, presentPage),
-      future: calculatePagination(categorizedBookings.future, futurePage),
-      past: calculatePagination(categorizedBookings.past, pastPage),
+      active: calculatePagination(categorizedBookings.active, activePage),
+      closed: calculatePagination(categorizedBookings.closed, closedPage),
     };
-  }, [categorizedBookings, presentPage, futurePage, pastPage, pageSize]);
+  }, [categorizedBookings, activePage, closedPage, pageSize]);
 
   // Calculate booking statistics
   const bookingStats = useMemo((): BookingStats => {
@@ -508,9 +471,12 @@ export function useBookings(providerData: any, business: any) {
     // Data
     bookings: filteredBookings,
     bookingStats,
-    presentBookings: categorizedBookings.present,
-    futureBookings: categorizedBookings.future,
-    pastBookings: categorizedBookings.past,
+    activeBookings: categorizedBookings.active,
+    closedBookings: categorizedBookings.closed,
+    // Keep old names for backward compatibility with stats section
+    presentBookings: categorizedBookings.active,
+    futureBookings: [],
+    pastBookings: categorizedBookings.closed,
     paginatedData,
     unreadCounts,
     
@@ -530,12 +496,17 @@ export function useBookings(providerData: any, business: any) {
     setSelectedBooking,
     
     // Pagination
-    presentPage,
-    setPresentPage,
-    futurePage,
-    setFuturePage,
-    pastPage,
-    setPastPage,
+    activePage,
+    setActivePage,
+    closedPage,
+    setClosedPage,
+    // Keep old names for backward compatibility
+    presentPage: activePage,
+    setPresentPage: setActivePage,
+    futurePage: 1,
+    setFuturePage: () => {},
+    pastPage: closedPage,
+    setPastPage: setClosedPage,
     
     // Actions
     loadBookings,

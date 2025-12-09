@@ -5,24 +5,20 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import BookingCard from "./BookingCard";
 
 interface PaginatedData {
-  present: { items: any[]; totalPages: number; currentPage: number };
-  future: { items: any[]; totalPages: number; currentPage: number };
-  past: { items: any[]; totalPages: number; currentPage: number };
+  active: { items: any[]; totalPages: number; currentPage: number };
+  closed: { items: any[]; totalPages: number; currentPage: number };
 }
 
 interface BookingListSectionProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
-  presentBookings: any[];
-  futureBookings: any[];
-  pastBookings: any[];
+  activeBookings: any[];
+  closedBookings: any[];
   paginatedData: PaginatedData;
-  presentPage: number;
-  setPresentPage: (page: number) => void;
-  futurePage: number;
-  setFuturePage: (page: number) => void;
-  pastPage: number;
-  setPastPage: (page: number) => void;
+  activePage: number;
+  setActivePage: (page: number) => void;
+  closedPage: number;
+  setClosedPage: (page: number) => void;
   onViewDetails: (booking: any) => void;
   onUpdateStatus: (bookingId: string, status: string) => Promise<void>;
   formatDisplayTime: (time: string) => string;
@@ -32,16 +28,13 @@ interface BookingListSectionProps {
 export default function BookingListSection({
   activeTab,
   setActiveTab,
-  presentBookings,
-  futureBookings,
-  pastBookings,
+  activeBookings,
+  closedBookings,
   paginatedData,
-  presentPage,
-  setPresentPage,
-  futurePage,
-  setFuturePage,
-  pastPage,
-  setPastPage,
+  activePage,
+  setActivePage,
+  closedPage,
+  setClosedPage,
   onViewDetails,
   onUpdateStatus,
   formatDisplayTime,
@@ -112,36 +105,27 @@ export default function BookingListSection({
       console.log('🔄 Tab change requested:', { from: activeTab, to: value });
       setActiveTab(value);
     }} className="w-full">
-      <TabsList className="grid w-full grid-cols-3">
+      <TabsList className="grid w-full grid-cols-2">
         <TabsTrigger 
-          value="present"
-          onClick={() => console.log('🖱️ Present tab clicked')}
-          className={activeTab === 'present' ? 'bg-blue-500 text-white' : ''}
+          value="active"
+          className={activeTab === 'active' ? 'bg-blue-500 text-white' : ''}
         >
-          Present ({presentBookings.length})
+          Active Bookings ({activeBookings.length})
         </TabsTrigger>
         <TabsTrigger 
-          value="future"
-          onClick={() => console.log('🖱️ Future tab clicked')}
-          className={activeTab === 'future' ? 'bg-blue-500 text-white' : ''}
+          value="closed"
+          className={activeTab === 'closed' ? 'bg-blue-500 text-white' : ''}
         >
-          Future ({futureBookings.length})
-        </TabsTrigger>
-        <TabsTrigger 
-          value="past"
-          onClick={() => console.log('🖱️ Past tab clicked')}
-          className={activeTab === 'past' ? 'bg-blue-500 text-white' : ''}
-        >
-          Past ({pastBookings.length})
+          Closed Bookings ({closedBookings.length})
         </TabsTrigger>
       </TabsList>
 
-      {/* Present Bookings Tab */}
-      <TabsContent value="present" className="mt-6">
+      {/* Active Bookings Tab */}
+      <TabsContent value="active" className="mt-6">
         <div className="space-y-4">
-          {paginatedData.present.items.length > 0 ? (
+          {paginatedData.active.items.length > 0 ? (
             <>
-              {paginatedData.present.items.map((booking) => (
+              {paginatedData.active.items.map((booking) => (
                 <BookingCard
                   key={booking.id}
                   booking={booking}
@@ -153,69 +137,41 @@ export default function BookingListSection({
                 />
               ))}
               <PaginationControls
-                currentPage={presentPage}
-                totalPages={paginatedData.present.totalPages}
-                onPageChange={setPresentPage}
+                currentPage={activePage}
+                totalPages={paginatedData.active.totalPages}
+                onPageChange={setActivePage}
               />
             </>
           ) : (
-            <EmptyState message="No current bookings. New bookings will appear here when they're scheduled for today or are in progress." />
+            <EmptyState message="No active bookings. All bookings that are pending, confirmed, or in progress will appear here." />
           )}
         </div>
       </TabsContent>
 
-      {/* Future Bookings Tab */}
-      <TabsContent value="future" className="mt-6">
+      {/* Closed Bookings Tab */}
+      <TabsContent value="closed" className="mt-6">
         <div className="space-y-4">
-          {paginatedData.future.items.length > 0 ? (
+          {paginatedData.closed.items.length > 0 ? (
             <>
-              {paginatedData.future.items.map((booking) => (
+              {paginatedData.closed.items.map((booking) => (
                 <BookingCard
                   key={booking.id}
                   booking={booking}
                   onViewDetails={onViewDetails}
                   onUpdateStatus={onUpdateStatus}
                   formatDisplayTime={formatDisplayTime}
-                  showActions={true}
+                  showActions={false} // Closed bookings typically don't need status actions
                   unreadCount={unreadCounts[booking.id] || 0}
                 />
               ))}
               <PaginationControls
-                currentPage={futurePage}
-                totalPages={paginatedData.future.totalPages}
-                onPageChange={setFuturePage}
+                currentPage={closedPage}
+                totalPages={paginatedData.closed.totalPages}
+                onPageChange={setClosedPage}
               />
             </>
           ) : (
-            <EmptyState message="No upcoming bookings. Future bookings will appear here when customers schedule appointments." />
-          )}
-        </div>
-      </TabsContent>
-
-      {/* Past Bookings Tab */}
-      <TabsContent value="past" className="mt-6">
-        <div className="space-y-4">
-          {paginatedData.past.items.length > 0 ? (
-            <>
-              {paginatedData.past.items.map((booking) => (
-                <BookingCard
-                  key={booking.id}
-                  booking={booking}
-                  onViewDetails={onViewDetails}
-                  onUpdateStatus={onUpdateStatus}
-                  formatDisplayTime={formatDisplayTime}
-                  showActions={false} // Past bookings typically don't need status actions
-                  unreadCount={unreadCounts[booking.id] || 0}
-                />
-              ))}
-              <PaginationControls
-                currentPage={pastPage}
-                totalPages={paginatedData.past.totalPages}
-                onPageChange={setPastPage}
-              />
-            </>
-          ) : (
-            <EmptyState message="No past bookings. Completed, cancelled, and declined bookings will appear here." />
+            <EmptyState message="No closed bookings. Completed, cancelled, declined, and no-show bookings will appear here." />
           )}
         </div>
       </TabsContent>

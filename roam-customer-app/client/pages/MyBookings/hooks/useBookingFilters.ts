@@ -8,6 +8,15 @@ export const useBookingFilters = (bookings: BookingWithDetails[]) => {
     closed: 1,
   });
   
+  // Search and filter state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  
+  // Reset pagination when search or filter changes
+  useEffect(() => {
+    setCurrentPage({ active: 1, closed: 1 });
+  }, [searchQuery, statusFilter]);
+  
   // Use dynamic page size based on device (mobile vs desktop)
   const [itemsPerPage, setItemsPerPage] = useState(getPageSize());
   
@@ -23,24 +32,56 @@ export const useBookingFilters = (bookings: BookingWithDetails[]) => {
   
   const ITEMS_PER_PAGE = itemsPerPage;
 
-  // Filter bookings by status
+  // Filter bookings by status, search, and category
   // ACTIVE: All non-final bookings (pending, confirmed, in_progress) regardless of date
   // CLOSED: All final state bookings (completed, cancelled, no_show, declined) regardless of date
   const filteredBookings = useMemo(() => {
     // Ensure bookings is an array
     const safeBookings = Array.isArray(bookings) ? bookings : [];
     
-    console.log("🔄 FILTERING BOOKINGS - useMemo triggered", {
-      bookingsLength: safeBookings.length,
-      timestamp: new Date().toISOString()
-    });
+    // First, apply search and status filters
+    let filtered = safeBookings;
     
-
+    // Apply status filter
+    if (statusFilter !== "all") {
+      filtered = filtered.filter((booking) => {
+        return booking.booking_status === statusFilter;
+      });
+    }
+    
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter((booking) => {
+        // Search by service name
+        const serviceName = booking.services?.name?.toLowerCase() || "";
+        
+        // Search by booking reference
+        const bookingReference = booking.booking_reference?.toLowerCase() || "";
+        
+        // Search by business/provider name
+        const businessName = booking.business_profiles?.business_name?.toLowerCase() || "";
+        
+        // Search by provider name
+        const providerName = booking.providers
+          ? `${booking.providers.first_name || ""} ${booking.providers.last_name || ""}`.toLowerCase()
+          : "";
+        
+        return (
+          serviceName.includes(query) ||
+          bookingReference.includes(query) ||
+          businessName.includes(query) ||
+          providerName.includes(query)
+        );
+      });
+    }
+    
+    // Then categorize into active and closed
     const result = {
       // ACTIVE TAB:
       // - All bookings that are NOT in a final state (completed, cancelled, no_show, declined)
       // - Includes pending, confirmed, in_progress regardless of date
-      active: safeBookings.filter((booking) => {
+      active: filtered.filter((booking) => {
         const status = booking.booking_status || 'pending';
         
         // Exclude final states: completed, cancelled, no_show, declined
@@ -58,7 +99,7 @@ export const useBookingFilters = (bookings: BookingWithDetails[]) => {
       
       // CLOSED TAB:
       // - All bookings in final states (completed, cancelled, no_show, declined) regardless of date
-      closed: safeBookings.filter((booking) => {
+      closed: filtered.filter((booking) => {
         const status = booking.booking_status || 'pending';
         
         // Show all final state bookings regardless of date
@@ -82,7 +123,7 @@ export const useBookingFilters = (bookings: BookingWithDetails[]) => {
     });
 
     return result;
-  }, [bookings]);
+  }, [bookings, searchQuery, statusFilter]);
 
   // Pagination logic
   const getPaginatedBookings = (bookings: BookingWithDetails[], page: number) => {
@@ -156,5 +197,9 @@ export const useBookingFilters = (bookings: BookingWithDetails[]) => {
     nextPage,
     prevPage,
     ITEMS_PER_PAGE,
+    searchQuery,
+    setSearchQuery,
+    statusFilter,
+    setStatusFilter,
   };
 };

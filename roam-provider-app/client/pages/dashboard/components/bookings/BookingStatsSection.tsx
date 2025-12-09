@@ -23,17 +23,19 @@ interface BookingStats {
 
 interface BookingStatsSectionProps {
   bookingStats: BookingStats;
-  presentBookings: any[];
-  futureBookings: any[];
-  pastBookings: any[];
+  presentBookings: any[]; // Backward compatibility - maps to activeBookings
+  futureBookings: any[]; // Backward compatibility - empty array
+  pastBookings: any[]; // Backward compatibility - maps to closedBookings
 }
 
 export default function BookingStatsSection({
   bookingStats,
-  presentBookings,
-  futureBookings,
-  pastBookings,
+  presentBookings, // Active bookings
+  futureBookings, // Not used anymore
+  pastBookings, // Closed bookings
 }: BookingStatsSectionProps) {
+  const activeBookings = presentBookings;
+  const closedBookings = pastBookings;
   return (
     <div className="space-y-6">
       {/* Main Stats Cards */}
@@ -102,16 +104,12 @@ export default function BookingStatsSection({
       {/* Quick Status Overview */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <Card className="p-4 text-center">
-          <p className="text-sm text-gray-600">Present</p>
-          <p className="text-2xl font-bold text-blue-600">{presentBookings.length}</p>
+          <p className="text-sm text-gray-600">Active</p>
+          <p className="text-2xl font-bold text-blue-600">{activeBookings.length}</p>
         </Card>
         <Card className="p-4 text-center">
-          <p className="text-sm text-gray-600">Future</p>
-          <p className="text-2xl font-bold text-green-600">{futureBookings.length}</p>
-        </Card>
-        <Card className="p-4 text-center">
-          <p className="text-sm text-gray-600">Past</p>
-          <p className="text-2xl font-bold text-purple-600">{pastBookings.length}</p>
+          <p className="text-sm text-gray-600">Closed</p>
+          <p className="text-2xl font-bold text-purple-600">{closedBookings.length}</p>
         </Card>
         <Card className="p-4 text-center">
           <p className="text-sm text-gray-600">Pending</p>

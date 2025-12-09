@@ -1,6 +1,14 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   ArrowLeft,
   AlertCircle,
@@ -10,6 +18,7 @@ import {
   Clock,
   Calendar,
   MessageCircle,
+  Search,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -74,6 +83,10 @@ export default function MyBookings() {
     prevPage,
     goToPage,
     ITEMS_PER_PAGE,
+    searchQuery,
+    setSearchQuery,
+    statusFilter,
+    setStatusFilter,
   } = useBookingFilters(bookings || []);
 
   // Add defensive programming to handle undefined data
@@ -193,6 +206,45 @@ export default function MyBookings() {
             <p className="text-lg text-foreground/70 mb-8">
               Manage your service appointments and view your booking history.
             </p>
+
+            {/* Search and Filter Section */}
+            <Card className="mb-6">
+              <CardContent className="p-4">
+                <div className="flex flex-col sm:flex-row gap-4">
+                  {/* Search Bar */}
+                  <div className="flex-1">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                      <Input
+                        placeholder="Search by service, provider, booking reference..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Status Filter Dropdown */}
+                  <div className="sm:w-48">
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Filter by status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Statuses</SelectItem>
+                        <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="confirmed">Confirmed</SelectItem>
+                        <SelectItem value="in_progress">In Progress</SelectItem>
+                        <SelectItem value="completed">Completed</SelectItem>
+                        <SelectItem value="cancelled">Cancelled</SelectItem>
+                        <SelectItem value="declined">Declined</SelectItem>
+                        <SelectItem value="no_show">No Show</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Booking Tabs */}
             <Tabs defaultValue="active" className="space-y-6">

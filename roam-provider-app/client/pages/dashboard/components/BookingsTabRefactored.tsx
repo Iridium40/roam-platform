@@ -42,9 +42,8 @@ export function BookingsTab({ providerData, business }: BookingsTabProps) {
     // Data
     bookings,
     bookingStats,
-    presentBookings,
-    futureBookings,
-    pastBookings,
+    activeBookings,
+    closedBookings,
     paginatedData,
     unreadCounts,
     
@@ -64,12 +63,10 @@ export function BookingsTab({ providerData, business }: BookingsTabProps) {
     setSelectedBooking,
     
     // Pagination
-    presentPage,
-    setPresentPage,
-    futurePage,
-    setFuturePage,
-    pastPage,
-    setPastPage,
+    activePage,
+    setActivePage,
+    closedPage,
+    setClosedPage,
     
     // Actions
     loadBookings,
@@ -93,12 +90,10 @@ export function BookingsTab({ providerData, business }: BookingsTabProps) {
   // Debug: Log tab data
   console.log('📊 BookingsTab render:', {
     activeTab,
-    presentCount: presentBookings.length,
-    futureCount: futureBookings.length,
-    pastCount: pastBookings.length,
-    paginatedPresent: paginatedData.present.items.length,
-    paginatedFuture: paginatedData.future.items.length,
-    paginatedPast: paginatedData.past.items.length,
+    activeCount: activeBookings.length,
+    closedCount: closedBookings.length,
+    paginatedActive: paginatedData.active.items.length,
+    paginatedClosed: paginatedData.closed.items.length,
   });
 
   if (loading) {
@@ -124,9 +119,9 @@ export function BookingsTab({ providerData, business }: BookingsTabProps) {
       {/* Booking Statistics */}
       <BookingStatsSection
         bookingStats={bookingStats}
-        presentBookings={presentBookings}
-        futureBookings={futureBookings}
-        pastBookings={pastBookings}
+        presentBookings={activeBookings}
+        futureBookings={[]}
+        pastBookings={closedBookings}
       />
 
       {/* Filters and View Toggle */}
@@ -195,16 +190,13 @@ export function BookingsTab({ providerData, business }: BookingsTabProps) {
       <BookingListSection
         activeTab={activeTab}
         setActiveTab={setActiveTab}
-        presentBookings={presentBookings}
-        futureBookings={futureBookings}
-        pastBookings={pastBookings}
+        activeBookings={activeBookings}
+        closedBookings={closedBookings}
         paginatedData={paginatedData}
-        presentPage={presentPage}
-        setPresentPage={setPresentPage}
-        futurePage={futurePage}
-        setFuturePage={setFuturePage}
-        pastPage={pastPage}
-        setPastPage={setPastPage}
+        activePage={activePage}
+        setActivePage={setActivePage}
+        closedPage={closedPage}
+        setClosedPage={setClosedPage}
         onViewDetails={setSelectedBooking}
         onUpdateStatus={updateBookingStatus}
         formatDisplayTime={formatDisplayTime}
@@ -213,7 +205,7 @@ export function BookingsTab({ providerData, business }: BookingsTabProps) {
       ) : viewType === "week" ? (
         <Suspense fallback={<div className="h-96 bg-gray-100 rounded-lg animate-pulse" />}>
           <WeekCalendarViewLazy
-            bookings={[...presentBookings, ...futureBookings, ...pastBookings]}
+            bookings={[...activeBookings, ...closedBookings]}
             currentDate={currentDate}
             onDateChange={setCurrentDate}
             onViewDetails={setSelectedBooking}
@@ -223,7 +215,7 @@ export function BookingsTab({ providerData, business }: BookingsTabProps) {
       ) : (
         <Suspense fallback={<div className="h-96 bg-gray-100 rounded-lg animate-pulse" />}>
           <MonthCalendarViewLazy
-            bookings={[...presentBookings, ...futureBookings, ...pastBookings]}
+            bookings={[...activeBookings, ...closedBookings]}
             currentDate={currentDate}
             onDateChange={setCurrentDate}
             onViewDetails={setSelectedBooking}
