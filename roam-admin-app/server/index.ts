@@ -55,6 +55,7 @@ import {
   handleUpdateCustomerStatus
 } from "./routes/customers.js";
 import { handleServices, handleAllServiceData } from "./routes/services.js";
+import { handleApproveBusiness } from "./routes/approve-business.js";
 
 export function createServer() {
   const app = express();
@@ -108,9 +109,11 @@ export function createServer() {
   // Business management routes
   app.get("/api/businesses", handleBusinesses);
   app.put("/api/businesses", handleBusinesses);
+  app.post("/api/approve-business", handleApproveBusiness);
   app.get("/api/verification/stats", handleVerificationStats);
   app.get("/api/business-documents", handleBusinessDocuments);
-  
+  app.put("/api/business-documents", handleBusinessDocuments);
+
   app.get("/api/business-locations", handleBusinessLocations);
   app.post("/api/business-locations", handleBusinessLocations);
   app.put("/api/business-locations", handleBusinessLocations);

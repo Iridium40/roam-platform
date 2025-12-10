@@ -499,7 +499,11 @@ async function getBusinessesForApprovals(req: Request, res: Response) {
       .select('*');
 
     // Filter by verification status - default to pending/suspended for approvals page
-    if (verification_status && verification_status !== 'all') {
+    if (verification_status === 'all') {
+      // Return all businesses regardless of status
+      // No filter applied
+    } else if (verification_status) {
+      // Filter by specific status
       query = query.eq('verification_status', verification_status);
     } else {
       // Default: only show businesses that need approval (pending or suspended)

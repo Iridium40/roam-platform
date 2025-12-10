@@ -102,9 +102,37 @@ async function getProviders(req: Request, res: Response) {
       });
     }
 
+    // Fetch auth emails and last sign in for each provider using admin API
+    const userIds = (data || []).map(p => p.user_id).filter(Boolean);
+    let authDataMap: Record<string, { email: string | null; last_sign_in_at: string | null }> = {};
+    
+    if (userIds.length > 0) {
+      for (const userId of userIds) {
+        try {
+          const { data: authUser } = await supabase.auth.admin.getUserById(userId);
+          if (authUser?.user) {
+            authDataMap[userId] = {
+              email: authUser.user.email || null,
+              last_sign_in_at: authUser.user.last_sign_in_at || null,
+            };
+          }
+        } catch (err) {
+          // Skip if we can't fetch auth user
+          console.warn(`Could not fetch auth user for provider ${userId}`);
+        }
+      }
+    }
+
+    // Merge auth data into provider data
+    const enhancedProviders = (data || []).map(provider => ({
+      ...provider,
+      auth_email: authDataMap[provider.user_id]?.email || null,
+      last_sign_in_at: authDataMap[provider.user_id]?.last_sign_in_at || null,
+    }));
+
     return res.status(200).json({ 
       success: true,
-      data: data || []
+      data: enhancedProviders
     });
 
   } catch (error) {

@@ -140,6 +140,8 @@ interface Provider {
       is_active: boolean;
     };
   }>;
+  auth_email?: string | null;
+  last_sign_in_at?: string | null;
 }
 
 interface ProviderService {
@@ -1946,13 +1948,27 @@ export default function AdminProviders() {
                       <Mail className="w-4 h-4 text-muted-foreground" />
                       <div>
                         <div className="text-sm text-muted-foreground">
-                          Email
+                          Contact Email
                         </div>
                         <div className="font-medium">
                           {selectedProvider.email || "Not provided"}
                         </div>
                       </div>
                     </div>
+
+                    {selectedProvider.auth_email && (
+                      <div className="flex items-center gap-3">
+                        <Shield className="w-4 h-4 text-muted-foreground" />
+                        <div>
+                          <div className="text-sm text-muted-foreground">
+                            Login Email
+                          </div>
+                          <div className="font-medium">
+                            {selectedProvider.auth_email}
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     <div className="flex items-center gap-3">
                       <Phone className="w-4 h-4 text-muted-foreground" />
@@ -2078,6 +2094,26 @@ export default function AdminProviders() {
                         >
                           {selectedProvider.is_active ? "Active" : "Inactive"}
                         </ROAMBadge>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <Clock className="w-4 h-4 text-muted-foreground" />
+                      <div>
+                        <div className="text-sm text-muted-foreground">
+                          Last Login
+                        </div>
+                        <div className="font-medium">
+                          {selectedProvider.last_sign_in_at
+                            ? new Date(selectedProvider.last_sign_in_at).toLocaleString("en-US", {
+                                year: "numeric",
+                                month: "short",
+                                day: "numeric",
+                                hour: "numeric",
+                                minute: "2-digit",
+                              })
+                            : "Never"}
+                        </div>
                       </div>
                     </div>
 
@@ -2229,254 +2265,6 @@ export default function AdminProviders() {
                 </ROAMCard>
               )}
 
-              {/* Provider Services */}
-              <ROAMCard>
-                <ROAMCardHeader>
-                  <ROAMCardTitle className="text-base">
-                    Provider Services
-                  </ROAMCardTitle>
-                </ROAMCardHeader>
-                <ROAMCardContent>
-                  <div className="space-y-4">
-                    {(() => {
-                      // Use the services nested in the provider object
-                      const currentProviderServices = selectedProvider.provider_services || [];
-
-                      return currentProviderServices.length > 0 ? (
-                        <div className="grid gap-4">
-                          {currentProviderServices.map((providerService) => (
-                            <div
-                              key={providerService.id}
-                              className="p-4 border rounded-lg space-y-2"
-                            >
-                              <div className="flex items-center justify-between">
-                                <div>
-                                  <div className="font-medium">
-                                    {providerService.services?.name ||
-                                      "Unknown Service"}
-                                  </div>
-                                  <div className="text-sm text-muted-foreground">
-                                    {providerService.services
-                                      ?.service_subcategories
-                                      ?.service_categories
-                                      ?.service_category_type
-                                      ? formatServiceCategoryType(
-                                          providerService.services
-                                            .service_subcategories
-                                            .service_categories
-                                            .service_category_type,
-                                        )
-                                      : "No category"}
-                                    {providerService.services
-                                      ?.service_subcategories
-                                      ?.service_subcategory_type &&
-                                      ` • ${formatServiceSubcategoryType(providerService.services.service_subcategories.service_subcategory_type)}`}
-                                  </div>
-                                </div>
-                                <ROAMBadge
-                                  variant={
-                                    providerService.services?.is_active
-                                      ? "success"
-                                      : "secondary"
-                                  }
-                                >
-                                  {providerService.services?.is_active
-                                    ? "Active"
-                                    : "Inactive"}
-                                </ROAMBadge>
-                              </div>
-
-                              <div className="flex items-center gap-4 text-sm">
-                                <div>
-                                  <span className="text-muted-foreground">
-                                    Min Price:{" "}
-                                  </span>
-                                  <span className="font-medium">
-                                    $
-                                    {providerService.services?.min_price?.toFixed(
-                                      2,
-                                    ) || "0.00"}
-                                  </span>
-                                </div>
-                                <div>
-                                  <span className="text-muted-foreground">
-                                    Duration:{" "}
-                                  </span>
-                                  <span className="font-medium">
-                                    {providerService.services
-                                      ?.duration_minutes || 0}{" "}
-                                    min
-                                  </span>
-                                </div>
-                              </div>
-
-                              {providerService.services?.description && (
-                                <div className="text-sm text-muted-foreground pt-2 border-t">
-                                  {providerService.services.description}
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="text-center py-8 text-muted-foreground">
-                          No services assigned to this provider
-                        </div>
-                      );
-                    })()}
-                  </div>
-                </ROAMCardContent>
-              </ROAMCard>
-
-              {/* Provider Add-Ons */}
-              <ROAMCard>
-                <ROAMCardHeader>
-                  <ROAMCardTitle className="text-base">
-                    Provider Add-Ons
-                  </ROAMCardTitle>
-                </ROAMCardHeader>
-                <ROAMCardContent>
-                  <div className="space-y-4">
-                    {(() => {
-                      // Use the addons nested in the provider object
-                      const currentProviderAddons = selectedProvider.provider_addons || [];
-
-                      return currentProviderAddons.length > 0 ? (
-                        <div className="grid gap-4">
-                          {currentProviderAddons.map((providerAddon) => (
-                            <div
-                              key={providerAddon.id}
-                              className="p-4 border rounded-lg space-y-2"
-                            >
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                  <div className="w-8 h-8 bg-gradient-to-br from-roam-light-blue to-roam-yellow rounded-lg flex items-center justify-center text-white font-semibold text-xs">
-                                    <Puzzle className="w-4 h-4" />
-                                  </div>
-                                  <div>
-                                    <div className="font-medium">
-                                      {providerAddon.service_addons?.name ||
-                                        "Unknown Add-On"}
-                                    </div>
-                                    <div className="text-sm text-muted-foreground">
-                                      Service Enhancement
-                                    </div>
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <ROAMBadge
-                                    variant={
-                                      providerAddon.is_active
-                                        ? "success"
-                                        : "secondary"
-                                    }
-                                  >
-                                    {providerAddon.is_active
-                                      ? "Active"
-                                      : "Inactive"}
-                                  </ROAMBadge>
-                                  <ROAMBadge
-                                    variant={
-                                      providerAddon.service_addons?.is_active
-                                        ? "outline"
-                                        : "secondary"
-                                    }
-                                    size="sm"
-                                  >
-                                    {providerAddon.service_addons?.is_active
-                                      ? "Available"
-                                      : "Unavailable"}
-                                  </ROAMBadge>
-                                </div>
-                              </div>
-
-                              {providerAddon.service_addons?.description && (
-                                <div className="text-sm text-muted-foreground pt-2 border-t">
-                                  {providerAddon.service_addons.description}
-                                </div>
-                              )}
-
-                              <div className="text-xs text-muted-foreground">
-                                Added: {formatDate(providerAddon.created_at)}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="text-center py-8 text-muted-foreground">
-                          <Puzzle className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-                          <p>No add-ons assigned to this provider</p>
-                        </div>
-                      );
-                    })()}
-                  </div>
-                </ROAMCardContent>
-              </ROAMCard>
-
-              {/* Provider Documents */}
-              <ROAMCard>
-                <ROAMCardHeader>
-                  <ROAMCardTitle className="text-base">
-                    Documents & Verification
-                  </ROAMCardTitle>
-                </ROAMCardHeader>
-                <ROAMCardContent>
-                  <div className="space-y-4">
-                    {sampleBusinessDocuments.length > 0 ? (
-                      <div className="grid gap-4">
-                        {sampleBusinessDocuments.slice(0, 3).map((document) => (
-                          <div
-                            key={document.id}
-                            className="p-4 border rounded-lg space-y-2"
-                          >
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <div className="font-medium">
-                                  {document.document_name}
-                                </div>
-                                <div className="text-sm text-muted-foreground capitalize">
-                                  {document.document_type.replace("_", " ")}
-                                </div>
-                              </div>
-                              <ROAMBadge
-                                variant={getDocumentStatusBadgeVariant(
-                                  document.verification_status,
-                                )}
-                              >
-                                {formatEnumDisplay(
-                                  document.verification_status,
-                                )}
-                              </ROAMBadge>
-                            </div>
-
-                            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                              {document.expiry_date && (
-                                <span>
-                                  Expires: {formatDate(document.expiry_date)}
-                                </span>
-                              )}
-                              <span>
-                                Uploaded: {formatDate(document.created_at)}
-                              </span>
-                            </div>
-
-                            {document.rejection_reason && (
-                              <div className="text-sm text-red-600 bg-red-50 p-2 rounded">
-                                <strong>Rejection Reason:</strong>{" "}
-                                {document.rejection_reason}
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-8 text-muted-foreground">
-                        No documents uploaded by this provider
-                      </div>
-                    )}
-                  </div>
-                </ROAMCardContent>
-              </ROAMCard>
             </div>
           )}
         </DialogContent>

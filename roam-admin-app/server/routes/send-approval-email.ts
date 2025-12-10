@@ -136,7 +136,7 @@ export async function handleSendApprovalEmail(req: Request, res: Response) {
 
               <!-- Header with Logo -->
               <div style="text-align: center; padding: 30px 0 20px; background-color: #f5f5f5; border-radius: 12px 12px 0 0; margin: -20px -20px 20px -20px; padding: 30px 20px;">
-                <img src="https://cdn.builder.io/api/v1/image/assets%2Fa42b6f9ec53e4654a92af75aad56d14f%2F993952d908754e5dbe0cceda03eb2224?format=webp&width=200"
+                <img src="https://vssomyuyhicaxsgiaupo.supabase.co/storage/v1/object/public/website-images/roam-logo-white.png"
                      alt="ROAM - Your Best Life. Everywhere."
                      class="logo"
                      style="max-width: 200px; height: auto;">

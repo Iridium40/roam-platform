@@ -19,10 +19,6 @@ export async function handleCustomers(req: Request, res: Response) {
         date_of_birth,
         image_url,
         bio,
-        email_notifications,
-        sms_notifications,
-        push_notifications,
-        marketing_emails,
         email_verified,
         phone_verified
       `)
@@ -32,11 +28,63 @@ export async function handleCustomers(req: Request, res: Response) {
       query = query.eq('is_active', status === 'active');
     }
     
-    const { data, error } = await query;
+    const { data: customers, error } = await query;
     
     if (error) throw error;
+
+    // Fetch user_settings and auth data for all customers
+    const userIds = (customers || []).map(c => c.user_id).filter(Boolean);
+    let settingsMap: Record<string, any> = {};
+    let authDataMap: Record<string, { email: string | null; last_sign_in_at: string | null }> = {};
     
-    res.json({ success: true, data: data || [] });
+    if (userIds.length > 0) {
+      // Fetch user_settings for notification preferences
+      const { data: settings } = await supabase
+        .from('user_settings')
+        .select(`
+          user_id,
+          email_notifications,
+          sms_notifications
+        `)
+        .in('user_id', userIds);
+      
+      if (settings) {
+        settingsMap = Object.fromEntries(
+          settings.map(s => [s.user_id, s])
+        );
+      }
+
+      // Fetch auth data (email and last sign in) for each user using admin API
+      for (const userId of userIds) {
+        try {
+          const { data: authUser } = await supabase.auth.admin.getUserById(userId);
+          if (authUser?.user) {
+            authDataMap[userId] = {
+              email: authUser.user.email || null,
+              last_sign_in_at: authUser.user.last_sign_in_at || null,
+            };
+          }
+        } catch (err) {
+          // Skip if we can't fetch auth user
+          console.warn(`Could not fetch auth user for ${userId}`);
+        }
+      }
+    }
+
+    // Merge user_settings and auth data into customer data
+    const enhancedCustomers = (customers || []).map(customer => {
+      const settings = settingsMap[customer.user_id] || {};
+      const authData = authDataMap[customer.user_id] || {};
+      return {
+        ...customer,
+        email_notifications: settings.email_notifications ?? true,
+        sms_notifications: settings.sms_notifications ?? false,
+        auth_email: authData.email || null,
+        last_sign_in_at: authData.last_sign_in_at || null,
+      };
+    });
+    
+    res.json({ success: true, data: enhancedCustomers });
   } catch (error) {
     console.error('Error fetching customers:', error);
     res.status(500).json({ 

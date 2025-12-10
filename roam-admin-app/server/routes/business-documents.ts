@@ -2,6 +2,19 @@ import { Request, Response } from 'express';
 import { supabase } from '../lib/supabase.js';
 
 export async function handleBusinessDocuments(req: Request, res: Response) {
+  // Route to appropriate handler based on method
+  switch (req.method) {
+    case 'GET':
+      return getBusinessDocuments(req, res);
+    case 'PUT':
+      return updateBusinessDocument(req, res);
+    default:
+      return res.status(405).json({ error: 'Method not allowed' });
+  }
+}
+
+// GET handler - fetch business documents
+async function getBusinessDocuments(req: Request, res: Response) {
   try {
     console.log('[Business Documents API] ===== START =====');
     console.log('[Business Documents API] Request method:', req.method);
@@ -162,6 +175,113 @@ export async function handleBusinessDocuments(req: Request, res: Response) {
     console.error('[Business Documents API] Unexpected error:', error);
     return res.status(500).json({ 
       error: 'Failed to fetch business documents',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+}
+
+// PUT handler - update business document verification status
+async function updateBusinessDocument(req: Request, res: Response) {
+  try {
+    console.log('[Business Documents API] ===== UPDATE START =====');
+    console.log('[Business Documents API] Request body:', req.body);
+
+    // Frontend sends: { id, verification_status, verified_by, verified_at, rejection_reason }
+    // NOTE: verified_by from frontend is auth.users.id, but FK requires admin_users.id
+    const { id, verification_status, verified_by, verified_at, rejection_reason } = req.body;
+
+    if (!id) {
+      return res.status(400).json({ 
+        error: 'Missing required field: id' 
+      });
+    }
+
+    // Validate id format (should be UUID)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(id)) {
+      return res.status(400).json({ 
+        error: 'Invalid id format - must be a valid UUID' 
+      });
+    }
+
+    // Build the update object with allowed fields
+    const updateData: Record<string, any> = {};
+    
+    if (verification_status !== undefined) {
+      updateData.verification_status = verification_status;
+    }
+    
+    // If verified_by is provided (auth.users.id), look up the admin_users.id
+    if (verified_by !== undefined) {
+      if (verified_by === null) {
+        updateData.verified_by = null;
+      } else {
+        // Look up admin_users record by user_id (auth.users.id)
+        const { data: adminUser, error: adminError } = await supabase
+          .from('admin_users')
+          .select('id')
+          .eq('user_id', verified_by)
+          .single();
+
+        if (adminError || !adminUser) {
+          console.error('[Business Documents API] Admin user lookup error:', adminError);
+          return res.status(400).json({ 
+            error: 'Failed to find admin user record for the current user',
+            details: adminError?.message
+          });
+        }
+
+        console.log('[Business Documents API] Found admin_users.id:', adminUser.id, 'for auth.users.id:', verified_by);
+        updateData.verified_by = adminUser.id;
+      }
+    }
+    
+    if (verified_at !== undefined) {
+      updateData.verified_at = verified_at;
+    }
+    if (rejection_reason !== undefined) {
+      updateData.rejection_reason = rejection_reason;
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({ 
+        error: 'No valid fields to update'
+      });
+    }
+
+    console.log('[Business Documents API] Updating document:', id);
+    console.log('[Business Documents API] Update data:', updateData);
+
+    // Update the document
+    const { data: updatedDocument, error: updateError } = await supabase
+      .from('business_documents')
+      .update(updateData)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error('[Business Documents API] Update error:', updateError);
+      return res.status(500).json({ 
+        error: updateError.message,
+        details: updateError.details,
+        code: updateError.code
+      });
+    }
+
+    console.log('[Business Documents API] Document updated successfully:', updatedDocument);
+    console.log('[Business Documents API] ===== UPDATE SUCCESS =====');
+
+    return res.status(200).json({ 
+      success: true,
+      data: updatedDocument,
+      message: 'Document updated successfully'
+    });
+
+  } catch (error) {
+    console.error('[Business Documents API] Update unexpected error:', error);
+    return res.status(500).json({ 
+      error: 'Failed to update business document',
       message: error instanceof Error ? error.message : 'Unknown error'
     });
   }

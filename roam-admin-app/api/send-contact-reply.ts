@@ -99,7 +99,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             <!-- Header with Logo -->
             <div style="text-align: center; padding: 30px 0 20px;">
-              <img src="${process.env.VITE_PUBLIC_SUPABASE_URL}/storage/v1/object/public/roam-file-storage/brand-assets/site_logo-1755737705142.png"
+              <img src="https://vssomyuyhicaxsgiaupo.supabase.co/storage/v1/object/public/website-images/roam-logo-white.png"
                    alt="ROAM - Your Best Life. Everywhere."
                    class="logo"
                    style="max-width: 200px; height: auto;">

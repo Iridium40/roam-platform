@@ -200,7 +200,8 @@ export default function AdminVerification() {
 
       console.log("Fetching business profiles from optimized API (with pre-aggregated document counts)...");
       // Use optimized approvals view that includes document counts in a single query
-      const businessResponse = await fetch('/api/businesses?use_approvals_view=true');
+      // Pass verification_status=all to get ALL businesses with their document counts
+      const businessResponse = await fetch('/api/businesses?use_approvals_view=true&verification_status=all');
       const businessResult = await businessResponse.json();
 
       if (!businessResponse.ok) {
@@ -1073,16 +1074,39 @@ export default function AdminVerification() {
       }
       
       const result = await response.json();
+      const documents: BusinessDocument[] = result.data || [];
       
       console.log("fetchCardDocuments response:", {
         businessId,
-        documentsCount: result.data?.length || 0,
+        documentsCount: documents.length,
       });
 
       setCardDocuments((prev) => ({
         ...prev,
-        [businessId]: result.data || [],
+        [businessId]: documents,
       }));
+
+      // Update the verifications state with accurate document counts from the fetched data
+      // This ensures the header counts match the actual documents
+      setVerifications((prev) =>
+        prev.map((v) => {
+          if (v.id === businessId) {
+            const verified = documents.filter(d => d.verification_status === 'verified').length;
+            const pending = documents.filter(d => d.verification_status === 'pending').length;
+            const rejected = documents.filter(d => d.verification_status === 'rejected').length;
+            const underReview = documents.filter(d => d.verification_status === 'under_review').length;
+            return {
+              ...v,
+              documents_count: documents.length,
+              verified_documents: verified,
+              pending_documents: pending,
+              rejected_documents: rejected,
+              under_review_documents: underReview,
+            };
+          }
+          return v;
+        })
+      );
     } catch (error: any) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error occurred";
@@ -1517,9 +1541,16 @@ export default function AdminVerification() {
                               <div className="flex items-center gap-2">
                                 <FileText className="w-4 h-4 text-muted-foreground" />
                                 <span>
-                                  {business.documents_count} documents (
-                                  {business.verified_documents} verified,{" "}
-                                  {business.pending_documents} pending)
+                                  {(() => {
+                                    // Use actual fetched documents if available, otherwise fall back to view data
+                                    const docs = cardDocuments[business.id];
+                                    if (docs) {
+                                      const verified = docs.filter(d => d.verification_status === 'verified').length;
+                                      const pending = docs.filter(d => d.verification_status === 'pending').length;
+                                      return `${docs.length} documents (${verified} verified, ${pending} pending)`;
+                                    }
+                                    return `${business.documents_count} documents (${business.verified_documents} verified, ${business.pending_documents} pending)`;
+                                  })()}
                                 </span>
                               </div>
                             </div>
@@ -1578,7 +1609,7 @@ export default function AdminVerification() {
                                 className="text-roam-blue border-roam-blue hover:bg-blue-50 w-full"
                               >
                                 <FileText className="w-4 h-4 mr-1" />
-                                {isExpanded ? "Hide" : "Review"} Documents ({business.documents_count})
+                                {isExpanded ? "Hide" : "Review"} Documents ({cardDocuments[business.id]?.length ?? business.documents_count})
                                 {isExpanded ? (
                                   <ChevronUp className="w-4 h-4 ml-1" />
                                 ) : (

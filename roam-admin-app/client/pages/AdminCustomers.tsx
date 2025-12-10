@@ -52,10 +52,10 @@ interface CustomerProfile {
   bio: string | null;
   email_notifications: boolean;
   sms_notifications: boolean;
-  push_notifications: boolean;
-  marketing_emails: boolean;
   email_verified: boolean;
   phone_verified: boolean;
+  auth_email: string | null;
+  last_sign_in_at: string | null;
 }
 
 interface CustomerLocation {
@@ -136,10 +136,10 @@ const sampleCustomers: CustomerProfile[] = [
     date_of_birth: "1990-05-15",
     email_notifications: true,
     sms_notifications: true,
-    push_notifications: true,
-    marketing_emails: false,
     email_verified: true,
     phone_verified: true,
+    auth_email: "alice.johnson@email.com",
+    last_sign_in_at: "2024-01-15T14:30:00Z",
   },
   {
     id: "2",
@@ -153,10 +153,10 @@ const sampleCustomers: CustomerProfile[] = [
     date_of_birth: "1985-08-22",
     email_notifications: true,
     sms_notifications: false,
-    push_notifications: true,
-    marketing_emails: true,
     email_verified: true,
     phone_verified: false,
+    auth_email: "bob.smith@email.com",
+    last_sign_in_at: "2024-01-10T09:15:00Z",
   },
   {
     id: "3",
@@ -170,10 +170,10 @@ const sampleCustomers: CustomerProfile[] = [
     date_of_birth: "1992-12-03",
     email_notifications: true,
     sms_notifications: false,
-    push_notifications: false,
-    marketing_emails: false,
     email_verified: false,
     phone_verified: false,
+    auth_email: "carol.davis@email.com",
+    last_sign_in_at: null,
   },
   {
     id: "4",
@@ -187,10 +187,10 @@ const sampleCustomers: CustomerProfile[] = [
     date_of_birth: "1988-03-17",
     email_notifications: false,
     sms_notifications: false,
-    push_notifications: false,
-    marketing_emails: false,
     email_verified: true,
     phone_verified: true,
+    auth_email: "david.wilson@email.com",
+    last_sign_in_at: "2023-12-20T16:45:00Z",
   },
   {
     id: "5",
@@ -204,10 +204,10 @@ const sampleCustomers: CustomerProfile[] = [
     date_of_birth: "1995-07-09",
     email_notifications: true,
     sms_notifications: true,
-    push_notifications: true,
-    marketing_emails: true,
     email_verified: true,
     phone_verified: true,
+    auth_email: "emma.brown@email.com",
+    last_sign_in_at: "2024-01-14T11:20:00Z",
   },
 ];
 
@@ -498,48 +498,16 @@ export default function AdminCustomers() {
       render: (value: any, row: CustomerProfile) => (
         <div className="flex gap-1">
           {row.email_notifications && (
-            <ROAMBadge variant="outline" size="sm">
+            <ROAMBadge variant="outline" size="sm" title="Email Notifications">
               📧
             </ROAMBadge>
           )}
           {row.sms_notifications && (
-            <ROAMBadge variant="outline" size="sm">
+            <ROAMBadge variant="outline" size="sm" title="SMS Notifications">
               📱
             </ROAMBadge>
           )}
-          {row.push_notifications && (
-            <ROAMBadge variant="outline" size="sm">
-              🔔
-            </ROAMBadge>
-          )}
-          {row.marketing_emails && (
-            <ROAMBadge variant="outline" size="sm">
-              📈
-            </ROAMBadge>
-          )}
         </div>
-      ),
-    },
-    {
-      key: "age",
-      header: "Age",
-      sortable: true,
-      render: (value: any, row: CustomerProfile) => (
-        <span className="text-sm text-muted-foreground">
-          {row.date_of_birth
-            ? `${calculateAge(row.date_of_birth)} years`
-            : "N/A"}
-        </span>
-      ),
-    },
-    {
-      key: "created_at",
-      header: "Joined",
-      sortable: true,
-      render: (value: string) => (
-        <span className="text-sm text-muted-foreground">
-          {formatDate(value)}
-        </span>
       ),
     },
     {
@@ -718,7 +686,7 @@ export default function AdminCustomers() {
                       <Mail className="w-4 h-4 text-muted-foreground" />
                       <div>
                         <div className="text-sm text-muted-foreground">
-                          Email
+                          Contact Email
                         </div>
                         <div className="font-medium">
                           {selectedCustomer.email || "No email provided"}
@@ -738,6 +706,20 @@ export default function AdminCustomers() {
                         </ROAMBadge>
                       </div>
                     </div>
+
+                    {selectedCustomer.auth_email && (
+                      <div className="flex items-center gap-3">
+                        <Shield className="w-4 h-4 text-muted-foreground" />
+                        <div>
+                          <div className="text-sm text-muted-foreground">
+                            Login Email
+                          </div>
+                          <div className="font-medium">
+                            {selectedCustomer.auth_email}
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     {selectedCustomer.phone && (
                       <div className="flex items-center gap-3">
@@ -828,6 +810,28 @@ export default function AdminCustomers() {
                             month: "long",
                             day: "numeric",
                           })}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <Clock className="w-4 h-4 text-muted-foreground" />
+                      <div>
+                        <div className="text-sm text-muted-foreground">
+                          Last Login
+                        </div>
+                        <div className="font-medium">
+                          {selectedCustomer.last_sign_in_at
+                            ? new Date(
+                                selectedCustomer.last_sign_in_at,
+                              ).toLocaleDateString("en-US", {
+                                year: "numeric",
+                                month: "long",
+                                day: "numeric",
+                                hour: "numeric",
+                                minute: "2-digit",
+                              })
+                            : "Never"}
                         </div>
                       </div>
                     </div>
@@ -936,61 +940,6 @@ export default function AdminCustomers() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`w-8 h-8 rounded-full flex items-center justify-center ${selectedCustomer.push_notifications ? "bg-roam-success/10" : "bg-muted"}`}
-                      >
-                        <span
-                          className={`text-sm ${selectedCustomer.push_notifications ? "text-roam-success" : "text-muted-foreground"}`}
-                        >
-                          ��
-                        </span>
-                      </div>
-                      <div>
-                        <div className="text-sm font-medium">
-                          Push Notifications
-                        </div>
-                        <ROAMBadge
-                          variant={
-                            selectedCustomer.push_notifications
-                              ? "success"
-                              : "secondary"
-                          }
-                          size="sm"
-                        >
-                          {selectedCustomer.push_notifications
-                            ? "Enabled"
-                            : "Disabled"}
-                        </ROAMBadge>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`w-8 h-8 rounded-full flex items-center justify-center ${selectedCustomer.marketing_emails ? "bg-roam-success/10" : "bg-muted"}`}
-                      >
-                        <TrendingUp
-                          className={`w-4 h-4 ${selectedCustomer.marketing_emails ? "text-roam-success" : "text-muted-foreground"}`}
-                        />
-                      </div>
-                      <div>
-                        <div className="text-sm font-medium">
-                          Marketing Emails
-                        </div>
-                        <ROAMBadge
-                          variant={
-                            selectedCustomer.marketing_emails
-                              ? "success"
-                              : "secondary"
-                          }
-                          size="sm"
-                        >
-                          {selectedCustomer.marketing_emails
-                            ? "Enabled"
-                            : "Disabled"}
-                        </ROAMBadge>
-                      </div>
-                    </div>
                   </div>
                 </ROAMCardContent>
               </ROAMCard>
