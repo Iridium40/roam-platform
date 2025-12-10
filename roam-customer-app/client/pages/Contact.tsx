@@ -398,10 +398,10 @@ export default function Contact() {
                     <MessageCircle className="w-5 h-5 mr-2" />
                     Chat with AI Assistant
                   </Button>
-                  <Button asChild size="lg" variant="outline" className="border-2 border-roam-blue text-roam-blue hover:bg-roam-blue hover:text-white shadow-lg hover-scale">
-                    <a href="mailto:contactus@roamyourbestlife.com">
+                  <Button asChild size="lg" variant={undefined} className="border-2 border-roam-blue bg-background !text-roam-blue hover:!bg-roam-blue hover:!text-white shadow-lg hover-scale [&>*]:!text-inherit [&:hover>*]:!text-white">
+                    <a href="mailto:contactus@roamyourbestlife.com" className="flex items-center !text-inherit hover:!text-white">
                       <Mail className="w-5 h-5 mr-2" />
-                      Email Support
+                      <span className="!text-inherit">Email Support</span>
                     </a>
                   </Button>
                 </div>
