@@ -242,7 +242,7 @@ export const BookingWidget: React.FC<BookingWidgetProps> = ({ data, onRefresh })
                       {/* Top Right - Price */}
                       <div className="text-right">
                         <div className="text-2xl font-bold text-blue-600">
-                          ${booking.price}
+                          ${(parseFloat(booking.price || '0')).toFixed(2)}
                         </div>
                       </div>
                     </div>

@@ -346,7 +346,7 @@ export default function DashboardTab({
                       <Badge className={getStatusBadge(booking.booking_status).className}>
                         {getStatusBadge(booking.booking_status).label}
                       </Badge>
-                      <p className="text-sm font-medium mt-1">${booking.total_amount || 0}</p>
+                      <p className="text-sm font-medium mt-1">${(parseFloat(booking.total_amount || '0')).toFixed(2)}</p>
                     </div>
                   </div>
                 ))

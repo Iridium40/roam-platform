@@ -563,7 +563,7 @@ export default function BookingsTab({
                             <BookingStatusIndicator status={booking.booking_status || 'unknown'} size="sm" showProgress={false} />
                             <div className="text-right">
                               <p className="text-base sm:text-lg font-bold text-gray-900">
-                                ${booking.total_amount || "115"}
+                                ${(parseFloat(booking.total_amount || "0")).toFixed(2)}
                               </p>
                             </div>
                           </div>
@@ -768,7 +768,7 @@ export default function BookingsTab({
                             <BookingStatusIndicator status={booking.booking_status || 'unknown'} size="sm" showProgress={false} />
                             <div className="text-right">
                               <p className="text-base sm:text-lg font-bold text-gray-900">
-                                ${booking.total_amount || "115"}
+                                ${(parseFloat(booking.total_amount || "0")).toFixed(2)}
                               </p>
                             </div>
                           </div>
@@ -973,7 +973,7 @@ export default function BookingsTab({
                             <BookingStatusIndicator status={booking.booking_status || 'unknown'} size="sm" showProgress={false} />
                             <div className="text-right">
                               <p className="text-base sm:text-lg font-bold text-gray-900">
-                                ${booking.total_amount || "115"}
+                                ${(parseFloat(booking.total_amount || "0")).toFixed(2)}
                               </p>
                             </div>
                           </div>
