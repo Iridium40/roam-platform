@@ -575,7 +575,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({
                     </span>
                   </div>
                   <span className="text-lg font-semibold text-roam-blue">
-                    ${booking.total_amount}
+                    ${parseFloat(booking.total_amount || '0').toFixed(2)}
                   </span>
                 </div>
 
@@ -779,7 +779,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({
                     </span>
                     {booking.tips && booking.tips.length > 0 && (
                       <span className="text-xs text-gray-500">
-                        • ${booking.tips[0].tip_amount} tip
+                        • ${parseFloat(booking.tips[0].tip_amount || '0').toFixed(2)} tip
                       </span>
                     )}
                   </div>

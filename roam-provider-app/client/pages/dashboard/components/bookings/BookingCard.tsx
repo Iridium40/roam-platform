@@ -219,7 +219,7 @@ export default function BookingCard({
             {booking.total_amount && (
               <div className="text-right">
                 <div className="text-2xl font-bold text-blue-600">
-                  ${booking.total_amount}
+                  ${parseFloat(booking.total_amount || '0').toFixed(2)}
                 </div>
                 {/* Payment Success Indicator */}
                 {(() => {
