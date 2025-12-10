@@ -673,10 +673,32 @@ export default function AdminVerification() {
           });
 
           if (emailResponse.ok) {
-            toast({
-              title: "Document Rejected",
-              description: "Document rejected and email sent to business",
-            });
+            try {
+              const emailResult = await emailResponse.json();
+              if (emailResult.emailStatus?.sent) {
+                toast({
+                  title: "Document Rejected",
+                  description: "Document rejected and email sent to business",
+                });
+              } else if (emailResult.emailStatus?.warning) {
+                toast({
+                  title: "Document Rejected",
+                  description: "Document rejected successfully. Note: Email could not be sent due to Resend test mode limitations.",
+                  variant: "default",
+                });
+              } else {
+                toast({
+                  title: "Document Rejected",
+                  description: "Document rejected but email could not be sent",
+                  variant: "default",
+                });
+              }
+            } catch (parseError) {
+              toast({
+                title: "Document Rejected",
+                description: "Document rejected and email sent to business",
+              });
+            }
           } else {
             toast({
               title: "Document Rejected",
@@ -954,9 +976,32 @@ export default function AdminVerification() {
             if (emailResponse.ok) {
               try {
                 const emailResult = await emailResponse.json();
-                console.log("Rejection email sent successfully:", emailResult);
+                console.log("Rejection email API response:", emailResult);
+                
+                if (emailResult.emailStatus?.sent) {
+                  toast({
+                    title: "Business Rejected",
+                    description: "Business verification rejected and email sent to business",
+                  });
+                } else if (emailResult.emailStatus?.warning) {
+                  toast({
+                    title: "Business Rejected",
+                    description: "Business verification rejected successfully. Note: Email could not be sent due to Resend test mode limitations.",
+                    variant: "default",
+                  });
+                } else {
+                  toast({
+                    title: "Business Rejected",
+                    description: "Business verification rejected successfully. Note: Rejection email could not be sent.",
+                    variant: "default",
+                  });
+                }
               } catch (parseError) {
                 console.log("Rejection email sent successfully (could not parse response details)");
+                toast({
+                  title: "Business Rejected",
+                  description: "Business verification rejected and email sent to business",
+                });
               }
             } else {
               const errorMessage = `HTTP ${emailResponse.status} - Email service error`;

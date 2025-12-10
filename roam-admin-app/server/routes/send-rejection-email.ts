@@ -208,25 +208,50 @@ export async function handleSendRejectionEmail(req: Request, res: Response) {
       return res.status(200).json({
         success: true,
         message: "Rejection email sent successfully",
-        emailId: emailResult.id
+        emailId: emailResult.id,
+        emailStatus: { sent: true }
       });
     } else {
-      let errorDetails;
+      const errorText = await resendResponse.text();
+      let errorData;
       try {
-        errorDetails = await resendResponse.json();
-        console.error("Resend API error response (JSON):", errorDetails);
+        errorData = JSON.parse(errorText);
+        console.error("Resend API error response (JSON):", errorData);
       } catch (e) {
-        errorDetails = await resendResponse.text();
-        console.error("Resend API error response (text):", errorDetails);
+        errorData = { message: errorText };
+        console.error("Resend API error response (text):", errorText);
       }
 
       console.error("Failed to send rejection email. Status:", resendResponse.status);
-      console.error("Error details:", errorDetails);
+      console.error("Error details:", errorData);
 
-      return res.status(500).json({
-        error: "Failed to send rejection email",
-        details: errorDetails,
-        statusCode: resendResponse.status
+      // Check if it's a Resend test mode validation error
+      let emailStatus: { sent: boolean; error?: string; warning?: string } = { sent: false };
+      
+      if (errorData.name === "validation_error" && errorData.message?.includes("testing emails")) {
+        const verifiedEmail = errorData.message.match(/\(([^)]+)\)/)?.[1] || "alan@roamyourbestlife.com";
+        console.warn(`Resend is in test mode. Email can only be sent to: ${verifiedEmail}`);
+        console.warn(`Attempted to send to: ${contactEmail}`);
+        console.warn("To send emails to other recipients, verify a domain at resend.com/domains");
+        
+        emailStatus = {
+          sent: false,
+          warning: `Resend is in test mode. Email can only be sent to ${verifiedEmail}. To send to other recipients, verify a domain at resend.com/domains`,
+          error: errorData.message
+        };
+      } else {
+        emailStatus = {
+          sent: false,
+          error: errorData.message || "Failed to send rejection email"
+        };
+      }
+
+      // Return 200 with emailStatus instead of 500, so the rejection action can still succeed
+      return res.status(200).json({
+        success: true,
+        message: "Business rejection processed successfully",
+        emailStatus,
+        emailError: errorData
       });
     }
 
