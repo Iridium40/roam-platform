@@ -115,7 +115,7 @@ export const CustomerAvatarDropdown: React.FC = () => {
             className="w-full flex items-center cursor-pointer"
           >
             <User className="mr-2 h-4 w-4" />
-            <span>Profile</span>
+            <span>My Settings</span>
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>

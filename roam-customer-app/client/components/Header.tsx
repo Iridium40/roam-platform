@@ -142,7 +142,7 @@ export function Header() {
                     to="/customer/profile"
                     className="text-foreground/70 hover:text-roam-blue transition-colors"
                   >
-                    My Profile
+                    My Settings
                   </Link>
                   <Link
                     to="/customer/settings"
