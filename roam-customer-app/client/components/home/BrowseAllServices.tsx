@@ -14,7 +14,6 @@ import {
   Search,
   SlidersHorizontal,
   Star,
-  MapPin,
   Clock,
   Calendar,
   TrendingUp,
@@ -28,8 +27,6 @@ import {
   Car,
   Smartphone,
   Building,
-  Smartphone as MobileIcon,
-  Video,
   X,
   Loader2,
   ChevronRight,
@@ -49,7 +46,6 @@ interface Service {
   min_price: number;
   rating: number;
   duration: string;
-  delivery_types?: string[];
   booking_count?: number;
 }
 
@@ -102,7 +98,6 @@ export function BrowseAllServices() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedSubcategory, setSelectedSubcategory] = useState<string>('all');
-  const [selectedDeliveryType, setSelectedDeliveryType] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('popular');
   const [showFilters, setShowFilters] = useState(false);
 
@@ -122,7 +117,6 @@ export function BrowseAllServices() {
             min_price,
             duration_minutes,
             image_url,
-            delivery_types,
             subcategory_id,
             service_subcategories!subcategory_id (
               id,
@@ -165,7 +159,6 @@ export function BrowseAllServices() {
           min_price: service.min_price || 50,
           rating: 4.5 + Math.random() * 0.5, // Random rating between 4.5-5.0
           duration: `${service.duration_minutes || 60} min`,
-          delivery_types: service.delivery_types || [],
           booking_count: Math.floor(Math.random() * 100) + 10,
         }));
 
@@ -223,12 +216,7 @@ export function BrowseAllServices() {
       filtered = filtered.filter((service) => service.subcategory === selectedSubcategory);
     }
 
-    // Delivery type filter
-    if (selectedDeliveryType !== 'all') {
-      filtered = filtered.filter((service) =>
-        service.delivery_types?.includes(selectedDeliveryType)
-      );
-    }
+    // Note: Delivery type filtering removed as delivery_types are set at business_services level, not service level
 
     // Sort
     switch (sortBy) {
@@ -250,7 +238,7 @@ export function BrowseAllServices() {
     }
 
     return filtered;
-  }, [services, searchQuery, selectedCategory, selectedSubcategory, selectedDeliveryType, sortBy]);
+  }, [services, searchQuery, selectedCategory, selectedSubcategory, sortBy]);
 
   const displayedServices = filteredAndSortedServices.slice(0, displayCount);
   const hasMore = displayCount < filteredAndSortedServices.length;
@@ -263,14 +251,12 @@ export function BrowseAllServices() {
     setSearchQuery('');
     setSelectedCategory('all');
     setSelectedSubcategory('all');
-    setSelectedDeliveryType('all');
     setSortBy('popular');
   };
 
   const activeFilterCount = [
     selectedCategory !== 'all',
     selectedSubcategory !== 'all',
-    selectedDeliveryType !== 'all',
     searchQuery !== '',
   ].filter(Boolean).length;
 
@@ -365,38 +351,7 @@ export function BrowseAllServices() {
           {/* Extended Filters */}
           {showFilters && (
             <div className="border-t pt-4 space-y-4 animate-in slide-in-from-top-2">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {/* Delivery Type */}
-                <div>
-                  <label className="text-sm font-medium text-gray-700 mb-2 block">Delivery Type</label>
-                  <Select value={selectedDeliveryType} onValueChange={setSelectedDeliveryType}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All delivery types" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Delivery Types</SelectItem>
-                      <SelectItem value="mobile">
-                        <div className="flex items-center gap-2">
-                          <MobileIcon className="w-4 h-4" />
-                          Mobile
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="in_studio">
-                        <div className="flex items-center gap-2">
-                          <Building className="w-4 h-4" />
-                          In-Studio
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="virtual">
-                        <div className="flex items-center gap-2">
-                          <Video className="w-4 h-4" />
-                          Virtual
-                        </div>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Subcategory Filter */}
                 {availableSubcategories.length > 0 && (
                   <div>
@@ -594,14 +549,4 @@ export function BrowseAllServices() {
       </div>
     </section>
   );
-}
-
-// Helper function to format delivery types
-function formatDeliveryType(type: string): string {
-  const map: Record<string, string> = {
-    mobile: 'Mobile',
-    in_studio: 'In-Studio',
-    virtual: 'Virtual',
-  };
-  return map[type] || type;
 }
