@@ -144,12 +144,6 @@ export function Header() {
                   >
                     My Settings
                   </Link>
-                  <Link
-                    to="/customer/settings"
-                    className="text-foreground/70 hover:text-roam-blue transition-colors"
-                  >
-                    Settings
-                  </Link>
                 </>
               ) : (
                 <div className="flex flex-col space-y-2 pt-4">

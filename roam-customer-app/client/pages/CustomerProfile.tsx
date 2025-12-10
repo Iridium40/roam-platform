@@ -6,11 +6,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { User, Edit, Save, X, Camera, Mail, Phone, Calendar, Loader2, ArrowLeft } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { User, Edit, Save, X, Camera, Mail, Phone, Calendar, Loader2, ArrowLeft, Bell } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { Footer } from '@/components/Footer';
+import { NotificationPreferences } from '@/components/NotificationPreferences';
 
 export default function CustomerProfile() {
   const { customer } = useAuth();
@@ -18,7 +20,18 @@ export default function CustomerProfile() {
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [profileData, setProfileData] = useState({
+  
+  type ProfileData = {
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone: string;
+    date_of_birth: string;
+    bio: string;
+    image_url: string;
+  };
+  
+  const [profileData, setProfileData] = useState<ProfileData>({
     first_name: '',
     last_name: '',
     email: '',
@@ -27,7 +40,7 @@ export default function CustomerProfile() {
     bio: '',
     image_url: '',
   });
-  const [originalData, setOriginalData] = useState(profileData);
+  const [originalData, setOriginalData] = useState<ProfileData>(profileData);
 
   useEffect(() => {
     if (customer) {
@@ -47,15 +60,16 @@ export default function CustomerProfile() {
         .single();
 
       if (error) throw error;
+      if (!data) throw new Error('No profile data found');
 
-      const profile = {
-        first_name: data.first_name || '',
-        last_name: data.last_name || '',
-        email: data.email || '',
-        phone: data.phone || '',
-        date_of_birth: data.date_of_birth || '',
-        bio: data.bio || '',
-        image_url: data.image_url || '',
+      const profile: ProfileData = {
+        first_name: (data as any).first_name || '',
+        last_name: (data as any).last_name || '',
+        email: (data as any).email || '',
+        phone: (data as any).phone || '',
+        date_of_birth: (data as any).date_of_birth || '',
+        bio: (data as any).bio || '',
+        image_url: (data as any).image_url || '',
       };
 
       setProfileData(profile);
@@ -80,6 +94,7 @@ export default function CustomerProfile() {
 
       const { error } = await supabase
         .from('customer_profiles')
+        // @ts-ignore - Supabase update accepts partial objects
         .update({
           first_name: profileData.first_name,
           last_name: profileData.last_name,
@@ -139,6 +154,7 @@ export default function CustomerProfile() {
       // Update profile with new image URL
       const { error: updateError } = await supabase
         .from('customer_profiles')
+        // @ts-ignore - Supabase update accepts partial objects
         .update({ image_url: publicUrl })
         .eq('user_id', customer.user_id);
 
@@ -198,38 +214,54 @@ export default function CustomerProfile() {
         </div>
 
         {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold mb-2">My Profile</h1>
-            <p className="text-muted-foreground">
-              Manage your personal information and preferences
-            </p>
-          </div>
-          {!isEditing ? (
-            <Button onClick={() => setIsEditing(true)}>
-              <Edit className="w-4 h-4 mr-2" />
-              Edit Profile
-            </Button>
-          ) : (
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={handleCancel} disabled={loading}>
-                <X className="w-4 h-4 mr-2" />
-                Cancel
-              </Button>
-              <Button onClick={handleSave} disabled={loading}>
-                {loading ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <Save className="w-4 h-4 mr-2" />
-                )}
-                Save Changes
-              </Button>
-            </div>
-          )}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold mb-2">My Settings</h1>
+          <p className="text-muted-foreground">
+            Manage your personal information and preferences
+          </p>
         </div>
 
-        {/* Profile Card */}
-        <Card>
+        {/* Tabs */}
+        <Tabs defaultValue="profile" className="w-full">
+          <TabsList className="grid w-full max-w-md grid-cols-2 mb-6">
+            <TabsTrigger value="profile" className="flex items-center gap-2">
+              <User className="w-4 h-4" />
+              Profile
+            </TabsTrigger>
+            <TabsTrigger value="notifications" className="flex items-center gap-2">
+              <Bell className="w-4 h-4" />
+              Notification Settings
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Profile Tab */}
+          <TabsContent value="profile" className="space-y-6">
+            <div className="flex justify-end mb-4">
+              {!isEditing ? (
+                <Button onClick={() => setIsEditing(true)}>
+                  <Edit className="w-4 h-4 mr-2" />
+                  Edit Profile
+                </Button>
+              ) : (
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={handleCancel} disabled={loading}>
+                    <X className="w-4 h-4 mr-2" />
+                    Cancel
+                  </Button>
+                  <Button onClick={handleSave} disabled={loading}>
+                    {loading ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Save className="w-4 h-4 mr-2" />
+                    )}
+                    Save Changes
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {/* Profile Card */}
+            <Card>
           <CardHeader>
             <CardTitle>Personal Information</CardTitle>
           </CardHeader>
@@ -360,6 +392,20 @@ export default function CustomerProfile() {
             </div>
           </CardContent>
         </Card>
+          </TabsContent>
+
+          {/* Notification Settings Tab */}
+          <TabsContent value="notifications" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Notification Preferences</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <NotificationPreferences />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Footer */}
