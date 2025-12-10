@@ -224,7 +224,7 @@ export function HomeHero({
             <div className="inline-flex items-center gap-3 bg-gradient-to-r from-roam-blue/20 via-roam-light-blue/20 to-roam-yellow/20 px-6 py-2 rounded-full backdrop-blur-sm border border-white/20">
               <div className="w-2 h-2 rounded-full bg-white animate-pulse"></div>
               <span className="text-sm font-medium text-white uppercase tracking-wider">
-                Discover Services
+                Search Services
               </span>
               <div className="w-2 h-2 rounded-full bg-roam-yellow animate-pulse"></div>
             </div>
@@ -307,33 +307,6 @@ export function HomeHero({
                 Mobile Only
               </Label>
             </div>
-          </div>
-
-          {/* Service Subcategory Buttons */}
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            {loadingSubcategories ? (
-              <div className="text-white/90 drop-shadow-md">Loading categories...</div>
-            ) : (
-              <>
-                {featuredSubcategories.map((subcategory) => (
-                  <Button
-                    key={subcategory.id}
-                    variant="outline"
-                    className="rounded-lg px-6 py-2 bg-white/95 backdrop-blur-sm border-white/30 text-gray-800 hover:bg-white hover:text-roam-blue hover:border-roam-blue transition-all shadow-lg font-medium"
-                    onClick={() => handleSubcategoryClick(subcategory.id, subcategory.service_subcategory_type)}
-                  >
-                    {formatSubcategoryName(subcategory.service_subcategory_type)}
-                  </Button>
-                ))}
-                <Button
-                  variant="outline"
-                  className="rounded-lg px-6 py-2 bg-white/95 backdrop-blur-sm border-white/30 text-gray-800 hover:bg-white hover:text-roam-blue hover:border-roam-blue transition-all shadow-lg font-medium"
-                  onClick={() => setShowMoreModal(true)}
-                >
-                  More...
-                </Button>
-              </>
-            )}
           </div>
         </div>
       </div>

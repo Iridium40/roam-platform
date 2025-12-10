@@ -2,22 +2,9 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Search,
-  SlidersHorizontal,
-  Star,
   Clock,
   Calendar,
-  TrendingUp,
-  DollarSign,
   Sparkles,
   Stethoscope,
   Scissors,
@@ -27,7 +14,6 @@ import {
   Car,
   Smartphone,
   Building,
-  X,
   Loader2,
   ChevronRight,
 } from 'lucide-react';
@@ -44,7 +30,6 @@ interface Service {
   description: string;
   price: string;
   min_price: number;
-  rating: number;
   duration: string;
   booking_count?: number;
   is_featured?: boolean;
@@ -97,11 +82,7 @@ export function BrowseAllServices() {
   const [allServicesDisplayCount, setAllServicesDisplayCount] = useState(12); // Show 12 initially for All Services
   
   // Filter states
-  const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('featured');
-  const [selectedSubcategory, setSelectedSubcategory] = useState<string>('all');
-  const [sortBy, setSortBy] = useState<string>('popular');
-  const [showFilters, setShowFilters] = useState(false);
 
   // Fetch all services and categories
   useEffect(() => {
@@ -160,7 +141,6 @@ export function BrowseAllServices() {
           description: service.description || 'Professional service',
           price: `$${service.min_price || 50}`,
           min_price: service.min_price || 50,
-          rating: 4.5 + Math.random() * 0.5, // Random rating between 4.5-5.0
           duration: `${service.duration_minutes || 60} min`,
           booking_count: Math.floor(Math.random() * 100) + 10,
           is_featured: service.is_featured || false,
@@ -189,18 +169,22 @@ export function BrowseAllServices() {
 
   // Helper function to convert to title case
   const toTitleCase = (str: string) => {
+    const upperCaseWords = ['IV', 'AI', 'CPR', 'EMT', 'DNA', 'RNA'];
+    
     return str
+      .replace(/_and_/g, ' & ')  // Replace _and_ with &
+      .replace(/_/g, ' ')         // Replace remaining underscores with spaces
       .split(' ')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .map(word => {
+        const upperWord = word.toUpperCase();
+        if (upperCaseWords.includes(upperWord)) {
+          return upperWord;
+        }
+        return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+      })
       .join(' ');
   };
 
-  // Get subcategories for selected category
-  const availableSubcategories = useMemo(() => {
-    if (selectedCategory === 'all' || selectedCategory === 'featured') return [];
-    const category = categories.find((cat) => cat.name === selectedCategory);
-    return category?.subcategories || [];
-  }, [selectedCategory, categories]);
 
   // Priority categories in specific order
   const priorityCategories = ['Beauty', 'Fitness', 'Therapy', 'Healthcare'];
@@ -237,46 +221,8 @@ export function BrowseAllServices() {
       filtered = filtered.filter((service) => service.category === selectedCategory);
     }
 
-    // Search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (service) =>
-          service.title.toLowerCase().includes(query) ||
-          service.description.toLowerCase().includes(query) ||
-          service.category.toLowerCase().includes(query) ||
-          service.subcategory.toLowerCase().includes(query)
-      );
-    }
-
-    // Subcategory filter
-    if (selectedSubcategory !== 'all') {
-      filtered = filtered.filter((service) => service.subcategory === selectedSubcategory);
-    }
-
-    // Note: Delivery type filtering removed as delivery_types are set at business_services level, not service level
-
-    // Sort
-    switch (sortBy) {
-      case 'price-low':
-        filtered.sort((a, b) => a.min_price - b.min_price);
-        break;
-      case 'price-high':
-        filtered.sort((a, b) => b.min_price - a.min_price);
-        break;
-      case 'rating':
-        filtered.sort((a, b) => b.rating - a.rating);
-        break;
-      case 'popular':
-        filtered.sort((a, b) => (b.booking_count || 0) - (a.booking_count || 0));
-        break;
-      case 'newest':
-        // Already sorted by created_at desc from DB
-        break;
-    }
-
     return filtered;
-  }, [services, searchQuery, selectedCategory, selectedSubcategory, sortBy, categories]);
+  }, [services, selectedCategory]);
 
   // Group services by subcategory when showing "All Services"
   const groupedServices = useMemo(() => {
@@ -338,158 +284,31 @@ export function BrowseAllServices() {
     setAllServicesDisplayCount(12);
   }, [selectedCategory]);
 
-  const resetFilters = () => {
-    setSearchQuery('');
-    setSelectedCategory('featured');
-    setSelectedSubcategory('all');
-    setSortBy('popular');
-  };
-
-  const activeFilterCount = [
-    selectedCategory !== 'featured',
-    selectedSubcategory !== 'all',
-    searchQuery !== '',
-  ].filter(Boolean).length;
 
   return (
     <section className="py-16 bg-gradient-to-b from-gray-50 to-white">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="text-center mb-12">
-          <Badge className="mb-4 bg-gradient-to-r from-roam-blue to-roam-light-blue text-white border-0">
+          <Badge className="mb-4 bg-gradient-to-r from-roam-blue to-roam-light-blue text-white border-0 rounded-lg">
             <Sparkles className="w-4 h-4 mr-1" />
             Browse All Services
           </Badge>
           <h2 className="text-4xl font-bold mb-4">
             Explore Our Complete <span className="text-roam-blue">Service Collection</span>
           </h2>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Discover {services.length}+ professional services across multiple categories. Filter, search, and find the perfect service for your needs.
-          </p>
-        </div>
-
-        {/* Filters Section */}
-        <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
-          {/* Search and Main Filters */}
-          <div className="flex flex-col lg:flex-row gap-4 mb-4">
-            {/* Search */}
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <Input
-                type="text"
-                placeholder="Search services..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 h-12 text-base"
-              />
-            </div>
-
-            {/* Sort */}
-            <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-full lg:w-48 h-12">
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="popular">
-                  <div className="flex items-center gap-2">
-                    <TrendingUp className="w-4 h-4" />
-                    Most Popular
-                  </div>
-                </SelectItem>
-                <SelectItem value="rating">
-                  <div className="flex items-center gap-2">
-                    <Star className="w-4 h-4" />
-                    Highest Rated
-                  </div>
-                </SelectItem>
-                <SelectItem value="price-low">
-                  <div className="flex items-center gap-2">
-                    <DollarSign className="w-4 h-4" />
-                    Price: Low to High
-                  </div>
-                </SelectItem>
-                <SelectItem value="price-high">
-                  <div className="flex items-center gap-2">
-                    <DollarSign className="w-4 h-4" />
-                    Price: High to Low
-                  </div>
-                </SelectItem>
-                <SelectItem value="newest">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="w-4 h-4" />
-                    Newest First
-                  </div>
-                </SelectItem>
-              </SelectContent>
-            </Select>
-
-            {/* Filters Toggle */}
-            <Button
-              variant="outline"
-              onClick={() => setShowFilters(!showFilters)}
-              className="h-12 relative"
-            >
-              <SlidersHorizontal className="w-5 h-5 mr-2" />
-              Filters
-              {activeFilterCount > 0 && (
-                <span className="absolute -top-2 -right-2 bg-roam-blue text-white text-xs rounded-full w-6 h-6 flex items-center justify-center font-semibold">
-                  {activeFilterCount}
-                </span>
-              )}
-            </Button>
-          </div>
-
-          {/* Extended Filters */}
-          {showFilters && (
-            <div className="border-t pt-4 space-y-4 animate-in slide-in-from-top-2">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Subcategory Filter */}
-                {availableSubcategories.length > 0 && (
-                  <div>
-                    <label className="text-sm font-medium text-gray-700 mb-2 block">Subcategory</label>
-                    <Select value={selectedSubcategory} onValueChange={setSelectedSubcategory}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="All subcategories" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Subcategories</SelectItem>
-                        {availableSubcategories.map((sub) => (
-                          <SelectItem key={sub} value={sub}>
-                            {sub}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-              </div>
-
-              {/* Reset Filters */}
-              {activeFilterCount > 0 && (
-                <Button
-                  variant="ghost"
-                  onClick={resetFilters}
-                  className="text-roam-blue hover:text-roam-blue/80"
-                >
-                  <X className="w-4 h-4 mr-2" />
-                  Reset All Filters
-                </Button>
-              )}
-            </div>
-          )}
         </div>
 
         {/* Category Tabs */}
         <div className="mb-8 overflow-x-auto scrollbar-hide">
-          <div className="flex gap-3 pb-2 min-w-max">
+          <div className="flex justify-center gap-3 pb-2 px-1 min-w-max">
             {/* Featured Services - First */}
             <button
               onClick={() => {
                 setSelectedCategory('featured');
-                setSelectedSubcategory('all');
               }}
               className={cn(
-                'px-6 py-3 rounded-full font-medium transition-all whitespace-nowrap flex items-center gap-2',
+                'px-6 py-3 rounded-lg font-medium transition-all whitespace-nowrap flex items-center gap-2',
                 selectedCategory === 'featured'
                   ? 'bg-gradient-to-r from-roam-blue to-roam-light-blue text-white shadow-lg scale-105'
                   : 'bg-white text-gray-700 hover:bg-gray-100 shadow'
@@ -503,10 +322,9 @@ export function BrowseAllServices() {
             <button
               onClick={() => {
                 setSelectedCategory('all');
-                setSelectedSubcategory('all');
               }}
               className={cn(
-                'px-6 py-3 rounded-full font-medium transition-all whitespace-nowrap',
+                'px-6 py-3 rounded-lg font-medium transition-all whitespace-nowrap',
                 selectedCategory === 'all'
                   ? 'bg-roam-blue text-white shadow-lg scale-105'
                   : 'bg-white text-gray-700 hover:bg-gray-100 shadow'
@@ -523,10 +341,9 @@ export function BrowseAllServices() {
                   key={category.id}
                   onClick={() => {
                     setSelectedCategory(category.name);
-                    setSelectedSubcategory('all');
                   }}
                   className={cn(
-                    'px-6 py-3 rounded-full font-medium transition-all whitespace-nowrap flex items-center gap-2',
+                    'px-6 py-3 rounded-lg font-medium transition-all whitespace-nowrap flex items-center gap-2',
                     selectedCategory === category.name
                       ? `bg-gradient-to-r ${category.color} text-white shadow-lg scale-105`
                       : 'bg-white text-gray-700 hover:bg-gray-100 shadow'
@@ -555,14 +372,8 @@ export function BrowseAllServices() {
           </div>
         ) : filteredAndSortedServices.length === 0 ? (
           <div className="text-center py-20">
-            <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Search className="w-10 h-10 text-gray-400" />
-            </div>
             <h3 className="text-2xl font-bold mb-2">No Services Found</h3>
-            <p className="text-gray-600 mb-6">Try adjusting your filters or search query</p>
-            <Button onClick={resetFilters} variant="outline" className="border-roam-blue text-roam-blue">
-              Reset Filters
-            </Button>
+            <p className="text-gray-600 mb-6">Try selecting a different category</p>
           </div>
         ) : displayedGroupedServices ? (
           // Grouped by Subcategory View (for "All Services")
@@ -595,7 +406,7 @@ export function BrowseAllServices() {
                               className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                             />
                             <div className="absolute top-2 left-2">
-                              <Badge className={`bg-gradient-to-r ${getCategoryColor(service.category)} text-white border-0 text-xs`}>
+                              <Badge className={`bg-gradient-to-r ${getCategoryColor(service.category)} text-white border-0 text-xs rounded-lg`}>
                                 <Icon className="w-3 h-3 mr-1" />
                                 {service.category}
                               </Badge>
@@ -608,11 +419,6 @@ export function BrowseAllServices() {
                                 variant="ghost"
                                 className="bg-white/90 hover:bg-white h-8 w-8"
                               />
-                            </div>
-                            {/* Rating Badge */}
-                            <div className="absolute bottom-2 left-2 bg-white/95 backdrop-blur-sm px-2 py-1 rounded-full flex items-center gap-1">
-                              <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-                              <span className="text-xs font-semibold">{service.rating.toFixed(1)}</span>
                             </div>
                           </div>
 
@@ -690,7 +496,7 @@ export function BrowseAllServices() {
                           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                         />
                         <div className="absolute top-2 left-2">
-                          <Badge className={`bg-gradient-to-r ${getCategoryColor(service.category)} text-white border-0 text-xs`}>
+                          <Badge className={`bg-gradient-to-r ${getCategoryColor(service.category)} text-white border-0 text-xs rounded-lg`}>
                             <Icon className="w-3 h-3 mr-1" />
                             {service.category}
                           </Badge>
@@ -703,11 +509,6 @@ export function BrowseAllServices() {
                             variant="ghost"
                             className="bg-white/90 hover:bg-white h-8 w-8"
                           />
-                        </div>
-                        {/* Rating Badge */}
-                        <div className="absolute bottom-2 left-2 bg-white/95 backdrop-blur-sm px-2 py-1 rounded-full flex items-center gap-1">
-                          <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-                          <span className="text-xs font-semibold">{service.rating.toFixed(1)}</span>
                         </div>
                       </div>
 

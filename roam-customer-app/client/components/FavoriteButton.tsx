@@ -141,7 +141,7 @@ export function FavoriteButton({
       disabled={isWorking || !isAuthenticated}
       className={cn(
         getSizeClasses(),
-        "transition-all duration-200",
+        "transition-all duration-200 rounded-lg",
         !isAuthenticated
           ? "text-gray-300 cursor-not-allowed"
           : isFavorited

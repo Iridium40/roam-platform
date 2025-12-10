@@ -1005,7 +1005,7 @@ export default function Index() {
                       {page.map((promotion) => (
                         <Card
                           key={promotion.id}
-                          className="group hover:shadow-2xl transition-all duration-500 hover:-translate-y-3 border-0 shadow-xl bg-white overflow-hidden rounded-3xl flex-shrink-0 w-full md:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)]"
+                          className="group hover:shadow-2xl transition-all duration-500 hover:-translate-y-3 border-0 shadow-xl bg-white overflow-hidden rounded-lg flex-shrink-0 w-full md:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)]"
                         >
                           {/* Hero Image Section */}
                           <div className="relative h-64 bg-gradient-to-br from-roam-yellow/20 via-roam-light-blue/10 to-roam-blue/5 overflow-hidden">
@@ -1043,17 +1043,6 @@ export default function Index() {
                               </div>
                             )}
                             <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent"></div>
-
-                            {/* Floating Action Button */}
-                            <div className="absolute top-4 right-4">
-                              <FavoriteButton
-                                type="promotion"
-                                itemId={promotion.id}
-                                size="sm"
-                                variant="ghost"
-                                className="w-10 h-10 rounded-full bg-white/95 hover:bg-white shadow-lg border-0 text-gray-600 hover:text-red-500 hover:scale-110 transition-all backdrop-blur-sm"
-                              />
-                            </div>
 
                             {/* Savings Badge - Bottom Right */}
                             {formatSavings(promotion) && (
@@ -1238,7 +1227,7 @@ export default function Index() {
                       {page.map((service) => (
                         <Card
                           key={service.id}
-                          className="group hover:shadow-2xl transition-all duration-500 hover:-translate-y-3 border-0 shadow-xl bg-white overflow-hidden rounded-3xl flex-shrink-0 w-full md:w-[calc(50%-12px)]"
+                          className="group hover:shadow-2xl transition-all duration-500 hover:-translate-y-3 border-0 shadow-xl bg-white overflow-hidden rounded-lg flex-shrink-0 w-full md:w-[calc(50%-12px)]"
                         >
                           {/* Hero Image Section */}
                           <div className="relative h-64 bg-gradient-to-br from-roam-blue/20 via-roam-light-blue/10 to-roam-yellow/5 overflow-hidden">
@@ -1256,7 +1245,7 @@ export default function Index() {
                                 itemId={service.id}
                                 size="sm"
                                 variant="ghost"
-                                className="w-10 h-10 rounded-full bg-white/95 hover:bg-white shadow-lg border-0 text-gray-600 hover:text-red-500 hover:scale-110 transition-all backdrop-blur-sm"
+                                className="w-10 h-10 rounded-lg bg-white/95 hover:bg-white shadow-lg border-0 text-gray-600 hover:text-red-500 hover:scale-110 transition-all backdrop-blur-sm"
                               />
                             </div>
 
@@ -1387,7 +1376,7 @@ export default function Index() {
                       {page.map((business) => (
                         <Card
                           key={business.id}
-                          className="group hover:shadow-2xl transition-all duration-500 hover:-translate-y-3 border-0 shadow-xl bg-white overflow-hidden rounded-3xl flex-shrink-0 w-full md:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)]"
+                          className="group hover:shadow-2xl transition-all duration-500 hover:-translate-y-3 border-0 shadow-xl bg-white overflow-hidden rounded-lg flex-shrink-0 w-full md:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)]"
                         >
                           <CardContent className="p-0">
                             {/* Hero Cover Section */}
@@ -1414,7 +1403,7 @@ export default function Index() {
                                   itemId={business.id}
                                   size="sm"
                                   variant="ghost"
-                                  className="w-10 h-10 rounded-full bg-white/95 hover:bg-white shadow-lg border-0 text-gray-600 hover:text-red-500 hover:scale-110 transition-all backdrop-blur-sm"
+                                  className="w-10 h-10 rounded-lg bg-white/95 hover:bg-white shadow-lg border-0 text-gray-600 hover:text-red-500 hover:scale-110 transition-all backdrop-blur-sm"
                                 />
                               </div>
 
@@ -1423,7 +1412,7 @@ export default function Index() {
                                 <Button
                                   size="sm"
                                   variant="ghost"
-                                  className="w-10 h-10 rounded-full bg-white/95 hover:bg-white shadow-lg border-0 text-gray-600 hover:text-roam-blue hover:scale-110 transition-all backdrop-blur-sm"
+                                  className="w-10 h-10 rounded-lg bg-white/95 hover:bg-white shadow-lg border-0 text-gray-600 hover:text-roam-blue hover:scale-110 transition-all backdrop-blur-sm"
                                   onClick={() => handleBusinessShare(business)}
                                 >
                                   <Share2 className="w-4 h-4" />

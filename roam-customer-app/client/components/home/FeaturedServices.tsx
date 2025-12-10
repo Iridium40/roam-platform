@@ -142,7 +142,7 @@ export const FeaturedServices: React.FC<FeaturedServicesProps> = ({
                       {page.map((promotion) => (
                         <Card
                           key={promotion.id}
-                          className="group hover:shadow-2xl transition-all duration-500 hover:-translate-y-3 border-0 shadow-xl bg-white overflow-hidden rounded-3xl w-full"
+                          className="group hover:shadow-2xl transition-all duration-500 hover:-translate-y-3 border-0 shadow-xl bg-white overflow-hidden rounded-lg w-full"
                         >
                           {/* Hero Image Section */}
                           <div className="relative h-64 bg-gradient-to-br from-roam-yellow/20 via-roam-light-blue/10 to-roam-blue/5 overflow-hidden">
@@ -180,17 +180,6 @@ export const FeaturedServices: React.FC<FeaturedServicesProps> = ({
                               </div>
                             )}
                             <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent"></div>
-
-                            {/* Floating Action Button */}
-                            <div className="absolute top-4 right-4">
-                              <FavoriteButton
-                                type="service"
-                                itemId={promotion.id}
-                                size="sm"
-                                variant="ghost"
-                                className="w-10 h-10 rounded-full bg-white/95 hover:bg-white shadow-lg border-0 text-gray-600 hover:text-red-500 hover:scale-110 transition-all backdrop-blur-sm"
-                              />
-                            </div>
 
                             {/* Savings Badge - Bottom Right */}
                             {formatSavings(promotion) && (
@@ -357,7 +346,7 @@ export const FeaturedServices: React.FC<FeaturedServicesProps> = ({
                       {page.map((business) => (
                         <Card
                           key={business.id}
-                          className="group hover:shadow-2xl transition-all duration-500 hover:-translate-y-3 border-0 shadow-xl bg-white overflow-hidden rounded-3xl flex-shrink-0 w-full sm:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)]"
+                          className="group hover:shadow-2xl transition-all duration-500 hover:-translate-y-3 border-0 shadow-xl bg-white overflow-hidden rounded-lg flex-shrink-0 w-full sm:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)]"
                         >
                           <CardContent className="p-0">
                             {/* Hero Cover Section */}
@@ -385,12 +374,12 @@ export const FeaturedServices: React.FC<FeaturedServicesProps> = ({
                                   itemId={business.id}
                                   size="sm"
                                   variant="ghost"
-                                  className="w-10 h-10 rounded-full bg-white/95 hover:bg-white shadow-lg border-0 text-gray-600 hover:text-red-500 hover:scale-110 transition-all backdrop-blur-sm"
+                                  className="w-10 h-10 rounded-lg bg-white/95 hover:bg-white shadow-lg border-0 text-gray-600 hover:text-red-500 hover:scale-110 transition-all backdrop-blur-sm"
                                 />
                                 <Button
                                   size="sm"
                                   variant="ghost"
-                                  className="w-10 h-10 rounded-full bg-white/95 hover:bg-white shadow-lg border-0 text-gray-600 hover:text-roam-blue hover:scale-110 transition-all backdrop-blur-sm"
+                                  className="w-10 h-10 rounded-lg bg-white/95 hover:bg-white shadow-lg border-0 text-gray-600 hover:text-roam-blue hover:scale-110 transition-all backdrop-blur-sm"
                                   onClick={() => onBusinessShare(business)}
                                 >
                                   <Share2 className="w-4 h-4" />
