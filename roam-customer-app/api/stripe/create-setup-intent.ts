@@ -34,6 +34,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
+    // Get customer profile
+    const { data: customer, error: customerError } = await supabase
+      .from('customers')
+      .select('user_id, email, first_name, last_name, phone')
+      .eq('user_id', customer_id)
+      .single();
+
+    if (customerError || !customer) {
+      console.error('Error fetching customer:', customerError);
+      return res.status(404).json({ 
+        error: 'Customer not found' 
+      });
+    }
+
     // Get or create Stripe customer
     const { data: stripeProfile, error: profileError } = await supabase
       .from('customer_stripe_profiles')
@@ -49,15 +63,45 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    if (!stripeProfile) {
-      return res.status(404).json({ 
-        error: 'Stripe customer profile not found. Please ensure customer exists.' 
+    let stripeCustomerId: string;
+
+    if (stripeProfile) {
+      stripeCustomerId = stripeProfile.stripe_customer_id;
+      console.log('✅ Using existing Stripe customer:', stripeCustomerId);
+    } else {
+      // Create new Stripe customer
+      console.log('Creating new Stripe customer for user:', customer_id);
+      
+      const stripeCustomer = await stripe.customers.create({
+        email: customer.email,
+        name: customer.first_name && customer.last_name 
+          ? `${customer.first_name} ${customer.last_name}`
+          : customer.email,
+        phone: customer.phone || undefined,
+        metadata: {
+          user_id: customer.user_id,
+          source: 'roam_payment_methods'
+        }
       });
+
+      stripeCustomerId = stripeCustomer.id;
+      console.log('✅ Created Stripe customer:', stripeCustomerId);
+
+      // Save to database
+      await supabase
+        .from('customer_stripe_profiles')
+        .upsert({
+          user_id: customer.user_id,
+          stripe_customer_id: stripeCustomerId,
+          stripe_email: customer.email
+        }, {
+          onConflict: 'user_id'
+        });
     }
 
     // Create Setup Intent for collecting payment method
     const setupIntent = await stripe.setupIntents.create({
-      customer: stripeProfile.stripe_customer_id,
+      customer: stripeCustomerId,
       payment_method_types: ['card'],
     });
 
