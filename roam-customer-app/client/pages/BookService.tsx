@@ -230,7 +230,7 @@ export default function BookService() {
     state: '',
     zip_code: '',
     is_primary: false,
-    location_type: 'home' as 'home' | 'work' | 'other'
+    location_type: 'Home' as 'Home' | 'Condo' | 'Hotel' | 'Other'
   });
 
   // Business sorting and filtering
@@ -1027,6 +1027,9 @@ export default function BookService() {
 
   // Handle Google Places address selection
   const handlePlaceSelect = (address: string, place?: any) => {
+    // Clear any selected saved location when user starts typing a new address
+    setSelectedCustomerLocation(null);
+    
     // If no place data, just update the address (user is typing manually)
     if (!place || !place.address_components || place.address_components.length === 0) {
       setNewCustomerLocation(prev => ({ ...prev, street_address: address }));
@@ -2247,10 +2250,13 @@ export default function BookService() {
                                   <label className="block text-sm font-medium mb-2">Location Name</label>
                                   <input
                                     type="text"
-                                    className="w-full px-3 py-2 border rounded-md"
+                                    className="w-full px-3 py-2 border rounded-md bg-white text-gray-900"
                                     placeholder="e.g., Home, Office"
                                     value={newCustomerLocation.location_name}
-                                    onChange={(e) => setNewCustomerLocation({ ...newCustomerLocation, location_name: e.target.value })}
+                                    onChange={(e) => {
+                                      setSelectedCustomerLocation(null);
+                                      setNewCustomerLocation({ ...newCustomerLocation, location_name: e.target.value });
+                                    }}
                                   />
                                 </div>
                                 <div>
@@ -2265,10 +2271,13 @@ export default function BookService() {
                                   <label className="block text-sm font-medium mb-2">Unit/Apt Number</label>
                                   <input
                                     type="text"
-                                    className="w-full px-3 py-2 border rounded-md"
+                                    className="w-full px-3 py-2 border rounded-md bg-white text-gray-900"
                                     placeholder="Apt 2B"
                                     value={newCustomerLocation.unit_number}
-                                    onChange={(e) => setNewCustomerLocation({ ...newCustomerLocation, unit_number: e.target.value })}
+                                    onChange={(e) => {
+                                      setSelectedCustomerLocation(null);
+                                      setNewCustomerLocation({ ...newCustomerLocation, unit_number: e.target.value });
+                                    }}
                                   />
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
@@ -2276,10 +2285,13 @@ export default function BookService() {
                                     <label className="block text-sm font-medium mb-2">City *</label>
                                     <input
                                       type="text"
-                                      className="w-full px-3 py-2 border rounded-md"
+                                      className="w-full px-3 py-2 border rounded-md bg-white text-gray-900"
                                       placeholder="Miami"
                                       value={newCustomerLocation.city}
-                                      onChange={(e) => setNewCustomerLocation({ ...newCustomerLocation, city: e.target.value })}
+                                      onChange={(e) => {
+                                        setSelectedCustomerLocation(null);
+                                        setNewCustomerLocation({ ...newCustomerLocation, city: e.target.value });
+                                      }}
                                       required
                                     />
                                   </div>
@@ -2287,10 +2299,13 @@ export default function BookService() {
                                     <label className="block text-sm font-medium mb-2">State *</label>
                                     <input
                                       type="text"
-                                      className="w-full px-3 py-2 border rounded-md"
+                                      className="w-full px-3 py-2 border rounded-md bg-white text-gray-900"
                                       placeholder="FL"
                                       value={newCustomerLocation.state}
-                                      onChange={(e) => setNewCustomerLocation({ ...newCustomerLocation, state: e.target.value })}
+                                      onChange={(e) => {
+                                        setSelectedCustomerLocation(null);
+                                        setNewCustomerLocation({ ...newCustomerLocation, state: e.target.value });
+                                      }}
                                       required
                                     />
                                   </div>
@@ -2299,23 +2314,30 @@ export default function BookService() {
                                   <label className="block text-sm font-medium mb-2">ZIP Code *</label>
                                   <input
                                     type="text"
-                                    className="w-full px-3 py-2 border rounded-md"
+                                    className="w-full px-3 py-2 border rounded-md bg-white text-gray-900"
                                     placeholder="33101"
                                     value={newCustomerLocation.zip_code}
-                                    onChange={(e) => setNewCustomerLocation({ ...newCustomerLocation, zip_code: e.target.value })}
+                                    onChange={(e) => {
+                                      setSelectedCustomerLocation(null);
+                                      setNewCustomerLocation({ ...newCustomerLocation, zip_code: e.target.value });
+                                    }}
                                     required
                                   />
                                 </div>
                                 <div>
                                   <label className="block text-sm font-medium mb-2">Location Type</label>
                                   <select
-                                    className="w-full px-3 py-2 border rounded-md"
+                                    className="w-full px-3 py-2 border rounded-md bg-white text-gray-900"
                                     value={newCustomerLocation.location_type}
-                                    onChange={(e) => setNewCustomerLocation({ ...newCustomerLocation, location_type: e.target.value as 'home' | 'work' | 'other' })}
+                                    onChange={(e) => {
+                                      setSelectedCustomerLocation(null);
+                                      setNewCustomerLocation({ ...newCustomerLocation, location_type: e.target.value as 'Home' | 'Condo' | 'Hotel' | 'Other' });
+                                    }}
                                   >
-                                    <option value="home">Home</option>
-                                    <option value="work">Work</option>
-                                    <option value="other">Other</option>
+                                    <option value="Home">Home</option>
+                                    <option value="Condo">Condo</option>
+                                    <option value="Hotel">Hotel</option>
+                                    <option value="Other">Other</option>
                                   </select>
                                 </div>
                                 
