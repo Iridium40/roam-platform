@@ -61,7 +61,6 @@ import {
   XCircle,
   AlertCircle,
   BarChart3,
-  MessageCircle,
   Camera,
   Smartphone,
   Building,
@@ -114,7 +113,6 @@ import type { BusinessProfile } from "@roam/shared";
 import {
   DashboardTab,
   BookingsTab,
-  MessagesTab,
   ServicesTab,
   FinancialsTab,
   ProfileTab,
@@ -188,15 +186,15 @@ export default function ProviderDashboard() {
     if (isOwner) return true; // Owners have full access
     
     if (isDispatcher) {
-      // Dispatchers can access: Dashboard, Bookings, Messages, Staff (read-only), Services (read-only), Profile (own profile settings), Settings
+      // Dispatchers can access: Dashboard, Bookings, Staff (read-only), Services (read-only), Profile (own profile settings), Settings
       // NO access to: Financials, Business Settings
-      return ['dashboard', 'bookings', 'messages', 'staff', 'services', 'profile', 'settings'].includes(feature);
+      return ['dashboard', 'bookings', 'staff', 'services', 'profile', 'settings'].includes(feature);
     }
     
     if (isProvider) {
-      // Providers can access: My Bookings, Messages, My Profile, Settings
+      // Providers can access: My Bookings, My Profile, Settings
       // NO access to: Dashboard, Staff, Financials, Business Settings, Services
-      return ['bookings', 'messages', 'profile', 'settings'].includes(feature);
+      return ['bookings', 'profile', 'settings'].includes(feature);
     }
     
     return false;
@@ -213,8 +211,6 @@ export default function ProviderDashboard() {
         return 'dashboard';
       case 'bookings':
         return 'bookings';
-      case 'messages':
-        return 'messages';
       case 'services':
         return 'services';
       case 'staff':
@@ -757,14 +753,6 @@ export default function ProviderDashboard() {
                   Bookings
                 </button>
               )}
-              {hasAccess('messages') && (
-                <button
-                  onClick={() => navigateToTab("messages")}
-                  className={`text-sm font-medium px-3 py-2 rounded-lg ${activeTab === "messages" ? "bg-gray-100 text-gray-900" : "text-gray-600 hover:text-gray-900"}`}
-                >
-                  Messages
-                </button>
-              )}
               {hasAccess('services') && (
                 <button
                   onClick={() => navigateToTab("services")}
@@ -895,20 +883,6 @@ export default function ProviderDashboard() {
                 </Button>
               )}
               
-              {hasAccess('messages') && (
-                <Button
-                  variant={activeTab === "messages" ? "default" : "ghost"}
-                  className="w-full justify-start"
-                  onClick={() => {
-                    navigateToTab("messages");
-                    setShowMobileMenu(false);
-                  }}
-                >
-                  <MessageCircle className="w-4 h-4 mr-2" />
-                  Messages
-                </Button>
-              )}
-              
               {hasAccess('staff') && (
                 <Button
                   variant={activeTab === "staff" ? "default" : "ghost"}
@@ -1026,14 +1000,6 @@ export default function ProviderDashboard() {
             providerData={providerData}
             business={business}
             providerRole={providerData?.provider_role}
-          />
-        )}
-
-        {/* Messages Tab */}
-        {activeTab === "messages" && (
-          <MessagesTab
-            providerData={providerData}
-            business={business}
           />
         )}
 

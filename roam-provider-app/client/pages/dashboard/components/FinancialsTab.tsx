@@ -107,6 +107,15 @@ export default function FinancialsTab({
     endDate: '',
     providerId: 'all',
   });
+  const [payoutFilters, setPayoutFilters] = useState({
+    startDate: '',
+    endDate: '',
+    providerId: 'all',
+  });
+  const [stripePayoutFilters, setStripePayoutFilters] = useState({
+    startDate: '',
+    endDate: '',
+  });
 
   // Providers and services for filters
   const [providers, setProviders] = useState<any[]>([]);
@@ -115,6 +124,386 @@ export default function FinancialsTab({
 
   const businessId = business?.id || providerData?.business_id;
   const isOwner = providerData?.provider_role === 'owner';
+
+  // Helper function to get filtered transactions
+  const getFilteredTransactions = useMemo(() => {
+    // Combine all transaction sources
+    const allTransactions = [
+      ...(financialSummary?.recent_transactions || []),
+      ...financialTransactions,
+      ...businessPaymentTransactions,
+    ];
+
+    // Remove duplicates by id
+    const uniqueTransactions = allTransactions.reduce((acc: any[], transaction: any) => {
+      if (!acc.find(t => t.id === transaction.id)) {
+        acc.push(transaction);
+      }
+      return acc;
+    }, []);
+
+    // Debug: Log transaction structure when filtering by provider
+    if (transactionFilters.providerId !== 'all' && uniqueTransactions.length > 0) {
+      console.log('🔍 Filtering transactions by provider:', {
+        providerId: transactionFilters.providerId,
+        totalTransactions: uniqueTransactions.length,
+        sampleTransaction: uniqueTransactions[0],
+        hasProviderId: uniqueTransactions[0].provider_id,
+        hasBookings: !!uniqueTransactions[0].bookings,
+        bookingsProviderId: Array.isArray(uniqueTransactions[0].bookings) 
+          ? uniqueTransactions[0].bookings[0]?.provider_id 
+          : uniqueTransactions[0].bookings?.provider_id,
+      });
+    }
+
+    // Apply filters
+    return uniqueTransactions.filter((transaction: any) => {
+      // Filter by date range
+      if (transactionFilters.startDate) {
+        const transactionDate = new Date(transaction.payment_date || transaction.processed_at || transaction.created_at);
+        if (transactionDate < new Date(transactionFilters.startDate)) return false;
+      }
+      if (transactionFilters.endDate) {
+        const transactionDate = new Date(transaction.payment_date || transaction.processed_at || transaction.created_at);
+        const endDate = new Date(transactionFilters.endDate);
+        endDate.setHours(23, 59, 59, 999);
+        if (transactionDate > endDate) return false;
+      }
+
+      // Filter by provider - handle different data structures
+      if (transactionFilters.providerId !== 'all') {
+        // Check if transaction has provider_id directly (business_earnings_detailed view)
+        if (transaction.provider_id) {
+          if (transaction.provider_id !== transactionFilters.providerId) return false;
+        } else {
+          // For financial_transactions and business_payment_transactions, check through bookings relationship
+          const booking = Array.isArray(transaction.bookings) ? transaction.bookings[0] : transaction.bookings;
+          if (booking?.provider_id !== transactionFilters.providerId) return false;
+        }
+      }
+
+      // Filter by service
+      if (transactionFilters.serviceId !== 'all') {
+        // For business_payment_transactions or business_earnings_detailed, check service_name or service_id
+        if (transaction.service_name) {
+          const service = services.find(s => s.id === transactionFilters.serviceId);
+          if (service && transaction.service_name !== service.name) return false;
+        } else if (transaction.service_id) {
+          if (transaction.service_id !== transactionFilters.serviceId) return false;
+        } else {
+          // For financial_transactions, check through bookings relationship
+          const booking = Array.isArray(transaction.bookings) ? transaction.bookings[0] : transaction.bookings;
+          if (booking?.service_id !== transactionFilters.serviceId) return false;
+        }
+      }
+
+      return true;
+    });
+  }, [
+    financialSummary?.recent_transactions,
+    financialTransactions,
+    businessPaymentTransactions,
+    transactionFilters,
+    services,
+  ]);
+
+  // CSV Export function for transactions
+  const exportTransactionsToCSV = () => {
+    const filtered = getFilteredTransactions;
+
+    // Prepare CSV data
+    const csvRows = [];
+    csvRows.push([
+      'Date',
+      'Customer',
+      'Service',
+      'Booking Reference',
+      'Amount',
+      'Gross Amount',
+      'Net Amount',
+      'Platform Fee',
+      'Status',
+      'Transaction Type',
+      'Description'
+    ].join(','));
+
+    filtered.forEach((transaction: any) => {
+      const isBusinessPaymentTransaction = !!transaction.transaction_description;
+      const booking = Array.isArray(transaction.bookings) ? transaction.bookings[0] : transaction.bookings;
+      
+      const customerName = isBusinessPaymentTransaction
+        ? `${transaction.customer_first_name || ''} ${transaction.customer_last_name || ''}`.trim()
+        : `${booking?.customer_profiles?.first_name || ''} ${booking?.customer_profiles?.last_name || ''}`.trim();
+      
+      const serviceName = isBusinessPaymentTransaction
+        ? transaction.service_name
+        : booking?.services?.name;
+      
+      const bookingReference = transaction.booking_reference || booking?.booking_reference || transaction.metadata?.booking_reference || '';
+      const transactionDate = transaction.payment_date || transaction.processed_at || transaction.created_at;
+      const amount = isBusinessPaymentTransaction
+        ? parseFloat(transaction.net_payment_amount || 0)
+        : transaction.amount || 0;
+      const grossAmount = isBusinessPaymentTransaction ? parseFloat(transaction.gross_payment_amount || 0) : amount;
+      const netAmount = isBusinessPaymentTransaction ? parseFloat(transaction.net_payment_amount || 0) : amount;
+      const platformFee = isBusinessPaymentTransaction ? parseFloat(transaction.platform_fee || 0) : 0;
+      const status = transaction.status || transaction.payment_status || '';
+      const transactionType = transaction.transaction_type || transaction.type || '';
+      const description = transaction.transaction_description || transaction.description || '';
+
+      csvRows.push([
+        transactionDate ? new Date(transactionDate).toLocaleDateString() : '',
+        `"${customerName}"`,
+        `"${serviceName || ''}"`,
+        `"${bookingReference}"`,
+        amount.toFixed(2),
+        grossAmount.toFixed(2),
+        netAmount.toFixed(2),
+        platformFee.toFixed(2),
+        `"${status}"`,
+        `"${transactionType}"`,
+        `"${description}"`
+      ].join(','));
+    });
+
+    // Create and download CSV
+    const csvContent = csvRows.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `transactions_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // CSV Export function for provider payouts
+  const exportPayoutsToCSV = () => {
+    // Apply filters to businessPaymentTransactions
+    let filtered = businessPaymentTransactions.filter((payout: any) => {
+      if (payoutFilters.startDate) {
+        const payoutDate = new Date(payout.payment_date || payout.created_at);
+        if (payoutDate < new Date(payoutFilters.startDate)) return false;
+      }
+      if (payoutFilters.endDate) {
+        const payoutDate = new Date(payout.payment_date || payout.created_at);
+        const endDate = new Date(payoutFilters.endDate);
+        endDate.setHours(23, 59, 59, 999);
+        if (payoutDate > endDate) return false;
+      }
+      if (payoutFilters.providerId !== 'all') {
+        // Check through bookings relationship
+        const booking = Array.isArray(payout.bookings) ? payout.bookings[0] : payout.bookings;
+        if (booking?.provider_id !== payoutFilters.providerId) return false;
+      }
+      return true;
+    });
+
+    // Prepare CSV data
+    const csvRows = [];
+    csvRows.push([
+      'Date',
+      'Provider',
+      'Gross Amount',
+      'Net Amount',
+      'Platform Fee',
+      'Booking Reference',
+      'Transaction Type',
+      'Tax Year',
+      'Status'
+    ].join(','));
+
+    filtered.forEach((payout: any) => {
+      const payoutDate = payout.payment_date || payout.created_at;
+      const booking = Array.isArray(payout.bookings) ? payout.bookings[0] : payout.bookings;
+      
+      // Get provider name from nested structure
+      let providerName = 'Unknown Provider';
+      if (booking?.providers) {
+        const provider = Array.isArray(booking.providers) ? booking.providers[0] : booking.providers;
+        if (provider) {
+          providerName = `${provider.first_name || ''} ${provider.last_name || ''}`.trim() || 'Unknown Provider';
+        }
+      } else if (booking?.provider_id) {
+        // Fallback: try to find provider in the providers list
+        const provider = providers.find(p => p.id === booking.provider_id);
+        if (provider) {
+          providerName = `${provider.first_name || ''} ${provider.last_name || ''}`.trim();
+        }
+      }
+      
+      const grossAmount = parseFloat(payout.gross_payment_amount || 0);
+      const netAmount = parseFloat(payout.net_payment_amount || 0);
+      const platformFee = parseFloat(payout.platform_fee || 0);
+      const bookingReference = payout.booking_reference || '';
+      const transactionType = payout.transaction_type || '';
+      const taxYear = payout.tax_year || '';
+      const status = 'completed'; // Provider payouts are always completed
+
+      csvRows.push([
+        payoutDate ? new Date(payoutDate).toLocaleDateString() : '',
+        `"${providerName}"`,
+        grossAmount.toFixed(2),
+        netAmount.toFixed(2),
+        platformFee.toFixed(2),
+        `"${bookingReference}"`,
+        `"${transactionType}"`,
+        taxYear,
+        `"${status}"`
+      ].join(','));
+    });
+
+    // Create and download CSV
+    const csvContent = csvRows.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `payouts_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // CSV Export function for Stripe payouts
+  const exportStripePayoutsToCSV = () => {
+    // Apply date filters to Stripe payouts
+    let filtered = stripePayouts.filter((payout: any) => {
+      if (stripePayoutFilters.startDate) {
+        const payoutDate = new Date(payout.created * 1000);
+        if (payoutDate < new Date(stripePayoutFilters.startDate)) return false;
+      }
+      if (stripePayoutFilters.endDate) {
+        const payoutDate = new Date(payout.created * 1000);
+        const endDate = new Date(stripePayoutFilters.endDate);
+        endDate.setHours(23, 59, 59, 999);
+        if (payoutDate > endDate) return false;
+      }
+      return true;
+    });
+
+    // Prepare CSV data
+    const csvRows = [];
+    csvRows.push([
+      'Date',
+      'Amount',
+      'Currency',
+      'Status',
+      'Method',
+      'Arrival Date',
+      'Type',
+      'Automatic'
+    ].join(','));
+
+    filtered.forEach((payout: any) => {
+      const payoutDate = new Date(payout.created * 1000);
+      const arrivalDate = new Date(payout.arrival_date * 1000);
+      const amount = payout.amount || 0;
+      const currency = payout.currency || 'USD';
+      const status = payout.status || '';
+      const method = payout.method || '';
+      const type = payout.type || '';
+      const automatic = payout.automatic ? 'Yes' : 'No';
+
+      csvRows.push([
+        payoutDate.toLocaleDateString(),
+        amount.toFixed(2),
+        currency,
+        `"${status}"`,
+        `"${method}"`,
+        arrivalDate.toLocaleDateString(),
+        `"${type}"`,
+        automatic
+      ].join(','));
+    });
+
+    // Create and download CSV
+    const csvContent = csvRows.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `stripe_payouts_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // CSV Export function for tips
+  const exportTipsToCSV = () => {
+    // Apply filters to tips (same logic as display)
+    let filtered = tipsData.filter((tip: any) => {
+      if (tipFilters.startDate) {
+        const tipDate = new Date(tip.tip_given_at || tip.created_at);
+        if (tipDate < new Date(tipFilters.startDate)) return false;
+      }
+      if (tipFilters.endDate) {
+        const tipDate = new Date(tip.tip_given_at || tip.created_at);
+        const endDate = new Date(tipFilters.endDate);
+        endDate.setHours(23, 59, 59, 999);
+        if (tipDate > endDate) return false;
+      }
+      if (tipFilters.providerId !== 'all') {
+        if (tip.provider_id !== tipFilters.providerId) return false;
+      }
+      return true;
+    });
+
+    // Prepare CSV data
+    const csvRows = [];
+    csvRows.push([
+      'Date',
+      'Provider',
+      'Tip Amount',
+      'Provider Net Amount',
+      'Platform Fee',
+      'Booking Reference',
+      'Customer',
+      'Service'
+    ].join(','));
+
+    filtered.forEach((tip: any) => {
+      const tipDate = tip.tip_given_at || tip.created_at;
+      const providerName = tip.provider_first_name && tip.provider_last_name
+        ? `${tip.provider_first_name} ${tip.provider_last_name}`
+        : 'Unknown Provider';
+      const tipAmount = parseFloat(tip.tip_amount || 0);
+      const providerNet = parseFloat(tip.provider_net_amount || 0);
+      const platformFee = parseFloat(tip.platform_fee_amount || 0);
+      const bookingReference = tip.booking_reference || '';
+      const customerName = tip.customer_first_name && tip.customer_last_name
+        ? `${tip.customer_first_name} ${tip.customer_last_name}`
+        : '';
+      const serviceName = tip.service_name || '';
+
+      csvRows.push([
+        tipDate ? new Date(tipDate).toLocaleDateString() : '',
+        `"${providerName}"`,
+        tipAmount.toFixed(2),
+        providerNet.toFixed(2),
+        platformFee.toFixed(2),
+        `"${bookingReference}"`,
+        `"${customerName}"`,
+        `"${serviceName}"`
+      ].join(','));
+    });
+
+    // Create and download CSV
+    const csvContent = csvRows.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `tips_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   // Load financial summary data from API (using real payment transactions)
   const loadFinancialSummary = async () => {
@@ -197,6 +586,7 @@ export default function FinancialsTab({
           bookings!inner(
             business_id,
             booking_reference,
+            provider_id,
             customer_profiles (
               first_name,
               last_name
@@ -217,9 +607,20 @@ export default function FinancialsTab({
       }
 
       // Load business_payment_transactions (this table has business_id directly)
+      // Join with bookings to get provider_id and provider details
       const { data: businessPaymentData, error: businessPaymentError } = await supabase
         .from('business_payment_transactions')
-        .select('*')
+        .select(`
+          *,
+          bookings (
+            provider_id,
+            providers (
+              id,
+              first_name,
+              last_name
+            )
+          )
+        `)
         .eq('business_id', businessId)
         .order('payment_date', { ascending: false })
         .limit(50);
@@ -319,18 +720,23 @@ export default function FinancialsTab({
     try {
       setLoadingFilters(true);
 
-      // Load providers
+      // Load providers (exclude dispatchers as they cannot deliver services)
       const { data: providersData, error: providersError } = await supabase
         .from('providers')
-        .select('id, first_name, last_name')
+        .select('id, first_name, last_name, provider_role')
         .eq('business_id', businessId)
         .eq('is_active', true)
+        .neq('provider_role', 'dispatcher') // Exclude dispatchers
         .order('first_name');
 
       if (providersError) {
         console.error('Error loading providers:', providersError);
       } else {
-        setProviders(providersData || []);
+        // Double-check: filter out any dispatchers that might have slipped through
+        const filteredProviders = (providersData || []).filter(
+          (provider: any) => provider.provider_role !== 'dispatcher'
+        );
+        setProviders(filteredProviders);
       }
 
       // Load services
@@ -832,18 +1238,104 @@ export default function FinancialsTab({
           {/* Stripe Payouts */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Wallet className="w-5 h-5" />
-                <span>Stripe Payouts</span>
-              </CardTitle>
-              <CardDescription>
-                Payouts are controlled by ROAM Platform and are automatically scheduled to be paid out once a week on Thursday to your connected bank account.
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Wallet className="w-5 h-5" />
+                    <span>Stripe Payouts</span>
+                  </CardTitle>
+                  <CardDescription>
+                    Payouts are controlled by ROAM Platform and are automatically scheduled to be paid out once a week on Thursday to your connected bank account.
+                  </CardDescription>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={exportStripePayoutsToCSV}
+                  className="flex items-center space-x-2"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Export CSV</span>
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
+              {/* Stripe Payouts Filters */}
+              <div className="mb-6 p-4 bg-gray-50 rounded-lg border">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+                  {/* Date Range */}
+                  <div className="md:col-span-5 space-y-2">
+                    <label className="text-xs font-medium text-gray-700">Date Range</label>
+                    <div className="flex gap-2">
+                      <div className="relative flex-1 min-w-0">
+                        <Input
+                          type="date"
+                          value={stripePayoutFilters.startDate}
+                          onChange={(e) => setStripePayoutFilters(prev => ({ ...prev, startDate: e.target.value }))}
+                          className="text-xs pr-10"
+                          placeholder="From"
+                        />
+                        <Calendar className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                      </div>
+                      <div className="relative flex-1 min-w-0">
+                        <Input
+                          type="date"
+                          value={stripePayoutFilters.endDate}
+                          onChange={(e) => setStripePayoutFilters(prev => ({ ...prev, endDate: e.target.value }))}
+                          className="text-xs pr-10"
+                          placeholder="To"
+                        />
+                        <Calendar className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Clear Filters */}
+                  <div className="md:col-span-2 space-y-2">
+                    <label className="text-xs font-medium text-gray-700 opacity-0">Clear</label>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setStripePayoutFilters({
+                        startDate: '',
+                        endDate: '',
+                      })}
+                      className="text-xs w-full"
+                    >
+                      Clear
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
               <div className="space-y-3">
-                {stripePayouts.length > 0 ? (
-                  stripePayouts.map((payout) => (
+                {(() => {
+                  // Apply filters to Stripe payouts
+                  let filtered = stripePayouts.filter((payout: any) => {
+                    if (stripePayoutFilters.startDate) {
+                      const payoutDate = new Date(payout.created * 1000);
+                      if (payoutDate < new Date(stripePayoutFilters.startDate)) return false;
+                    }
+                    if (stripePayoutFilters.endDate) {
+                      const payoutDate = new Date(payout.created * 1000);
+                      const endDate = new Date(stripePayoutFilters.endDate);
+                      endDate.setHours(23, 59, 59, 999);
+                      if (payoutDate > endDate) return false;
+                    }
+                    return true;
+                  });
+
+                  if (filtered.length === 0) {
+                    return (
+                      <div className="text-center py-8">
+                        <Wallet className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                        <p className="text-sm text-gray-500">No Stripe payouts match your filters</p>
+                        <p className="text-xs text-gray-400 mt-1">Try adjusting your filter criteria</p>
+                      </div>
+                    );
+                  }
+
+                  return filtered.map((payout) => (
                     <div key={payout.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                       <div className="flex items-center space-x-3">
                         <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
@@ -887,14 +1379,8 @@ export default function FinancialsTab({
                          payout.status}
                       </Badge>
                     </div>
-                  ))
-                ) : (
-                  <div className="text-center py-8">
-                    <Wallet className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                    <p className="text-sm text-gray-500">No Stripe payouts yet</p>
-                    <p className="text-xs text-gray-400 mt-1">Payouts are automatically processed weekly on Thursdays by ROAM Platform</p>
-                  </div>
-                )}
+                  ));
+                })()}
               </div>
             </CardContent>
           </Card>
@@ -903,15 +1389,129 @@ export default function FinancialsTab({
           {businessPaymentTransactions.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Building2 className="w-5 h-5" />
-                  <span>Provider Payouts</span>
-                </CardTitle>
-                <CardDescription>Your earnings transferred to your account</CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center space-x-2">
+                      <Building2 className="w-5 h-5" />
+                      <span>Provider Payouts</span>
+                    </CardTitle>
+                    <CardDescription>Your earnings transferred to your account</CardDescription>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={exportPayoutsToCSV}
+                    className="flex items-center space-x-2"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>Export CSV</span>
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
+                {/* Provider Payouts Filters */}
+                <div className="mb-6 p-4 bg-gray-50 rounded-lg border">
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+                    {/* Date Range */}
+                    <div className="md:col-span-5 space-y-2">
+                      <label className="text-xs font-medium text-gray-700">Date Range</label>
+                      <div className="flex gap-2">
+                        <div className="relative flex-1 min-w-0">
+                          <Input
+                            type="date"
+                            value={payoutFilters.startDate}
+                            onChange={(e) => setPayoutFilters(prev => ({ ...prev, startDate: e.target.value }))}
+                            className="text-xs pr-10"
+                            placeholder="From"
+                          />
+                          <Calendar className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                        </div>
+                        <div className="relative flex-1 min-w-0">
+                          <Input
+                            type="date"
+                            value={payoutFilters.endDate}
+                            onChange={(e) => setPayoutFilters(prev => ({ ...prev, endDate: e.target.value }))}
+                            className="text-xs pr-10"
+                            placeholder="To"
+                          />
+                          <Calendar className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Provider Filter */}
+                    <div className="md:col-span-4 space-y-2">
+                      <label className="text-xs font-medium text-gray-700">Provider</label>
+                      <Select
+                        value={payoutFilters.providerId}
+                        onValueChange={(value) => setPayoutFilters(prev => ({ ...prev, providerId: value }))}
+                      >
+                        <SelectTrigger className="text-xs">
+                          <SelectValue placeholder="All Providers" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Providers</SelectItem>
+                          {providers.map((provider) => (
+                            <SelectItem key={provider.id} value={provider.id}>
+                              {provider.first_name} {provider.last_name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Clear Filters */}
+                    <div className="md:col-span-3 space-y-2">
+                      <label className="text-xs font-medium text-gray-700 opacity-0">Clear</label>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setPayoutFilters({
+                          startDate: '',
+                          endDate: '',
+                          providerId: 'all',
+                        })}
+                        className="text-xs w-full"
+                      >
+                        Clear
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="space-y-3">
-                  {businessPaymentTransactions.map((payout) => (
+                  {(() => {
+                    // Apply filters to provider payouts
+                    let filtered = businessPaymentTransactions.filter((payout: any) => {
+                      if (payoutFilters.startDate) {
+                        const payoutDate = new Date(payout.payment_date || payout.created_at);
+                        if (payoutDate < new Date(payoutFilters.startDate)) return false;
+                      }
+                      if (payoutFilters.endDate) {
+                        const payoutDate = new Date(payout.payment_date || payout.created_at);
+                        const endDate = new Date(payoutFilters.endDate);
+                        endDate.setHours(23, 59, 59, 999);
+                        if (payoutDate > endDate) return false;
+                      }
+                      if (payoutFilters.providerId !== 'all') {
+                        // Check through bookings relationship
+                        const booking = Array.isArray(payout.bookings) ? payout.bookings[0] : payout.bookings;
+                        if (booking?.provider_id !== payoutFilters.providerId) return false;
+                      }
+                      return true;
+                    });
+
+                    if (filtered.length === 0) {
+                      return (
+                        <div className="text-center py-8">
+                          <Building2 className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                          <p className="text-sm text-gray-500">No provider payouts match your filters</p>
+                          <p className="text-xs text-gray-400 mt-1">Try adjusting your filter criteria</p>
+                        </div>
+                      );
+                    }
+
+                    return filtered.map((payout) => (
                     <div key={payout.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                       <div className="flex items-center space-x-3">
                         <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-green-100">
@@ -941,7 +1541,8 @@ export default function FinancialsTab({
                         </p>
                       </div>
                     </div>
-                  ))}
+                  ));
+                  })()}
                 </div>
               </CardContent>
             </Card>
@@ -952,11 +1553,24 @@ export default function FinancialsTab({
         <TabsContent value="transactions" className="space-y-6 mt-6">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Receipt className="w-5 h-5" />
-                <span>Transaction History</span>
-              </CardTitle>
-              <CardDescription>All charges, fees, and balance changes from your bookings</CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Receipt className="w-5 h-5" />
+                    <span>Transaction History</span>
+                  </CardTitle>
+                  <CardDescription>All charges, fees, and balance changes from your bookings</CardDescription>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={exportTransactionsToCSV}
+                  className="flex items-center space-x-2"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Export CSV</span>
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               {/* Filters */}
@@ -1053,45 +1667,7 @@ export default function FinancialsTab({
 
               <div className="space-y-3">
                 {(() => {
-                  // Determine which data source to use
-                  const transactionsToFilter = financialSummary?.recent_transactions && financialSummary.recent_transactions.length > 0
-                    ? financialSummary.recent_transactions
-                    : financialTransactions;
-
-                  // Apply filters
-                  let filtered = transactionsToFilter.filter((transaction: any) => {
-                    // Filter by date range
-                    if (transactionFilters.startDate) {
-                      const transactionDate = new Date(transaction.payment_date || transaction.processed_at || transaction.created_at);
-                      if (transactionDate < new Date(transactionFilters.startDate)) return false;
-                    }
-                    if (transactionFilters.endDate) {
-                      const transactionDate = new Date(transaction.payment_date || transaction.processed_at || transaction.created_at);
-                      const endDate = new Date(transactionFilters.endDate);
-                      endDate.setHours(23, 59, 59, 999);
-                      if (transactionDate > endDate) return false;
-                    }
-
-                    // Filter by provider (for financialTransactions with bookings join)
-                    if (transactionFilters.providerId !== 'all') {
-                      const booking = Array.isArray(transaction.bookings) ? transaction.bookings[0] : transaction.bookings;
-                      if (booking?.provider_id !== transactionFilters.providerId) return false;
-                    }
-
-                    // Filter by service
-                    if (transactionFilters.serviceId !== 'all') {
-                      // For business_payment_transactions, check service_name or service_id
-                      if (transaction.service_name) {
-                        const service = services.find(s => s.id === transactionFilters.serviceId);
-                        if (service && transaction.service_name !== service.name) return false;
-                      } else {
-                        const booking = Array.isArray(transaction.bookings) ? transaction.bookings[0] : transaction.bookings;
-                        if (booking?.service_id !== transactionFilters.serviceId) return false;
-                      }
-                    }
-
-                    return true;
-                  });
+                  const filtered = getFilteredTransactions;
 
                   if (filtered.length === 0) {
                     return (
@@ -1208,13 +1784,26 @@ export default function FinancialsTab({
           <TabsContent value="tips" className="space-y-6 mt-6">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Star className="w-5 h-5" />
-                  <span>Provider Tips Report</span>
-                </CardTitle>
-                <CardDescription>
-                  Tips received by providers who are eligible for bookings
-                </CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center space-x-2">
+                      <Star className="w-5 h-5" />
+                      <span>Provider Tips Report</span>
+                    </CardTitle>
+                    <CardDescription>
+                      Tips received by providers who are eligible for bookings
+                    </CardDescription>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={exportTipsToCSV}
+                    className="flex items-center space-x-2"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>Export CSV</span>
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 {tipsLoading ? (
