@@ -42,7 +42,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Get customer profile
     const { data: customer, error: customerError } = await supabase
-      .from('customers')
+      .from('customer_profiles')
       .select('user_id, email, first_name, last_name, phone')
       .eq('user_id', customer_id)
       .single();
