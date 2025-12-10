@@ -54,6 +54,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useFavorites } from "@/hooks/useFavorites";
 import { Header } from "@/components/Header";
 import { HomeHero } from "@/components/home/HomeHero";
+import { BrowseAllServices } from "@/components/home/BrowseAllServices";
 import { Footer } from "@/components/Footer";
 import { Loader2 } from "lucide-react";
 import type { 
@@ -948,6 +949,9 @@ export default function Index() {
 
       {/* Hero Section with Search */}
       <HomeHero />
+
+      {/* Browse All Services Section */}
+      <BrowseAllServices />
 
       {/* Featured Services Carousel */}
       <section className="py-12">
