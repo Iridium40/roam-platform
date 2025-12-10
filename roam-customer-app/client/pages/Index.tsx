@@ -1488,12 +1488,12 @@ export default function Index() {
                                 </Button>
                                 <Button
                                   asChild
-                                  variant="outline"
-                                  className="flex-1 border-2 border-roam-blue/20 text-roam-blue hover:bg-roam-blue hover:text-white font-semibold py-3 rounded-2xl transition-all duration-300"
+                                  variant={undefined}
+                                  className="flex-1 border-2 border-roam-blue/20 bg-background !text-roam-blue hover:!bg-roam-blue hover:!text-white font-semibold py-3 rounded-2xl transition-all duration-300 [&>*]:!text-inherit [&:hover>*]:!text-white"
                                 >
-                                  <Link to={`/business/${business.id}`}>
+                                  <Link to={`/business/${business.id}`} className="flex items-center !text-inherit hover:!text-white">
                                     <BookOpen className="w-4 h-4 mr-2" />
-                                    View
+                                    <span className="!text-inherit">View</span>
                                   </Link>
                                 </Button>
                               </div>
@@ -1598,12 +1598,12 @@ export default function Index() {
             <Button
               asChild
               size="lg"
-              variant="outline"
-              className="border-roam-blue text-roam-blue hover:bg-roam-blue hover:text-white text-lg px-8 py-6"
+              variant={undefined}
+              className="border border-roam-blue bg-background !text-roam-blue hover:!bg-roam-blue hover:!text-white text-lg px-8 py-6 transition-colors [&>*]:!text-inherit [&:hover>*]:!text-white"
             >
-              <Link to="/about">
+              <Link to="/about" className="flex items-center !text-inherit hover:!text-white">
                 <Building className="w-5 h-5 mr-2" />
-                Learn More
+                <span className="!text-inherit">Learn More</span>
               </Link>
             </Button>
           </div>

@@ -463,10 +463,10 @@ export function BrowseAllServices() {
                 <Button
                   onClick={handleLoadMoreAllServices}
                   size="lg"
-                  variant="outline"
-                  className="border-2 border-roam-blue text-roam-blue hover:bg-roam-blue hover:text-white px-8"
+                  variant={undefined}
+                  className="border-2 border-roam-blue bg-background !text-roam-blue hover:!bg-roam-blue hover:!text-white px-8 [&>*]:!text-inherit [&:hover>*]:!text-white"
                 >
-                  Load More Services
+                  <span className="!text-inherit">Load More Services</span>
                   <ChevronRight className="w-5 h-5 ml-2" />
                 </Button>
                 <p className="text-sm text-gray-500 mt-4">
@@ -551,10 +551,10 @@ export function BrowseAllServices() {
                 <Button
                   onClick={handleLoadMore}
                   size="lg"
-                  variant="outline"
-                  className="border-2 border-roam-blue text-roam-blue hover:bg-roam-blue hover:text-white px-8"
+                  variant={undefined}
+                  className="border-2 border-roam-blue bg-background !text-roam-blue hover:!bg-roam-blue hover:!text-white px-8 [&>*]:!text-inherit [&:hover>*]:!text-white"
                 >
-                  Load More Services
+                  <span className="!text-inherit">Load More Services</span>
                   <ChevronRight className="w-5 h-5 ml-2" />
                 </Button>
                 <p className="text-sm text-gray-500 mt-4">
