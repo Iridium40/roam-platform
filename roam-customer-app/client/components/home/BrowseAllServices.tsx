@@ -47,6 +47,7 @@ interface Service {
   rating: number;
   duration: string;
   booking_count?: number;
+  is_featured?: boolean;
 }
 
 interface Category {
@@ -92,11 +93,12 @@ export function BrowseAllServices() {
   const [services, setServices] = useState<Service[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
-  const [displayCount, setDisplayCount] = useState(18); // Show 18 initially (3 rows)
+  const [displayCount, setDisplayCount] = useState(12); // Show 12 initially for Featured/Category views
+  const [allServicesDisplayCount, setAllServicesDisplayCount] = useState(12); // Show 12 initially for All Services
   
   // Filter states
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedCategory, setSelectedCategory] = useState<string>('featured');
   const [selectedSubcategory, setSelectedSubcategory] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('popular');
   const [showFilters, setShowFilters] = useState(false);
@@ -117,6 +119,7 @@ export function BrowseAllServices() {
             min_price,
             duration_minutes,
             image_url,
+            is_featured,
             subcategory_id,
             service_subcategories!subcategory_id (
               id,
@@ -160,6 +163,7 @@ export function BrowseAllServices() {
           rating: 4.5 + Math.random() * 0.5, // Random rating between 4.5-5.0
           duration: `${service.duration_minutes || 60} min`,
           booking_count: Math.floor(Math.random() * 100) + 10,
+          is_featured: service.is_featured || false,
         }));
 
         // Transform categories
@@ -183,16 +187,55 @@ export function BrowseAllServices() {
     fetchData();
   }, []);
 
+  // Helper function to convert to title case
+  const toTitleCase = (str: string) => {
+    return str
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  };
+
   // Get subcategories for selected category
   const availableSubcategories = useMemo(() => {
-    if (selectedCategory === 'all') return [];
+    if (selectedCategory === 'all' || selectedCategory === 'featured') return [];
     const category = categories.find((cat) => cat.name === selectedCategory);
     return category?.subcategories || [];
   }, [selectedCategory, categories]);
 
+  // Priority categories in specific order
+  const priorityCategories = ['Beauty', 'Fitness', 'Therapy', 'Healthcare'];
+
+  // Filtered categories for display
+  const displayCategories = useMemo(() => {
+    // Get priority categories that exist in the database
+    const priority = categories.filter(cat => 
+      priorityCategories.some(p => cat.name.toLowerCase().includes(p.toLowerCase()))
+    ).sort((a, b) => {
+      const aIndex = priorityCategories.findIndex(p => a.name.toLowerCase().includes(p.toLowerCase()));
+      const bIndex = priorityCategories.findIndex(p => b.name.toLowerCase().includes(p.toLowerCase()));
+      return aIndex - bIndex;
+    });
+
+    // Get remaining categories
+    const remaining = categories.filter(cat => 
+      !priorityCategories.some(p => cat.name.toLowerCase().includes(p.toLowerCase()))
+    );
+
+    return [...priority, ...remaining];
+  }, [categories]);
+
   // Filter and sort services
   const filteredAndSortedServices = useMemo(() => {
     let filtered = [...services];
+
+    // Featured filter
+    if (selectedCategory === 'featured') {
+      filtered = filtered.filter((service) => service.is_featured === true);
+    }
+    // Category filter
+    else if (selectedCategory !== 'all') {
+      filtered = filtered.filter((service) => service.category === selectedCategory);
+    }
 
     // Search filter
     if (searchQuery) {
@@ -204,11 +247,6 @@ export function BrowseAllServices() {
           service.category.toLowerCase().includes(query) ||
           service.subcategory.toLowerCase().includes(query)
       );
-    }
-
-    // Category filter
-    if (selectedCategory !== 'all') {
-      filtered = filtered.filter((service) => service.category === selectedCategory);
     }
 
     // Subcategory filter
@@ -238,24 +276,77 @@ export function BrowseAllServices() {
     }
 
     return filtered;
-  }, [services, searchQuery, selectedCategory, selectedSubcategory, sortBy]);
+  }, [services, searchQuery, selectedCategory, selectedSubcategory, sortBy, categories]);
+
+  // Group services by subcategory when showing "All Services"
+  const groupedServices = useMemo(() => {
+    if (selectedCategory !== 'all') {
+      return null; // Don't group for specific categories or featured
+    }
+
+    const groups: Record<string, Service[]> = {};
+    filteredAndSortedServices.forEach((service) => {
+      const subcategory = service.subcategory || 'Other';
+      if (!groups[subcategory]) {
+        groups[subcategory] = [];
+      }
+      groups[subcategory].push(service);
+    });
+
+    // Sort subcategories alphabetically
+    return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
+  }, [filteredAndSortedServices, selectedCategory]);
+
+  // For "All Services" view with grouping, slice services to display count
+  const displayedGroupedServices = useMemo(() => {
+    if (!groupedServices) return null;
+    
+    let count = 0;
+    const displayed: [string, Service[]][] = [];
+    
+    for (const [subcategory, services] of groupedServices) {
+      const remaining = allServicesDisplayCount - count;
+      if (remaining <= 0) break;
+      
+      if (services.length <= remaining) {
+        displayed.push([subcategory, services]);
+        count += services.length;
+      } else {
+        displayed.push([subcategory, services.slice(0, remaining)]);
+        count += remaining;
+      }
+    }
+    
+    return displayed;
+  }, [groupedServices, allServicesDisplayCount]);
 
   const displayedServices = filteredAndSortedServices.slice(0, displayCount);
   const hasMore = displayCount < filteredAndSortedServices.length;
+  const hasMoreAllServices = allServicesDisplayCount < filteredAndSortedServices.length;
 
   const handleLoadMore = () => {
-    setDisplayCount((prev) => prev + 18); // Load 3 more rows
+    setDisplayCount((prev) => prev + 12); // Load 12 more services
   };
+
+  const handleLoadMoreAllServices = () => {
+    setAllServicesDisplayCount((prev) => prev + 12); // Load 12 more services
+  };
+
+  // Reset display counts when category changes
+  useEffect(() => {
+    setDisplayCount(12);
+    setAllServicesDisplayCount(12);
+  }, [selectedCategory]);
 
   const resetFilters = () => {
     setSearchQuery('');
-    setSelectedCategory('all');
+    setSelectedCategory('featured');
     setSelectedSubcategory('all');
     setSortBy('popular');
   };
 
   const activeFilterCount = [
-    selectedCategory !== 'all',
+    selectedCategory !== 'featured',
     selectedSubcategory !== 'all',
     searchQuery !== '',
   ].filter(Boolean).length;
@@ -391,6 +482,24 @@ export function BrowseAllServices() {
         {/* Category Tabs */}
         <div className="mb-8 overflow-x-auto scrollbar-hide">
           <div className="flex gap-3 pb-2 min-w-max">
+            {/* Featured Services - First */}
+            <button
+              onClick={() => {
+                setSelectedCategory('featured');
+                setSelectedSubcategory('all');
+              }}
+              className={cn(
+                'px-6 py-3 rounded-full font-medium transition-all whitespace-nowrap flex items-center gap-2',
+                selectedCategory === 'featured'
+                  ? 'bg-gradient-to-r from-roam-blue to-roam-light-blue text-white shadow-lg scale-105'
+                  : 'bg-white text-gray-700 hover:bg-gray-100 shadow'
+              )}
+            >
+              <Sparkles className="w-4 h-4" />
+              Featured Services
+            </button>
+            
+            {/* All Services - Second */}
             <button
               onClick={() => {
                 setSelectedCategory('all');
@@ -405,7 +514,9 @@ export function BrowseAllServices() {
             >
               All Services
             </button>
-            {categories.map((category) => {
+            
+            {/* Priority Categories: Beauty, Fitness, Therapy, Healthcare */}
+            {displayCategories.map((category) => {
               const Icon = category.icon;
               return (
                 <button
@@ -422,7 +533,7 @@ export function BrowseAllServices() {
                   )}
                 >
                   <Icon className="w-4 h-4" />
-                  {category.name}
+                  {toTitleCase(category.name)}
                 </button>
               );
             })}
@@ -453,7 +564,113 @@ export function BrowseAllServices() {
               Reset Filters
             </Button>
           </div>
+        ) : displayedGroupedServices ? (
+          // Grouped by Subcategory View (for "All Services")
+          <>
+            {displayedGroupedServices.map(([subcategory, services]) => (
+              <div key={subcategory} className="mb-12">
+                {/* Subcategory Header */}
+                <div className="flex items-center gap-3 mb-6">
+                  <h3 className="text-2xl font-bold text-gray-800">{toTitleCase(subcategory)}</h3>
+                  <div className="flex-1 h-px bg-gradient-to-r from-gray-300 to-transparent"></div>
+                  <span className="text-sm text-gray-500 font-medium">{services.length} services</span>
+                </div>
+
+                {/* Services Grid for this Subcategory */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
+                  {services.map((service) => {
+                    const Icon = getCategoryIcon(service.category);
+                    return (
+                      <Link
+                        key={service.id}
+                        to={`/book-service/${service.id}`}
+                        className="group block"
+                      >
+                        <div className="bg-white rounded-xl shadow-md hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 overflow-hidden h-full flex flex-col">
+                          {/* Image */}
+                          <div className="relative h-40 overflow-hidden">
+                            <img
+                              src={service.image}
+                              alt={service.title}
+                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                            />
+                            <div className="absolute top-2 left-2">
+                              <Badge className={`bg-gradient-to-r ${getCategoryColor(service.category)} text-white border-0 text-xs`}>
+                                <Icon className="w-3 h-3 mr-1" />
+                                {service.category}
+                              </Badge>
+                            </div>
+                            <div className="absolute top-2 right-2">
+                              <FavoriteButton
+                                type="service"
+                                itemId={service.id}
+                                size="sm"
+                                variant="ghost"
+                                className="bg-white/90 hover:bg-white h-8 w-8"
+                              />
+                            </div>
+                            {/* Rating Badge */}
+                            <div className="absolute bottom-2 left-2 bg-white/95 backdrop-blur-sm px-2 py-1 rounded-full flex items-center gap-1">
+                              <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                              <span className="text-xs font-semibold">{service.rating.toFixed(1)}</span>
+                            </div>
+                          </div>
+
+                          {/* Content */}
+                          <div className="p-4 flex-1 flex flex-col">
+                            <h3 className="font-semibold text-sm mb-2 line-clamp-2 group-hover:text-roam-blue transition-colors">
+                              {service.title}
+                            </h3>
+                            
+                            <div className="flex items-center gap-2 text-xs text-gray-500 mb-3">
+                              <Clock className="w-3 h-3" />
+                              <span>{service.duration}</span>
+                            </div>
+
+                            <div className="mt-auto">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="text-xs text-gray-500">Starting at</p>
+                                  <p className="text-lg font-bold text-roam-blue">{service.price}</p>
+                                </div>
+                                <Button
+                                  size="sm"
+                                  className="bg-roam-blue hover:bg-roam-blue/90 text-xs h-8 px-3"
+                                >
+                                  <Calendar className="w-3 h-3 mr-1" />
+                                  Book
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+
+            {/* Load More Button for All Services */}
+            {hasMoreAllServices && (
+              <div className="text-center mt-12">
+                <Button
+                  onClick={handleLoadMoreAllServices}
+                  size="lg"
+                  variant="outline"
+                  className="border-2 border-roam-blue text-roam-blue hover:bg-roam-blue hover:text-white px-8"
+                >
+                  Load More Services
+                  <ChevronRight className="w-5 h-5 ml-2" />
+                </Button>
+                <p className="text-sm text-gray-500 mt-4">
+                  {filteredAndSortedServices.length - allServicesDisplayCount} more services available
+                </p>
+              </div>
+            )}
+          </>
         ) : (
+          // Regular Grid View (for Featured, specific categories)
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
               {displayedServices.map((service) => {
