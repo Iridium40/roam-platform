@@ -240,6 +240,8 @@ export async function handleApproveBusiness(req: Request, res: Response) {
     }
 
     // Send approval email with Phase 2 onboarding link (if enabled)
+    let emailStatus: { sent: boolean; error?: string; warning?: string } = { sent: false };
+    
     if (sendEmail) {
       console.log("Sending approval email with Phase 2 onboarding link...");
       console.log("Approval URL to include in email:", approvalUrl);
@@ -258,6 +260,7 @@ export async function handleApproveBusiness(req: Request, res: Response) {
           const resendApiKey = process.env.RESEND_API_KEY || process.env.VITE_RESEND_API_KEY;
           if (!resendApiKey) {
             console.warn("Resend API key not found, skipping email");
+            emailStatus = { sent: false, error: "Resend API key not configured" };
           } else {
             const emailPayload = {
               from: "ROAM Provider Support <onboarding@resend.dev>",
@@ -337,17 +340,49 @@ export async function handleApproveBusiness(req: Request, res: Response) {
             if (resendResponse.ok) {
               const emailResult = await resendResponse.json();
               console.log("Approval email sent successfully to:", userEmail);
+              emailStatus = { sent: true };
             } else {
               const errorText = await resendResponse.text();
-              console.error("Error sending approval email:", errorText);
+              let errorData;
+              try {
+                errorData = JSON.parse(errorText);
+              } catch {
+                errorData = { message: errorText };
+              }
+              
+              console.error("Error sending approval email:", errorData);
+              
+              // Check if it's a Resend test mode validation error
+              if (errorData.name === "validation_error" && errorData.message?.includes("testing emails")) {
+                const verifiedEmail = errorData.message.match(/\(([^)]+)\)/)?.[1] || "alan@roamyourbestlife.com";
+                console.warn(`Resend is in test mode. Email can only be sent to: ${verifiedEmail}`);
+                console.warn(`Attempted to send to: ${userEmail}`);
+                console.warn("To send emails to other recipients, verify a domain at resend.com/domains");
+                
+                emailStatus = {
+                  sent: false,
+                  warning: `Resend is in test mode. Email can only be sent to ${verifiedEmail}. To send to other recipients, verify a domain at resend.com/domains`,
+                  error: errorData.message
+                };
+              } else {
+                emailStatus = {
+                  sent: false,
+                  error: errorData.message || "Failed to send approval email"
+                };
+              }
               // Continue anyway - don't block approval on email failure
             }
           }
         } else {
           console.warn("No email address found for user:", userId);
+          emailStatus = { sent: false, error: "No email address found for user" };
         }
       } catch (emailError) {
         console.error("Error sending approval email:", emailError);
+        emailStatus = {
+          sent: false,
+          error: emailError instanceof Error ? emailError.message : "Unknown error sending email"
+        };
         // Continue anyway - don't block approval on email failure
       }
     }
@@ -359,6 +394,7 @@ export async function handleApproveBusiness(req: Request, res: Response) {
       approvalUrl,
       approvedAt: new Date().toISOString(),
       approvedBy: adminUserId,
+      emailStatus,
     });
   } catch (error) {
     console.error("Application approval error:", error);

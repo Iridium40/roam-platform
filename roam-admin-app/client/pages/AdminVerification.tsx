@@ -837,11 +837,38 @@ export default function AdminVerification() {
         const approvalResult = await approvalResponse.json();
         console.log("Approval successful:", approvalResult);
 
+        // Check email status
+        const emailStatus = approvalResult.emailStatus;
+        
+        // Show success toast for approval
+        toast({
+          title: "Business Approved",
+          description: "Business has been approved successfully.",
+          variant: "default",
+        });
+
+        // Show separate warning if email wasn't sent
+        if (!emailStatus?.sent) {
+          if (emailStatus?.warning) {
             toast({
-              title: "Business Approved",
-          description: `Business has been approved successfully. An approval email with Phase 2 onboarding link has been sent.`,
-              variant: "default",
+              title: "Email Not Sent",
+              description: emailStatus.warning,
+              variant: "destructive",
             });
+          } else if (emailStatus?.error) {
+            toast({
+              title: "Email Not Sent",
+              description: `Email could not be sent: ${emailStatus.error}. Approval link: ${approvalResult.approvalUrl}`,
+              variant: "destructive",
+            });
+          }
+        } else {
+          toast({
+            title: "Email Sent",
+            description: "Approval email with Phase 2 onboarding link has been sent.",
+            variant: "default",
+          });
+        }
           } else {
         // For other actions (reject, suspend, pending), update directly via API
         const updateResponse = await fetch("/api/businesses", {
