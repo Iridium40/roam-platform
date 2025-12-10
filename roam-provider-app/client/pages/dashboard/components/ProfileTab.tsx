@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   User,
   Camera,
@@ -351,7 +352,21 @@ export default function ProfileTab({
       </div>
 
       {/* Profile Content */}
-      <div className="space-y-6">
+      <Tabs defaultValue="profile" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="profile" className="flex items-center space-x-2">
+            <User className="w-4 h-4" />
+            <span>Profile Info</span>
+          </TabsTrigger>
+          <TabsTrigger value="notifications" className="flex items-center space-x-2">
+            <Bell className="w-4 h-4" />
+            <span>Notifications</span>
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Profile Information Tab */}
+        <TabsContent value="profile" className="mt-6">
+          <div className="space-y-6">
             {/* Edit Profile Header */}
             <div className="flex items-center justify-end space-x-2">
               {isEditing ? (
@@ -558,28 +573,35 @@ export default function ProfileTab({
           </div>
         </CardContent>
       </Card>
+          </div>
+        </TabsContent>
 
-        {/* Notification Settings */}
-        {providerData?.user_id && providerData?.id && (
-          <UserSettingsSection 
-            userId={providerData.user_id} 
-            providerId={providerData.id} 
-          />
-        )}
+        {/* Notifications Tab */}
+        <TabsContent value="notifications" className="mt-6">
+          <div className="space-y-6">
+            {/* Notification Settings */}
+            {providerData?.user_id && providerData?.id && (
+              <UserSettingsSection 
+                userId={providerData.user_id} 
+                providerId={providerData.id} 
+              />
+            )}
 
-        {/* Notification Preferences */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Bell className="w-5 h-5" />
-              <span>Notification Preferences</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <NotificationPreferences />
-          </CardContent>
-        </Card>
-      </div>
+            {/* Notification Preferences */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Bell className="w-5 h-5" />
+                  <span>Notification Preferences</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <NotificationPreferences />
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

@@ -122,6 +122,7 @@ export function BookingsTab({ providerData, business }: BookingsTabProps) {
         presentBookings={activeBookings}
         futureBookings={[]}
         pastBookings={closedBookings}
+        onStatusClick={setSelectedStatusFilter}
       />
 
       {/* Filters and View Toggle */}

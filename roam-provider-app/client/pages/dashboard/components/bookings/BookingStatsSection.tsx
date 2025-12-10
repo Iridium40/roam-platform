@@ -26,6 +26,7 @@ interface BookingStatsSectionProps {
   presentBookings: any[]; // Backward compatibility - maps to activeBookings
   futureBookings: any[]; // Backward compatibility - empty array
   pastBookings: any[]; // Backward compatibility - maps to closedBookings
+  onStatusClick?: (status: string) => void;
 }
 
 export default function BookingStatsSection({
@@ -33,9 +34,16 @@ export default function BookingStatsSection({
   presentBookings, // Active bookings
   futureBookings, // Not used anymore
   pastBookings, // Closed bookings
+  onStatusClick,
 }: BookingStatsSectionProps) {
   const activeBookings = presentBookings;
   const closedBookings = pastBookings;
+  
+  const handleStatusClick = (status: string) => {
+    if (onStatusClick) {
+      onStatusClick(status);
+    }
+  };
   return (
     <div className="space-y-6">
       {/* Main Stats Cards */}
@@ -103,23 +111,38 @@ export default function BookingStatsSection({
 
       {/* Quick Status Overview */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <Card className="p-4 text-center">
+        <Card 
+          className={`p-4 text-center ${onStatusClick ? 'cursor-pointer hover:bg-gray-50 transition-colors' : ''}`}
+          onClick={() => handleStatusClick('all')}
+        >
           <p className="text-sm text-gray-600">Active</p>
           <p className="text-2xl font-bold text-blue-600">{activeBookings.length}</p>
         </Card>
-        <Card className="p-4 text-center">
+        <Card 
+          className={`p-4 text-center ${onStatusClick ? 'cursor-pointer hover:bg-gray-50 transition-colors' : ''}`}
+          onClick={() => handleStatusClick('all')}
+        >
           <p className="text-sm text-gray-600">Closed</p>
           <p className="text-2xl font-bold text-purple-600">{closedBookings.length}</p>
         </Card>
-        <Card className="p-4 text-center">
+        <Card 
+          className={`p-4 text-center ${onStatusClick ? 'cursor-pointer hover:bg-gray-50 transition-colors' : ''}`}
+          onClick={() => handleStatusClick('pending')}
+        >
           <p className="text-sm text-gray-600">Pending</p>
           <p className="text-2xl font-bold text-orange-600">{bookingStats.pendingBookings}</p>
         </Card>
-        <Card className="p-4 text-center">
+        <Card 
+          className={`p-4 text-center ${onStatusClick ? 'cursor-pointer hover:bg-gray-50 transition-colors' : ''}`}
+          onClick={() => handleStatusClick('confirmed')}
+        >
           <p className="text-sm text-gray-600">Confirmed</p>
           <p className="text-2xl font-bold text-green-600">{bookingStats.confirmedBookings}</p>
         </Card>
-        <Card className="p-4 text-center">
+        <Card 
+          className={`p-4 text-center ${onStatusClick ? 'cursor-pointer hover:bg-gray-50 transition-colors' : ''}`}
+          onClick={() => handleStatusClick('completed')}
+        >
           <p className="text-sm text-gray-600">Completed</p>
           <p className="text-2xl font-bold text-emerald-600">{bookingStats.completedBookings}</p>
         </Card>

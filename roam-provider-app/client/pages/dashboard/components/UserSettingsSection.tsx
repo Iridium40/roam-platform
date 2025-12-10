@@ -225,14 +225,10 @@ export default function UserSettingsSection({ userId, providerId }: UserSettings
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">User Settings</h2>
-          <p className="text-sm text-gray-600">Manage your notification preferences</p>
-        </div>
-        {hasChanges && (
-          <Button onClick={saveSettings} disabled={saving} className="mt-4 sm:mt-0">
+      {/* Save Changes Button */}
+      {hasChanges && (
+        <div className="flex justify-end">
+          <Button onClick={saveSettings} disabled={saving}>
             {saving ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -245,8 +241,8 @@ export default function UserSettingsSection({ userId, providerId }: UserSettings
               </>
             )}
           </Button>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Notification Settings */}
       <Card>

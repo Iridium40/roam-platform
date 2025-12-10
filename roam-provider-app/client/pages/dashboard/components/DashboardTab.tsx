@@ -225,7 +225,7 @@ export default function DashboardTab({
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Unassigned Bookings</p>
-                <p className="text-3xl font-bold text-gray-900">{unassignedBookings}</p>
+                <p className={`text-3xl font-bold ${unassignedBookings > 0 ? 'text-red-600' : 'text-gray-900'}`}>{unassignedBookings}</p>
               </div>
               <div className="w-12 h-12 bg-amber-100 rounded-lg flex items-center justify-center">
                 <UserX className="w-6 h-6 text-amber-600" />
@@ -252,10 +252,13 @@ export default function DashboardTab({
 
       {/* Booking Status Overview */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-        <Card className="p-4">
+        <Card 
+          className={`p-4 ${pendingBookings > 0 ? 'cursor-pointer hover:bg-gray-50 transition-colors' : ''}`}
+          onClick={pendingBookings > 0 ? handlePendingBookingsClick : undefined}
+        >
           <div className="text-center">
             <p className="text-sm text-gray-600">Pending</p>
-            <p className="text-2xl font-bold text-orange-600">{pendingBookings}</p>
+            <p className={`text-2xl font-bold ${pendingBookings > 0 ? 'text-red-600' : 'text-black'}`}>{pendingBookings}</p>
           </div>
         </Card>
         <Card className="p-4">

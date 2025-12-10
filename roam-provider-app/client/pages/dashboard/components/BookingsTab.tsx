@@ -468,27 +468,38 @@ export default function BookingsTab({
 
       {/* Quick Status Overview */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <Card className="p-4 text-center">
-          <p className="text-sm text-gray-600">Present</p>
+        <Card 
+          className="p-4 text-center cursor-pointer hover:bg-gray-50 transition-colors"
+          onClick={() => setSelectedStatusFilter('all')}
+        >
+          <p className="text-sm text-gray-600">Active</p>
           <p className="text-2xl font-bold text-blue-600">{presentBookings.length}</p>
         </Card>
-        <Card className="p-4 text-center">
-          <p className="text-sm text-gray-600">Future</p>
-          <p className="text-2xl font-bold text-green-600">{futureBookings.length}</p>
-        </Card>
-        <Card className="p-4 text-center">
-          <p className="text-sm text-gray-600">Past</p>
+        <Card 
+          className="p-4 text-center cursor-pointer hover:bg-gray-50 transition-colors"
+          onClick={() => setSelectedStatusFilter('all')}
+        >
+          <p className="text-sm text-gray-600">Closed</p>
           <p className="text-2xl font-bold text-purple-600">{pastBookings.length}</p>
         </Card>
-        <Card className="p-4 text-center">
+        <Card 
+          className="p-4 text-center cursor-pointer hover:bg-gray-50 transition-colors"
+          onClick={() => setSelectedStatusFilter('pending')}
+        >
           <p className="text-sm text-gray-600">Pending</p>
           <p className="text-2xl font-bold text-orange-600">{bookingStats.pendingBookings}</p>
         </Card>
-        <Card className="p-4 text-center">
+        <Card 
+          className="p-4 text-center cursor-pointer hover:bg-gray-50 transition-colors"
+          onClick={() => setSelectedStatusFilter('confirmed')}
+        >
           <p className="text-sm text-gray-600">Confirmed</p>
           <p className="text-2xl font-bold text-green-600">{bookingStats.confirmedBookings}</p>
         </Card>
-        <Card className="p-4 text-center">
+        <Card 
+          className="p-4 text-center cursor-pointer hover:bg-gray-50 transition-colors"
+          onClick={() => setSelectedStatusFilter('completed')}
+        >
           <p className="text-sm text-gray-600">Completed</p>
           <p className="text-2xl font-bold text-emerald-600">{bookingStats.completedBookings}</p>
         </Card>
