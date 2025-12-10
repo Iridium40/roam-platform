@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Bot, User, Send, MessageCircle, X, Loader2 } from "lucide-react";
 import { logger } from '@/utils/logger';
+import { parseChatMessage } from '@/utils/parseChatLinks';
+import { ChatActionList } from '@/components/ChatActionButton';
 
 interface Message {
   id: string;
@@ -132,48 +134,70 @@ export default function ChatBot({ isOpen, onClose }: ChatBotProps) {
         <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
           <ScrollArea ref={scrollAreaRef} className="flex-1 p-4 h-full">
             <div className="space-y-4 min-h-full">
-              {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex gap-3 ${
-                    message.role === "user" ? "justify-end" : "justify-start"
-                  }`}
-                >
-                  {message.role === "assistant" && (
-                    <div className="w-8 h-8 rounded-full bg-roam-blue/10 flex items-center justify-center flex-shrink-0">
-                      <img 
-                        src="/roam-icon.png" 
-                        alt="ROAM" 
-                        className="w-4 h-4"
-                        onError={(e) => {
-                          console.error('ROAM icon failed to load:', e);
-                          e.currentTarget.style.display = 'none';
-                        }}
-                      />
-                    </div>
-                  )}
+              {messages.map((message) => {
+                // Parse message to extract action buttons
+                const { text, actions } = message.role === "assistant" 
+                  ? parseChatMessage(message.content)
+                  : { text: message.content, actions: [] };
+
+                return (
                   <div
-                    className={`max-w-[80%] p-3 rounded-lg ${
-                      message.role === "user"
-                        ? "bg-roam-blue text-white"
-                        : "bg-gray-100 text-gray-900"
+                    key={message.id}
+                    className={`flex gap-3 ${
+                      message.role === "user" ? "justify-end" : "justify-start"
                     }`}
                   >
-                    <p className="text-sm">{message.content}</p>
-                    <p className="text-xs opacity-70 mt-1">
-                      {message.timestamp.toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </p>
-                  </div>
-                  {message.role === "user" && (
-                    <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
-                      <User className="w-4 h-4 text-gray-600" />
+                    {message.role === "assistant" && (
+                      <div className="w-8 h-8 rounded-full bg-roam-blue/10 flex items-center justify-center flex-shrink-0">
+                        <img 
+                          src="/roam-icon.png" 
+                          alt="ROAM" 
+                          className="w-4 h-4"
+                          onError={(e) => {
+                            console.error('ROAM icon failed to load:', e);
+                            e.currentTarget.style.display = 'none';
+                          }}
+                        />
+                      </div>
+                    )}
+                    <div
+                      className={`max-w-[80%] ${
+                        message.role === "user"
+                          ? ""
+                          : "w-full"
+                      }`}
+                    >
+                      <div
+                        className={`p-3 rounded-lg ${
+                          message.role === "user"
+                            ? "bg-roam-blue text-white"
+                            : "bg-gray-100 text-gray-900"
+                        }`}
+                      >
+                        <p className="text-sm whitespace-pre-line">{text}</p>
+                        <p className="text-xs opacity-70 mt-1">
+                          {message.timestamp.toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </p>
+                      </div>
+                      {/* Render action buttons below message */}
+                      {actions.length > 0 && (
+                        <ChatActionList
+                          actions={actions}
+                          onNavigate={() => onClose()}
+                        />
+                      )}
                     </div>
-                  )}
-                </div>
-              ))}
+                    {message.role === "user" && (
+                      <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
+                        <User className="w-4 h-4 text-gray-600" />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
               {isLoading && (
                 <div className="flex gap-3 justify-start">
                   <div className="w-8 h-8 rounded-full bg-roam-blue/10 flex items-center justify-center flex-shrink-0">
