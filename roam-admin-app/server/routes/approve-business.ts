@@ -263,7 +263,7 @@ export async function handleApproveBusiness(req: Request, res: Response) {
             emailStatus = { sent: false, error: "Resend API key not configured" };
           } else {
             const emailPayload = {
-              from: "ROAM Provider Support <onboarding@resend.dev>",
+              from: "ROAM Provider Support <providersupport@roamyourbestlife.com>",
               to: [userEmail],
               subject: "🎉 Your Business Has Been Approved!",
               html: `

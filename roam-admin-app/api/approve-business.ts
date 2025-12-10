@@ -265,7 +265,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             console.warn("Resend API key not found, skipping email");
           } else {
             const emailPayload = {
-              from: "ROAM Provider Support <onboarding@resend.dev>",
+              from: "ROAM Provider Support <providersupport@roamyourbestlife.com>",
               to: [userEmail],
               subject: "🎉 Your Business Has Been Approved!",
               html: `

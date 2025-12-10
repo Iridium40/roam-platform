@@ -112,7 +112,7 @@ export async function handleSendApprovalEmail(req: Request, res: Response) {
     console.log("Sending approval email via Resend to:", contactEmail);
 
     const emailPayload = {
-      from: "ROAM Provider Support <onboarding@resend.dev>",
+      from: "ROAM Provider Support <providersupport@roamyourbestlife.com>",
       to: [contactEmail],
       subject: "Application Approved",
         html: `
