@@ -57,7 +57,7 @@ export async function handleSendRejectionEmail(req: Request, res: Response) {
     console.log("Sending rejection email via Resend to:", contactEmail);
 
     const emailPayload = {
-      from: "ROAM Provider Support <onboarding@resend.dev>",
+      from: "ROAM Provider Support <providersupport@roamyourbestlife.com>",
       to: [contactEmail],
       subject: "Application Status Update - Action Required",
         html: `
