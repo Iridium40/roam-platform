@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api/endpoints";
 import { useAuth } from "@/contexts/auth/AuthProvider";
@@ -20,6 +21,7 @@ interface BookingStats {
 export function useBookings(providerData: any, business: any) {
   const { toast } = useToast();
   const { provider } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   
   // State management
   const [bookings, setBookings] = useState<any[]>([]);
@@ -28,6 +30,7 @@ export function useBookings(providerData: any, business: any) {
   const [selectedStatusFilter, setSelectedStatusFilter] = useState("all");
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
   const [showUnassignedOnly, setShowUnassignedOnly] = useState(false);
+  const [selectedDateFilter, setSelectedDateFilter] = useState<string | null>(null);
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
   const [activeTab, setActiveTab] = useState("active");
   
@@ -47,6 +50,52 @@ export function useBookings(providerData: any, business: any) {
   
   // Dynamic page size based on device (responsive)
   const [pageSize, setPageSize] = useState(getPageSize());
+  
+  // Check URL params for filters and sync with state
+  useEffect(() => {
+    const unassignedFromUrl = searchParams.get('unassigned') === 'true';
+    const unreadFromUrl = searchParams.get('unread') === 'true';
+    const statusFromUrl = searchParams.get('status');
+    const dateFromUrl = searchParams.get('date');
+    const searchFromUrl = searchParams.get('search');
+    
+    if (unassignedFromUrl && !showUnassignedOnly) {
+      setShowUnassignedOnly(true);
+      // Remove the query param after setting the state to keep URL clean
+      searchParams.delete('unassigned');
+      setSearchParams(searchParams, { replace: true });
+    }
+    
+    if (unreadFromUrl && !showUnreadOnly) {
+      setShowUnreadOnly(true);
+      // Remove the query param after setting the state to keep URL clean
+      searchParams.delete('unread');
+      setSearchParams(searchParams, { replace: true });
+    }
+    
+    if (statusFromUrl && statusFromUrl !== selectedStatusFilter) {
+      setSelectedStatusFilter(statusFromUrl);
+      // Remove the query param after setting the state to keep URL clean
+      searchParams.delete('status');
+      setSearchParams(searchParams, { replace: true });
+    }
+    
+    // Handle date filter for "Today's Schedule"
+    if (dateFromUrl && dateFromUrl !== selectedDateFilter) {
+      setSelectedDateFilter(dateFromUrl);
+      // Remove the query param after setting the state to keep URL clean
+      searchParams.delete('date');
+      setSearchParams(searchParams, { replace: true });
+    }
+    
+    // Handle search query from URL (for booking reference search)
+    if (searchFromUrl && searchFromUrl !== searchQuery) {
+      setSearchQuery(searchFromUrl);
+      // Remove the query param after setting the state to keep URL clean
+      searchParams.delete('search');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams, showUnassignedOnly, showUnreadOnly, selectedStatusFilter, selectedDateFilter, searchQuery]);
   
   // Update page size on window resize
   useEffect(() => {
@@ -239,6 +288,14 @@ export function useBookings(providerData: any, business: any) {
       filtered = filtered.filter(booking => !booking.provider_id || booking.provider_id === 'unassigned');
     }
 
+    // Apply date filter (for "Today's Schedule")
+    if (selectedDateFilter) {
+      filtered = filtered.filter(booking => {
+        const bookingDate = booking.booking_date ? new Date(booking.booking_date).toISOString().split('T')[0] : null;
+        return bookingDate === selectedDateFilter;
+      });
+    }
+
     // Apply search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
@@ -259,7 +316,7 @@ export function useBookings(providerData: any, business: any) {
       const dateB = new Date(`${b.booking_date} ${b.start_time}`);
       return dateB.getTime() - dateA.getTime();
     });
-  }, [bookings, searchQuery, selectedStatusFilter, showUnreadOnly, showUnassignedOnly, unreadCounts]);
+  }, [bookings, searchQuery, selectedStatusFilter, showUnreadOnly, showUnassignedOnly, selectedDateFilter, unreadCounts]);
 
   // Categorize bookings into active and closed
   const categorizedBookings = useMemo(() => {

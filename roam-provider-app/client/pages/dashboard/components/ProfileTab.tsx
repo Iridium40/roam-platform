@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   User,
   Camera,
@@ -16,11 +15,14 @@ import {
   Loader2,
   CheckCircle,
   Settings,
+  Bell,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { ImageStorageService } from "@/utils/image/imageStorage";
 import type { ImageType } from "@/utils/image/imageTypes";
+import UserSettingsSection from "./UserSettingsSection";
+import { NotificationPreferences } from "@/components/NotificationPreferences";
 
 interface ProfileTabProps {
   providerData: any;
@@ -344,21 +346,12 @@ export default function ProfileTab({
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Profile & Settings</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Profile Settings</h1>
         <p className="text-sm text-gray-600">Manage your profile information and preferences</p>
       </div>
 
       {/* Profile Content */}
-      <Tabs defaultValue="profile" className="w-full">
-        <TabsList className="grid w-full grid-cols-1">
-          <TabsTrigger value="profile" className="flex items-center space-x-2">
-            <User className="w-4 h-4" />
-            <span>Profile</span>
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="profile" className="mt-6">
-          <div className="space-y-6">
+      <div className="space-y-6">
             {/* Edit Profile Header */}
             <div className="flex items-center justify-end space-x-2">
               {isEditing ? (
@@ -565,9 +558,28 @@ export default function ProfileTab({
           </div>
         </CardContent>
       </Card>
-          </div>
-        </TabsContent>
-      </Tabs>
+
+        {/* Notification Settings */}
+        {providerData?.user_id && providerData?.id && (
+          <UserSettingsSection 
+            userId={providerData.user_id} 
+            providerId={providerData.id} 
+          />
+        )}
+
+        {/* Notification Preferences */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Bell className="w-5 h-5" />
+              <span>Notification Preferences</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <NotificationPreferences />
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

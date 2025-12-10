@@ -97,6 +97,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { useProviderAuth } from "@/contexts/auth/ProviderAuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { useNotificationCount } from "@/hooks/useNotificationCount";
 import ConversationChat from "@/components/ConversationChat";
 import ConversationsList from "@/components/ConversationsList";
 import useRealtimeBookings from "@/hooks/useRealtimeBookings";
@@ -260,6 +261,10 @@ export default function ProviderDashboard() {
     // State management
   const [providerData, setProviderData] = useState<ProviderWithRelations | null>(null);
   const [business, setBusiness] = useState<BusinessProfile | null>(null);
+  
+  // Get notification count for bell icon
+  const businessId = business?.id || providerData?.business_id;
+  const { count: notificationCount } = useNotificationCount(businessId);
   // Note: bookings and businessMetrics are now handled by individual tab components
 
   // Note: Real-time booking updates are now handled by the BookingsTab component
@@ -781,42 +786,48 @@ export default function ProviderDashboard() {
           </div>
 
           <div className="flex items-center space-x-4">
-            <Button variant="ghost" size="sm">
-              <Bell className="w-4 h-4" />
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => {
+                const basePath = getBasePath();
+                navigate(`${basePath}/bookings?unread=true`);
+              }}
+              className={notificationCount.unreadMessages > 0 ? "text-red-600 hover:text-red-700" : ""}
+            >
+              <Bell 
+                className={`w-4 h-4 ${notificationCount.unreadMessages > 0 ? "text-red-600 animate-heartbeat" : ""}`} 
+              />
             </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="flex items-center space-x-2">
-                  <Settings className="w-4 h-4" />
-                  <span className="hidden sm:inline">Settings</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {hasAccess('profile') && (
-                  <DropdownMenuItem onClick={() => navigateToTab("profile")}>
-                    <User className="w-4 h-4 mr-2" />
-                    {isProvider || isDispatcher ? 'My Profile' : 'Profile'}
+            <div className="hidden lg:block">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="flex items-center space-x-2">
+                    <Settings className="w-4 h-4" />
+                    <span className="hidden sm:inline">Settings</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {hasAccess('profile') && (
+                    <DropdownMenuItem onClick={() => navigateToTab("profile")}>
+                      <User className="w-4 h-4 mr-2" />
+                      Profile Settings
+                    </DropdownMenuItem>
+                  )}
+                  {hasAccess('business-settings') && (
+                    <DropdownMenuItem onClick={() => navigateToTab("business-settings")}>
+                      <Building className="w-4 h-4 mr-2" />
+                      Business Settings
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleSignOut}>
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Sign out
                   </DropdownMenuItem>
-                )}
-                {hasAccess('settings') && (
-                  <DropdownMenuItem onClick={() => navigateToTab("settings")}>
-                    <Bell className="w-4 h-4 mr-2" />
-                    Notification Settings
-                  </DropdownMenuItem>
-                )}
-                {hasAccess('business-settings') && (
-                  <DropdownMenuItem onClick={() => navigateToTab("business-settings")}>
-                    <Building className="w-4 h-4 mr-2" />
-                    Business Settings
-                  </DropdownMenuItem>
-                )}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleSignOut}>
-                  <LogOut className="w-4 h-4 mr-2" />
-                  Sign out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
             <Button
               variant="ghost"
               size="sm"
@@ -879,7 +890,7 @@ export default function ProviderDashboard() {
                   }}
                 >
                   <Calendar className="w-4 h-4 mr-2" />
-                  {isProvider ? 'My Bookings' : 'Bookings'}
+                  Bookings
                 </Button>
               )}
               
@@ -893,7 +904,7 @@ export default function ProviderDashboard() {
                   }}
                 >
                   <Users className="w-4 h-4 mr-2" />
-                  {isProvider ? 'Team' : 'Staff Management'}
+                  Staff
                 </Button>
               )}
               
@@ -907,7 +918,7 @@ export default function ProviderDashboard() {
                   }}
                 >
                   <Briefcase className="w-4 h-4 mr-2" />
-                  {isProvider ? 'My Services' : 'Services'}
+                  Services
                 </Button>
               )}
               
@@ -935,21 +946,7 @@ export default function ProviderDashboard() {
                   }}
                 >
                   <User className="w-4 h-4 mr-2" />
-                  {isProvider || isDispatcher ? 'My Profile' : 'Profile'}
-                </Button>
-              )}
-              
-              {hasAccess('settings') && (
-                <Button
-                  variant={activeTab === "settings" ? "default" : "ghost"}
-                  className="w-full justify-start"
-                  onClick={() => {
-                    navigateToTab("settings");
-                    setShowMobileMenu(false);
-                  }}
-                >
-                  <Bell className="w-4 h-4 mr-2" />
-                  Settings
+                  Profile Settings
                 </Button>
               )}
               
