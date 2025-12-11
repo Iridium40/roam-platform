@@ -214,7 +214,7 @@ export default function BookingCard({
               className="text-xs px-3 py-1 h-8"
               onClick={() => onViewDetails(booking)}
             >
-              Details & Assignment
+              {hasProviderAssigned ? "Details" : "Assign Provider"}
             </Button>
             {booking.total_amount && (
               <div className="text-right">

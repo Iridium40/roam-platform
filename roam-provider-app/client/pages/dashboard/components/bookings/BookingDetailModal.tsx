@@ -29,6 +29,7 @@ import {
   Mail,
   UserCheck,
   User,
+  AlertCircle,
 } from "lucide-react";
 
 interface BookingDetailModalProps {
@@ -56,11 +57,21 @@ export default function BookingDetailModal({
   // Check if business is independent (single provider, assignment locked)
   const isIndependentBusiness = selectedBooking?.business_profiles?.business_type === 'independent';
 
-  // Check if booking can be reassigned (only pending, confirmed, or in_progress bookings)
-  // Independent businesses cannot reassign since they have only one provider
+  // Check if booking can be assigned/reassigned
+  // Can assign if: booking is pending, confirmed, or in_progress AND not independent business
+  // Can also assign if booking has no provider assigned (unassigned bookings)
+  const currentProviderId = selectedBooking?.provider_id || 
+    (Array.isArray(selectedBooking?.providers) ? selectedBooking?.providers[0]?.id : selectedBooking?.providers?.id);
+  const isUnassigned = !currentProviderId;
+  
   const canReassignBooking = selectedBooking && 
     ['pending', 'confirmed', 'in_progress'].includes(selectedBooking.booking_status) &&
     !isIndependentBusiness;
+  
+  // Can assign if booking can be reassigned OR if it's unassigned
+  const canAssignBooking = canReassignBooking || (isUnassigned && selectedBooking && 
+    ['pending', 'confirmed', 'in_progress'].includes(selectedBooking.booking_status) &&
+    !isIndependentBusiness);
 
   // Load available providers when modal opens and user can assign
   useEffect(() => {
@@ -250,24 +261,40 @@ export default function BookingDetailModal({
           </div>
 
           {/* Assigned Provider */}
-          {(() => {
-            // Handle both array and object formats from Supabase joins
-            const provider = Array.isArray(selectedBooking.providers) 
-              ? selectedBooking.providers[0] 
-              : selectedBooking.providers;
-            
-            if (!provider) return null;
-            
-            return (
-              <div className="space-y-3">
-                <h3 className="font-semibold text-lg">Assigned Provider</h3>
+          <div className="space-y-3">
+            <h3 className="font-semibold text-lg">Assigned Provider</h3>
+            {(() => {
+              // Handle both array and object formats from Supabase joins
+              const provider = Array.isArray(selectedBooking.providers) 
+                ? selectedBooking.providers[0] 
+                : selectedBooking.providers;
+              
+              if (!provider && !selectedBooking.provider_id) {
+                return (
+                  <div className="flex items-center space-x-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <AlertCircle className="h-4 w-4 text-yellow-600" />
+                    <p className="text-sm text-yellow-800 font-medium">Unassigned - No provider assigned to this booking</p>
+                  </div>
+                );
+              }
+              
+              if (!provider) {
+                return (
+                  <div className="flex items-center space-x-2">
+                    <Users className="h-4 w-4 text-gray-500" />
+                    <p className="text-sm text-gray-600">Provider ID: {selectedBooking.provider_id} (Details not loaded)</p>
+                  </div>
+                );
+              }
+              
+              return (
                 <div className="flex items-center space-x-2">
                   <Users className="h-4 w-4 text-gray-500" />
                   <p className="text-sm">{provider.first_name} {provider.last_name}</p>
                 </div>
-              </div>
-            );
-          })()}
+              );
+            })()}
+          </div>
 
           {/* Provider Assignment (Owners and Dispatchers Only) */}
           {canAssignBookings && (
@@ -303,17 +330,20 @@ export default function BookingDetailModal({
                     </div>
                   )}
                   
-                  {canReassignBooking && (
+                  {canAssignBooking && (
                     <div className="space-y-2">
-                      <Label htmlFor="provider-assignment">Assign to Provider:</Label>
+                      <Label htmlFor="provider-assignment">
+                        {isUnassigned ? "Assign to Provider:" : "Reassign to Provider:"}
+                      </Label>
                       <div className="flex gap-2">
                         <Select
+                          value={currentProviderId || 'unassigned'}
                           onValueChange={handleAssignProvider}
                           disabled={isAssigning || loadingProviders}
                         >
                           <SelectTrigger className="flex-1">
                             <SelectValue placeholder={
-                              loadingProviders ? "Loading providers..." : "Select a provider"
+                              loadingProviders ? "Loading providers..." : isUnassigned ? "Select a provider" : "Change provider"
                             } />
                           </SelectTrigger>
                           <SelectContent>
@@ -329,6 +359,11 @@ export default function BookingDetailModal({
                           <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
                         )}
                       </div>
+                      {isUnassigned && (
+                        <p className="text-sm text-blue-600 bg-blue-50 p-2 rounded border border-blue-200">
+                          ⚠️ This booking is unassigned. Please assign a provider before accepting.
+                        </p>
+                      )}
                       {availableProviders.length === 0 && !loadingProviders && (
                         <p className="text-sm text-yellow-600">
                           No active providers available for assignment
@@ -337,9 +372,9 @@ export default function BookingDetailModal({
                     </div>
                   )}
                   
-                  {!canReassignBooking && (
+                  {!canAssignBooking && !isIndependentBusiness && (
                     <p className="text-sm text-gray-600">
-                      Cannot reassign - booking is {selectedBooking.booking_status}
+                      Cannot assign/reassign - booking is {selectedBooking.booking_status}
                     </p>
                   )}
                 </div>
