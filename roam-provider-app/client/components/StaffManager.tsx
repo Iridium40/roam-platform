@@ -76,6 +76,7 @@ interface StaffMemberWithStats extends Provider {
   total_revenue?: number;
   recent_bookings?: number;
   customer_rating?: number;
+  assigned_services_count?: number;
 }
 
 const roleOptions = [
@@ -462,12 +463,24 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
                 Date.now() - 30 * 24 * 60 * 60 * 1000,
             ).length || 0;
 
+          // Get assigned services count for providers and owners
+          let assignedServicesCount = 0;
+          if (member.provider_role === 'provider' || member.provider_role === 'owner') {
+            const { count } = await supabase
+              .from('provider_services')
+              .select('*', { count: 'exact', head: true })
+              .eq('provider_id', member.id)
+              .eq('is_active', true);
+            assignedServicesCount = count || 0;
+          }
+
           return {
             ...member,
             location_name: member.business_locations?.location_name,
             total_revenue: totalRevenue,
             recent_bookings: recentBookings,
             customer_rating: member.average_rating || 0,
+            assigned_services_count: assignedServicesCount,
           };
         }),
       );
@@ -969,12 +982,22 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
                       <div className="flex flex-col items-end gap-1">
                         {getStatusBadge(member)}
                         {(member.provider_role === "provider" || member.provider_role === "owner") && (
-                          <Badge
-                            variant={member.active_for_bookings ? "default" : "secondary"}
-                            className="text-xs"
-                          >
-                            {member.active_for_bookings ? "Bookable" : "Not Bookable"}
-                          </Badge>
+                          member.assigned_services_count === 0 ? (
+                            <Badge
+                              variant="outline"
+                              className="text-xs bg-amber-50 text-amber-700 border-amber-300"
+                            >
+                              <AlertCircle className="w-3 h-3 mr-1" />
+                              No Services
+                            </Badge>
+                          ) : (
+                            <Badge
+                              variant={member.active_for_bookings ? "default" : "secondary"}
+                              className="text-xs"
+                            >
+                              {member.active_for_bookings ? "Bookable" : "Not Bookable"}
+                            </Badge>
+                          )
                         )}
                       </div>
                     </div>
@@ -993,6 +1016,18 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
                         <span>{member.location_name}</span>
                       </div>
                     </div>
+
+                    {(member.provider_role === "provider" || member.provider_role === "owner") && 
+                      member.assigned_services_count === 0 && (
+                      <div className="mt-3 p-2 bg-amber-50 border border-amber-200 rounded-md">
+                        <div className="flex items-center gap-2 text-amber-700">
+                          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                          <p className="text-xs">
+                            <span className="font-medium">Setup incomplete:</span> Assign services to enable bookings.
+                          </p>
+                        </div>
+                      </div>
+                    )}
 
                     {member.provider_role === "provider" && (
                       <div className="mt-3 pt-3 border-t">
@@ -1581,6 +1616,15 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
                 A temporary password will be generated. The staff member must change it on their first login.
               </AlertDescription>
             </Alert>
+
+            {(manualStaffData.role === "provider" || manualStaffData.role === "owner") && (
+              <Alert className="bg-amber-50 border-amber-200">
+                <Package className="h-4 w-4 text-amber-600" />
+                <AlertDescription className="text-amber-700">
+                  <span className="font-medium">Next step:</span> After creating this staff member, you'll need to assign services before they can accept bookings.
+                </AlertDescription>
+              </Alert>
+            )}
           </div>
 
           <DialogFooter>
