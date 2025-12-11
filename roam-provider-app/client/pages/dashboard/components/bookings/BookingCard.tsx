@@ -2,6 +2,16 @@ import React, { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import BookingStatusIndicator from "@/components/BookingStatusIndicator";
 import ConversationChat from "@/components/ConversationChat";
 import DeclineBookingModal from "./DeclineBookingModal";
@@ -17,6 +27,7 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
+  AlertTriangle,
   DollarSign,
   UserCheck,
   Star,
@@ -35,6 +46,34 @@ interface BookingCardProps {
   unreadCount?: number;
 }
 
+// Confirmation dialog config for each status action
+const STATUS_CONFIRMATION_CONFIG: Record<string, { title: string; description: string; confirmText: string; variant: 'default' | 'destructive' }> = {
+  confirmed: {
+    title: "Accept Booking",
+    description: "Are you sure you want to accept this booking? The customer will be notified that their booking has been confirmed.",
+    confirmText: "Accept Booking",
+    variant: "default",
+  },
+  in_progress: {
+    title: "Start Service",
+    description: "Are you sure you want to start this service? This will mark the booking as in progress.",
+    confirmText: "Start Service",
+    variant: "default",
+  },
+  completed: {
+    title: "Complete Service",
+    description: "Are you sure you want to mark this service as completed? This action cannot be undone.",
+    confirmText: "Complete Service",
+    variant: "default",
+  },
+  no_show: {
+    title: "Mark as No Show",
+    description: "Are you sure you want to mark this booking as a no-show? The customer will be notified and this may affect their account.",
+    confirmText: "Mark No Show",
+    variant: "destructive",
+  },
+};
+
 export default function BookingCard({
   booking,
   onViewDetails,
@@ -45,9 +84,38 @@ export default function BookingCard({
 }: BookingCardProps) {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isDeclineModalOpen, setIsDeclineModalOpen] = useState(false);
+  const [confirmationDialog, setConfirmationDialog] = useState<{ isOpen: boolean; status: string | null }>({
+    isOpen: false,
+    status: null,
+  });
+  const [isProcessing, setIsProcessing] = useState(false);
   // Use prop value if provided, otherwise default to 0
   const unreadCount = propUnreadCount;
   const { provider } = useProviderAuth();
+
+  // Handle status action with confirmation
+  const handleStatusAction = (status: string) => {
+    // Decline has its own modal with reason input
+    if (status === "declined") {
+      setIsDeclineModalOpen(true);
+      return;
+    }
+    // Show confirmation dialog for other actions
+    setConfirmationDialog({ isOpen: true, status });
+  };
+
+  // Confirm the status change
+  const handleConfirmStatusChange = async () => {
+    if (!confirmationDialog.status) return;
+    
+    setIsProcessing(true);
+    try {
+      await onUpdateStatus(booking.id, confirmationDialog.status);
+    } finally {
+      setIsProcessing(false);
+      setConfirmationDialog({ isOpen: false, status: null });
+    }
+  };
 
   // Handle decline with reason
   const handleDeclineConfirm = async (reason: string) => {
@@ -425,14 +493,10 @@ export default function BookingCard({
                     key={action.status}
                     variant={action.variant}
                     size="sm"
-                    disabled={isDisabled}
+                    disabled={isDisabled || isProcessing}
                     onClick={() => {
                       if (isDisabled) return;
-                      if (action.status === "declined") {
-                        setIsDeclineModalOpen(true);
-                      } else {
-                        onUpdateStatus(booking.id, action.status);
-                      }
+                      handleStatusAction(action.status);
                     }}
                     className={isDisabled ? 'opacity-50 cursor-not-allowed' : ''}
                     title={action.tooltip}
@@ -698,14 +762,10 @@ export default function BookingCard({
                     key={action.status}
                     variant={action.variant}
                     size="sm"
-                    disabled={isDisabled}
+                    disabled={isDisabled || isProcessing}
                     onClick={() => {
                       if (isDisabled) return;
-                      if (action.status === "declined") {
-                        setIsDeclineModalOpen(true);
-                      } else {
-                        onUpdateStatus(booking.id, action.status);
-                      }
+                      handleStatusAction(action.status);
                     }}
                     className={`flex items-center justify-center ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
                     title={action.tooltip}
@@ -747,6 +807,67 @@ export default function BookingCard({
           bookingDate: booking.booking_date,
         }}
       />
+
+      {/* Status Change Confirmation Dialog */}
+      <AlertDialog 
+        open={confirmationDialog.isOpen} 
+        onOpenChange={(open) => !open && setConfirmationDialog({ isOpen: false, status: null })}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <div className="flex items-center gap-3">
+              {confirmationDialog.status === 'no_show' ? (
+                <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                  <AlertTriangle className="w-5 h-5 text-red-600" />
+                </div>
+              ) : confirmationDialog.status === 'completed' ? (
+                <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+                  <CheckCircle className="w-5 h-5 text-green-600" />
+                </div>
+              ) : confirmationDialog.status === 'in_progress' ? (
+                <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
+                  <Clock className="w-5 h-5 text-purple-600" />
+                </div>
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                  <CheckCircle className="w-5 h-5 text-blue-600" />
+                </div>
+              )}
+              <div>
+                <AlertDialogTitle>
+                  {confirmationDialog.status && STATUS_CONFIRMATION_CONFIG[confirmationDialog.status]?.title}
+                </AlertDialogTitle>
+              </div>
+            </div>
+            <AlertDialogDescription className="mt-3">
+              {confirmationDialog.status && STATUS_CONFIRMATION_CONFIG[confirmationDialog.status]?.description}
+              <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+                <p className="text-sm font-medium text-gray-900">{booking.services?.name}</p>
+                <p className="text-sm text-gray-600">
+                  {booking.customer_profiles 
+                    ? `${booking.customer_profiles.first_name || ""} ${booking.customer_profiles.last_name || ""}`.trim()
+                    : "Customer"
+                  } • {booking.booking_date} at {formatDisplayTime(booking.start_time)}
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isProcessing}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmStatusChange}
+              disabled={isProcessing}
+              className={
+                confirmationDialog.status && STATUS_CONFIRMATION_CONFIG[confirmationDialog.status]?.variant === 'destructive'
+                  ? 'bg-red-600 hover:bg-red-700 text-white'
+                  : 'bg-blue-600 hover:bg-blue-700 text-white'
+              }
+            >
+              {isProcessing ? 'Processing...' : confirmationDialog.status && STATUS_CONFIRMATION_CONFIG[confirmationDialog.status]?.confirmText}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
