@@ -5,9 +5,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -24,12 +28,17 @@ import {
   Clock,
   MapPin,
   Users,
-  Hash,
   Phone,
   Mail,
   UserCheck,
   User,
   AlertCircle,
+  DollarSign,
+  Heart,
+  Star,
+  Sparkles,
+  Timer,
+  X,
 } from "lucide-react";
 
 interface BookingDetailModalProps {
@@ -195,290 +204,426 @@ export default function BookingDetailModal({
 
   if (!selectedBooking) return null;
 
+  // Format currency helper
+  const formatCurrency = (amount: number | string | null | undefined): string => {
+    const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
+    if (numAmount == null || isNaN(numAmount)) return '$0.00';
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(numAmount);
+  };
+
+  // Format date helper
+  const formatDate = (dateStr: string | null | undefined): string => {
+    if (!dateStr) return '';
+    try {
+      return new Date(dateStr).toLocaleDateString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  // Get tip status display
+  const getTipStatusBadge = (status: string | null | undefined) => {
+    switch (status) {
+      case 'paid':
+        return <Badge className="bg-green-100 text-green-800 border-green-200">Received</Badge>;
+      case 'pending':
+        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">Pending</Badge>;
+      case 'requested':
+        return <Badge className="bg-blue-100 text-blue-800 border-blue-200">Requested</Badge>;
+      case 'declined':
+        return <Badge className="bg-gray-100 text-gray-600 border-gray-200">Declined</Badge>;
+      default:
+        return <Badge variant="outline" className="text-gray-500">No Tip</Badge>;
+    }
+  };
+
+  // Check if booking is completed
+  const isCompleted = selectedBooking.booking_status === 'completed';
+
+  // Get provider info (handle both array and object formats)
+  const provider = Array.isArray(selectedBooking.providers) 
+    ? selectedBooking.providers[0] 
+    : selectedBooking.providers;
+
+  // Format location
+  const getFormattedLocation = () => {
+    if (selectedBooking.customer_locations) {
+      const loc = selectedBooking.customer_locations;
+      const parts = [
+        loc.street_address || loc.address_line1,
+        loc.unit_number,
+        loc.city,
+        loc.state,
+        loc.zip_code || loc.postal_code
+      ].filter(Boolean);
+      return parts.join(', ') || 'Customer location';
+    }
+    if (selectedBooking.business_locations) {
+      const loc = selectedBooking.business_locations;
+      const parts = [
+        loc.location_name,
+        loc.address_line1,
+        loc.city,
+        loc.state,
+        loc.postal_code
+      ].filter(Boolean);
+      return parts.join(', ') || 'Business location';
+    }
+    return 'Location not specified';
+  };
+
   return (
     <Dialog open={!!selectedBooking} onOpenChange={() => setSelectedBooking(null)}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-semibold">
-            Booking Details
-          </DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-6">
-          {/* Booking Header */}
-          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900">
-                {selectedBooking.services?.name || "Service"}
-              </h3>
-              <div className="flex items-center space-x-4 text-sm text-gray-600 mt-1">
-                <span className="flex items-center space-x-1">
-                  <Hash className="w-3 h-3" />
-                  <span>{selectedBooking.booking_reference || `BK${Math.random().toString(36).substr(2, 4).toUpperCase()}`}</span>
+      <DialogContent className="max-w-lg sm:max-w-xl md:max-w-2xl max-h-[90vh] overflow-y-auto p-0">
+        {/* Header Section */}
+        <div className="sticky top-0 z-10 bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 sm:p-6 rounded-t-lg">
+          {/* Close Button */}
+          <button
+            onClick={() => setSelectedBooking(null)}
+            className="absolute top-3 right-3 sm:top-4 sm:right-4 text-white/80 hover:text-white transition-colors p-1.5 rounded-full hover:bg-white/10"
+            aria-label="Close"
+          >
+            <X className="h-5 w-5" />
+          </button>
+          
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 pr-8">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <Sparkles className="h-4 w-4 flex-shrink-0" />
+                <span className="text-xs font-medium text-blue-100 uppercase tracking-wide">
+                  {selectedBooking.booking_reference || `#${selectedBooking.id?.slice(-8)}`}
                 </span>
-                <span>{selectedBooking.booking_date}</span>
-                <span>{formatDisplayTime(selectedBooking.start_time)}</span>
+              </div>
+              <h2 className="text-lg sm:text-xl font-bold truncate">
+                {selectedBooking.services?.name || "Service"}
+              </h2>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-sm text-blue-100">
+                <span className="flex items-center gap-1">
+                  <Calendar className="h-3.5 w-3.5" />
+                  {formatDate(selectedBooking.booking_date)}
+                </span>
+                <span className="flex items-center gap-1">
+                  <Clock className="h-3.5 w-3.5" />
+                  {formatDisplayTime(selectedBooking.start_time)}
+                </span>
               </div>
             </div>
-            <div className="flex items-center space-x-2">
+            <div className="flex-shrink-0">
               <BookingStatusIndicator status={selectedBooking.booking_status} />
             </div>
           </div>
+        </div>
 
-          {/* Customer Information */}
-          <div className="space-y-3">
-            <h3 className="font-semibold text-lg">Customer Information</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <Users className="h-4 w-4 text-gray-500" />
-                  <span className="text-sm font-medium">Customer</span>
-                </div>
-                <div className="ml-6">
-                  <div className="flex items-center space-x-3">
-                    {/* Customer Avatar */}
-                    <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
-                      {selectedBooking.customer_profiles?.image_url ? (
-                        <img
-                          src={selectedBooking.customer_profiles.image_url}
-                          alt={`${selectedBooking.customer_profiles.first_name || ""} ${selectedBooking.customer_profiles.last_name || ""}`}
-                          className="w-full h-full object-cover rounded-lg"
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-blue-600 rounded-lg flex items-center justify-center">
-                          {selectedBooking.customer_profiles?.first_name?.[0] || selectedBooking.customer_profiles?.last_name?.[0] ? (
-                            <span className="text-white font-semibold text-lg">
-                              {selectedBooking.customer_profiles.first_name[0] || selectedBooking.customer_profiles.last_name[0]}
-                            </span>
-                          ) : (
-                            <User className="w-6 h-6 text-white" />
-                          )}
-                        </div>
-                      )}
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">
-                        {selectedBooking.customer_profiles
-                          ? `${selectedBooking.customer_profiles.first_name || ""} ${selectedBooking.customer_profiles.last_name || ""}`
-                          : "Unknown Customer"
-                        }
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {selectedBooking.customer_profiles?.email && (
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <Mail className="h-4 w-4 text-gray-500" />
-                    <span className="text-sm font-medium">Email</span>
-                  </div>
-                  <div className="ml-6">
-                    <p className="text-sm">{selectedBooking.customer_profiles.email}</p>
-                  </div>
-                </div>
-              )}
-
-              {selectedBooking.customer_profiles?.phone && (
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <Phone className="h-4 w-4 text-gray-500" />
-                    <span className="text-sm font-medium">Phone</span>
-                  </div>
-                  <div className="ml-6">
-                    <p className="text-sm">{selectedBooking.customer_profiles.phone}</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Assigned Provider */}
-          <div className="space-y-3">
-            <h3 className="font-semibold text-lg">Assigned Provider</h3>
-            {(() => {
-              // Handle both array and object formats from Supabase joins
-              const provider = Array.isArray(selectedBooking.providers) 
-                ? selectedBooking.providers[0] 
-                : selectedBooking.providers;
-              
-              if (!provider && !selectedBooking.provider_id) {
-                return (
-                  <div className="flex items-center space-x-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                    <AlertCircle className="h-4 w-4 text-yellow-600" />
-                    <p className="text-sm text-yellow-800 font-medium">Unassigned - No provider assigned to this booking</p>
-                  </div>
-                );
-              }
-              
-              if (!provider) {
-                return (
-                  <div className="flex items-center space-x-2">
-                    <Users className="h-4 w-4 text-gray-500" />
-                    <p className="text-sm text-gray-600">Provider ID: {selectedBooking.provider_id} (Details not loaded)</p>
-                  </div>
-                );
-              }
-              
-              return (
-                <div className="flex items-center space-x-2">
-                  <Users className="h-4 w-4 text-gray-500" />
-                  <p className="text-sm">{provider.first_name} {provider.last_name}</p>
-                </div>
-              );
-            })()}
-          </div>
-
-          {/* Provider Assignment (Owners and Dispatchers Only) */}
-          {canAssignBookings && (
-            <div className="space-y-3">
-              <h3 className="font-semibold text-lg flex items-center gap-2">
-                <UserCheck className="h-5 w-5" />
-                Provider Assignment
-              </h3>
-              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Current Assignment:</span>
-                    {(() => {
-                      // Handle both array and object formats from Supabase joins
-                      const provider = Array.isArray(selectedBooking.providers) 
-                        ? selectedBooking.providers[0] 
-                        : selectedBooking.providers;
-                      
-                      return (
-                        <Badge variant={provider ? "default" : "secondary"}>
-                          {provider 
-                            ? `${provider.first_name} ${provider.last_name}`
-                            : "Unassigned"
-                          }
-                        </Badge>
-                      );
-                    })()}
-                  </div>
-                  
-                  {isIndependentBusiness && !isUnassigned && (
-                    <div className="text-sm text-gray-600 bg-gray-50 p-2 rounded border border-gray-200">
-                      <span className="font-medium">Independent Business:</span> Provider reassignment is automatic and cannot be changed.
-                    </div>
-                  )}
-                  
-                  {canAssignBooking && (
-                    <div className="space-y-2">
-                      <Label htmlFor="provider-assignment">
-                        {isUnassigned ? "Assign to Provider:" : "Reassign to Provider:"}
-                      </Label>
-                      <div className="flex gap-2">
-                        <Select
-                          value={currentProviderId || 'unassigned'}
-                          onValueChange={handleAssignProvider}
-                          disabled={isAssigning || loadingProviders}
-                        >
-                          <SelectTrigger className="flex-1">
-                            <SelectValue placeholder={
-                              loadingProviders ? "Loading providers..." : isUnassigned ? "Select a provider" : "Change provider"
-                            } />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="unassigned">Unassigned</SelectItem>
-                            {availableProviders.map((provider) => (
-                              <SelectItem key={provider.id} value={provider.id}>
-                                {provider.first_name} {provider.last_name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        {isAssigning && (
-                          <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-                        )}
-                      </div>
-                      {isUnassigned && (
-                        <p className="text-sm text-blue-600 bg-blue-50 p-2 rounded border border-blue-200">
-                          ⚠️ This booking is unassigned. Please assign a provider before accepting.
-                        </p>
-                      )}
-                      {availableProviders.length === 0 && !loadingProviders && (
-                        <p className="text-sm text-yellow-600">
-                          No active providers available for assignment
-                        </p>
-                      )}
-                    </div>
-                  )}
-                  
-                  {!canAssignBooking && !isIndependentBusiness && (
-                    <p className="text-sm text-gray-600">
-                      Cannot assign/reassign - booking is {selectedBooking.booking_status}
-                    </p>
+        <div className="p-4 sm:p-6 space-y-4">
+          {/* Customer Card */}
+          <Card className="border-0 shadow-sm bg-gray-50/50">
+            <CardHeader className="pb-3 pt-4 px-4">
+              <CardTitle className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                <User className="h-4 w-4 text-blue-600" />
+                Customer
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="px-4 pb-4 pt-0">
+              <div className="flex items-center gap-3">
+                {/* Avatar */}
+                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0 overflow-hidden shadow-md">
+                  {selectedBooking.customer_profiles?.image_url ? (
+                    <img
+                      src={selectedBooking.customer_profiles.image_url}
+                      alt=""
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-white font-semibold text-lg">
+                      {selectedBooking.customer_profiles?.first_name?.[0] || 
+                       selectedBooking.customer_profiles?.last_name?.[0] || 
+                       <User className="w-6 h-6" />}
+                    </span>
                   )}
                 </div>
-              </div>
-            </div>
-          )}
-
-          {/* Service Details */}
-          <div className="space-y-3">
-            <h3 className="font-semibold text-lg">Service Details</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <Calendar className="h-4 w-4 text-gray-500" />
-                  <span className="text-sm font-medium">Date & Time</span>
-                </div>
-                <div className="ml-6">
-                  <p className="text-sm">
-                    {selectedBooking.booking_date}
+                
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-gray-900 truncate">
+                    {selectedBooking.customer_profiles
+                      ? `${selectedBooking.customer_profiles.first_name || ""} ${selectedBooking.customer_profiles.last_name || ""}`.trim() || "Unknown Customer"
+                      : "Unknown Customer"
+                    }
                   </p>
-                  <p className="text-sm text-gray-600">
-                    {formatDisplayTime(selectedBooking.start_time)} - {formatDisplayTime(selectedBooking.end_time)}
-                  </p>
+                  
+                  {/* Contact info */}
+                  <div className="mt-1.5 space-y-1">
+                    {selectedBooking.customer_profiles?.email && (
+                      <a 
+                        href={`mailto:${selectedBooking.customer_profiles.email}`}
+                        className="flex items-center gap-2 text-sm text-gray-600 hover:text-blue-600 transition-colors"
+                      >
+                        <Mail className="h-3.5 w-3.5 flex-shrink-0" />
+                        <span className="truncate">{selectedBooking.customer_profiles.email}</span>
+                      </a>
+                    )}
+                    {selectedBooking.customer_profiles?.phone && (
+                      <a 
+                        href={`tel:${selectedBooking.customer_profiles.phone}`}
+                        className="flex items-center gap-2 text-sm text-gray-600 hover:text-blue-600 transition-colors"
+                      >
+                        <Phone className="h-3.5 w-3.5 flex-shrink-0" />
+                        <span>{selectedBooking.customer_profiles.phone}</span>
+                      </a>
+                    )}
+                  </div>
                 </div>
               </div>
+            </CardContent>
+          </Card>
 
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <Clock className="h-4 w-4 text-gray-500" />
-                  <span className="text-sm font-medium">Duration</span>
-                </div>
-                <div className="ml-6">
-                  <p className="text-sm">
+          {/* Service & Schedule Details */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Service Details */}
+            <Card className="border-0 shadow-sm bg-gray-50/50">
+              <CardHeader className="pb-2 pt-4 px-4">
+                <CardTitle className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                  <Timer className="h-4 w-4 text-blue-600" />
+                  Service Details
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="px-4 pb-4 pt-0 space-y-2">
+                <div>
+                  <span className="text-xs text-gray-500 uppercase tracking-wide">Duration</span>
+                  <p className="font-medium text-gray-900">
                     {selectedBooking.services?.duration_minutes 
                       ? `${selectedBooking.services.duration_minutes} minutes`
-                      : "Duration not specified"
+                      : "Not specified"
                     }
                   </p>
                 </div>
-              </div>
+                <div>
+                  <span className="text-xs text-gray-500 uppercase tracking-wide">Time</span>
+                  <p className="font-medium text-gray-900">
+                    {formatDisplayTime(selectedBooking.start_time)}
+                    {selectedBooking.end_time && ` - ${formatDisplayTime(selectedBooking.end_time)}`}
+                  </p>
+                </div>
+                {selectedBooking.total_amount && (
+                  <div>
+                    <span className="text-xs text-gray-500 uppercase tracking-wide">Total</span>
+                    <p className="font-semibold text-green-600">
+                      {formatCurrency(selectedBooking.total_amount)}
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
-            </div>
-          </div>
-
-          {/* Location Information */}
-          <div className="space-y-3">
-            <h3 className="font-semibold text-lg">Location</h3>
-            <div className="flex items-start space-x-2">
-              <MapPin className="h-4 w-4 text-gray-500 mt-0.5" />
-              <div>
-                <p className="text-sm">
-                  {selectedBooking.customer_locations
-                    ? `${selectedBooking.customer_locations.address_line1 || ""} ${selectedBooking.customer_locations.address_line2 || ""}, ${selectedBooking.customer_locations.city || ""}, ${selectedBooking.customer_locations.state || ""} ${selectedBooking.customer_locations.postal_code || ""}`
-                    : selectedBooking.business_locations
-                    ? `${selectedBooking.business_locations.location_name || ""} ${selectedBooking.business_locations.address_line1 || ""}, ${selectedBooking.business_locations.city || ""}, ${selectedBooking.business_locations.state || ""}`
-                    : "Location not specified"
-                  }
+            {/* Location */}
+            <Card className="border-0 shadow-sm bg-gray-50/50">
+              <CardHeader className="pb-2 pt-4 px-4">
+                <CardTitle className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-blue-600" />
+                  Location
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="px-4 pb-4 pt-0">
+                <p className="text-sm text-gray-900 leading-relaxed">
+                  {getFormattedLocation()}
                 </p>
-              </div>
-            </div>
+                {selectedBooking.customer_locations?.access_instructions && (
+                  <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-800">
+                    <span className="font-medium">Access: </span>
+                    {selectedBooking.customer_locations.access_instructions}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
+
+          {/* Assigned Provider */}
+          <Card className="border-0 shadow-sm bg-gray-50/50">
+            <CardHeader className="pb-2 pt-4 px-4">
+              <CardTitle className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                <UserCheck className="h-4 w-4 text-blue-600" />
+                Assigned Provider
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="px-4 pb-4 pt-0">
+              {!provider && !selectedBooking.provider_id ? (
+                <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                  <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0" />
+                  <p className="text-sm text-amber-800 font-medium">No provider assigned</p>
+                </div>
+              ) : provider ? (
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center text-white font-semibold shadow-sm">
+                    {provider.first_name?.[0] || provider.last_name?.[0] || 'P'}
+                  </div>
+                  <p className="font-medium text-gray-900">
+                    {provider.first_name} {provider.last_name}
+                  </p>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500">Provider details not available</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Provider Assignment Section (Owners and Dispatchers Only) */}
+          {canAssignBookings && canAssignBooking && (
+            <Card className="border border-blue-200 shadow-sm bg-blue-50/50">
+              <CardHeader className="pb-2 pt-4 px-4">
+                <CardTitle className="text-sm font-semibold text-blue-700 flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  {isUnassigned ? "Assign Provider" : "Reassign Provider"}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="px-4 pb-4 pt-0 space-y-3">
+                {isIndependentBusiness && !isUnassigned && (
+                  <p className="text-xs text-gray-600 bg-white p-2 rounded border">
+                    <span className="font-medium">Independent Business:</span> Provider reassignment is automatic.
+                  </p>
+                )}
+                
+                <div className="flex gap-2">
+                  <Select
+                    value={currentProviderId || 'unassigned'}
+                    onValueChange={handleAssignProvider}
+                    disabled={isAssigning || loadingProviders}
+                  >
+                    <SelectTrigger className="flex-1 bg-white">
+                      <SelectValue placeholder={
+                        loadingProviders ? "Loading..." : "Select provider"
+                      } />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="unassigned">Unassigned</SelectItem>
+                      {availableProviders.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.first_name} {p.last_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {isAssigning && (
+                    <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin flex-shrink-0" />
+                  )}
+                </div>
+                
+                {isUnassigned && (
+                  <p className="text-xs text-blue-700 bg-white p-2 rounded border border-blue-200">
+                    ⚠️ Please assign a provider before accepting this booking.
+                  </p>
+                )}
+                
+                {availableProviders.length === 0 && !loadingProviders && (
+                  <p className="text-xs text-amber-700">No active providers available</p>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Special Instructions */}
           {selectedBooking.special_instructions && (
-            <div className="space-y-3">
-              <h3 className="font-semibold text-lg">Special Instructions</h3>
-              <p className="text-sm bg-gray-50 p-3 rounded-md">{selectedBooking.special_instructions}</p>
-            </div>
+            <Card className="border-0 shadow-sm bg-amber-50/50">
+              <CardHeader className="pb-2 pt-4 px-4">
+                <CardTitle className="text-sm font-semibold text-amber-700 flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4" />
+                  Special Instructions
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="px-4 pb-4 pt-0">
+                <p className="text-sm text-gray-800 leading-relaxed">
+                  {selectedBooking.special_instructions}
+                </p>
+              </CardContent>
+            </Card>
           )}
 
+          {/* Tip & Review Section - Only show for completed bookings */}
+          {isCompleted && (
+            <Card className="border border-green-200 shadow-sm bg-gradient-to-br from-green-50 to-emerald-50">
+              <CardHeader className="pb-2 pt-4 px-4">
+                <CardTitle className="text-sm font-semibold text-green-700 flex items-center gap-2">
+                  <Heart className="h-4 w-4 fill-green-600 text-green-600" />
+                  Tip & Appreciation
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="px-4 pb-4 pt-0">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Tip Info */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-gray-500 uppercase tracking-wide">Tip Status</span>
+                      {getTipStatusBadge(selectedBooking.tip_status)}
+                    </div>
+                    
+                    {selectedBooking.tip_amount > 0 && (
+                      <div className="flex items-center gap-2 p-3 bg-white rounded-lg border border-green-200">
+                        <DollarSign className="h-5 w-5 text-green-600" />
+                        <div>
+                          <p className="text-lg font-bold text-green-600">
+                            {formatCurrency(selectedBooking.tip_amount)}
+                          </p>
+                          <p className="text-xs text-gray-500">Tip received</p>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {!selectedBooking.tip_amount && selectedBooking.tip_eligible && (
+                      <p className="text-xs text-gray-500 italic">
+                        Tip eligible - awaiting customer
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Review/Rating Info */}
+                  <div className="space-y-2">
+                    <span className="text-xs text-gray-500 uppercase tracking-wide">Customer Feedback</span>
+                    
+                    {selectedBooking.customer_rating ? (
+                      <div className="flex items-center gap-2 p-3 bg-white rounded-lg border border-green-200">
+                        <div className="flex items-center gap-1">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <Star 
+                              key={star} 
+                              className={`h-4 w-4 ${
+                                star <= selectedBooking.customer_rating 
+                                  ? 'text-yellow-400 fill-yellow-400' 
+                                  : 'text-gray-300'
+                              }`} 
+                            />
+                          ))}
+                        </div>
+                        <span className="text-sm font-medium text-gray-700">
+                          {selectedBooking.customer_rating}/5
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="p-3 bg-white rounded-lg border border-gray-200">
+                        <p className="text-xs text-gray-500 italic flex items-center gap-1">
+                          <Star className="h-3.5 w-3.5 text-gray-400" />
+                          No rating yet
+                        </p>
+                      </div>
+                    )}
+                    
+                    {selectedBooking.customer_review && (
+                      <div className="p-3 bg-white rounded-lg border border-green-200 mt-2">
+                        <p className="text-sm text-gray-700 italic">
+                          "{selectedBooking.customer_review}"
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </DialogContent>
     </Dialog>

@@ -15,6 +15,9 @@ import {
   Send,
   MessageCircle,
   Users,
+  Hash,
+  Calendar,
+  X,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/auth/AuthProvider';
 import { supabase } from '@/lib/supabase';
@@ -76,18 +79,25 @@ interface ConversationChatProps {
     provider_name?: string;
     business_id?: string;
     customer_id?: string;
+    booking_reference?: string;
+    booking_date?: string;
+    services?: {
+      name: string;
+    };
     customer_profiles?: {
       id: string;
       user_id?: string;
       first_name: string;
       last_name: string;
       email?: string;
+      image_url?: string;
     };
     providers?: {
       id: string;
       user_id: string;
       first_name: string;
       last_name: string;
+      image_url?: string;
     };
   };
   conversationSid?: string;
@@ -503,27 +513,62 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
   );
 
 
+  // Get service name from either services.name or service_name
+  const serviceName = booking?.services?.name || booking?.service_name || 'Service';
+  const bookingRef = booking?.booking_reference || '';
+  const customerName = booking?.customer_profiles 
+    ? `${booking.customer_profiles.first_name || ''} ${booking.customer_profiles.last_name || ''}`.trim()
+    : booking?.customer_name || 'Customer';
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl h-[80vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <MessageCircle className="h-5 w-5" />
-            {booking ? `Chat - ${booking.service_name || 'Booking'}` : 'Conversation'}
-          </DialogTitle>
-        </DialogHeader>
+      <DialogContent className="max-w-2xl h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
+        {/* Custom Header with gradient background */}
+        <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-5 rounded-t-lg">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
+                <MessageCircle className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold">{serviceName}</h2>
+                <p className="text-blue-100 text-sm">with {customerName}</p>
+              </div>
+            </div>
+            <button 
+              onClick={onClose}
+              className="text-white/80 hover:text-white transition-colors p-1 rounded-full hover:bg-white/10"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          
+          {/* Booking Reference & Date */}
+          {(bookingRef || booking?.booking_date) && (
+            <div className="flex items-center gap-4 mt-3 pt-3 border-t border-white/20">
+              {bookingRef && (
+                <div className="flex items-center gap-1.5 text-sm text-blue-100">
+                  <Hash className="h-4 w-4" />
+                  <span className="font-mono font-medium text-white">{bookingRef}</span>
+                </div>
+              )}
+              {booking?.booking_date && (
+                <div className="flex items-center gap-1.5 text-sm text-blue-100">
+                  <Calendar className="h-4 w-4" />
+                  <span>{booking.booking_date}</span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
 
-        <div className="flex-1 flex flex-col min-h-0">
-          {/* Participants Info */}
-          <Card className="mb-4">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <Users className="h-4 w-4" />
-                Participants ({participants.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="flex flex-wrap gap-2">
+        <div className="flex-1 flex flex-col min-h-0 bg-gray-50">
+          {/* Participants Info - Compact */}
+          <div className="px-4 py-3 bg-white border-b">
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-gray-500" />
+              <span className="text-xs text-gray-500 font-medium">Participants:</span>
+              <div className="flex flex-wrap gap-1.5">
                 {participants.map((participant) => {
                   const name = formatParticipantName(participant);
                   const initials = name
@@ -538,35 +583,39 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
                   return (
                     <Badge
                       key={identityKey}
-                      variant={isCurrentUser ? "default" : "secondary"}
-                      className="flex items-center gap-1"
+                      variant={isCurrentUser ? "default" : "outline"}
+                      className={`text-xs py-0.5 ${isCurrentUser ? 'bg-blue-600' : 'bg-gray-50 text-gray-700 border-gray-200'}`}
                     >
-                      <Avatar className="h-4 w-4">
-                        <AvatarFallback className="text-xs">
-                          {initials}
-                        </AvatarFallback>
-                      </Avatar>
-                      {name}
+                      {initials} {name.split(' ')[0]}
                       {isCurrentUser && " (You)"}
                     </Badge>
                   );
                 })}
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
-          {/* Messages */}
-          <Card className="flex-1 flex flex-col min-h-0">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm">Messages</CardTitle>
-            </CardHeader>
-            <CardContent className="flex-1 flex flex-col min-h-0 pt-0">
-              <ScrollArea className="h-[400px]">
+          {/* Messages Area */}
+          <div className="flex-1 min-h-0">
+            <ScrollArea className="h-full">
                 <div className="space-y-4 p-4">
                   {loading ? (
-                    <div className="text-center text-gray-500">Loading messages...</div>
+                    <div className="flex items-center justify-center h-40">
+                      <div className="text-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                        <p className="text-gray-500 text-sm">Loading messages...</p>
+                      </div>
+                    </div>
                   ) : messages.length === 0 ? (
-                    <div className="text-center text-gray-500">No messages yet. Start the conversation!</div>
+                    <div className="flex items-center justify-center h-40">
+                      <div className="text-center">
+                        <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                          <MessageCircle className="h-8 w-8 text-blue-600" />
+                        </div>
+                        <p className="text-gray-600 font-medium">No messages yet</p>
+                        <p className="text-gray-400 text-sm mt-1">Start the conversation!</p>
+                      </div>
+                    </div>
                   ) : (
                     (() => {
                       // Group messages by date
@@ -658,31 +707,29 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
                   <div ref={messagesEndRef} />
                 </div>
               </ScrollArea>
-            </CardContent>
-          </Card>
+          </div>
 
-          {/* Message Input */}
-          <Card className="mt-4">
-            <CardContent className="pt-4">
-              <div className="flex gap-2">
-                <Input
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  placeholder="Type your message..."
-                  disabled={sending || !activeConversationSid}
-                  className="flex-1"
-                />
-                <Button
-                  onClick={handleSendMessage}
-                  disabled={!newMessage.trim() || sending || !activeConversationSid}
-                  size="icon"
-                >
-                  <Send className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Message Input - Fixed at bottom */}
+          <div className="p-4 bg-white border-t">
+            <div className="flex gap-3 items-center">
+              <Input
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Type your message..."
+                disabled={sending || !activeConversationSid}
+                className="flex-1 border-gray-200 focus:border-blue-400 focus:ring-blue-400"
+              />
+              <Button
+                onClick={handleSendMessage}
+                disabled={!newMessage.trim() || sending || !activeConversationSid}
+                size="icon"
+                className="bg-blue-600 hover:bg-blue-700 h-10 w-10 rounded-full flex-shrink-0"
+              >
+                <Send className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

@@ -131,6 +131,28 @@ export default function BookingCard({
   // Check if booking has been rescheduled
   const isRescheduled = Boolean(booking.original_booking_date || booking.original_booking_time);
 
+  // Check if messaging should be allowed
+  // Hide message button if booking is in final status AND booking date is more than 1 day past
+  const canMessage = () => {
+    const finalStatuses = ['completed', 'cancelled', 'declined', 'no_show'];
+    const isInFinalStatus = finalStatuses.includes(booking.booking_status);
+    
+    if (!isInFinalStatus) return true;
+    
+    // Check if booking date is more than 1 day past
+    if (!booking.booking_date) return true;
+    
+    const bookingDate = new Date(booking.booking_date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    bookingDate.setHours(0, 0, 0, 0);
+    
+    const diffInDays = (today.getTime() - bookingDate.getTime()) / (1000 * 60 * 60 * 24);
+    
+    // Allow messaging if booking date is within 1 day (not more than 1 day past)
+    return diffInDays <= 1;
+  };
+
   const getStatusActions = (status: string) => {
     // Check if booking is scheduled for today or in the past
     const isBookingDateTodayOrPast = () => {
@@ -432,47 +454,49 @@ export default function BookingCard({
           </div>
         )}
 
-        {/* Status & Actions Section */}
-        <div className="pt-4 border-t border-gray-100">
-          <div className="flex items-center justify-between gap-4">
-            {/* Status */}
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-2">
-                <span className="text-sm font-medium text-gray-700">{getStatusMessage(booking.booking_status)}</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div 
-                  className={`h-2 rounded-full transition-all duration-300 ${
-                    booking.booking_status === 'pending' ? 'bg-yellow-500' :
-                    booking.booking_status === 'confirmed' ? 'bg-blue-500' :
-                    booking.booking_status === 'in_progress' ? 'bg-purple-500' :
-                    booking.booking_status === 'completed' ? 'bg-green-500' :
-                    'bg-red-500'
-                  }`}
-                  style={{ width: `${getProgressPercentage(booking.booking_status)}%` }}
-                ></div>
-              </div>
+        {/* Status Section */}
+        <div className="pt-4 border-t border-gray-100 space-y-4">
+          {/* Status */}
+          <div>
+            <div className="flex items-center gap-3 mb-2">
+              <span className="text-sm font-medium text-gray-700">{getStatusMessage(booking.booking_status)}</span>
             </div>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div 
+                className={`h-2 rounded-full transition-all duration-300 ${
+                  booking.booking_status === 'pending' ? 'bg-yellow-500' :
+                  booking.booking_status === 'confirmed' ? 'bg-blue-500' :
+                  booking.booking_status === 'in_progress' ? 'bg-purple-500' :
+                  booking.booking_status === 'completed' ? 'bg-green-500' :
+                  'bg-red-500'
+                }`}
+                style={{ width: `${getProgressPercentage(booking.booking_status)}%` }}
+              ></div>
+            </div>
+          </div>
 
-            {/* Action Buttons */}
-            <div className="flex items-center gap-2 flex-shrink-0">
-              {/* Message Button */}
-              <Button
-                onClick={() => setIsChatOpen(true)}
-                size="sm"
-                className="bg-blue-600 hover:bg-blue-700 text-white relative"
-              >
-                <MessageCircle className="w-4 h-4 mr-1.5" />
-                Message
-                {unreadCount > 0 && (
-                  <Badge
-                    variant="destructive"
-                    className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs font-bold rounded-full"
-                  >
-                    {unreadCount > 9 ? '9+' : unreadCount}
-                  </Badge>
-                )}
-              </Button>
+          {/* Action Buttons - Same layout as mobile */}
+          <div className="space-y-2">
+            {/* Primary Actions Row - Message & Details */}
+            <div className={`grid gap-2 ${canMessage() ? 'grid-cols-2' : 'grid-cols-1'}`}>
+              {canMessage() && (
+                <Button
+                  onClick={() => setIsChatOpen(true)}
+                  size="sm"
+                  className="bg-blue-600 hover:bg-blue-700 text-white relative"
+                >
+                  <MessageCircle className="w-4 h-4 mr-1.5" />
+                  Message
+                  {unreadCount > 0 && (
+                    <Badge
+                      variant="destructive"
+                      className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs font-bold rounded-full"
+                    >
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </Badge>
+                  )}
+                </Button>
+              )}
 
               {/* Details Button */}
               <Button
@@ -483,38 +507,42 @@ export default function BookingCard({
               >
                 {hasProviderAssigned ? "Details" : "Assign Provider"}
               </Button>
-
-              {/* Status Actions */}
-              {showActions && statusActions.map((action: any) => {
-                const Icon = action.icon;
-                const isDisabled = action.disabled || false;
-                return (
-                  <Button
-                    key={action.status}
-                    variant={action.variant}
-                    size="sm"
-                    disabled={isDisabled || isProcessing}
-                    onClick={() => {
-                      if (isDisabled) return;
-                      handleStatusAction(action.status);
-                    }}
-                    className={isDisabled ? 'opacity-50 cursor-not-allowed' : ''}
-                    title={action.tooltip}
-                  >
-                    <Icon className="w-4 h-4 mr-1.5" />
-                    {action.label}
-                  </Button>
-                );
-              })}
             </div>
+
+            {/* Status Action Buttons */}
+            {showActions && statusActions.length > 0 && (
+              <div className={`grid gap-2 ${statusActions.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                {statusActions.map((action: any) => {
+                  const Icon = action.icon;
+                  const isDisabled = action.disabled || false;
+                  return (
+                    <Button
+                      key={action.status}
+                      variant={action.variant}
+                      size="sm"
+                      disabled={isDisabled || isProcessing}
+                      onClick={() => {
+                        if (isDisabled) return;
+                        handleStatusAction(action.status);
+                      }}
+                      className={`flex items-center justify-center ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      title={action.tooltip}
+                    >
+                      <Icon className="w-4 h-4 mr-1.5" />
+                      {action.label}
+                    </Button>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Provider Assignment Warning */}
+            {!hasProviderAssigned && booking.booking_status === "pending" && (
+              <p className="text-xs text-amber-600 text-center">
+                ⚠️ Assign a provider before accepting
+              </p>
+            )}
           </div>
-          
-          {/* Provider Assignment Warning */}
-          {!hasProviderAssigned && booking.booking_status === "pending" && (
-            <p className="text-xs text-amber-600 text-right mt-2">
-              ⚠️ Assign a provider before accepting
-            </p>
-          )}
         </div>
       </div>
 
@@ -721,24 +749,26 @@ export default function BookingCard({
         {/* Action Buttons - Full Width */}
         <div className="pt-2 border-t border-gray-100 space-y-2">
           {/* Primary Actions Row */}
-          <div className="grid grid-cols-2 gap-2">
-            {/* Message Button */}
-            <Button
-              onClick={() => setIsChatOpen(true)}
-              size="sm"
-              className="bg-blue-600 hover:bg-blue-700 text-white relative"
-            >
-              <MessageCircle className="w-4 h-4 mr-1.5" />
-              <span className="text-xs">Message</span>
-              {unreadCount > 0 && (
-                <Badge
-                  variant="destructive"
-                  className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs font-bold rounded-full"
-                >
-                  {unreadCount > 9 ? '9+' : unreadCount}
-                </Badge>
-              )}
-            </Button>
+          <div className={`grid gap-2 ${canMessage() ? 'grid-cols-2' : 'grid-cols-1'}`}>
+            {/* Message Button - Hidden for final status bookings more than 1 day past */}
+            {canMessage() && (
+              <Button
+                onClick={() => setIsChatOpen(true)}
+                size="sm"
+                className="bg-blue-600 hover:bg-blue-700 text-white relative"
+              >
+                <MessageCircle className="w-4 h-4 mr-1.5" />
+                <span className="text-xs">Message</span>
+                {unreadCount > 0 && (
+                  <Badge
+                    variant="destructive"
+                    className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs font-bold rounded-full"
+                  >
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </Badge>
+                )}
+              </Button>
+            )}
 
             {/* Details Button */}
             <Button

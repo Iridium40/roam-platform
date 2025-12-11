@@ -1,9 +1,6 @@
-import React, { useState, lazy, Suspense } from "react";
-import { RefreshCw } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import React, { useState, lazy, Suspense, useEffect } from "react";
 
 // Import modular components
-import BookingStatsSection from "./bookings/BookingStatsSection";
 import BookingFiltersSection from "./bookings/BookingFiltersSection";
 import BookingListSection from "./bookings/BookingListSection";
 import BookingDetailModal from "./bookings/BookingDetailModal";
@@ -37,11 +34,25 @@ export function BookingsTab({ providerData, business }: BookingsTabProps) {
   const [viewType, setViewType] = useState<"list" | "week" | "month">("list");
   const [currentDate, setCurrentDate] = useState(new Date());
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detect mobile screen size and force list view
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 640); // sm breakpoint
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Effective view type - always list on mobile
+  const effectiveViewType = isMobile ? "list" : viewType;
 
   const {
     // Data
     bookings,
-    bookingStats,
     activeBookings,
     closedBookings,
     paginatedData,
@@ -116,17 +127,7 @@ export function BookingsTab({ providerData, business }: BookingsTabProps) {
 
   return (
     <div className="space-y-6">
-      {/* Booking Statistics */}
-      <BookingStatsSection
-        bookingStats={bookingStats}
-        presentBookings={activeBookings}
-        futureBookings={[]}
-        pastBookings={closedBookings}
-        onStatusClick={setSelectedStatusFilter}
-      />
-
-      {/* Filters and View Toggle */}
-      <div className="space-y-4">
+      {/* Filters Section with all controls */}
       <BookingFiltersSection
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
@@ -137,57 +138,14 @@ export function BookingsTab({ providerData, business }: BookingsTabProps) {
         showUnassignedOnly={showUnassignedOnly}
         setShowUnassignedOnly={setShowUnassignedOnly}
         canViewUnassigned={canViewUnassigned}
+        onRefresh={handleRefresh}
+        isRefreshing={isRefreshing || loading}
+        viewType={viewType}
+        setViewType={setViewType}
       />
 
-        {/* View Toggle and Refresh Button */}
-        <div className="flex items-center justify-end gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleRefresh}
-            disabled={isRefreshing || loading}
-            className="flex items-center gap-2"
-          >
-            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
-          <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
-            <button
-              onClick={() => setViewType("list")}
-              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                viewType === "list"
-                  ? "bg-white text-gray-900 shadow-sm"
-                  : "text-gray-600 hover:text-gray-900"
-              }`}
-            >
-              List
-            </button>
-            <button
-              onClick={() => setViewType("week")}
-              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                viewType === "week"
-                  ? "bg-white text-gray-900 shadow-sm"
-                  : "text-gray-600 hover:text-gray-900"
-              }`}
-            >
-              Week
-            </button>
-            <button
-              onClick={() => setViewType("month")}
-              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                viewType === "month"
-                  ? "bg-white text-gray-900 shadow-sm"
-                  : "text-gray-600 hover:text-gray-900"
-              }`}
-            >
-              Month
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Booking Views */}
-      {viewType === "list" ? (
+      {/* Booking Views - Mobile always shows list view */}
+      {effectiveViewType === "list" ? (
       <BookingListSection
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -203,7 +161,7 @@ export function BookingsTab({ providerData, business }: BookingsTabProps) {
         formatDisplayTime={formatDisplayTime}
         unreadCounts={unreadCounts}
       />
-      ) : viewType === "week" ? (
+      ) : effectiveViewType === "week" ? (
         <Suspense fallback={<div className="h-96 bg-gray-100 rounded-lg animate-pulse" />}>
           <WeekCalendarViewLazy
             bookings={[...activeBookings, ...closedBookings]}

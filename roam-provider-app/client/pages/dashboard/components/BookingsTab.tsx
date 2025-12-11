@@ -65,6 +65,9 @@ export default function BookingsTab({
   const isOwner = role === 'owner';
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatusFilter, setSelectedStatusFilter] = useState("all");
+  const [unreadOnly, setUnreadOnly] = useState(false);
+  const [unassignedOnly, setUnassignedOnly] = useState(false);
+  const [viewMode, setViewMode] = useState<"list" | "week" | "month">("list");
   const [activeTab, setActiveTab] = useState("present");
   const [presentPage, setPresentPage] = useState(1);
   const [futurePage, setFuturePage] = useState(1);
@@ -94,12 +97,22 @@ export default function BookingsTab({
       );
     }
 
+    // Filter for unassigned bookings only
+    if (unassignedOnly) {
+      filtered = filtered.filter(booking => !booking.provider_id);
+    }
+
+    // Filter for unread bookings only (pending status as proxy for unread)
+    if (unreadOnly) {
+      filtered = filtered.filter(booking => booking.booking_status === 'pending');
+    }
+
     return filtered.sort((a, b) => {
       const dateA = new Date(`${a.booking_date} ${a.start_time}`);
       const dateB = new Date(`${b.booking_date} ${b.start_time}`);
       return dateA.getTime() - dateB.getTime();
     });
-  }, [bookings, searchQuery, selectedStatusFilter]);
+  }, [bookings, searchQuery, selectedStatusFilter, unreadOnly, unassignedOnly]);
 
   const [presentBookings, futureBookings, pastBookings, paginatedData] = useMemo(() => {
     const present: any[] = [];
@@ -379,7 +392,7 @@ export default function BookingsTab({
     setPresentPage(1);
     setFuturePage(1);
     setPastPage(1);
-  }, [searchQuery, selectedStatusFilter]);
+  }, [searchQuery, selectedStatusFilter, unreadOnly, unassignedOnly]);
 
   // Reset current tab pagination when tab changes
   useEffect(() => {
@@ -505,37 +518,133 @@ export default function BookingsTab({
         </Card>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="flex-1">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <Input
-              placeholder="Search bookings by customer, service, or reference..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
+      {/* Search and Filters */}
+      <Card className="p-4">
+        <div className="flex flex-col gap-3">
+          {/* Row 1: Search Bar + Status Dropdown */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Input
+                placeholder="Search by customer name, service, or booking reference..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 bg-gray-50 border-gray-200 focus:bg-white transition-colors"
+              />
+            </div>
+            <Select value={selectedStatusFilter} onValueChange={setSelectedStatusFilter}>
+              <SelectTrigger className="w-full sm:w-[160px] h-10">
+                <Filter className="w-3.5 h-3.5 mr-2 text-gray-500" />
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="confirmed">Confirmed</SelectItem>
+                <SelectItem value="in_progress">In Progress</SelectItem>
+                <SelectItem value="completed">Completed</SelectItem>
+                <SelectItem value="cancelled">Cancelled</SelectItem>
+                <SelectItem value="declined">Declined</SelectItem>
+                <SelectItem value="no_show">No Show</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
+          
+          {/* Row 2: Unread Only + Unassigned Only + Refresh */}
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={() => setUnreadOnly(!unreadOnly)}
+              className={`px-3 py-1.5 text-sm rounded-md border transition-colors ${
+                unreadOnly 
+                  ? 'bg-blue-50 text-blue-700 border-blue-300 font-medium' 
+                  : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+              }`}
+            >
+              Unread Only
+            </button>
+            <button
+              onClick={() => setUnassignedOnly(!unassignedOnly)}
+              className={`px-3 py-1.5 text-sm rounded-md border transition-colors ${
+                unassignedOnly 
+                  ? 'bg-blue-50 text-blue-700 border-blue-300 font-medium' 
+                  : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+              }`}
+            >
+              Unassigned Only
+            </button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={loadBookings}
+              disabled={loading}
+              className="h-8 px-3 text-sm"
+            >
+              <Activity className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+              {loading ? 'Loading...' : 'Refresh'}
+            </Button>
+          </div>
+
+          {/* Row 3: View Mode Dropdown */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-500">View:</span>
+            <Select value={viewMode} onValueChange={(value: "list" | "week" | "month") => setViewMode(value)}>
+              <SelectTrigger className="w-[120px] h-8 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="list">List</SelectItem>
+                <SelectItem value="week">Week</SelectItem>
+                <SelectItem value="month">Month</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          {/* Active Filters Display */}
+          {(searchQuery || selectedStatusFilter !== 'all' || unreadOnly || unassignedOnly) && (
+            <div className="flex items-center gap-2 pt-2 border-t border-gray-100">
+              <span className="text-xs text-gray-500">Active filters:</span>
+              {searchQuery && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-blue-50 text-blue-700 rounded-md">
+                  Search: "{searchQuery.length > 20 ? searchQuery.substring(0, 20) + '...' : searchQuery}"
+                  <button onClick={() => setSearchQuery('')} className="hover:text-blue-900">
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+              {selectedStatusFilter !== 'all' && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-purple-50 text-purple-700 rounded-md">
+                  Status: {selectedStatusFilter.replace('_', ' ')}
+                  <button onClick={() => setSelectedStatusFilter('all')} className="hover:text-purple-900">
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+              {unreadOnly && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-orange-50 text-orange-700 rounded-md">
+                  Unread Only
+                  <button onClick={() => setUnreadOnly(false)} className="hover:text-orange-900">
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+              {unassignedOnly && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-green-50 text-green-700 rounded-md">
+                  Unassigned Only
+                  <button onClick={() => setUnassignedOnly(false)} className="hover:text-green-900">
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+              <button 
+                onClick={() => { setSearchQuery(''); setSelectedStatusFilter('all'); setUnreadOnly(false); setUnassignedOnly(false); }}
+                className="text-xs text-gray-500 hover:text-gray-700 underline ml-auto"
+              >
+                Clear all
+              </button>
+            </div>
+          )}
         </div>
-        <div className="sm:w-48">
-          <Select value={selectedStatusFilter} onValueChange={setSelectedStatusFilter}>
-            <SelectTrigger>
-              <SelectValue placeholder="Filter by status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value="pending">Pending</SelectItem>
-              <SelectItem value="confirmed">Confirmed</SelectItem>
-              <SelectItem value="in_progress">In Progress</SelectItem>
-              <SelectItem value="completed">Completed</SelectItem>
-              <SelectItem value="cancelled">Cancelled</SelectItem>
-              <SelectItem value="declined">Declined</SelectItem>
-              <SelectItem value="no_show">No Show</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+      </Card>
 
       {/* Bookings Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">

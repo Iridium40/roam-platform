@@ -248,12 +248,18 @@ export default function MyBookings() {
 
             {/* Booking Tabs */}
             <Tabs defaultValue="active" className="space-y-6">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="active" className="flex items-center gap-2">
+              <TabsList className="grid w-full grid-cols-2 h-12">
+                <TabsTrigger 
+                  value="active" 
+                  className="flex items-center gap-2 data-[state=active]:bg-gray-800 data-[state=active]:text-white data-[state=active]:shadow-sm transition-all"
+                >
                   <CheckCircle className="w-4 h-4" />
                   Active Bookings ({safeFilteredBookings.active.length})
                 </TabsTrigger>
-                <TabsTrigger value="closed" className="flex items-center gap-2">
+                <TabsTrigger 
+                  value="closed" 
+                  className="flex items-center gap-2 data-[state=active]:bg-gray-800 data-[state=active]:text-white data-[state=active]:shadow-sm transition-all"
+                >
                   <Clock className="w-4 h-4" />
                   Closed Bookings ({safeFilteredBookings.closed.length})
                 </TabsTrigger>

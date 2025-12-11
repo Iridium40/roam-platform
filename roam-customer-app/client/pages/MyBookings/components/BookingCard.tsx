@@ -644,12 +644,12 @@ export const BookingCard: React.FC<BookingCardProps> = ({
 
             {/* Pending/Confirmed Booking Actions */}
             {!isPastBooking && (booking.booking_status === "confirmed" || booking.booking_status === "pending") && (
-              <div className="grid grid-cols-3 gap-2">
-                {/* Message Button */}
+              <div className="space-y-2">
+                {/* Message Button - Full Width */}
                 {booking.providers && (
                   <Button
                     size="sm"
-                    className="bg-roam-blue hover:bg-roam-blue/90 text-white font-medium relative"
+                    className="w-full bg-roam-blue hover:bg-roam-blue/90 text-white font-medium relative"
                     onClick={handleMessageClick}
                     title={`Message ${booking.providers.first_name} ${booking.providers.last_name} about this booking`}
                   >
@@ -666,40 +666,43 @@ export const BookingCard: React.FC<BookingCardProps> = ({
                   </Button>
                 )}
                 
-                {/* Reschedule Button */}
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="border-gray-300 text-gray-700 hover:bg-gray-50"
-                  onClick={() => onReschedule(booking)}
-                >
-                  <Edit className="w-4 h-4 mr-1.5" />
-                  <span className="text-xs">Reschedule</span>
-                </Button>
-                
-                {/* Cancel Button */}
-                {canCancelBooking ? (
+                {/* Reschedule & Cancel Buttons - Side by Side */}
+                <div className="grid grid-cols-2 gap-2">
+                  {/* Reschedule Button */}
                   <Button
                     size="sm"
                     variant="outline"
-                    className="border-red-200 text-red-600 hover:bg-red-50"
-                    onClick={() => onCancel(booking)}
+                    className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                    onClick={() => onReschedule(booking)}
                   >
-                    <X className="w-4 h-4 mr-1.5" />
-                    <span className="text-xs">Cancel</span>
+                    <Edit className="w-4 h-4 mr-1.5" />
+                    <span className="text-xs">Reschedule</span>
                   </Button>
-                ) : (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="border-gray-200 text-gray-400 cursor-not-allowed"
-                    disabled
-                    title="Cannot cancel within 24 hours of appointment"
-                  >
-                    <X className="w-4 h-4 mr-1.5" />
-                    <span className="text-xs">24h Lock</span>
-                  </Button>
-                )}
+                  
+                  {/* Cancel Button */}
+                  {canCancelBooking ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-red-200 text-red-600 hover:bg-red-50"
+                      onClick={() => onCancel(booking)}
+                    >
+                      <X className="w-4 h-4 mr-1.5" />
+                      <span className="text-xs">Cancel</span>
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-gray-200 text-gray-400 cursor-not-allowed"
+                      disabled
+                      title="Cannot cancel within 24 hours of appointment"
+                    >
+                      <X className="w-4 h-4 mr-1.5" />
+                      <span className="text-xs">24h Lock</span>
+                    </Button>
+                  )}
+                </div>
               </div>
             )}
 
