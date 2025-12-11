@@ -50,6 +50,7 @@ interface StripeTaxInfoCaptureProps {
   onBack?: () => void;
   initialData?: TaxInfoData;
   className?: string;
+  isOnboarding?: boolean; // When true, uses /api/onboarding/ endpoints (no auth required)
 }
 
 export default function StripeTaxInfoCapture({
@@ -58,7 +59,8 @@ export default function StripeTaxInfoCapture({
   onComplete,
   onBack,
   initialData,
-  className = ""
+  className = "",
+  isOnboarding = false
 }: StripeTaxInfoCaptureProps) {
   const { toast } = useToast();
   const [taxInfo, setTaxInfo] = useState<TaxInfoData>(
@@ -93,8 +95,11 @@ export default function StripeTaxInfoCapture({
       try {
         setLoading(true);
         
-        // Load tax info via API endpoint (uses service_role)
-        const res = await fetch(`/api/business/tax-info?business_id=${businessId}`);
+        // Load tax info via API endpoint (uses onboarding endpoint during Phase 2)
+        const endpoint = isOnboarding 
+          ? `/api/onboarding/tax-info?business_id=${businessId}`
+          : `/api/business/tax-info?business_id=${businessId}`;
+        const res = await fetch(endpoint);
         if (!res.ok) {
           if (res.status === 404 || res.status === 500) {
             // No tax info exists yet, that's okay
@@ -217,8 +222,9 @@ export default function StripeTaxInfoCapture({
       const businessEntityType = ['sole_proprietorship', 'partnership', 'llc', 'corporation', 'non_profit']
         .includes(taxInfo.businessType) ? taxInfo.businessType : 'llc';
 
-      // Save via API endpoint (uses service_role to bypass RLS)
-      const res = await fetch('/api/business/tax-info', {
+      // Save via API endpoint (uses onboarding endpoint during Phase 2)
+      const endpoint = isOnboarding ? '/api/onboarding/tax-info' : '/api/business/tax-info';
+      const res = await fetch(endpoint, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

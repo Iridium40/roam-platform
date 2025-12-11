@@ -470,6 +470,22 @@ export function createServer() {
     }
   );
 
+  // Phase 2 onboarding tax info routes (no login required)
+  app.get("/api/onboarding/tax-info",
+    requirePhase2Access(),
+    async (req: AuthenticatedRequest, res) => {
+      const { getBusinessTaxInfo } = await import('./routes/tax-info');
+      return getBusinessTaxInfo(req, res);
+    }
+  );
+  app.put("/api/onboarding/tax-info",
+    requirePhase2Access(),
+    async (req: AuthenticatedRequest, res) => {
+      const { upsertBusinessTaxInfo } = await import('./routes/tax-info');
+      return upsertBusinessTaxInfo(req, res);
+    }
+  );
+
   // Business documents routes
   app.get("/api/business/documents",
     requireAuth(['owner', 'dispatcher', 'admin']),
@@ -614,7 +630,12 @@ export function createServer() {
         const profileHandler = await import(
           "../api/business/profile/[businessId]"
         );
-        await profileHandler.default(req, res);
+        // Transform Express req to match Vercel format
+        const vercelReq = {
+          ...req,
+          query: { ...req.query, businessId: req.params.businessId }
+        };
+        await profileHandler.default(vercelReq as any, res as any);
       } catch (error) {
         console.error("Error importing business profile handler:", error);
         res
@@ -632,7 +653,36 @@ export function createServer() {
         const profileHandler = await import(
           "../api/business/profile/[businessId]"
         );
-        await profileHandler.default(req, res);
+        // Transform Express req to match Vercel format
+        const vercelReq = {
+          ...req,
+          query: { ...req.query, businessId: req.params.businessId }
+        };
+        await profileHandler.default(vercelReq as any, res as any);
+      } catch (error) {
+        console.error("Error importing business profile handler for onboarding:", error);
+        res
+          .status(500)
+          .json({ error: "Failed to load business profile handler" });
+      }
+    }
+  );
+
+  // Business profile PUT route for Phase 2 onboarding (no login required)
+  app.put("/api/onboarding/business-profile/:businessId",
+    requirePhase2Access(),
+    async (req: AuthenticatedRequest, res) => {
+      try {
+        const profileHandler = await import(
+          "../api/business/profile/[businessId]"
+        );
+        // Transform Express req to match Vercel format
+        const vercelReq = {
+          ...req,
+          query: { ...req.query, businessId: req.params.businessId },
+          body: req.body
+        };
+        await profileHandler.default(vercelReq as any, res as any);
       } catch (error) {
         console.error("Error importing business profile handler for onboarding:", error);
         res
@@ -738,7 +788,13 @@ export function createServer() {
         const profileHandler = await import(
           "../api/business/profile/[businessId]"
         );
-        await profileHandler.default(req, res);
+        // Transform Express req to match Vercel format
+        const vercelReq = {
+          ...req,
+          query: { ...req.query, businessId: req.params.businessId },
+          body: req.body
+        };
+        await profileHandler.default(vercelReq as any, res as any);
       } catch (error) {
         console.error("Error importing business profile handler:", error);
         res

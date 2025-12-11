@@ -86,7 +86,8 @@ export default function BankingPayoutSetup({
   useEffect(() => {
     const checkTaxInfo = async () => {
       try {
-        const res = await fetch(`/api/business/tax-info?business_id=${businessId}`);
+        // Use onboarding endpoint during Phase 2 (no auth required)
+        const res = await fetch(`/api/onboarding/tax-info?business_id=${businessId}`);
         if (res.ok) {
           const { tax_info } = await res.json();
           if (tax_info && tax_info.tax_id && tax_info.legal_business_name) {
@@ -130,7 +131,8 @@ export default function BankingPayoutSetup({
       setError(null);
 
       // Get tax info which contains the contact email and business details for Stripe
-      const taxInfoResponse = await fetch(`/api/business/tax-info?business_id=${businessId}`);
+      // Use onboarding endpoint during Phase 2 (no auth required)
+      const taxInfoResponse = await fetch(`/api/onboarding/tax-info?business_id=${businessId}`);
       if (!taxInfoResponse.ok) {
         throw new Error('Failed to fetch tax information. Please complete the tax information form first.');
       }
@@ -297,6 +299,7 @@ export default function BankingPayoutSetup({
               <StripeTaxInfoCapture
                 businessId={businessId}
                 userId={userId}
+                isOnboarding={true}
                 onComplete={(taxData) => {
                   // Tax info has been saved successfully
                   // Update business info from tax data

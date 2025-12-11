@@ -246,13 +246,26 @@ export async function handleApproveBusiness(req: Request, res: Response) {
       console.log("Sending approval email with Phase 2 onboarding link...");
       console.log("Approval URL to include in email:", approvalUrl);
       try {
-        // Get user email
+        // Get provider email (contact email from Phase 1 onboarding) - this is the primary email
+        const { data: providerData } = await supabase
+          .from("providers")
+          .select("email, first_name")
+          .eq("user_id", userId)
+          .eq("business_id", businessId)
+          .eq("provider_role", "owner")
+          .maybeSingle();
+        
+        // Priority: providers.email (contact email from Phase 1) > businessProfile.contact_email > auth.users.email
         const { data: userData } = await supabase.auth.admin.getUserById(userId);
-        const userEmail = userData.user?.email || businessProfile.contact_email;
-        console.log("Sending email to:", userEmail);
+        const userEmail = providerData?.email || businessProfile.contact_email || userData.user?.email;
+        console.log("Provider email from providers table:", providerData?.email);
+        console.log("Business contact email:", businessProfile.contact_email);
+        console.log("Auth user email:", userData.user?.email);
+        console.log("Sending email to (final):", userEmail);
 
         if (userEmail) {
           const firstName =
+            providerData?.first_name ||
             userData.user?.user_metadata?.first_name ||
             businessProfile.business_name ||
             "Provider";
@@ -262,6 +275,9 @@ export async function handleApproveBusiness(req: Request, res: Response) {
             console.warn("Resend API key not found, skipping email");
             emailStatus = { sent: false, error: "Resend API key not configured" };
           } else {
+            // Logo URL from Supabase storage
+            const logoUrl = 'https://vssomyuyhicaxsgiaupo.supabase.co/storage/v1/object/public/email-brand-images/ROAM/roam-logo-email.png';
+            
             const emailPayload = {
               from: "ROAM Provider Support <providersupport@roamyourbestlife.com>",
               to: [userEmail],
@@ -274,10 +290,10 @@ export async function handleApproveBusiness(req: Request, res: Response) {
                   <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 </head>
                 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-                  <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-                    <img src="https://vssomyuyhicaxsgiaupo.supabase.co/storage/v1/object/public/website-images/roam-logo-white.png" alt="ROAM" style="max-width: 120px; height: auto; margin-bottom: 10px;" />
-                    <h1 style="color: white; margin: 0; font-size: 28px;">🎉 Congratulations!</h1>
-                    <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px;">Your Business Has Been Approved</p>
+                  <div style="background: #ffffff; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; border-bottom: 3px solid #667eea;">
+                    <img src="${logoUrl}" alt="ROAM" style="max-width: 120px; height: auto; margin-bottom: 15px;" />
+                    <h1 style="color: #1e293b; margin: 0; font-size: 28px;">🎉 Congratulations!</h1>
+                    <p style="color: #64748b; margin: 10px 0 0 0; font-size: 16px;">Your Business Has Been Approved</p>
                   </div>
                   
                   <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 10px 10px;">

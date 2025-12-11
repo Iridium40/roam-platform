@@ -166,7 +166,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Get owner user_id from providers table: business_profiles.id -> providers.business_id -> providers.user_id
     const { data: ownerProvider, error: ownerError } = await supabase
       .from("providers")
-      .select("user_id")
+      .select("user_id, email, first_name")
       .eq("business_id", businessId)
       .eq("provider_role", "owner")
       .maybeSingle();
@@ -249,13 +249,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       console.log("Sending approval email with Phase 2 onboarding link...");
       console.log("Approval URL to include in email:", approvalUrl);
       try {
-        // Get user email
+        // Get provider email (contact email from Phase 1 onboarding) - this is the primary email
+        // Priority: providers.email (contact email from Phase 1) > businessProfile.contact_email > auth.users.email
         const { data: userData } = await supabase.auth.admin.getUserById(userId);
-        const userEmail = userData.user?.email || businessProfile.contact_email;
-        console.log("Sending email to:", userEmail);
+        const userEmail = ownerProvider?.email || businessProfile.contact_email || userData.user?.email;
+        console.log("Provider email from providers table:", ownerProvider?.email);
+        console.log("Business contact email:", businessProfile.contact_email);
+        console.log("Auth user email:", userData.user?.email);
+        console.log("Sending email to (final):", userEmail);
 
         if (userEmail) {
           const firstName =
+            ownerProvider?.first_name ||
             userData.user?.user_metadata?.first_name ||
             businessProfile.business_name ||
             "Provider";

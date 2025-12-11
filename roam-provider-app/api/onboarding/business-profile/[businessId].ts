@@ -116,6 +116,77 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
+  if (req.method === 'PUT') {
+    try {
+      // Handle test business IDs
+      if (businessId.startsWith('test-') && businessId !== '12345678-1234-1234-1234-123456789abc') {
+        return res.status(200).json({
+          success: true,
+          message: 'Test business profile updated successfully',
+          testMode: true
+        });
+      }
+
+      const body = typeof req.body === 'object' ? req.body : JSON.parse(req.body || '{}');
+      const {
+        businessName,
+        detailedDescription,
+        websiteUrl,
+        socialMediaLinks,
+        logoUrl,
+        coverImageUrl
+      } = body;
+
+      // Check if business exists
+      const { data: existingBusiness, error: fetchError } = await supabase
+        .from('business_profiles')
+        .select('id, business_name')
+        .eq('id', businessId)
+        .single();
+
+      if (fetchError || !existingBusiness) {
+        console.error('Error fetching existing business:', fetchError);
+        return res.status(404).json({ error: 'Business profile not found' });
+      }
+
+      // Build update object with only defined values
+      const updateData: Record<string, any> = {};
+      if (businessName !== undefined && businessName !== null && businessName !== '') {
+        updateData.business_name = businessName.trim();
+      }
+      if (detailedDescription !== undefined) {
+        updateData.business_description = detailedDescription || null;
+      }
+      if (websiteUrl !== undefined) {
+        updateData.website_url = websiteUrl?.trim() || null;
+      }
+      if (socialMediaLinks !== undefined) {
+        updateData.social_media = socialMediaLinks || {};
+      }
+      if (logoUrl !== undefined) {
+        updateData.logo_url = logoUrl || null;
+      }
+      if (coverImageUrl !== undefined) {
+        updateData.cover_image_url = coverImageUrl || null;
+      }
+
+      const { error: updateError } = await supabase
+        .from('business_profiles')
+        .update(updateData)
+        .eq('id', businessId);
+
+      if (updateError) {
+        console.error('Error updating business profile:', updateError);
+        return res.status(500).json({ error: 'Failed to update business profile' });
+      }
+
+      return res.status(200).json({ success: true });
+    } catch (error) {
+      console.error('Error in business profile PUT:', error);
+      return res.status(500).json({ error: 'Internal server error' });
+    }
+  }
+
   return res.status(405).json({ error: 'Method not allowed' });
 }
 

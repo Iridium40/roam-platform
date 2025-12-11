@@ -454,8 +454,8 @@ export default function BusinessProfileSetup({
         updatePayload.coverImageUrl = formData.coverImageUrl;
       }
 
-      // Save business profile data using proper endpoint
-      const response = await fetch(`/api/business/profile/${businessId}`, {
+      // Save business profile data using onboarding endpoint (no auth required during Phase 2)
+      const response = await fetch(`/api/onboarding/business-profile/${businessId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updatePayload),
