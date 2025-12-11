@@ -81,7 +81,7 @@ export async function handleBookingCancellation(
     // Fetch payment intent IDs from business_payment_transactions
     const { data: paymentTransactions, error: transactionsError } = await supabase
       .from('business_payment_transactions')
-      .select('stripe_payment_intent_id, stripe_transfer_id, stripe_connect_account_id, net_payment_amount')
+      .select('id, stripe_payment_intent_id, stripe_transfer_id, stripe_connect_account_id, net_payment_amount')
       .eq('booking_id', bookingId)
       .order('created_at', { ascending: false });
 
