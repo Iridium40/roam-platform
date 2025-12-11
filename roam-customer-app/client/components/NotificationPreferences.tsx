@@ -6,13 +6,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { Save, Loader2 } from 'lucide-react';
 
 export function NotificationPreferences() {
   const { customer, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const [settings, setSettings] = useState<any>(null);
+  const [originalSettings, setOriginalSettings] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
 
   const userId = customer?.user_id;
 
@@ -24,6 +27,41 @@ export function NotificationPreferences() {
       setLoading(false);
     }
   }, [userId, authLoading]);
+
+  // Detect changes by comparing current settings with original
+  useEffect(() => {
+    if (!settings || !originalSettings) {
+      setHasChanges(false);
+      return;
+    }
+
+    // Compare all relevant notification preference fields
+    const hasChangesDetected = 
+      (settings.customer_booking_accepted_email ?? true) !== (originalSettings.customer_booking_accepted_email ?? true) ||
+      (settings.customer_booking_accepted_sms ?? false) !== (originalSettings.customer_booking_accepted_sms ?? false) ||
+      (settings.customer_booking_declined_email ?? true) !== (originalSettings.customer_booking_declined_email ?? true) ||
+      (settings.customer_booking_declined_sms ?? false) !== (originalSettings.customer_booking_declined_sms ?? false) ||
+      (settings.customer_booking_completed_email ?? true) !== (originalSettings.customer_booking_completed_email ?? true) ||
+      (settings.customer_booking_completed_sms ?? false) !== (originalSettings.customer_booking_completed_sms ?? false) ||
+      (settings.customer_booking_no_show_email ?? true) !== (originalSettings.customer_booking_no_show_email ?? true) ||
+      (settings.customer_booking_no_show_sms ?? false) !== (originalSettings.customer_booking_no_show_sms ?? false) ||
+      (settings.customer_booking_reminder_email ?? true) !== (originalSettings.customer_booking_reminder_email ?? true) ||
+      (settings.customer_booking_reminder_sms ?? true) !== (originalSettings.customer_booking_reminder_sms ?? true) ||
+      (settings.customer_welcome_email ?? true) !== (originalSettings.customer_welcome_email ?? true) ||
+      (settings.provider_new_booking_email ?? true) !== (originalSettings.provider_new_booking_email ?? true) ||
+      (settings.provider_new_booking_sms ?? true) !== (originalSettings.provider_new_booking_sms ?? true) ||
+      (settings.provider_booking_cancelled_email ?? true) !== (originalSettings.provider_booking_cancelled_email ?? true) ||
+      (settings.provider_booking_cancelled_sms ?? false) !== (originalSettings.provider_booking_cancelled_sms ?? false) ||
+      (settings.provider_booking_rescheduled_email ?? true) !== (originalSettings.provider_booking_rescheduled_email ?? true) ||
+      (settings.provider_booking_rescheduled_sms ?? false) !== (originalSettings.provider_booking_rescheduled_sms ?? false) ||
+      (settings.admin_business_verification_email ?? true) !== (originalSettings.admin_business_verification_email ?? true) ||
+      (settings.admin_business_verification_sms ?? false) !== (originalSettings.admin_business_verification_sms ?? false) ||
+      (settings.quiet_hours_enabled ?? false) !== (originalSettings.quiet_hours_enabled ?? false) ||
+      (settings.notification_email || '') !== (originalSettings.notification_email || '') ||
+      (settings.notification_phone || '') !== (originalSettings.notification_phone || '');
+
+    setHasChanges(hasChangesDetected);
+  }, [settings, originalSettings]);
 
   async function loadSettings() {
     try {
@@ -68,9 +106,12 @@ export function NotificationPreferences() {
           quiet_hours_enabled: false,
         };
         setSettings(defaultSettings);
+        setOriginalSettings(JSON.parse(JSON.stringify(defaultSettings)));
       } else {
         setSettings(result.data);
+        setOriginalSettings(JSON.parse(JSON.stringify(result.data)));
       }
+      setHasChanges(false);
     } catch (error) {
       console.error('Error loading settings:', error);
       toast({
@@ -125,6 +166,10 @@ export function NotificationPreferences() {
         title: 'Settings saved',
         description: 'Your notification preferences have been updated.',
       });
+      
+      // Update original settings to reflect saved state
+      setOriginalSettings(JSON.parse(JSON.stringify(settings)));
+      setHasChanges(false);
     } catch (error) {
       console.error('Error saving settings:', error);
       toast({
@@ -426,10 +471,20 @@ export function NotificationPreferences() {
 
           <Button 
             onClick={saveSettings} 
-            disabled={saving}
+            disabled={saving || !hasChanges}
             className="w-full"
           >
-            {saving ? 'Saving...' : 'Save Preferences'}
+            {saving ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4 mr-2" />
+                Save Changes
+              </>
+            )}
           </Button>
         </CardContent>
       </Card>

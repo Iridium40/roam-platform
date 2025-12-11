@@ -1176,144 +1176,219 @@ export default function Index() {
           </div>
 
           {filteredPopularServices.length > 0 ? (
-            <div className="relative">
-              {/* Navigation Arrows */}
-              {popularPages.length > 1 && (
-                <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      console.log('Popular Prev button clicked!');
-                      prevPopularSlide();
-                    }}
-                    disabled={currentPopularSlide === 0}
-                    className="absolute left-4 top-1/2 -translate-y-1/2 z-50 bg-white border-2 border-roam-blue text-roam-blue hover:bg-roam-blue hover:text-white shadow-xl disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                    style={{ pointerEvents: 'auto' }}
+            <>
+              {/* Mobile View - Show all services stacked */}
+              <div className="md:hidden grid grid-cols-1 gap-6 px-4">
+                {filteredPopularServices.map((service) => (
+                  <Card
+                    key={service.id}
+                    className="group hover:shadow-2xl transition-all duration-500 hover:-translate-y-3 border-0 shadow-xl bg-white overflow-hidden rounded-lg w-full"
                   >
-                    <ChevronLeft className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      console.log('Popular Next button clicked!');
-                      nextPopularSlide();
-                    }}
-                    disabled={currentPopularSlide >= popularPages.length - 1}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 z-50 bg-white border-2 border-roam-blue text-roam-blue hover:bg-roam-blue hover:text-white shadow-xl disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                    style={{ pointerEvents: 'auto' }}
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </Button>
-                </>
-              )}
-              <div className="overflow-hidden">
-                <div
-                  className="flex transition-transform duration-300 ease-in-out"
-                  style={{
-                    transform: `translateX(-${currentPopularSlide * 100}%)`,
-                  }}
-                >
-                  {popularPages.map((page, pageIndex) => (
-                    <div
-                      key={`popular-page-${pageIndex}`}
-                      className="flex gap-6 w-full flex-none px-4"
-                    >
-                      {page.map((service) => (
-                        <Card
-                          key={service.id}
-                          className="group hover:shadow-2xl transition-all duration-500 hover:-translate-y-3 border-0 shadow-xl bg-white overflow-hidden rounded-lg flex-shrink-0 w-full md:w-[calc(50%-12px)]"
-                        >
-                          {/* Hero Image Section */}
-                          <div className="relative h-64 bg-gradient-to-br from-roam-blue/20 via-roam-light-blue/10 to-roam-yellow/5 overflow-hidden">
-                            <img
-                              src={service.image}
-                              alt={service.title}
-                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent"></div>
+                    {/* Hero Image Section */}
+                    <div className="relative h-64 bg-gradient-to-br from-roam-blue/20 via-roam-light-blue/10 to-roam-yellow/5 overflow-hidden">
+                      <img
+                        src={service.image}
+                        alt={service.title}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent"></div>
 
-                            {/* Floating Action Button */}
-                            <div className="absolute top-4 right-4">
-                              <FavoriteButton
-                                type="service"
-                                itemId={service.id}
-                                size="sm"
-                                variant="ghost"
-                                className="w-10 h-10 rounded-lg bg-white/95 hover:bg-white shadow-lg border-0 text-gray-600 hover:text-red-500 hover:scale-110 transition-all backdrop-blur-sm"
-                              />
-                            </div>
+                      {/* Floating Action Button */}
+                      <div className="absolute top-4 right-4">
+                        <FavoriteButton
+                          type="service"
+                          itemId={service.id}
+                          size="sm"
+                          variant="ghost"
+                          className="w-10 h-10 rounded-lg bg-white/95 hover:bg-white shadow-lg border-0 text-gray-600 hover:text-red-500 hover:scale-110 transition-all backdrop-blur-sm"
+                        />
+                      </div>
 
-                            {/* Price Badge - Bottom Left */}
-                            <div className="absolute bottom-4 left-4">
-                              <div className="bg-roam-blue text-white px-4 py-2 rounded-2xl shadow-lg font-bold text-lg">
-                                Starting at {service.price}
-                              </div>
-                            </div>
-                          </div>
-
-                          <CardContent className="p-6">
-                            {/* Service Title & Category */}
-                            <div className="mb-4">
-                              <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-roam-blue transition-colors">
-                                {service.title}
-                              </h3>
-                              <span className="inline-block px-3 py-1 text-xs font-medium bg-roam-blue/10 text-roam-blue rounded-full capitalize">
-                                {service.category}
-                              </span>
-                            </div>
-
-                            {/* Description */}
-                            <p className="text-gray-600 text-sm leading-relaxed line-clamp-2 mb-4">
-                              {service.description}
-                            </p>
-
-                            {/* Stats Row */}
-                            <div className="flex items-center gap-1 text-sm text-gray-600 mb-4">
-                              <Clock className="w-4 h-4 text-roam-blue" />
-                              <span>{service.duration}</span>
-                            </div>
-
-                            {/* Book Button */}
-                            <Button
-                              asChild
-                              className="w-full bg-gradient-to-r from-roam-blue to-roam-light-blue hover:from-roam-blue/90 hover:to-roam-light-blue/90 text-white font-semibold py-3 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]"
-                            >
-                              <Link to={`/book-service/${service.id}`}>
-                                <Calendar className="w-4 h-4 mr-2" />
-                                Book Now
-                              </Link>
-                            </Button>
-                          </CardContent>
-                        </Card>
-                      ))}
+                      {/* Price Badge - Bottom Left */}
+                      <div className="absolute bottom-4 left-4">
+                        <div className="bg-roam-blue text-white px-4 py-2 rounded-2xl shadow-lg font-bold text-lg">
+                          Starting at {service.price}
+                        </div>
+                      </div>
                     </div>
-                  ))}
-                </div>
+
+                    <CardContent className="p-6">
+                      {/* Service Title & Category */}
+                      <div className="mb-4">
+                        <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-roam-blue transition-colors">
+                          {service.title}
+                        </h3>
+                        <span className="inline-block px-3 py-1 text-xs font-medium bg-roam-blue/10 text-roam-blue rounded-full capitalize">
+                          {service.category}
+                        </span>
+                      </div>
+
+                      {/* Description */}
+                      <p className="text-gray-600 text-sm leading-relaxed line-clamp-2 mb-4">
+                        {service.description}
+                      </p>
+
+                      {/* Stats Row */}
+                      <div className="flex items-center gap-1 text-sm text-gray-600 mb-4">
+                        <Clock className="w-4 h-4 text-roam-blue" />
+                        <span>{service.duration}</span>
+                      </div>
+
+                      {/* Book Button */}
+                      <Button
+                        asChild
+                        className="w-full bg-gradient-to-r from-roam-blue to-roam-light-blue hover:from-roam-blue/90 hover:to-roam-light-blue/90 text-white font-semibold py-3 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]"
+                      >
+                        <Link to={`/book-service/${service.id}`}>
+                          <Calendar className="w-4 h-4 mr-2" />
+                          Book Now
+                        </Link>
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
 
-              {/* Carousel indicators - only show when there are multiple pages */}
-              {popularPages.length > 1 && (
-                <div className="flex justify-center mt-6 gap-2">
-                  {popularPages.map((_, index) => (
-                    <button
-                      key={index}
-                      onClick={() => setCurrentPopularSlide(index)}
-                      className={`w-3 h-3 rounded-full transition-colors ${
-                        index === currentPopularSlide
-                          ? "bg-roam-blue"
-                          : "bg-gray-300 hover:bg-gray-400"
-                      }`}
-                    />
-                  ))}
+              {/* Desktop View - Carousel */}
+              <div className="hidden md:block relative">
+                {/* Navigation Arrows */}
+                {popularPages.length > 1 && (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log('Popular Prev button clicked!');
+                        prevPopularSlide();
+                      }}
+                      disabled={currentPopularSlide === 0}
+                      className="absolute left-4 top-1/2 -translate-y-1/2 z-50 bg-white border-2 border-roam-blue text-roam-blue hover:bg-roam-blue hover:text-white shadow-xl disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                      style={{ pointerEvents: 'auto' }}
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log('Popular Next button clicked!');
+                        nextPopularSlide();
+                      }}
+                      disabled={currentPopularSlide >= popularPages.length - 1}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 z-50 bg-white border-2 border-roam-blue text-roam-blue hover:bg-roam-blue hover:text-white shadow-xl disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                      style={{ pointerEvents: 'auto' }}
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </Button>
+                  </>
+                )}
+                <div className="overflow-hidden">
+                  <div
+                    className="flex transition-transform duration-300 ease-in-out"
+                    style={{
+                      transform: `translateX(-${currentPopularSlide * 100}%)`,
+                    }}
+                  >
+                    {popularPages.map((page, pageIndex) => (
+                      <div
+                        key={`popular-page-${pageIndex}`}
+                        className="flex gap-6 w-full flex-none px-4"
+                      >
+                        {page.map((service) => (
+                          <Card
+                            key={service.id}
+                            className="group hover:shadow-2xl transition-all duration-500 hover:-translate-y-3 border-0 shadow-xl bg-white overflow-hidden rounded-lg flex-shrink-0 w-[calc(50%-12px)]"
+                          >
+                            {/* Hero Image Section */}
+                            <div className="relative h-64 bg-gradient-to-br from-roam-blue/20 via-roam-light-blue/10 to-roam-yellow/5 overflow-hidden">
+                              <img
+                                src={service.image}
+                                alt={service.title}
+                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent"></div>
+
+                              {/* Floating Action Button */}
+                              <div className="absolute top-4 right-4">
+                                <FavoriteButton
+                                  type="service"
+                                  itemId={service.id}
+                                  size="sm"
+                                  variant="ghost"
+                                  className="w-10 h-10 rounded-lg bg-white/95 hover:bg-white shadow-lg border-0 text-gray-600 hover:text-red-500 hover:scale-110 transition-all backdrop-blur-sm"
+                                />
+                              </div>
+
+                              {/* Price Badge - Bottom Left */}
+                              <div className="absolute bottom-4 left-4">
+                                <div className="bg-roam-blue text-white px-4 py-2 rounded-2xl shadow-lg font-bold text-lg">
+                                  Starting at {service.price}
+                                </div>
+                              </div>
+                            </div>
+
+                            <CardContent className="p-6">
+                              {/* Service Title & Category */}
+                              <div className="mb-4">
+                                <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-roam-blue transition-colors">
+                                  {service.title}
+                                </h3>
+                                <span className="inline-block px-3 py-1 text-xs font-medium bg-roam-blue/10 text-roam-blue rounded-full capitalize">
+                                  {service.category}
+                                </span>
+                              </div>
+
+                              {/* Description */}
+                              <p className="text-gray-600 text-sm leading-relaxed line-clamp-2 mb-4">
+                                {service.description}
+                              </p>
+
+                              {/* Stats Row */}
+                              <div className="flex items-center gap-1 text-sm text-gray-600 mb-4">
+                                <Clock className="w-4 h-4 text-roam-blue" />
+                                <span>{service.duration}</span>
+                              </div>
+
+                              {/* Book Button */}
+                              <Button
+                                asChild
+                                className="w-full bg-gradient-to-r from-roam-blue to-roam-light-blue hover:from-roam-blue/90 hover:to-roam-light-blue/90 text-white font-semibold py-3 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]"
+                              >
+                                <Link to={`/book-service/${service.id}`}>
+                                  <Calendar className="w-4 h-4 mr-2" />
+                                  Book Now
+                                </Link>
+                              </Button>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              )}
-            </div>
+
+                {/* Carousel indicators - only show when there are multiple pages */}
+                {popularPages.length > 1 && (
+                  <div className="flex justify-center mt-6 gap-2">
+                    {popularPages.map((_, index) => (
+                      <button
+                        key={index}
+                        onClick={() => setCurrentPopularSlide(index)}
+                        className={`w-3 h-3 rounded-full transition-colors ${
+                          index === currentPopularSlide
+                            ? "bg-roam-blue"
+                            : "bg-gray-300 hover:bg-gray-400"
+                        }`}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
           ) : (
             <div className="text-center py-8">
               <p className="text-gray-500">
@@ -1337,192 +1412,324 @@ export default function Index() {
           </div>
 
           {featuredBusinesses.length > 0 ? (
-            <div className="relative overflow-hidden">
-              {/* Navigation Arrows */}
-              {businessPages.length > 1 && (
-                <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={prevBusinessSlide}
-                    disabled={currentBusinessSlide === 0}
-                    className="absolute left-4 top-1/2 -translate-y-1/2 z-10 bg-white/90 border-roam-blue text-roam-blue hover:bg-roam-blue hover:text-white shadow-lg disabled:opacity-50"
+            <>
+              {/* Mobile View - Show all businesses stacked */}
+              <div className="md:hidden grid grid-cols-1 gap-6 px-4">
+                {featuredBusinesses.map((business) => (
+                  <Card
+                    key={business.id}
+                    className="group hover:shadow-2xl transition-all duration-500 hover:-translate-y-3 border-0 shadow-xl bg-white overflow-hidden rounded-lg w-full"
                   >
-                    <ChevronLeft className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={nextBusinessSlide}
-                    disabled={currentBusinessSlide >= businessPages.length - 1}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 z-10 bg-white/90 border-roam-blue text-roam-blue hover:bg-roam-blue hover:text-white shadow-lg disabled:opacity-50"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </Button>
-                </>
-              )}
-              <div className="overflow-hidden">
-                <div
-                  className="flex transition-transform duration-300 ease-in-out"
-                  style={{
-                    transform: `translateX(-${currentBusinessSlide * 100}%)`,
-                  }}
-                >
-                  {businessPages.map((page, pageIndex) => (
-                    <div
-                      key={`businesses-page-${pageIndex}`}
-                      className="flex gap-6 w-full flex-none px-4"
-                    >
-                      {page.map((business) => (
-                        <Card
-                          key={business.id}
-                          className="group hover:shadow-2xl transition-all duration-500 hover:-translate-y-3 border-0 shadow-xl bg-white overflow-hidden rounded-lg flex-shrink-0 w-full md:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)]"
-                        >
-                          <CardContent className="p-0">
-                            {/* Hero Cover Section */}
-                            <div
-                              className="relative h-64 bg-gradient-to-br from-roam-blue/20 via-roam-light-blue/10 to-roam-yellow/5"
-                              style={{
-                                backgroundImage: business.cover_image_url
-                                  ? `url(${business.cover_image_url})`
-                                  : undefined,
-                                backgroundSize: "cover",
-                                backgroundPosition: "center",
-                                backgroundRepeat: "no-repeat",
-                              }}
+                    <CardContent className="p-0">
+                      {/* Hero Cover Section */}
+                      <div
+                        className="relative h-64 bg-gradient-to-br from-roam-blue/20 via-roam-light-blue/10 to-roam-yellow/5"
+                        style={{
+                          backgroundImage: business.cover_image_url
+                            ? `url(${business.cover_image_url})`
+                            : undefined,
+                          backgroundSize: "cover",
+                          backgroundPosition: "center",
+                          backgroundRepeat: "no-repeat",
+                        }}
+                      >
+                        {/* Cover overlay */}
+                        {business.cover_image_url && (
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent"></div>
+                        )}
+
+                        {/* Favorite Icon - Top Right */}
+                        <div className="absolute top-4 right-4 z-20">
+                          <FavoriteButton
+                            type="business"
+                            itemId={business.id}
+                            size="sm"
+                            variant="ghost"
+                            className="w-10 h-10 rounded-lg bg-white/95 hover:bg-white shadow-lg border-0 text-gray-600 hover:text-red-500 hover:scale-110 transition-all backdrop-blur-sm"
+                          />
+                        </div>
+
+                        {/* Share Icon - Bottom Right */}
+                        <div className="absolute -bottom-4 right-6 z-20">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="w-10 h-10 rounded-lg bg-white/95 hover:bg-white shadow-lg border-0 text-gray-600 hover:text-roam-blue hover:scale-110 transition-all backdrop-blur-sm"
+                            onClick={() => handleBusinessShare(business)}
+                          >
+                            <Share2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+
+                        {/* Business Logo - Overlapping */}
+                        <div className="absolute -bottom-8 left-6 z-20">
+                          <div className="w-16 h-16 bg-white rounded-2xl shadow-xl flex items-center justify-center overflow-hidden border-4 border-white group-hover:scale-110 transition-transform duration-300">
+                            {business.image &&
+                            business.image !==
+                              "/api/placeholder/80/80" ? (
+                              <img
+                                src={business.image}
+                                alt={business.name}
+                                className="w-full h-full object-cover rounded-xl"
+                              />
+                            ) : (
+                              <Building className="w-8 h-8 text-roam-blue" />
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Content Section */}
+                      <div className="px-6 pt-12 pb-6 space-y-6">
+                        {/* Business Name */}
+                        <div>
+                          <h3 className="font-bold text-xl text-gray-900 group-hover:text-roam-blue transition-colors leading-tight mb-1">
+                            {business.name}
+                          </h3>
+                        </div>
+
+                        {/* Specialties */}
+                        <div className="space-y-3">
+                          <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                            Specialties
+                          </h4>
+                          <div className="flex flex-wrap gap-2">
+                            {business.specialties
+                              .slice(0, 4)
+                              .map((specialty) => (
+                                <span
+                                  key={specialty}
+                                  className="px-3 py-1.5 text-xs font-medium bg-gradient-to-r from-roam-blue/8 to-roam-light-blue/8 text-roam-blue rounded-lg border border-roam-blue/15 hover:border-roam-blue/25 transition-colors"
+                                >
+                                  {formatSpecialty(specialty)}
+                                </span>
+                              ))}
+                            {business.specialties.length > 4 && (
+                              <span className="px-3 py-1.5 text-xs font-medium bg-gray-50 text-gray-600 rounded-lg border border-gray-200">
+                                +{business.specialties.length - 4}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex gap-3 pt-2">
+                          <Button
+                            asChild
+                            className="flex-1 bg-gradient-to-r from-roam-blue to-roam-light-blue hover:from-roam-blue/90 hover:to-roam-light-blue/90 text-white font-semibold py-3 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]"
+                          >
+                            <Link
+                              to={`/business/${business.id}?tab=services&book=true`}
                             >
-                              {/* Cover overlay */}
-                              {business.cover_image_url && (
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent"></div>
-                              )}
-
-                              {/* Favorite Icon - Top Right */}
-                              <div className="absolute top-4 right-4 z-20">
-                                <FavoriteButton
-                                  type="business"
-                                  itemId={business.id}
-                                  size="sm"
-                                  variant="ghost"
-                                  className="w-10 h-10 rounded-lg bg-white/95 hover:bg-white shadow-lg border-0 text-gray-600 hover:text-red-500 hover:scale-110 transition-all backdrop-blur-sm"
-                                />
-                              </div>
-
-                              {/* Share Icon - Bottom Right */}
-                              <div className="absolute -bottom-4 right-6 z-20">
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="w-10 h-10 rounded-lg bg-white/95 hover:bg-white shadow-lg border-0 text-gray-600 hover:text-roam-blue hover:scale-110 transition-all backdrop-blur-sm"
-                                  onClick={() => handleBusinessShare(business)}
-                                >
-                                  <Share2 className="w-4 h-4" />
-                                </Button>
-                              </div>
-
-                              {/* Business Logo - Overlapping */}
-                              <div className="absolute -bottom-8 left-6 z-20">
-                                <div className="w-16 h-16 bg-white rounded-2xl shadow-xl flex items-center justify-center overflow-hidden border-4 border-white group-hover:scale-110 transition-transform duration-300">
-                                  {business.image &&
-                                  business.image !==
-                                    "/api/placeholder/80/80" ? (
-                                    <img
-                                      src={business.image}
-                                      alt={business.name}
-                                      className="w-full h-full object-cover rounded-xl"
-                                    />
-                                  ) : (
-                                    <Building className="w-8 h-8 text-roam-blue" />
-                                  )}
-                                </div>
-                              </div>
-
-                            </div>
-
-                            {/* Content Section */}
-                            <div className="px-6 pt-12 pb-6 space-y-6">
-                              {/* Business Name */}
-                              <div>
-                                <h3 className="font-bold text-xl text-gray-900 group-hover:text-roam-blue transition-colors leading-tight mb-1">
-                                  {business.name}
-                                </h3>
-                              </div>
-
-                              {/* Specialties */}
-                              <div className="space-y-3">
-                                <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-                                  Specialties
-                                </h4>
-                                <div className="flex flex-wrap gap-2">
-                                  {business.specialties
-                                    .slice(0, 4)
-                                    .map((specialty, index) => {
-                                      return (
-                                        <span
-                                          key={specialty}
-                                          className="px-3 py-1.5 text-xs font-medium bg-gradient-to-r from-roam-blue/8 to-roam-light-blue/8 text-roam-blue rounded-lg border border-roam-blue/15 hover:border-roam-blue/25 transition-colors"
-                                        >
-                                          {formatSpecialty(specialty)}
-                                        </span>
-                                      );
-                                    })}
-                                  {business.specialties.length > 4 && (
-                                    <span className="px-3 py-1.5 text-xs font-medium bg-gray-50 text-gray-600 rounded-lg border border-gray-200">
-                                      +{business.specialties.length - 4}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-
-                              {/* Action Buttons */}
-                              <div className="flex gap-3 pt-2">
-                                <Button
-                                  asChild
-                                  className="flex-1 bg-gradient-to-r from-roam-blue to-roam-light-blue hover:from-roam-blue/90 hover:to-roam-light-blue/90 text-white font-semibold py-3 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]"
-                                >
-                                  <Link
-                                    to={`/business/${business.id}?tab=services&book=true`}
-                                  >
-                                    <Calendar className="w-4 h-4 mr-2" />
-                                    Book
-                                  </Link>
-                                </Button>
-                                <Button
-                                  asChild
-                                  variant={undefined}
-                                  className="flex-1 border-2 border-roam-blue/20 bg-background !text-roam-blue hover:!bg-roam-blue hover:!text-white font-semibold py-3 rounded-2xl transition-all duration-300 [&>*]:!text-inherit [&:hover>*]:!text-white"
-                                >
-                                  <Link to={`/business/${business.id}`} className="flex items-center !text-inherit hover:!text-white">
-                                    <BookOpen className="w-4 h-4 mr-2" />
-                                    <span className="!text-inherit">View</span>
-                                  </Link>
-                                </Button>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  ))}
-                </div>
+                              <Calendar className="w-4 h-4 mr-2" />
+                              Book
+                            </Link>
+                          </Button>
+                          <Button
+                            asChild
+                            variant={undefined}
+                            className="flex-1 border-2 border-roam-blue/20 bg-background !text-roam-blue hover:!bg-roam-blue hover:!text-white font-semibold py-3 rounded-2xl transition-all duration-300 [&>*]:!text-inherit [&:hover>*]:!text-white"
+                          >
+                            <Link to={`/business/${business.id}`} className="flex items-center !text-inherit hover:!text-white">
+                              <BookOpen className="w-4 h-4 mr-2" />
+                              <span className="!text-inherit">View</span>
+                            </Link>
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
 
-              {/* Carousel indicators - only show when there are multiple pages */}
-              {businessPages.length > 1 && (
-                <div className="flex justify-center mt-6 gap-2">
-                  {businessPages.map((_, index) => (
-                    <button
-                      key={index}
-                      onClick={() => setCurrentBusinessSlide(index)}
-                      className={`w-3 h-3 rounded-full transition-colors ${
-                        index === currentBusinessSlide
-                          ? "bg-roam-blue"
-                          : "bg-gray-300 hover:bg-gray-400"
-                      }`}
-                    />
-                  ))}
+              {/* Desktop View - Carousel */}
+              <div className="hidden md:block relative overflow-hidden">
+                {/* Navigation Arrows */}
+                {businessPages.length > 1 && (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={prevBusinessSlide}
+                      disabled={currentBusinessSlide === 0}
+                      className="absolute left-4 top-1/2 -translate-y-1/2 z-10 bg-white/90 border-roam-blue text-roam-blue hover:bg-roam-blue hover:text-white shadow-lg disabled:opacity-50"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={nextBusinessSlide}
+                      disabled={currentBusinessSlide >= businessPages.length - 1}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 z-10 bg-white/90 border-roam-blue text-roam-blue hover:bg-roam-blue hover:text-white shadow-lg disabled:opacity-50"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </Button>
+                  </>
+                )}
+                <div className="overflow-hidden">
+                  <div
+                    className="flex transition-transform duration-300 ease-in-out"
+                    style={{
+                      transform: `translateX(-${currentBusinessSlide * 100}%)`,
+                    }}
+                  >
+                    {businessPages.map((page, pageIndex) => (
+                      <div
+                        key={`businesses-page-${pageIndex}`}
+                        className="flex gap-6 w-full flex-none px-4"
+                      >
+                        {page.map((business) => (
+                          <Card
+                            key={business.id}
+                            className="group hover:shadow-2xl transition-all duration-500 hover:-translate-y-3 border-0 shadow-xl bg-white overflow-hidden rounded-lg flex-shrink-0 w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)]"
+                          >
+                            <CardContent className="p-0">
+                              {/* Hero Cover Section */}
+                              <div
+                                className="relative h-64 bg-gradient-to-br from-roam-blue/20 via-roam-light-blue/10 to-roam-yellow/5"
+                                style={{
+                                  backgroundImage: business.cover_image_url
+                                    ? `url(${business.cover_image_url})`
+                                    : undefined,
+                                  backgroundSize: "cover",
+                                  backgroundPosition: "center",
+                                  backgroundRepeat: "no-repeat",
+                                }}
+                              >
+                                {/* Cover overlay */}
+                                {business.cover_image_url && (
+                                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent"></div>
+                                )}
+
+                                {/* Favorite Icon - Top Right */}
+                                <div className="absolute top-4 right-4 z-20">
+                                  <FavoriteButton
+                                    type="business"
+                                    itemId={business.id}
+                                    size="sm"
+                                    variant="ghost"
+                                    className="w-10 h-10 rounded-lg bg-white/95 hover:bg-white shadow-lg border-0 text-gray-600 hover:text-red-500 hover:scale-110 transition-all backdrop-blur-sm"
+                                  />
+                                </div>
+
+                                {/* Share Icon - Bottom Right */}
+                                <div className="absolute -bottom-4 right-6 z-20">
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="w-10 h-10 rounded-lg bg-white/95 hover:bg-white shadow-lg border-0 text-gray-600 hover:text-roam-blue hover:scale-110 transition-all backdrop-blur-sm"
+                                    onClick={() => handleBusinessShare(business)}
+                                  >
+                                    <Share2 className="w-4 h-4" />
+                                  </Button>
+                                </div>
+
+                                {/* Business Logo - Overlapping */}
+                                <div className="absolute -bottom-8 left-6 z-20">
+                                  <div className="w-16 h-16 bg-white rounded-2xl shadow-xl flex items-center justify-center overflow-hidden border-4 border-white group-hover:scale-110 transition-transform duration-300">
+                                    {business.image &&
+                                    business.image !==
+                                      "/api/placeholder/80/80" ? (
+                                      <img
+                                        src={business.image}
+                                        alt={business.name}
+                                        className="w-full h-full object-cover rounded-xl"
+                                      />
+                                    ) : (
+                                      <Building className="w-8 h-8 text-roam-blue" />
+                                    )}
+                                  </div>
+                                </div>
+
+                              </div>
+
+                              {/* Content Section */}
+                              <div className="px-6 pt-12 pb-6 space-y-6">
+                                {/* Business Name */}
+                                <div>
+                                  <h3 className="font-bold text-xl text-gray-900 group-hover:text-roam-blue transition-colors leading-tight mb-1">
+                                    {business.name}
+                                  </h3>
+                                </div>
+
+                                {/* Specialties */}
+                                <div className="space-y-3">
+                                  <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                    Specialties
+                                  </h4>
+                                  <div className="flex flex-wrap gap-2">
+                                    {business.specialties
+                                      .slice(0, 4)
+                                      .map((specialty, index) => {
+                                        return (
+                                          <span
+                                            key={specialty}
+                                            className="px-3 py-1.5 text-xs font-medium bg-gradient-to-r from-roam-blue/8 to-roam-light-blue/8 text-roam-blue rounded-lg border border-roam-blue/15 hover:border-roam-blue/25 transition-colors"
+                                          >
+                                            {formatSpecialty(specialty)}
+                                          </span>
+                                        );
+                                      })}
+                                    {business.specialties.length > 4 && (
+                                      <span className="px-3 py-1.5 text-xs font-medium bg-gray-50 text-gray-600 rounded-lg border border-gray-200">
+                                        +{business.specialties.length - 4}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Action Buttons */}
+                                <div className="flex gap-3 pt-2">
+                                  <Button
+                                    asChild
+                                    className="flex-1 bg-gradient-to-r from-roam-blue to-roam-light-blue hover:from-roam-blue/90 hover:to-roam-light-blue/90 text-white font-semibold py-3 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]"
+                                  >
+                                    <Link
+                                      to={`/business/${business.id}?tab=services&book=true`}
+                                    >
+                                      <Calendar className="w-4 h-4 mr-2" />
+                                      Book
+                                    </Link>
+                                  </Button>
+                                  <Button
+                                    asChild
+                                    variant={undefined}
+                                    className="flex-1 border-2 border-roam-blue/20 bg-background !text-roam-blue hover:!bg-roam-blue hover:!text-white font-semibold py-3 rounded-2xl transition-all duration-300 [&>*]:!text-inherit [&:hover>*]:!text-white"
+                                  >
+                                    <Link to={`/business/${business.id}`} className="flex items-center !text-inherit hover:!text-white">
+                                      <BookOpen className="w-4 h-4 mr-2" />
+                                      <span className="!text-inherit">View</span>
+                                    </Link>
+                                  </Button>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              )}
-            </div>
+
+                {/* Carousel indicators - only show when there are multiple pages */}
+                {businessPages.length > 1 && (
+                  <div className="flex justify-center mt-6 gap-2">
+                    {businessPages.map((_, index) => (
+                      <button
+                        key={index}
+                        onClick={() => setCurrentBusinessSlide(index)}
+                        className={`w-3 h-3 rounded-full transition-colors ${
+                          index === currentBusinessSlide
+                            ? "bg-roam-blue"
+                            : "bg-gray-300 hover:bg-gray-400"
+                        }`}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
           ) : (
             <Card className="p-12 text-center">
               <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">

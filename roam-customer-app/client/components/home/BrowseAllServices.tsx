@@ -3,6 +3,13 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   Clock,
   Calendar,
   Sparkles,
@@ -16,6 +23,7 @@ import {
   Building,
   Loader2,
   ChevronRight,
+  ChevronDown,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { FavoriteButton } from '@/components/FavoriteButton';
@@ -300,60 +308,141 @@ export function BrowseAllServices() {
         </div>
 
         {/* Category Tabs */}
-        <div className="mb-8 overflow-x-auto scrollbar-hide">
-          <div className="flex justify-center gap-3 pb-2 px-1 min-w-max">
-            {/* Featured Services - First */}
-            <button
-              onClick={() => {
-                setSelectedCategory('featured');
-              }}
-              className={cn(
-                'px-6 py-3 rounded-lg font-medium transition-all whitespace-nowrap flex items-center gap-2',
-                selectedCategory === 'featured'
-                  ? 'bg-gradient-to-r from-roam-blue to-roam-light-blue text-white shadow-lg scale-105'
-                  : 'bg-white text-gray-700 hover:bg-gray-100 shadow'
-              )}
-            >
-              <Sparkles className="w-4 h-4" />
-              Featured Services
-            </button>
-            
-            {/* All Services - Second */}
-            <button
-              onClick={() => {
-                setSelectedCategory('all');
-              }}
-              className={cn(
-                'px-6 py-3 rounded-lg font-medium transition-all whitespace-nowrap',
-                selectedCategory === 'all'
-                  ? 'bg-roam-blue text-white shadow-lg scale-105'
-                  : 'bg-white text-gray-700 hover:bg-gray-100 shadow'
-              )}
-            >
-              All Services
-            </button>
-            
-            {/* Priority Categories: Beauty, Fitness, Therapy, Healthcare */}
-            {displayCategories.map((category) => {
-              const Icon = category.icon;
-              return (
-                <button
-                  key={category.id}
-                  onClick={() => {
-                    setSelectedCategory(category.name);
-                  }}
-                  className={cn(
-                    'px-6 py-3 rounded-lg font-medium transition-all whitespace-nowrap flex items-center gap-2',
-                    selectedCategory === category.name
-                      ? `bg-gradient-to-r ${category.color} text-white shadow-lg scale-105`
-                      : 'bg-white text-gray-700 hover:bg-gray-100 shadow'
-                  )}
-                >
-                  <Icon className="w-4 h-4" />
-                  {toTitleCase(category.name)}
-                </button>
-              );
-            })}
+        <div className="mb-8">
+          {/* Desktop View - All buttons in a row */}
+          <div className="hidden md:block overflow-x-auto scrollbar-hide">
+            <div className="flex justify-center gap-3 pb-2 px-1 min-w-max">
+              {/* Featured Services - First */}
+              <button
+                onClick={() => {
+                  setSelectedCategory('featured');
+                }}
+                className={cn(
+                  'px-6 py-3 rounded-lg font-medium transition-all whitespace-nowrap flex items-center gap-2',
+                  selectedCategory === 'featured'
+                    ? 'bg-gradient-to-r from-roam-blue to-roam-light-blue text-white shadow-lg scale-105'
+                    : 'bg-white text-gray-700 hover:bg-gray-100 shadow'
+                )}
+              >
+                <Sparkles className="w-4 h-4" />
+                Featured Services
+              </button>
+              
+              {/* All Services - Second */}
+              <button
+                onClick={() => {
+                  setSelectedCategory('all');
+                }}
+                className={cn(
+                  'px-6 py-3 rounded-lg font-medium transition-all whitespace-nowrap',
+                  selectedCategory === 'all'
+                    ? 'bg-roam-blue text-white shadow-lg scale-105'
+                    : 'bg-white text-gray-700 hover:bg-gray-100 shadow'
+                )}
+              >
+                All Services
+              </button>
+              
+              {/* Priority Categories: Beauty, Fitness, Therapy, Healthcare */}
+              {displayCategories.map((category) => {
+                const Icon = category.icon;
+                return (
+                  <button
+                    key={category.id}
+                    onClick={() => {
+                      setSelectedCategory(category.name);
+                    }}
+                    className={cn(
+                      'px-6 py-3 rounded-lg font-medium transition-all whitespace-nowrap flex items-center gap-2',
+                      selectedCategory === category.name
+                        ? `bg-gradient-to-r ${category.color} text-white shadow-lg scale-105`
+                        : 'bg-white text-gray-700 hover:bg-gray-100 shadow'
+                    )}
+                  >
+                    <Icon className="w-4 h-4" />
+                    {toTitleCase(category.name)}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Mobile View - Featured/All Services buttons + Dropdown */}
+          <div className="md:hidden space-y-3">
+            {/* Featured Services and All Services buttons */}
+            <div className="flex justify-center gap-3">
+              <button
+                onClick={() => {
+                  setSelectedCategory('featured');
+                }}
+                className={cn(
+                  'px-6 py-3 rounded-lg font-medium transition-all whitespace-nowrap flex items-center gap-2 flex-1 justify-center',
+                  selectedCategory === 'featured'
+                    ? 'bg-gradient-to-r from-roam-blue to-roam-light-blue text-white shadow-lg scale-105'
+                    : 'bg-white text-gray-700 hover:bg-gray-100 shadow'
+                )}
+              >
+                <Sparkles className="w-4 h-4" />
+                Featured Services
+              </button>
+              
+              <button
+                onClick={() => {
+                  setSelectedCategory('all');
+                }}
+                className={cn(
+                  'px-6 py-3 rounded-lg font-medium transition-all whitespace-nowrap flex-1 justify-center',
+                  selectedCategory === 'all'
+                    ? 'bg-roam-blue text-white shadow-lg scale-105'
+                    : 'bg-white text-gray-700 hover:bg-gray-100 shadow'
+                )}
+              >
+                All Services
+              </button>
+            </div>
+
+            {/* Category Dropdown */}
+            <div className="w-full">
+              <Select
+                value={selectedCategory !== 'featured' && selectedCategory !== 'all' ? selectedCategory : undefined}
+                onValueChange={(value) => {
+                  setSelectedCategory(value);
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select a category">
+                    {selectedCategory !== 'featured' && selectedCategory !== 'all' ? (
+                      (() => {
+                        const category = displayCategories.find(c => c.name === selectedCategory);
+                        if (category) {
+                          const Icon = category.icon;
+                          return (
+                            <div className="flex items-center gap-2">
+                              <Icon className="w-4 h-4" />
+                              <span>{toTitleCase(selectedCategory)}</span>
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()
+                    ) : null}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {displayCategories.map((category) => {
+                    const Icon = category.icon;
+                    return (
+                      <SelectItem key={category.id} value={category.name}>
+                        <div className="flex items-center gap-2">
+                          <Icon className="w-4 h-4" />
+                          <span>{toTitleCase(category.name)}</span>
+                        </div>
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
 

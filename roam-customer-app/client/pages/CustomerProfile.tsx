@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { User, Edit, Save, X, Camera, Mail, Phone, Calendar, Loader2, ArrowLeft, Bell } from 'lucide-react';
+import { User, Save, Camera, Mail, Phone, Calendar, Loader2, ArrowLeft, Bell } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
@@ -17,9 +17,9 @@ import { NotificationPreferences } from '@/components/NotificationPreferences';
 export default function CustomerProfile() {
   const { customer } = useAuth();
   const { toast } = useToast();
-  const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
   
   type ProfileData = {
     first_name: string;
@@ -74,6 +74,7 @@ export default function CustomerProfile() {
 
       setProfileData(profile);
       setOriginalData(profile);
+      setHasChanges(false);
     } catch (error) {
       console.error('Error loading profile:', error);
       toast({
@@ -108,7 +109,7 @@ export default function CustomerProfile() {
       if (error) throw error;
 
       setOriginalData(profileData);
-      setIsEditing(false);
+      setHasChanges(false);
 
       toast({
         title: 'Success',
@@ -126,10 +127,24 @@ export default function CustomerProfile() {
     }
   };
 
-  const handleCancel = () => {
-    setProfileData(originalData);
-    setIsEditing(false);
-  };
+  // Detect changes by comparing current data with original
+  useEffect(() => {
+    if (!profileData || !originalData) {
+      setHasChanges(false);
+      return;
+    }
+
+    const hasChangesDetected = 
+      profileData.first_name !== originalData.first_name ||
+      profileData.last_name !== originalData.last_name ||
+      profileData.email !== originalData.email ||
+      profileData.phone !== originalData.phone ||
+      profileData.date_of_birth !== originalData.date_of_birth ||
+      profileData.bio !== originalData.bio ||
+      profileData.image_url !== originalData.image_url;
+
+    setHasChanges(hasChangesDetected);
+  }, [profileData, originalData]);
 
   const handleImageUpload = async (file: File) => {
     if (!customer) return;
@@ -160,8 +175,11 @@ export default function CustomerProfile() {
 
       if (updateError) throw updateError;
 
-      setProfileData({ ...profileData, image_url: publicUrl });
-      setOriginalData({ ...originalData, image_url: publicUrl });
+      const updatedProfile = { ...profileData, image_url: publicUrl };
+      const updatedOriginal = { ...originalData, image_url: publicUrl };
+      setProfileData(updatedProfile);
+      setOriginalData(updatedOriginal);
+      setHasChanges(false);
 
       toast({
         title: 'Success',
@@ -223,43 +241,20 @@ export default function CustomerProfile() {
 
         {/* Tabs */}
         <Tabs defaultValue="profile" className="w-full">
-          <TabsList className="grid w-full max-w-md grid-cols-2 mb-6">
-            <TabsTrigger value="profile" className="flex items-center gap-2">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="profile" className="flex items-center space-x-2">
               <User className="w-4 h-4" />
-              Profile
+              <span>Profile Info</span>
             </TabsTrigger>
-            <TabsTrigger value="notifications" className="flex items-center gap-2">
+            <TabsTrigger value="notifications" className="flex items-center space-x-2">
               <Bell className="w-4 h-4" />
-              Notification Settings
+              <span>Notifications</span>
             </TabsTrigger>
           </TabsList>
 
           {/* Profile Tab */}
-          <TabsContent value="profile" className="space-y-6">
-            <div className="flex justify-end mb-4">
-              {!isEditing ? (
-                <Button onClick={() => setIsEditing(true)}>
-                  <Edit className="w-4 h-4 mr-2" />
-                  Edit Profile
-                </Button>
-              ) : (
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={handleCancel} disabled={loading}>
-                    <X className="w-4 h-4 mr-2" />
-                    Cancel
-                  </Button>
-                  <Button onClick={handleSave} disabled={loading}>
-                    {loading ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    ) : (
-                      <Save className="w-4 h-4 mr-2" />
-                    )}
-                    Save Changes
-                  </Button>
-                </div>
-              )}
-            </div>
-
+          <TabsContent value="profile" className="mt-6">
+            <div className="space-y-6">
             {/* Profile Card */}
             <Card>
           <CardHeader>
@@ -275,19 +270,17 @@ export default function CustomerProfile() {
                     {getInitials()}
                   </AvatarFallback>
                 </Avatar>
-                {isEditing && (
-                  <button
-                    onClick={() => document.getElementById('avatar-upload')?.click()}
-                    className="absolute bottom-0 right-0 bg-roam-blue text-white rounded-full p-2 shadow-lg hover:bg-roam-blue/90"
-                    disabled={uploading}
-                  >
-                    {uploading ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Camera className="w-4 h-4" />
-                    )}
-                  </button>
-                )}
+                <button
+                  onClick={() => document.getElementById('avatar-upload')?.click()}
+                  className="absolute bottom-0 right-0 bg-roam-blue text-white rounded-full p-2 shadow-lg hover:bg-roam-blue/90"
+                  disabled={uploading}
+                >
+                  {uploading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Camera className="w-4 h-4" />
+                  )}
+                </button>
                 <input
                   id="avatar-upload"
                   type="file"
@@ -315,7 +308,6 @@ export default function CustomerProfile() {
                   id="first_name"
                   value={profileData.first_name}
                   onChange={(e) => setProfileData({ ...profileData, first_name: e.target.value })}
-                  disabled={!isEditing}
                   required
                 />
               </div>
@@ -325,7 +317,6 @@ export default function CustomerProfile() {
                   id="last_name"
                   value={profileData.last_name}
                   onChange={(e) => setProfileData({ ...profileData, last_name: e.target.value })}
-                  disabled={!isEditing}
                   required
                 />
               </div>
@@ -342,7 +333,6 @@ export default function CustomerProfile() {
                     type="email"
                     value={profileData.email}
                     onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
-                    disabled={!isEditing}
                     required
                   />
                 </div>
@@ -356,7 +346,6 @@ export default function CustomerProfile() {
                     type="tel"
                     value={profileData.phone}
                     onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
-                    disabled={!isEditing}
                     placeholder="(555) 123-4567"
                   />
                 </div>
@@ -373,7 +362,6 @@ export default function CustomerProfile() {
                   type="date"
                   value={profileData.date_of_birth}
                   onChange={(e) => setProfileData({ ...profileData, date_of_birth: e.target.value })}
-                  disabled={!isEditing}
                 />
               </div>
             </div>
@@ -385,17 +373,37 @@ export default function CustomerProfile() {
                 id="bio"
                 value={profileData.bio}
                 onChange={(e) => setProfileData({ ...profileData, bio: e.target.value })}
-                disabled={!isEditing}
                 placeholder="Tell us a little about yourself..."
                 rows={4}
               />
             </div>
+
+            {/* Save Button */}
+            <Button 
+              onClick={handleSave} 
+              disabled={loading || !hasChanges}
+              className="w-full"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4 mr-2" />
+                  Save Changes
+                </>
+              )}
+            </Button>
           </CardContent>
         </Card>
+            </div>
           </TabsContent>
 
           {/* Notification Settings Tab */}
-          <TabsContent value="notifications" className="space-y-6">
+          <TabsContent value="notifications" className="mt-6">
+            <div className="space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle>Notification Preferences</CardTitle>
@@ -404,6 +412,7 @@ export default function CustomerProfile() {
                 <NotificationPreferences />
               </CardContent>
             </Card>
+            </div>
           </TabsContent>
         </Tabs>
       </div>
