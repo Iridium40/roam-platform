@@ -1,8 +1,5 @@
 import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import { Save, X, Edit } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 
@@ -29,15 +26,13 @@ export function BusinessSettingsTab({ providerData, business, onBusinessUpdate }
     setBusinessData,
     
     // UI state
-    isEditing,
-    setIsEditing,
+    hasChanges,
     loading,
     logoUploading,
     coverUploading,
     
     // Actions
     saveBusinessSettings,
-    cancelEditing,
     handleLogoUpload,
     handleCoverUpload,
   } = useBusinessSettings(business);
@@ -47,9 +42,6 @@ export function BusinessSettingsTab({ providerData, business, onBusinessUpdate }
   const [locations, setLocations] = React.useState([]);
   const [documentsLoading, setDocumentsLoading] = React.useState(true);
   const [locationsLoading, setLocationsLoading] = React.useState(true);
-  
-  // Track active tab
-  const [activeTab, setActiveTab] = React.useState("basic-info");
 
   // Load business documents and locations on mount
   React.useEffect(() => {
@@ -359,72 +351,11 @@ export function BusinessSettingsTab({ providerData, business, onBusinessUpdate }
     }
   };
 
-  const hasUnsavedChanges = isEditing;
-  
-  // Tabs that support editing (basic-info and hours)
-  const editableTabs = ['basic-info', 'hours'];
-  const isEditableTab = editableTabs.includes(activeTab);
-  
-  // Only show save/cancel buttons if on an editable tab
-  const showEditControls = isEditableTab && hasUnsavedChanges;
-
   return (
     <div className="space-y-6">
-      {/* Header with Edit or Save/Cancel actions - only for editable tabs */}
-      {showEditControls ? (
-        <div className="flex items-center justify-between p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <div className="flex items-center gap-2">
-            <Badge variant="secondary">Unsaved Changes</Badge>
-            <span className="text-sm text-muted-foreground">
-              You have unsaved changes to your business settings.
-            </span>
-          </div>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={cancelEditing}
-              disabled={loading}
-            >
-              <X className="w-4 h-4 mr-1" />
-              Cancel
-            </Button>
-            <Button
-              size="sm"
-              onClick={saveBusinessSettings}
-              disabled={loading}
-            >
-              <Save className="w-4 h-4 mr-1" />
-              {loading ? "Saving..." : "Save Changes"}
-            </Button>
-          </div>
-        </div>
-      ) : isEditableTab ? (
-        <div className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg">
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900">Business Settings</h2>
-            <p className="text-sm text-gray-600">Manage your business information and preferences</p>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setIsEditing(true)}
-          >
-            <Edit className="w-4 h-4 mr-1" />
-            Edit Settings
-          </Button>
-        </div>
-      ) : (
-        <div className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg">
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900">Business Settings</h2>
-            <p className="text-sm text-gray-600">Manage your business information and preferences</p>
-          </div>
-        </div>
-      )}
 
       {/* Main content in tabs */}
-      <Tabs defaultValue="basic-info" className="w-full" onValueChange={setActiveTab}>
+      <Tabs defaultValue="basic-info" className="w-full">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="basic-info">Basic Info</TabsTrigger>
           <TabsTrigger value="hours">Hours</TabsTrigger>
@@ -436,10 +367,9 @@ export function BusinessSettingsTab({ providerData, business, onBusinessUpdate }
           <BasicInfoSection
             businessData={businessData}
             setBusinessData={setBusinessData}
-            isEditing={isEditing}
+            hasChanges={hasChanges}
+            loading={loading}
             onSave={saveBusinessSettings}
-            onCancel={cancelEditing}
-            onEdit={() => setIsEditing(true)}
             logoUploading={logoUploading}
             coverUploading={coverUploading}
             onLogoUpload={handleLogoUpload}
@@ -451,10 +381,9 @@ export function BusinessSettingsTab({ providerData, business, onBusinessUpdate }
           <BusinessHoursSection
             businessData={businessData}
             setBusinessData={setBusinessData}
-            isEditing={isEditing}
+            hasChanges={hasChanges}
+            loading={loading}
             onSave={saveBusinessSettings}
-            onCancel={cancelEditing}
-            onEdit={() => setIsEditing(true)}
           />
         </TabsContent>
 

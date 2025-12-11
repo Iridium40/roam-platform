@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,15 +15,16 @@ import {
   Building,
   Camera,
   Trash2,
+  Save,
+  Loader2,
 } from "lucide-react";
 
 interface BasicInfoSectionProps {
   businessData: any;
   setBusinessData: (data: any) => void;
-  isEditing: boolean;
+  hasChanges: boolean;
+  loading: boolean;
   onSave: () => void;
-  onCancel: () => void;
-  onEdit: () => void;
   logoUploading: boolean;
   coverUploading: boolean;
   onLogoUpload: (file: File) => void;
@@ -33,10 +34,9 @@ interface BasicInfoSectionProps {
 export default function BasicInfoSection({
   businessData,
   setBusinessData,
-  isEditing,
+  hasChanges,
+  loading,
   onSave,
-  onCancel,
-  onEdit,
   logoUploading,
   coverUploading,
   onLogoUpload,
@@ -57,7 +57,7 @@ export default function BasicInfoSection({
             <Label>Cover Photo</Label>
             <div 
               className="relative h-48 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
-              onClick={() => isEditing && document.getElementById('cover-upload')?.click()}
+              onClick={() => document.getElementById('cover-upload')?.click()}
             >
               {businessData.cover_image_url ? (
                 <img
@@ -73,11 +73,9 @@ export default function BasicInfoSection({
                   </div>
                 </div>
               )}
-              {isEditing && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-40 opacity-0 hover:opacity-100 transition-opacity">
-                  <Camera className="w-8 h-8 text-white" />
-                </div>
-              )}
+              <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-40 opacity-0 hover:opacity-100 transition-opacity">
+                <Camera className="w-8 h-8 text-white" />
+              </div>
             </div>
             <input
               id="cover-upload"
@@ -88,7 +86,7 @@ export default function BasicInfoSection({
                 const file = e.target.files?.[0];
                 if (file) onCoverUpload(file);
               }}
-              disabled={coverUploading || !isEditing}
+              disabled={coverUploading}
             />
           </div>
 
@@ -112,7 +110,7 @@ export default function BasicInfoSection({
                   <Button
                     variant="outline"
                     size="sm"
-                    disabled={logoUploading || !isEditing}
+                    disabled={logoUploading}
                     onClick={() => document.getElementById('logo-upload')?.click()}
                   >
                     <Camera className="w-4 h-4 mr-1" />
@@ -122,7 +120,6 @@ export default function BasicInfoSection({
                     <Button
                       variant="outline"
                       size="sm"
-                      disabled={!isEditing}
                       onClick={() => setBusinessData({...businessData, logo_url: ""})}
                     >
                       <Trash2 className="w-4 h-4 mr-1" />
@@ -152,7 +149,6 @@ export default function BasicInfoSection({
                     id="business_name"
                     value={businessData.business_name || ""}
                     onChange={(e) => setBusinessData({...businessData, business_name: e.target.value})}
-                    disabled={!isEditing}
                     placeholder="Enter business name"
                   />
                 </div>
@@ -161,7 +157,6 @@ export default function BasicInfoSection({
                   <Select
                     value={businessData.business_type || ""}
                     onValueChange={(value) => setBusinessData({...businessData, business_type: value})}
-                    disabled={!isEditing}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select business type" />
@@ -185,7 +180,6 @@ export default function BasicInfoSection({
                     type="email"
                     value={businessData.contact_email || ""}
                     onChange={(e) => setBusinessData({...businessData, contact_email: e.target.value})}
-                    disabled={!isEditing}
                     placeholder="contact@business.com"
                   />
                 </div>
@@ -195,7 +189,6 @@ export default function BasicInfoSection({
                     id="phone"
                     value={businessData.phone || ""}
                     onChange={(e) => setBusinessData({...businessData, phone: e.target.value})}
-                    disabled={!isEditing}
                     placeholder="(555) 123-4567"
                   />
                 </div>
@@ -208,7 +201,6 @@ export default function BasicInfoSection({
                   type="url"
                   value={businessData.website_url || ""}
                   onChange={(e) => setBusinessData({...businessData, website_url: e.target.value})}
-                  disabled={!isEditing}
                   placeholder="https://yourbusiness.com"
                 />
               </div>
@@ -222,11 +214,29 @@ export default function BasicInfoSection({
               id="business_description"
               value={businessData.business_description || ""}
               onChange={(e) => setBusinessData({...businessData, business_description: e.target.value})}
-              disabled={!isEditing}
               placeholder="Describe your business, services, and what makes you unique..."
               rows={4}
             />
           </div>
+
+          {/* Save Button */}
+          <Button
+            onClick={onSave}
+            disabled={loading || !hasChanges}
+            className="w-full"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4 mr-2" />
+                Save Changes
+              </>
+            )}
+          </Button>
         </div>
       </CardContent>
     </Card>

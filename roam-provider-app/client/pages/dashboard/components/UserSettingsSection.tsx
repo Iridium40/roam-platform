@@ -3,21 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import {
   Save,
   Loader2,
   Bell,
-  Smartphone,
-  Mail,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
@@ -28,8 +18,6 @@ interface UserSettings {
   theme: 'light' | 'dark' | 'system';
   language: string;
   timezone: string;
-  email_notifications: boolean;
-  sms_notifications: boolean;
   auto_logout_minutes: number;
   date_format: string;
   time_format: '12h' | '24h';
@@ -53,8 +41,6 @@ export default function UserSettingsSection({ userId, providerId }: UserSettings
     theme: 'system',
     language: 'en',
     timezone: 'America/Chicago', // CST
-    email_notifications: true,
-    sms_notifications: false,
     auto_logout_minutes: 60,
     date_format: 'MM/DD/YYYY',
     time_format: '12h',
@@ -115,8 +101,6 @@ export default function UserSettingsSection({ userId, providerId }: UserSettings
         theme: 'system',
         language: 'en',
         timezone: 'America/Chicago', // CST
-        email_notifications: true,
-        sms_notifications: false,
         auto_logout_minutes: 60,
         date_format: 'MM/DD/YYYY',
         time_format: '12h',
@@ -172,14 +156,6 @@ export default function UserSettingsSection({ userId, providerId }: UserSettings
     }
   };
 
-  const updateSetting = <K extends keyof UserSettings>(
-    key: K,
-    value: UserSettings[K]
-  ) => {
-    setSettings(prev => ({ ...prev, [key]: value }));
-    setHasChanges(true);
-  };
-
   const updateNotificationPhone = (value: string) => {
     setNotificationPhone(value);
     setHasChanges(true);
@@ -221,89 +197,48 @@ export default function UserSettingsSection({ userId, providerId }: UserSettings
         </div>
       )}
 
-      {/* Notification Settings */}
+      {/* Notification Contact Information */}
       <Card>
         <CardHeader>
           <div className="flex items-center space-x-2">
             <Bell className="w-5 h-5" />
-            <CardTitle>Notifications</CardTitle>
+            <CardTitle>Notification Contact Information</CardTitle>
           </div>
           <CardDescription>
-            Manage how you receive notifications
+            Specify where you want to receive notifications. If left empty, we'll use your profile information.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Email Notifications */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label htmlFor="email_notifications">Email Notifications</Label>
-                <p className="text-sm text-gray-500">
-                  Receive notifications via email
-                </p>
-              </div>
-              <Switch
-                id="email_notifications"
-                checked={settings.email_notifications}
-                onCheckedChange={(checked) => updateSetting('email_notifications', checked)}
-              />
-            </div>
-
-            {/* Notification Email Address */}
-            {settings.email_notifications && (
-              <div className="space-y-2 pl-6">
-                <Label htmlFor="notification_email">Notification Email Address</Label>
-                <Input
-                  id="notification_email"
-                  type="email"
-                  placeholder="notifications@example.com"
-                  value={notificationEmail}
-                  onChange={(e) => updateNotificationEmail(e.target.value)}
-                />
-                <p className="text-xs text-gray-500">
-                  Enter the email address where you want to receive notifications (optional, defaults to account email)
-                </p>
-              </div>
-            )}
+          {/* Notification Email Address */}
+          <div className="space-y-2">
+            <Label htmlFor="notification_email">Notification Email Address</Label>
+            <Input
+              id="notification_email"
+              type="email"
+              placeholder="notifications@example.com"
+              value={notificationEmail}
+              onChange={(e) => updateNotificationEmail(e.target.value)}
+            />
+            <p className="text-xs text-gray-500">
+              Leave empty to use your profile email
+            </p>
           </div>
 
           <Separator />
 
-          {/* SMS Notifications */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5 flex items-center">
-                <Smartphone className="w-4 h-4 mr-2 text-gray-500" />
-                <div>
-                  <Label htmlFor="sms_notifications">SMS Notifications</Label>
-                  <p className="text-sm text-gray-500">
-                    Receive notifications via text message
-                  </p>
-                </div>
-              </div>
-              <Switch
-                id="sms_notifications"
-                checked={settings.sms_notifications}
-                onCheckedChange={(checked) => updateSetting('sms_notifications', checked)}
-              />
-            </div>
-
-            {/* Notification Phone Number */}
-            {settings.sms_notifications && (
-              <div className="space-y-2 pl-6">
-                <Label htmlFor="notification_phone">Notification Phone Number</Label>
-                <Input
-                  id="notification_phone"
-                  type="tel"
-                  placeholder="+1 (555) 123-4567"
-                  value={notificationPhone}
-                  onChange={(e) => updateNotificationPhone(e.target.value)}
-                />
-                <p className="text-xs text-gray-500">
-                  Enter the phone number where you want to receive SMS notifications
-                </p>
-              </div>
-            )}
+          {/* Notification Phone Number */}
+          <div className="space-y-2">
+            <Label htmlFor="notification_phone">Notification Phone Number</Label>
+            <Input
+              id="notification_phone"
+              type="tel"
+              placeholder="+1 (555) 123-4567"
+              value={notificationPhone}
+              onChange={(e) => updateNotificationPhone(e.target.value)}
+            />
+            <p className="text-xs text-gray-500">
+              Leave empty to use your profile phone number
+            </p>
           </div>
         </CardContent>
       </Card>

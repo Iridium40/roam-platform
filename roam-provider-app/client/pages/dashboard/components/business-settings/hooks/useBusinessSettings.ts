@@ -61,8 +61,29 @@ export function useBusinessSettings(business: any) {
     },
   });
 
+  // Original data for change detection
+  const [originalBusinessData, setOriginalBusinessData] = useState<BusinessData>({
+    business_name: "",
+    business_type: "",
+    contact_email: "",
+    phone: "",
+    website_url: "",
+    business_description: "",
+    logo_url: "",
+    cover_image_url: "",
+    business_hours: {
+      monday: { open: "09:00", close: "17:00", closed: false },
+      tuesday: { open: "09:00", close: "17:00", closed: false },
+      wednesday: { open: "09:00", close: "17:00", closed: false },
+      thursday: { open: "09:00", close: "17:00", closed: false },
+      friday: { open: "09:00", close: "17:00", closed: false },
+      saturday: { open: "09:00", close: "17:00", closed: false },
+      sunday: { open: "09:00", close: "17:00", closed: true },
+    },
+  });
+
   // UI state
-  const [isEditing, setIsEditing] = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
   const [loading, setLoading] = useState(false);
   const [logoUploading, setLogoUploading] = useState(false);
   const [coverUploading, setCoverUploading] = useState(false);
@@ -75,8 +96,7 @@ export function useBusinessSettings(business: any) {
   // Load business data (excluding hours - those are loaded separately via API)
   useEffect(() => {
     if (business) {
-      setBusinessData(prev => ({
-        ...prev, // Preserve existing hours from loadBusinessHours()
+      const newData = {
         id: business.id,
         business_name: business.business_name || "",
         business_type: business.business_type || "",
@@ -86,10 +106,33 @@ export function useBusinessSettings(business: any) {
         business_description: business.business_description || "",
         logo_url: business.logo_url || "",
         cover_image_url: business.cover_image_url || "",
-        // Note: business_hours intentionally excluded to prevent stale data from prop
+      };
+      setBusinessData(prev => ({
+        ...prev, // Preserve existing hours from loadBusinessHours()
+        ...newData,
+      }));
+      setOriginalBusinessData(prev => ({
+        ...prev, // Preserve existing hours
+        ...newData,
       }));
     }
   }, [business]);
+
+  // Detect changes by comparing current data with original
+  useEffect(() => {
+    const hasChangesDetected =
+      businessData.business_name !== originalBusinessData.business_name ||
+      businessData.business_type !== originalBusinessData.business_type ||
+      businessData.contact_email !== originalBusinessData.contact_email ||
+      businessData.phone !== originalBusinessData.phone ||
+      businessData.website_url !== originalBusinessData.website_url ||
+      businessData.business_description !== originalBusinessData.business_description ||
+      businessData.logo_url !== originalBusinessData.logo_url ||
+      businessData.cover_image_url !== originalBusinessData.cover_image_url ||
+      JSON.stringify(businessData.business_hours) !== JSON.stringify(originalBusinessData.business_hours);
+
+    setHasChanges(hasChangesDetected);
+  }, [businessData, originalBusinessData]);
 
   // Load service eligibility
   const loadServiceEligibility = async () => {
@@ -140,6 +183,10 @@ export function useBusinessSettings(business: any) {
       
       if (data.business_hours) {
         setBusinessData(prev => ({
+          ...prev,
+          business_hours: data.business_hours,
+        }));
+        setOriginalBusinessData(prev => ({
           ...prev,
           business_hours: data.business_hours,
         }));
@@ -212,12 +259,15 @@ export function useBusinessSettings(business: any) {
       // Reload hours from database to ensure UI reflects saved state
       await loadBusinessHours();
 
+      // Update original data to reflect saved state
+      setOriginalBusinessData(JSON.parse(JSON.stringify(businessData)));
+      setHasChanges(false);
+
       toast({
         title: "Success",
         description: "Your business settings have been updated successfully.",
       });
       
-      setIsEditing(false);
       return true;
     } catch (error: any) {
       console.error("Error updating business settings:", error);
@@ -340,28 +390,10 @@ export function useBusinessSettings(business: any) {
     }
   };
 
-  // Cancel editing
-  const cancelEditing = () => {
-    if (business) {
-      // Reload data from business prop (excluding hours)
-      setBusinessData(prev => ({
-        ...prev, // Preserve current hours
-        id: business.id,
-        business_name: business.business_name || "",
-        business_type: business.business_type || "",
-        contact_email: business.contact_email || "",
-        phone: business.phone || "",
-        website_url: business.website_url || "",
-        business_description: business.business_description || "",
-        logo_url: business.logo_url || "",
-        cover_image_url: business.cover_image_url || "",
-        // business_hours intentionally preserved from current state
-      }));
-      
-      // Reload hours from API to get fresh data
-      loadBusinessHours();
-    }
-    setIsEditing(false);
+  // Reset changes to original values
+  const resetChanges = () => {
+    setBusinessData(JSON.parse(JSON.stringify(originalBusinessData)));
+    setHasChanges(false);
   };
 
   return {
@@ -370,8 +402,7 @@ export function useBusinessSettings(business: any) {
     setBusinessData,
     
     // UI state
-    isEditing,
-    setIsEditing,
+    hasChanges,
     loading,
     logoUploading,
     coverUploading,
@@ -387,7 +418,7 @@ export function useBusinessSettings(business: any) {
     
     // Actions
     saveBusinessSettings,
-    cancelEditing,
+    resetChanges,
     handleLogoUpload,
     handleCoverUpload,
   };

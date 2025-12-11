@@ -1,16 +1,16 @@
 import React from "react";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Clock } from "lucide-react";
+import { Clock, Save, Loader2 } from "lucide-react";
 
 interface BusinessHoursSectionProps {
   businessData: any;
   setBusinessData: (data: any) => void;
-  isEditing: boolean;
+  hasChanges: boolean;
+  loading: boolean;
   onSave: () => void;
-  onCancel: () => void;
-  onEdit: () => void;
 }
 
 interface DayHours {
@@ -32,10 +32,9 @@ type BusinessHours = {
 export default function BusinessHoursSection({
   businessData,
   setBusinessData,
-  isEditing,
+  hasChanges,
+  loading,
   onSave,
-  onCancel,
-  onEdit,
 }: BusinessHoursSectionProps) {
   
   const defaultHours: BusinessHours = {
@@ -100,7 +99,6 @@ export default function BusinessHoursSection({
                         closed: !e.target.checked,
                       });
                     }}
-                    disabled={!isEditing}
                     className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                   />
                   <span className="text-sm text-gray-600 w-12">Open</span>
@@ -116,7 +114,6 @@ export default function BusinessHoursSection({
                           open: e.target.value,
                         });
                       }}
-                      disabled={!isEditing}
                       className="w-28"
                     />
                     <span className="text-sm text-gray-600">to</span>
@@ -128,7 +125,6 @@ export default function BusinessHoursSection({
                           close: e.target.value,
                         });
                       }}
-                      disabled={!isEditing}
                       className="w-28"
                     />
                   </div>
@@ -138,24 +134,34 @@ export default function BusinessHoursSection({
                   </div>
                 )}
               </div>
-              
-              {/* Display formatted time when not editing */}
-              {!isEditing && !hours.closed && (
-                <div className="text-sm text-gray-600">
-                  {formatTime(hours.open)} - {formatTime(hours.close)}
-                </div>
-              )}
             </div>
           ))}
           
-          {isEditing && (
-            <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-              <p className="text-sm text-blue-800">
-                💡 <strong>Tip:</strong> Set your business hours to help customers know when you're available. 
-                You can always update these hours later or set special hours for holidays.
-              </p>
-            </div>
-          )}
+          <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+            <p className="text-sm text-blue-800">
+              💡 <strong>Tip:</strong> Set your business hours to help customers know when you're available. 
+              You can always update these hours later or set special hours for holidays.
+            </p>
+          </div>
+
+          {/* Save Button */}
+          <Button
+            onClick={onSave}
+            disabled={loading || !hasChanges}
+            className="w-full"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4 mr-2" />
+                Save Changes
+              </>
+            )}
+          </Button>
         </div>
       </CardContent>
     </Card>
