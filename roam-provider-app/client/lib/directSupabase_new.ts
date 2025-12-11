@@ -127,7 +127,6 @@ export const updateCustomerProfileViaEdgeFunction = async (
               is_active: true,
               email_notifications: true,
               sms_notifications: true,
-              push_notifications: true,
               marketing_emails: false,
               email_verified: false,
               phone_verified: false,

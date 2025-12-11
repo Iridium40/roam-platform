@@ -7,13 +7,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { Save, Loader2 } from 'lucide-react';
 
 export function NotificationPreferences() {
   const { provider, loading: authLoading } = useProviderAuth();
   const { toast } = useToast();
   const [settings, setSettings] = useState<any>(null);
+  const [originalSettings, setOriginalSettings] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
 
   const userId = provider?.user_id;
 
@@ -24,6 +27,35 @@ export function NotificationPreferences() {
       setLoading(false);
     }
   }, [userId, authLoading]);
+
+  // Detect changes by comparing current settings with original
+  useEffect(() => {
+    if (!settings || !originalSettings) {
+      setHasChanges(false);
+      return;
+    }
+
+    // Compare all relevant notification preference fields
+    const hasChangesDetected = 
+      (settings.customer_booking_accepted_email ?? true) !== (originalSettings.customer_booking_accepted_email ?? true) ||
+      (settings.customer_booking_accepted_sms ?? false) !== (originalSettings.customer_booking_accepted_sms ?? false) ||
+      (settings.customer_booking_completed_email ?? true) !== (originalSettings.customer_booking_completed_email ?? true) ||
+      (settings.customer_booking_completed_sms ?? false) !== (originalSettings.customer_booking_completed_sms ?? false) ||
+      (settings.customer_booking_reminder_email ?? true) !== (originalSettings.customer_booking_reminder_email ?? true) ||
+      (settings.customer_booking_reminder_sms ?? true) !== (originalSettings.customer_booking_reminder_sms ?? true) ||
+      (settings.customer_welcome_email ?? true) !== (originalSettings.customer_welcome_email ?? true) ||
+      (settings.provider_new_booking_email ?? true) !== (originalSettings.provider_new_booking_email ?? true) ||
+      (settings.provider_new_booking_sms ?? true) !== (originalSettings.provider_new_booking_sms ?? true) ||
+      (settings.provider_booking_cancelled_email ?? true) !== (originalSettings.provider_booking_cancelled_email ?? true) ||
+      (settings.provider_booking_cancelled_sms ?? false) !== (originalSettings.provider_booking_cancelled_sms ?? false) ||
+      (settings.provider_booking_rescheduled_email ?? true) !== (originalSettings.provider_booking_rescheduled_email ?? true) ||
+      (settings.provider_booking_rescheduled_sms ?? false) !== (originalSettings.provider_booking_rescheduled_sms ?? false) ||
+      (settings.admin_business_verification_email ?? true) !== (originalSettings.admin_business_verification_email ?? true) ||
+      (settings.admin_business_verification_sms ?? false) !== (originalSettings.admin_business_verification_sms ?? false) ||
+      (settings.quiet_hours_enabled ?? false) !== (originalSettings.quiet_hours_enabled ?? false);
+
+    setHasChanges(hasChangesDetected);
+  }, [settings, originalSettings]);
 
   async function loadSettings() {
     try {
@@ -59,9 +91,12 @@ export function NotificationPreferences() {
           quiet_hours_enabled: false,
         };
         setSettings(defaultSettings);
+        setOriginalSettings(JSON.parse(JSON.stringify(defaultSettings)));
       } else {
         setSettings(data);
+        setOriginalSettings(JSON.parse(JSON.stringify(data)));
       }
+      setHasChanges(false);
     } catch (error) {
       console.error('Error loading settings:', error);
       toast({
@@ -77,25 +112,14 @@ export function NotificationPreferences() {
   async function saveSettings() {
     setSaving(true);
     try {
-      // Automatically enable master toggles if any individual notification is enabled
-      const hasAnyEmailEnabled = 
-        settings?.provider_new_booking_email ||
-        settings?.provider_booking_cancelled_email ||
-        settings?.provider_booking_rescheduled_email;
-      
-      const hasAnySmsEnabled = 
-        settings?.provider_new_booking_sms ||
-        settings?.provider_booking_cancelled_sms ||
-        settings?.provider_booking_rescheduled_sms;
-
+      // Preserve existing email_notifications and sms_notifications values
+      // These are managed in UserSettingsSection, we don't override them here
       const { error } = await supabase
         .from('user_settings')
         .upsert({
           user_id: userId,
           ...settings,
-          // Auto-enable master toggles if any individual notification is on
-          email_notifications: hasAnyEmailEnabled,
-          sms_notifications: hasAnySmsEnabled,
+          // Don't modify email_notifications or sms_notifications - they're managed in UserSettingsSection
           updated_at: new Date().toISOString(),
         });
 
@@ -105,6 +129,10 @@ export function NotificationPreferences() {
         title: 'Settings saved',
         description: 'Your notification preferences have been updated.',
       });
+      
+      // Update original settings to reflect saved state
+      setOriginalSettings(JSON.parse(JSON.stringify(settings)));
+      setHasChanges(false);
     } catch (error) {
       console.error('Error saving settings:', error);
       toast({
@@ -146,48 +174,6 @@ export function NotificationPreferences() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Notification Contact Information */}
-          <div className="space-y-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <h3 className="text-lg font-medium text-blue-900">Notification Contact Information</h3>
-            <p className="text-sm text-blue-700">
-              Specify where you want to receive notifications. If left empty, we'll use your profile information.
-            </p>
-            
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="notification_email">Notification Email</Label>
-                <Input
-                  id="notification_email"
-                  type="email"
-                  placeholder="your-email@example.com"
-                  value={settings?.notification_email || ''}
-                  onChange={(e) =>
-                    setSettings({ ...settings, notification_email: e.target.value })
-                  }
-                />
-                <p className="text-xs text-gray-500">
-                  Leave empty to use your profile email
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="notification_phone">Notification Phone Number</Label>
-                <Input
-                  id="notification_phone"
-                  type="tel"
-                  placeholder="+1 (555) 123-4567"
-                  value={settings?.notification_phone || ''}
-                  onChange={(e) =>
-                    setSettings({ ...settings, notification_phone: e.target.value })
-                  }
-                />
-                <p className="text-xs text-gray-500">
-                  Leave empty to use your profile phone number
-                </p>
-              </div>
-            </div>
-          </div>
-
           {/* Customer Notifications */}
           {userType === 'CUSTOMER' && (
             <div className="space-y-4 pt-6 border-t">
@@ -361,10 +347,20 @@ export function NotificationPreferences() {
 
           <Button 
             onClick={saveSettings} 
-            disabled={saving}
+            disabled={saving || !hasChanges}
             className="w-full"
           >
-            {saving ? 'Saving...' : 'Save Preferences'}
+            {saving ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4 mr-2" />
+                Save Changes
+              </>
+            )}
           </Button>
         </CardContent>
       </Card>

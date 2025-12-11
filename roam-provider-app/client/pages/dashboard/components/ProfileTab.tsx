@@ -12,10 +12,7 @@ import {
   Upload,
   Trash2,
   Save,
-  Edit,
   Loader2,
-  CheckCircle,
-  Settings,
   Bell,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
@@ -45,7 +42,16 @@ export default function ProfileTab({
     profile_image_url: "",
     cover_image_url: "",
   });
-  const [isEditing, setIsEditing] = useState(false);
+  const [originalProfileData, setOriginalProfileData] = useState({
+    first_name: "",
+    last_name: "",
+    email: "",
+    phone: "",
+    bio: "",
+    profile_image_url: "",
+    cover_image_url: "",
+  });
+  const [hasChanges, setHasChanges] = useState(false);
   const [profilePhotoUploading, setProfilePhotoUploading] = useState(false);
   const [coverPhotoUploading, setCoverPhotoUploading] = useState(false);
   const [profilePhotoPreview, setProfilePhotoPreview] = useState<string | null>(null);
@@ -64,7 +70,7 @@ export default function ProfileTab({
 
     try {
       setLoading(true);
-      setProfileData({
+      const loadedData = {
         first_name: providerData.first_name || "",
         last_name: providerData.last_name || "",
         email: providerData.email || "",
@@ -72,7 +78,10 @@ export default function ProfileTab({
         bio: providerData.bio || "",
         profile_image_url: providerData.image_url || "",
         cover_image_url: providerData.cover_image_url || "",
-      });
+      };
+      setProfileData(loadedData);
+      setOriginalProfileData(loadedData);
+      setHasChanges(false);
     } catch (error) {
       console.error('Error loading profile data:', error);
       toast({
@@ -110,7 +119,10 @@ export default function ProfileTab({
         title: "Profile Updated",
         description: "Your profile has been updated successfully.",
       });
-      setIsEditing(false);
+      
+      // Update original data to reflect saved state
+      setOriginalProfileData(profileData);
+      setHasChanges(false);
       
       // Reload the page to reflect changes
       setTimeout(() => {
@@ -320,6 +332,20 @@ export default function ProfileTab({
     loadProfileData();
   }, [providerData]);
 
+  // Detect changes by comparing current data with original
+  useEffect(() => {
+    const hasChangesDetected = 
+      profileData.first_name !== originalProfileData.first_name ||
+      profileData.last_name !== originalProfileData.last_name ||
+      profileData.email !== originalProfileData.email ||
+      profileData.phone !== originalProfileData.phone ||
+      profileData.bio !== originalProfileData.bio ||
+      profileData.profile_image_url !== originalProfileData.profile_image_url ||
+      profileData.cover_image_url !== originalProfileData.cover_image_url;
+    
+    setHasChanges(hasChangesDetected);
+  }, [profileData, originalProfileData]);
+
   // Show loading state
   if (loading) {
     return (
@@ -367,26 +393,6 @@ export default function ProfileTab({
         {/* Profile Information Tab */}
         <TabsContent value="profile" className="mt-6">
           <div className="space-y-6">
-            {/* Edit Profile Header */}
-            <div className="flex items-center justify-end space-x-2">
-              {isEditing ? (
-                <>
-                  <Button variant="outline" onClick={() => setIsEditing(false)}>
-                    Cancel
-                  </Button>
-                  <Button onClick={saveProfileData} disabled={loading}>
-                    <Save className="w-4 h-4 mr-2" />
-                    Save Changes
-                  </Button>
-                </>
-              ) : (
-                <Button onClick={() => setIsEditing(true)}>
-                  <Edit className="w-4 h-4 mr-2" />
-                  Edit Profile
-                </Button>
-              )}
-            </div>
-
             {/* Profile Information Card */}
             <Card>
               <CardHeader>
@@ -397,50 +403,44 @@ export default function ProfileTab({
           <div>
             <Label className="text-sm font-medium">Cover Photo</Label>
             <div className="mt-2 relative">
-              {profileData.cover_image_url ? (
+                  {profileData.cover_image_url ? (
                 <div className="relative">
                   <img
                     src={profileData.cover_image_url}
                     alt="Cover"
                     className="w-full h-32 object-cover rounded-lg"
                   />
-                  {isEditing && (
-                    <>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="absolute top-2 right-2"
-                        disabled={coverPhotoUploading}
-                        onClick={() => document.getElementById('cover-upload')?.click()}
-                      >
-                        <Camera className="w-4 h-4 mr-1" />
-                        Change
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="absolute top-2 right-20"
-                        onClick={() => setProfileData({...profileData, cover_image_url: ""})}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </>
-                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="absolute top-2 right-2"
+                    disabled={coverPhotoUploading}
+                    onClick={() => document.getElementById('cover-upload')?.click()}
+                  >
+                    <Camera className="w-4 h-4 mr-1" />
+                    Change
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="absolute top-2 right-20"
+                    onClick={() => {
+                      setProfileData({...profileData, cover_image_url: ""});
+                    }}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
                 </div>
               ) : (
                 <div className="w-full h-32 bg-gray-100 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-300">
-                  {isEditing ? (
-                    <Button
-                      variant="outline"
-                      onClick={() => document.getElementById('cover-upload')?.click()}
-                      disabled={coverPhotoUploading}
-                    >
-                      <Upload className="w-4 h-4 mr-2" />
-                      Upload Cover Photo
-                    </Button>
-                  ) : (
-                    <p className="text-sm text-gray-500">No cover photo uploaded</p>
-                  )}
+                  <Button
+                    variant="outline"
+                    onClick={() => document.getElementById('cover-upload')?.click()}
+                    disabled={coverPhotoUploading}
+                  >
+                    <Upload className="w-4 h-4 mr-2" />
+                    Upload Cover Photo
+                  </Button>
                 </div>
               )}
               <input
@@ -448,7 +448,6 @@ export default function ProfileTab({
                 type="file"
                 accept="image/*"
                 className="hidden"
-                disabled={!isEditing}
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (file) handleCoverPhotoUpload(file);
@@ -456,10 +455,7 @@ export default function ProfileTab({
               />
             </div>
             <p className="text-xs text-gray-500 mt-1">
-              {isEditing 
-                ? "Upload a cover image for your profile (max 50MB). Recommended size: 1200x400px"
-                : "Click 'Edit Profile' to change your cover photo"
-              }
+              Upload a cover image for your profile (max 50MB). Recommended size: 1200x400px
             </p>
           </div>
 
@@ -475,44 +471,38 @@ export default function ProfileTab({
                     {profileData.first_name?.[0]}{profileData.last_name?.[0]}
                   </AvatarFallback>
                 </Avatar>
-                {isEditing && (
-                  <div className="space-y-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={profilePhotoUploading}
-                      onClick={() => document.getElementById('profile-upload')?.click()}
-                    >
-                      <Camera className="w-4 h-4 mr-1" />
-                      Change Photo
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setProfileData({...profileData, profile_image_url: ""})}
-                    >
-                      <Trash2 className="w-4 h-4 mr-1" />
-                      Remove
-                    </Button>
-                  </div>
-                )}
+                <div className="space-y-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={profilePhotoUploading}
+                    onClick={() => document.getElementById('profile-upload')?.click()}
+                  >
+                    <Camera className="w-4 h-4 mr-1" />
+                    Change Photo
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setProfileData({...profileData, profile_image_url: ""});
+                    }}
+                  >
+                    <Trash2 className="w-4 h-4 mr-1" />
+                    Remove
+                  </Button>
+                </div>
                 <input
                   id="profile-upload"
                   type="file"
                   accept="image/*"
                   className="hidden"
-                  disabled={!isEditing}
                   onChange={(e) => {
                     const file = e.target.files?.[0];
                     if (file) handleProfilePhotoUpload(file);
                   }}
                 />
               </div>
-              {!isEditing && (
-                <p className="text-xs text-gray-500 mt-2">
-                  Click 'Edit Profile' to change your photo
-                </p>
-              )}
             </div>
 
             {/* Basic Information */}
@@ -524,7 +514,6 @@ export default function ProfileTab({
                     id="first_name"
                     value={profileData.first_name}
                     onChange={(e) => setProfileData({...profileData, first_name: e.target.value})}
-                    disabled={!isEditing}
                   />
                 </div>
                 <div>
@@ -533,7 +522,6 @@ export default function ProfileTab({
                     id="last_name"
                     value={profileData.last_name}
                     onChange={(e) => setProfileData({...profileData, last_name: e.target.value})}
-                    disabled={!isEditing}
                   />
                 </div>
               </div>
@@ -544,7 +532,6 @@ export default function ProfileTab({
                   type="email"
                   value={profileData.email}
                   onChange={(e) => setProfileData({...profileData, email: e.target.value})}
-                  disabled={!isEditing}
                 />
               </div>
               <div>
@@ -553,7 +540,6 @@ export default function ProfileTab({
                   id="phone"
                   value={profileData.phone}
                   onChange={(e) => setProfileData({...profileData, phone: e.target.value})}
-                  disabled={!isEditing}
                 />
               </div>
             </div>
@@ -566,11 +552,29 @@ export default function ProfileTab({
               id="bio"
               value={profileData.bio}
               onChange={(e) => setProfileData({...profileData, bio: e.target.value})}
-              disabled={!isEditing}
               placeholder="Tell customers about yourself, your experience, and what makes you unique..."
               rows={4}
             />
           </div>
+
+          {/* Save Button */}
+          <Button 
+            onClick={saveProfileData} 
+            disabled={loading || !hasChanges}
+            className="w-full"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4 mr-2" />
+                Save Changes
+              </>
+            )}
+          </Button>
         </CardContent>
       </Card>
           </div>

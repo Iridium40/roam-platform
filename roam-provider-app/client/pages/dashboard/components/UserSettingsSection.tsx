@@ -16,7 +16,6 @@ import {
   Save,
   Loader2,
   Bell,
-  Volume2,
   Smartphone,
   Mail,
 } from "lucide-react";
@@ -30,9 +29,7 @@ interface UserSettings {
   language: string;
   timezone: string;
   email_notifications: boolean;
-  push_notifications: boolean;
   sms_notifications: boolean;
-  sound_enabled: boolean;
   auto_logout_minutes: number;
   date_format: string;
   time_format: '12h' | '24h';
@@ -57,9 +54,7 @@ export default function UserSettingsSection({ userId, providerId }: UserSettings
     language: 'en',
     timezone: 'America/Chicago', // CST
     email_notifications: true,
-    push_notifications: true,
     sms_notifications: false,
-    sound_enabled: true,
     auto_logout_minutes: 60,
     date_format: 'MM/DD/YYYY',
     time_format: '12h',
@@ -95,18 +90,11 @@ export default function UserSettingsSection({ userId, providerId }: UserSettings
         await createDefaultSettings();
       }
 
-      // Load provider notification_phone and notification_email
-      const { data: providerData, error: providerError } = await supabase
-        .from('providers')
-        .select('notification_phone, notification_email')
-        .eq('id', providerId)
-        .single();
-
-      if (providerError) {
-        console.error('Error loading provider notification data:', providerError);
-      } else if (providerData) {
-        setNotificationPhone(providerData.notification_phone || '');
-        setNotificationEmail(providerData.notification_email || '');
+      // Load notification_phone and notification_email from user_settings (primary source)
+      // These are already loaded in the settings object above, but we'll extract them for the input fields
+      if (data) {
+        setNotificationPhone(data.notification_phone || '');
+        setNotificationEmail(data.notification_email || '');
       }
     } catch (error) {
       console.error('Error loading settings:', error);
@@ -128,9 +116,7 @@ export default function UserSettingsSection({ userId, providerId }: UserSettings
         language: 'en',
         timezone: 'America/Chicago', // CST
         email_notifications: true,
-        push_notifications: true,
         sms_notifications: false,
-        sound_enabled: true,
         auto_logout_minutes: 60,
         date_format: 'MM/DD/YYYY',
         time_format: '12h',
@@ -156,27 +142,18 @@ export default function UserSettingsSection({ userId, providerId }: UserSettings
     try {
       setSaving(true);
 
-      // Save user settings
+      // Save user settings including notification contact info
       const { error } = await supabase
         .from('user_settings')
         .upsert({
           ...settings,
+          notification_email: notificationEmail.trim() || null,
+          notification_phone: notificationPhone.trim() || null,
           updated_at: new Date().toISOString(),
         })
         .eq('user_id', userId);
 
       if (error) throw error;
-
-      // Save provider notification_phone and notification_email
-      const { error: notificationError } = await supabase
-        .from('providers')
-        .update({ 
-          notification_phone: notificationPhone.trim() || null,
-          notification_email: notificationEmail.trim() || null 
-        })
-        .eq('id', providerId);
-
-      if (notificationError) throw notificationError;
 
       setHasChanges(false);
       toast({
@@ -288,43 +265,6 @@ export default function UserSettingsSection({ userId, providerId }: UserSettings
                 </p>
               </div>
             )}
-          </div>
-
-          <Separator />
-
-          {/* Push Notifications */}
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label htmlFor="push_notifications">Push Notifications</Label>
-              <p className="text-sm text-gray-500">
-                Receive push notifications in your browser
-              </p>
-            </div>
-            <Switch
-              id="push_notifications"
-              checked={settings.push_notifications}
-              onCheckedChange={(checked) => updateSetting('push_notifications', checked)}
-            />
-          </div>
-
-          <Separator />
-
-          {/* Sound Enabled */}
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5 flex items-center">
-              <Volume2 className="w-4 h-4 mr-2 text-gray-500" />
-              <div>
-                <Label htmlFor="sound_enabled">Notification Sounds</Label>
-                <p className="text-sm text-gray-500">
-                  Play sound when notifications arrive
-                </p>
-              </div>
-            </div>
-            <Switch
-              id="sound_enabled"
-              checked={settings.sound_enabled}
-              onCheckedChange={(checked) => updateSetting('sound_enabled', checked)}
-            />
           </div>
 
           <Separator />
