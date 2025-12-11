@@ -1994,6 +1994,44 @@ export function createServer() {
 
           if (error) throw error;
           result = data;
+
+          // For independent businesses, auto-assign addon to owner
+          const { data: businessProfile } = await supabase
+            .from('business_profiles')
+            .select('business_type')
+            .eq('id', business_id)
+            .single();
+
+          if (businessProfile?.business_type === 'independent') {
+            // Find the owner provider
+            const { data: ownerProvider } = await supabase
+              .from('providers')
+              .select('id')
+              .eq('business_id', business_id)
+              .eq('provider_role', 'owner')
+              .eq('is_active', true)
+              .maybeSingle();
+
+            if (ownerProvider) {
+              // Auto-assign addon to owner
+              const { error: assignError } = await supabase
+                .from('provider_addons')
+                .upsert({
+                  provider_id: ownerProvider.id,
+                  addon_id: addon_id,
+                  is_active: true
+                }, {
+                  onConflict: 'provider_id,addon_id',
+                  ignoreDuplicates: false
+                });
+
+              if (assignError) {
+                console.error('Error auto-assigning addon to owner:', assignError);
+              } else {
+                console.log(`Auto-assigned addon ${addon_id} to owner ${ownerProvider.id} for independent business`);
+              }
+            }
+          }
         }
 
         res.json({ 

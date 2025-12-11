@@ -211,6 +211,58 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(500).json({ error: 'Failed to add service', details: insertError.message });
       }
 
+      // For independent businesses, auto-assign service to owner
+      const { data: businessProfile } = await supabase
+        .from('business_profiles')
+        .select('business_type')
+        .eq('id', business_id)
+        .single();
+
+      if (businessProfile?.business_type === 'independent') {
+        // Find the owner provider
+        const { data: ownerProvider } = await supabase
+          .from('providers')
+          .select('id')
+          .eq('business_id', business_id)
+          .eq('provider_role', 'owner')
+          .eq('is_active', true)
+          .maybeSingle();
+
+        if (ownerProvider) {
+          // Auto-assign service to owner
+          const { error: assignError } = await supabase
+            .from('provider_services')
+            .upsert({
+              provider_id: ownerProvider.id,
+              service_id: service_id,
+              is_active: true
+            }, {
+              onConflict: 'provider_id,service_id',
+              ignoreDuplicates: false
+            });
+
+          if (assignError) {
+            console.error('Error auto-assigning service to owner:', assignError);
+            // Don't fail the request, just log the error
+          } else {
+            console.log(`Auto-assigned service ${service_id} to owner ${ownerProvider.id} for independent business`);
+          }
+
+          // Ensure owner is bookable (active_for_bookings = true)
+          const { error: updateError } = await supabase
+            .from('providers')
+            .update({ active_for_bookings: true })
+            .eq('id', ownerProvider.id)
+            .eq('active_for_bookings', false); // Only update if currently false
+
+          if (updateError) {
+            console.error('Error updating owner active_for_bookings:', updateError);
+          } else {
+            console.log(`Ensured owner ${ownerProvider.id} is bookable for independent business`);
+          }
+        }
+      }
+
       return res.status(201).json({
         message: 'Service added successfully',
         service: newService

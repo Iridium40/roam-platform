@@ -472,13 +472,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const lastName = userInfo.data.user?.user_metadata?.last_name || "";
 
         // Update existing provider record with business_id
+        // For independent businesses, also set active_for_bookings to true
+        const updateData: any = {
+          business_id: businessProfileData.id,
+          email: businessData.contactEmail,
+          phone: businessData.phone,
+        };
+
+        if (businessData.businessType === 'independent') {
+          updateData.active_for_bookings = true;
+        }
+
         const { error: updateProviderError } = await supabase
           .from("providers")
-          .update({
-            business_id: businessProfileData.id,
-            email: businessData.contactEmail,
-            phone: businessData.phone,
-          })
+          .update(updateData)
           .eq("user_id", userId);
 
         providerError = updateProviderError;
@@ -491,21 +498,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const lastName = userInfo.data.user?.user_metadata?.last_name || "";
 
         // Create new provider record
+        // For independent businesses, set active_for_bookings to true
+        const providerData: any = {
+          user_id: userId,
+          business_id: businessProfileData.id,
+          first_name: firstName,
+          last_name: lastName,
+          email: businessData.contactEmail,
+          phone: businessData.phone,
+          provider_role: "owner",
+          verification_status: "pending",
+          background_check_status: "under_review",
+          is_active: false,
+          business_managed: true,
+        };
+
+        if (businessData.businessType === 'independent') {
+          providerData.active_for_bookings = true;
+        }
+
         const { error: createProviderError } = await supabase
           .from("providers")
-          .insert({
-            user_id: userId,
-            business_id: businessProfileData.id,
-            first_name: firstName,
-            last_name: lastName,
-            email: businessData.contactEmail,
-            phone: businessData.phone,
-            provider_role: "owner",
-            verification_status: "pending",
-            background_check_status: "under_review",
-            is_active: false,
-            business_managed: true,
-          });
+          .insert(providerData);
 
         providerError = createProviderError;
         console.log("Created new provider record for user:", userId);

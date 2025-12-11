@@ -62,16 +62,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({ error: "Failed to complete onboarding" });
     }
 
+    // Check if business is independent
+    const { data: businessProfile } = await supabase
+      .from("business_profiles")
+      .select("business_type")
+      .eq("id", businessId)
+      .single();
+
     // Update provider to active status
-    // Note: verification_status is managed by ROAM Admin app, not provider app
+    // For independent businesses, also set active_for_bookings to true
+    const updateData: any = {
+      is_active: true,
+      onboarding_completed_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    if (businessProfile?.business_type === 'independent') {
+      updateData.active_for_bookings = true;
+    }
+
     const { error: updateProviderError } = await supabase
       .from("providers")
-      .update({
-        is_active: true,
-        onboarding_completed_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-      .eq("business_id", businessId);
+      .update(updateData)
+      .eq("business_id", businessId)
+      .eq("provider_role", "owner");
 
     if (updateProviderError) {
       console.error("Error updating provider:", updateProviderError);

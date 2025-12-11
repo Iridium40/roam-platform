@@ -1143,7 +1143,14 @@ export default function BookService() {
                 loadCustomerLocations();
               }
               
-              setCurrentStep('provider');
+              // Skip provider step for independent businesses
+              if (selectedBusiness?.business_type === 'independent') {
+                setNoProviderPreference(true);
+                setSelectedProvider(null);
+                setCurrentStep('summary');
+              } else {
+                setCurrentStep('provider');
+              }
             } else {
               // Multiple delivery types available, go to delivery-location selection
               setCurrentStep('delivery-location');
@@ -1234,7 +1241,14 @@ export default function BookService() {
           }
         }
         
-        setCurrentStep('provider');
+        // Skip provider step for independent businesses
+        if (selectedBusiness?.business_type === 'independent') {
+          setNoProviderPreference(true);
+          setSelectedProvider(null);
+          setCurrentStep('summary');
+        } else {
+          setCurrentStep('provider');
+        }
         break;
       case 'provider':
         if (selectedProvider || noProviderPreference) {
@@ -1268,7 +1282,19 @@ export default function BookService() {
         }
         break;
       case 'summary':
-        setCurrentStep('provider');
+        // Skip provider step for independent businesses when going back
+        if (selectedBusiness?.business_type === 'independent') {
+          const deliveryTypes = selectedBusiness ? getDeliveryTypes(selectedBusiness) : [];
+          if (deliveryTypes.length > 1) {
+            setCurrentStep('delivery-location');
+          } else if (businessId) {
+            setCurrentStep('datetime');
+          } else {
+            setCurrentStep('business');
+          }
+        } else {
+          setCurrentStep('provider');
+        }
         break;
       case 'checkout':
         setCurrentStep('summary');
@@ -1771,19 +1797,23 @@ export default function BookService() {
                 </>
               )}
               
-              {/* Step: Provider */}
-              <div className="w-8 h-0.5 bg-gray-300"></div>
-              <div className={`flex items-center ${currentStep === 'provider' ? 'text-roam-blue' : 'text-gray-400'}`}>
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep === 'provider' ? 'bg-roam-blue text-white' : 'bg-gray-200'}`}>
-                  {(() => {
-                    let stepNum = 2;
-                    if (!businessId) stepNum = 3;
-                    if (selectedBusiness && (getDeliveryTypes(selectedBusiness).length > 1 || getDeliveryTypes(selectedBusiness).some(type => type !== 'virtual'))) stepNum++;
-                    return stepNum;
-                  })()}
-                </div>
-                <span className="ml-2 hidden sm:inline">Provider</span>
-              </div>
+              {/* Step: Provider - Hide for independent businesses */}
+              {selectedBusiness?.business_type !== 'independent' && (
+                <>
+                  <div className="w-8 h-0.5 bg-gray-300"></div>
+                  <div className={`flex items-center ${currentStep === 'provider' ? 'text-roam-blue' : 'text-gray-400'}`}>
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep === 'provider' ? 'bg-roam-blue text-white' : 'bg-gray-200'}`}>
+                      {(() => {
+                        let stepNum = 2;
+                        if (!businessId) stepNum = 3;
+                        if (selectedBusiness && (getDeliveryTypes(selectedBusiness).length > 1 || getDeliveryTypes(selectedBusiness).some(type => type !== 'virtual'))) stepNum++;
+                        return stepNum;
+                      })()}
+                    </div>
+                    <span className="ml-2 hidden sm:inline">Provider</span>
+                  </div>
+                </>
+              )}
               
               {/* Step: Summary */}
               <div className="w-8 h-0.5 bg-gray-300"></div>

@@ -430,6 +430,44 @@ export default function ServicePricingSetup({
 
       if (error) throw error;
 
+      // For independent businesses, auto-assign addon to owner
+      const { data: businessProfile } = await supabase
+        .from('business_profiles')
+        .select('business_type')
+        .eq('id', businessId)
+        .single();
+
+      if (businessProfile?.business_type === 'independent') {
+        // Find the owner provider
+        const { data: ownerProvider } = await supabase
+          .from('providers')
+          .select('id')
+          .eq('business_id', businessId)
+          .eq('provider_role', 'owner')
+          .eq('is_active', true)
+          .maybeSingle();
+
+        if (ownerProvider) {
+          // Auto-assign addon to owner
+          const { error: assignError } = await supabase
+            .from('provider_addons')
+            .upsert({
+              provider_id: ownerProvider.id,
+              addon_id: addonId,
+              is_active: true
+            }, {
+              onConflict: 'provider_id,addon_id',
+              ignoreDuplicates: false
+            });
+
+          if (assignError) {
+            console.error('Error auto-assigning addon to owner:', assignError);
+          } else {
+            console.log(`Auto-assigned addon ${addonId} to owner ${ownerProvider.id} for independent business`);
+          }
+        }
+      }
+
       // Update local state
       setPricingData(prev => ({
         ...prev,

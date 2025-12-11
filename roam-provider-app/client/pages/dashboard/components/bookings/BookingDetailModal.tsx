@@ -59,19 +59,23 @@ export default function BookingDetailModal({
 
   // Check if booking can be assigned/reassigned
   // Can assign if: booking is pending, confirmed, or in_progress AND not independent business
-  // Can also assign if booking has no provider assigned (unassigned bookings)
+  // Can also assign if booking has no provider assigned (unassigned bookings) - even for independent businesses
   const currentProviderId = selectedBooking?.provider_id || 
     (Array.isArray(selectedBooking?.providers) ? selectedBooking?.providers[0]?.id : selectedBooking?.providers?.id);
   const isUnassigned = !currentProviderId;
   
+  // Can reassign if booking has a provider and is not independent business
   const canReassignBooking = selectedBooking && 
+    currentProviderId && // Has a provider assigned
     ['pending', 'confirmed', 'in_progress'].includes(selectedBooking.booking_status) &&
     !isIndependentBusiness;
   
-  // Can assign if booking can be reassigned OR if it's unassigned
-  const canAssignBooking = canReassignBooking || (isUnassigned && selectedBooking && 
-    ['pending', 'confirmed', 'in_progress'].includes(selectedBooking.booking_status) &&
-    !isIndependentBusiness);
+  // Can assign if:
+  // 1. Booking is unassigned (regardless of business type) OR
+  // 2. Booking can be reassigned (has provider and not independent business)
+  const canAssignBooking = (isUnassigned && selectedBooking && 
+    ['pending', 'confirmed', 'in_progress'].includes(selectedBooking.booking_status)) ||
+    canReassignBooking;
 
   // Load available providers when modal opens and user can assign
   useEffect(() => {
@@ -85,18 +89,48 @@ export default function BookingDetailModal({
 
     setLoadingProviders(true);
     try {
-      // Load providers who are active for bookings and are staff (not owners/dispatchers)
-      const { data, error } = await supabase
-        .from('providers')
-        .select('id, first_name, last_name, provider_role, active_for_bookings')
-        .eq('business_id', selectedBooking.business_id)
-        .eq('active_for_bookings', true)
-        .eq('is_active', true)
-        .in('provider_role', ['provider']) // Only actual service providers, not owners/dispatchers
-        .order('first_name');
+      // Check if business is independent
+      const businessIsIndependent = selectedBooking?.business_profiles?.business_type === 'independent';
+      
+      // Check if booking is unassigned
+      const currentProviderId = selectedBooking?.provider_id || 
+        (Array.isArray(selectedBooking?.providers) ? selectedBooking?.providers[0]?.id : selectedBooking?.providers?.id);
+      const bookingIsUnassigned = !currentProviderId;
+      
+      // For independent businesses, only load the owner
+      if (businessIsIndependent) {
+        const { data, error } = await supabase
+          .from('providers')
+          .select('id, first_name, last_name, provider_role, active_for_bookings')
+          .eq('business_id', selectedBooking.business_id)
+          .eq('provider_role', 'owner')
+          .eq('is_active', true)
+          .maybeSingle();
 
-      if (error) throw error;
-      setAvailableProviders(data || []);
+        if (error) throw error;
+        setAvailableProviders(data ? [data] : []);
+        
+        // Auto-assign to owner if booking is unassigned
+        if (bookingIsUnassigned && data && canAssignBooking) {
+          // Use setTimeout to avoid calling during render
+          setTimeout(() => {
+            handleAssignProvider(data.id);
+          }, 100);
+        }
+      } else {
+        // Load providers who are active for bookings and are staff (not owners/dispatchers)
+        const { data, error } = await supabase
+          .from('providers')
+          .select('id, first_name, last_name, provider_role, active_for_bookings')
+          .eq('business_id', selectedBooking.business_id)
+          .eq('active_for_bookings', true)
+          .eq('is_active', true)
+          .in('provider_role', ['provider']) // Only actual service providers, not owners/dispatchers
+          .order('first_name');
+
+        if (error) throw error;
+        setAvailableProviders(data || []);
+      }
     } catch (error) {
       console.error('Error loading available providers:', error);
       toast({
@@ -324,9 +358,9 @@ export default function BookingDetailModal({
                     })()}
                   </div>
                   
-                  {isIndependentBusiness && (
+                  {isIndependentBusiness && !isUnassigned && (
                     <div className="text-sm text-gray-600 bg-gray-50 p-2 rounded border border-gray-200">
-                      <span className="font-medium">Independent Business:</span> Provider assignment is automatic and cannot be changed.
+                      <span className="font-medium">Independent Business:</span> Provider reassignment is automatic and cannot be changed.
                     </div>
                   )}
                   

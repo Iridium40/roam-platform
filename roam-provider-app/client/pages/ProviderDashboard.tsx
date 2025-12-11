@@ -766,7 +766,7 @@ export default function ProviderDashboard() {
                   Services
                 </button>
               )}
-              {hasAccess('staff') && (
+              {hasAccess('staff') && business?.business_type !== 'independent' && (
                 <button
                   onClick={() => navigateToTab("staff")}
                   className={`text-sm font-medium px-3 py-2 rounded-lg ${activeTab === "staff" ? "bg-gray-100 text-gray-900" : "text-gray-600 hover:text-gray-900"}`}
@@ -894,7 +894,7 @@ export default function ProviderDashboard() {
                 </Button>
               )}
               
-              {hasAccess('staff') && (
+              {hasAccess('staff') && business?.business_type !== 'independent' && (
                 <Button
                   variant={activeTab === "staff" ? "default" : "ghost"}
                   className="w-full justify-start"
