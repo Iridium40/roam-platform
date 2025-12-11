@@ -1005,7 +1005,7 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
                           </div>
                           <div>
                             <div className="text-lg font-semibold text-roam-blue">
-                              ${member.total_revenue?.toLocaleString()}
+                              ${(member.total_revenue || 0).toFixed(2)}
                             </div>
                             <div className="text-xs text-foreground/60">
                               Revenue
