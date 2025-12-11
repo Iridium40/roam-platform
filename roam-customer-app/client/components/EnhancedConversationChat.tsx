@@ -20,7 +20,9 @@ import {
   Loader2,
   AlertCircle,
   CheckCircle,
-  RefreshCw
+  RefreshCw,
+  Hash,
+  Calendar,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -80,11 +82,14 @@ interface BookingSummary {
   service_id?: string;
   business_id?: string;
   service_name?: string;
+  booking_reference?: string;
+  booking_date?: string;
   customer_profiles?: {
     id: string;
     first_name: string;
     last_name: string;
     email?: string;
+    image_url?: string;
   };
   providers?: {
     id: string;
@@ -503,169 +508,246 @@ export default function EnhancedConversationChat({
     );
   }
 
+  // Get provider name for display
+  const providerName = booking?.providers 
+    ? `${booking.providers.first_name || ''} ${booking.providers.last_name || ''}`.trim()
+    : booking?.provider_name || 'Provider';
+  const bookingRef = booking?.booking_reference || '';
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
-        <DialogHeader className="flex-shrink-0">
-          <DialogTitle className="flex items-center gap-2">
-            <MessageCircle className="w-5 h-5 text-roam-blue" />
-            Conversation - {bookingData.serviceName}
-          </DialogTitle>
-        </DialogHeader>
-
-        {/* Error Banner */}
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-            <div className="flex items-center gap-2">
-              <AlertCircle className="w-4 h-4" />
-              <span className="text-sm">{error}</span>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => setError(null)}
-                className="ml-auto p-1 h-auto"
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* Messages Area */}
-        <ScrollArea className="h-[400px] p-4 border rounded-lg bg-gray-50">
-          <div className="space-y-4">
-            {messages.length === 0 ? (
-              <div className="text-center py-8">
-                <MessageCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                <p className="text-gray-500 mb-2">No messages yet</p>
-                <p className="text-sm text-gray-400">
-                  Start the conversation by sending a message below
-                </p>
+      <DialogContent className="max-w-2xl h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
+        {/* Custom Header with gradient background */}
+        <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-5 rounded-t-lg">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
+                <MessageCircle className="h-6 w-6 text-white" />
               </div>
-            ) : (
-              (() => {
-                // Group messages by date
-                let lastDateKey: string | null = null;
-                
-                return messages.map((message, index) => {
-                  const author = resolveAuthor(message);
-                  // Check if this message was sent by the current logged-in customer
-                  const isCurrentUser = message.author_type === 'customer' && message.author_id === customer?.user_id;
-                  const isCustomer = message.author_type === 'customer';
-                  const displayName = author?.userName || (isCustomer ? bookingData.customerName : bookingData.providerName);
-                  const initials = displayName
+              <div>
+                <h2 className="text-lg font-semibold">{bookingData.serviceName}</h2>
+                <p className="text-blue-100 text-sm">with {providerName}</p>
+              </div>
+            </div>
+            <button 
+              onClick={onClose}
+              className="text-white/80 hover:text-white transition-colors p-1 rounded-full hover:bg-white/10"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          
+          {/* Booking Reference & Date */}
+          {(bookingRef || booking?.booking_date) && (
+            <div className="flex items-center gap-4 mt-3 pt-3 border-t border-white/20">
+              {bookingRef && (
+                <div className="flex items-center gap-1.5 text-sm text-blue-100">
+                  <Hash className="h-4 w-4" />
+                  <span className="font-mono font-medium text-white">{bookingRef}</span>
+                </div>
+              )}
+              {booking?.booking_date && (
+                <div className="flex items-center gap-1.5 text-sm text-blue-100">
+                  <Calendar className="h-4 w-4" />
+                  <span>{booking.booking_date}</span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="flex-1 flex flex-col min-h-0 bg-gray-50">
+          {/* Participants Info - Compact */}
+          <div className="px-4 py-3 bg-white border-b">
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-gray-500" />
+              <span className="text-xs text-gray-500 font-medium">Participants:</span>
+              <div className="flex flex-wrap gap-1.5">
+                {participants.map((participant) => {
+                  const name = participant.userName || (participant.userType === 'customer' ? bookingData.customerName : bookingData.providerName);
+                  const initials = name
                     ?.split(' ')
                     .map((part) => part[0])
                     .join('')
                     .slice(0, 2)
                     .toUpperCase();
-
-                  // Extract role from message attributes (set by TwilioConversationsService.sendMessage)
-                  let displayRole = isCustomer ? 'Customer' : 'Provider';
-                  if (message.attributes) {
-                    try {
-                      const attrs = typeof message.attributes === 'string' 
-                        ? JSON.parse(message.attributes) 
-                        : message.attributes;
-                      const role = attrs.role || attrs.userType || message.author_type;
-                      // Capitalize the role for display
-                      displayRole = role.charAt(0).toUpperCase() + role.slice(1);
-                    } catch (e) {
-                      // Use default displayRole if parsing fails
-                    }
-                  }
-
-                  // Check if we need to show a date separator
-                  const currentDateKey = getDateKey(message.timestamp);
-                  const showDateSeparator = currentDateKey !== lastDateKey;
-                  lastDateKey = currentDateKey;
+                  const identityKey = `${participant.userType}-${participant.userId}`;
+                  const isCurrentUser = participant.userId === customer?.user_id;
 
                   return (
-                    <div key={message.id}>
-                      {/* Date Separator */}
-                      {showDateSeparator && (
-                        <div className="flex items-center justify-center my-4">
-                          <div className="bg-gray-200 text-gray-600 text-xs font-medium px-3 py-1 rounded-full">
-                            {formatMessageDate(message.timestamp)}
-                          </div>
-                        </div>
-                      )}
-                      
-                      {/* Message */}
-                      <div className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'} mb-3`}>
-                        <div className={`flex items-end gap-3 ${isCurrentUser ? 'flex-row-reverse' : 'flex-row'}`}>
-                          <div className="flex flex-col items-center">
-                            <Avatar className="h-8 w-8 border">
-                              <AvatarImage src={author?.avatarUrl || undefined} alt={displayName || undefined} />
-                              <AvatarFallback>{initials}</AvatarFallback>
-                            </Avatar>
-                            <span className="mt-1 text-[11px] text-muted-foreground/80 max-w-[140px] text-center truncate">
-                              {displayName}
-                            </span>
-                          </div>
-                          <div
-                            className={`max-w-[70%] rounded-lg px-4 py-2 ${
-                              isCurrentUser ? 'bg-roam-blue text-white' : 'bg-white border shadow-sm'
-                            }`}
-                          >
-                            <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
-                            <div className="flex items-center justify-end mt-1 text-[11px] opacity-80">
-                              <span className={isCurrentUser ? 'text-white/80' : 'text-gray-500'}>
-                                {formatMessageTime(message.timestamp)}
-                              </span>
+                    <Badge
+                      key={identityKey}
+                      variant={isCurrentUser ? "default" : "outline"}
+                      className={`text-xs py-0.5 ${isCurrentUser ? 'bg-blue-600' : 'bg-gray-50 text-gray-700 border-gray-200'}`}
+                    >
+                      {initials} {name?.split(' ')[0]}
+                      {isCurrentUser && " (You)"}
+                    </Badge>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* Error Banner */}
+          {error && (
+            <div className="mx-4 mt-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-4 h-4" />
+                <span className="text-sm">{error}</span>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setError(null)}
+                  className="ml-auto p-1 h-auto"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Messages Area */}
+          <div className="flex-1 min-h-0">
+            <ScrollArea className="h-full">
+              <div className="space-y-4 p-4">
+                {messages.length === 0 ? (
+                  <div className="flex items-center justify-center h-40">
+                    <div className="text-center">
+                      <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <MessageCircle className="h-8 w-8 text-blue-600" />
+                      </div>
+                      <p className="text-gray-600 font-medium">No messages yet</p>
+                      <p className="text-gray-400 text-sm mt-1">Start the conversation!</p>
+                    </div>
+                  </div>
+                ) : (
+                  (() => {
+                    // Group messages by date
+                    let lastDateKey: string | null = null;
+                    
+                    return messages.map((message, index) => {
+                      const author = resolveAuthor(message);
+                      // Check if this message was sent by the current logged-in customer
+                      const isCurrentUser = message.author_type === 'customer' && message.author_id === customer?.user_id;
+                      const isCustomer = message.author_type === 'customer';
+                      const displayName = author?.userName || (isCustomer ? bookingData.customerName : bookingData.providerName);
+                      const initials = displayName
+                        ?.split(' ')
+                        .map((part) => part[0])
+                        .join('')
+                        .slice(0, 2)
+                        .toUpperCase();
+
+                      // Extract role from message attributes (set by TwilioConversationsService.sendMessage)
+                      let displayRole = isCustomer ? 'Customer' : 'Provider';
+                      if (message.attributes) {
+                        try {
+                          const attrs = typeof message.attributes === 'string' 
+                            ? JSON.parse(message.attributes) 
+                            : message.attributes;
+                          const role = attrs.role || attrs.userType || message.author_type;
+                          // Capitalize the role for display
+                          displayRole = role.charAt(0).toUpperCase() + role.slice(1);
+                        } catch (e) {
+                          // Use default displayRole if parsing fails
+                        }
+                      }
+
+                      // Check if we need to show a date separator
+                      const currentDateKey = getDateKey(message.timestamp);
+                      const showDateSeparator = currentDateKey !== lastDateKey;
+                      lastDateKey = currentDateKey;
+
+                      return (
+                        <div key={message.id}>
+                          {/* Date Separator */}
+                          {showDateSeparator && (
+                            <div className="flex items-center justify-center my-4">
+                              <div className="bg-gray-200 text-gray-600 text-xs font-medium px-3 py-1 rounded-full">
+                                {formatMessageDate(message.timestamp)}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Message */}
+                          <div className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'} mb-3`}>
+                            <div className={`flex items-end gap-3 ${isCurrentUser ? 'flex-row-reverse' : 'flex-row'}`}>
+                              <div className="flex flex-col items-center">
+                                <Avatar className="h-8 w-8 border">
+                                  <AvatarImage src={author?.avatarUrl || undefined} alt={displayName || undefined} />
+                                  <AvatarFallback>{initials}</AvatarFallback>
+                                </Avatar>
+                                <span className="mt-1 text-[11px] text-muted-foreground/80 max-w-[140px] text-center truncate">
+                                  {displayRole}
+                                </span>
+                              </div>
+                              <div
+                                className={`max-w-[70%] rounded-lg px-4 py-2 ${
+                                  isCurrentUser ? 'bg-blue-600 text-white' : 'bg-white border shadow-sm'
+                                }`}
+                              >
+                                <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
+                                <div className="flex items-center justify-end mt-1 text-[11px] opacity-80">
+                                  <span className={isCurrentUser ? 'text-white/80' : 'text-gray-500'}>
+                                    {formatMessageTime(message.timestamp)}
+                                  </span>
+                                </div>
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    </div>
-                  );
-                });
-              })()
-            )}
-            <div ref={messagesEndRef} />
+                      );
+                    });
+                  })()
+                )}
+                <div ref={messagesEndRef} />
+              </div>
+            </ScrollArea>
           </div>
-        </ScrollArea>
 
-        {/* Message Input */}
-        <div className="flex-shrink-0 border-t pt-4">
-          <div className="flex gap-2">
-            <Input
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Type your message..."
-              disabled={sending || conversationStatus !== 'ready'}
-              className="flex-1"
-            />
-            <Button 
-              onClick={sendMessage}
-              disabled={!newMessage.trim() || sending || conversationStatus !== 'ready'}
-              className="px-4"
-            >
-              {sending ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Send className="w-4 h-4" />
-              )}
-            </Button>
-          </div>
-          
-          {/* Status Indicator */}
-          <div className="flex items-center justify-between mt-2 text-xs text-gray-500">
-            <div className="flex items-center gap-1">
-              {conversationStatus === 'ready' ? (
-                <>
-                  <CheckCircle className="w-3 h-3 text-green-500" />
-                  <span>Connected</span>
-                </>
-              ) : (
-                <>
-                  <AlertCircle className="w-3 h-3 text-yellow-500" />
-                  <span>Connecting...</span>
-                </>
-              )}
+          {/* Message Input - Fixed at bottom */}
+          <div className="p-4 bg-white border-t">
+            <div className="flex gap-3 items-center">
+              <Input
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Type your message..."
+                disabled={sending || conversationStatus !== 'ready'}
+                className="flex-1 border-gray-200 focus:border-blue-400 focus:ring-blue-400"
+              />
+              <Button
+                onClick={sendMessage}
+                disabled={!newMessage.trim() || sending || conversationStatus !== 'ready'}
+                size="icon"
+                className="bg-blue-600 hover:bg-blue-700 h-10 w-10 rounded-full flex-shrink-0"
+              >
+                {sending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+              </Button>
             </div>
-            <span>Press Enter to send</span>
+            
+            {/* Status Indicator */}
+            <div className="flex items-center justify-between mt-2 text-xs text-gray-500">
+              <div className="flex items-center gap-1">
+                {conversationStatus === 'ready' ? (
+                  <>
+                    <CheckCircle className="w-3 h-3 text-green-500" />
+                    <span>Connected</span>
+                  </>
+                ) : (
+                  <>
+                    <AlertCircle className="w-3 h-3 text-yellow-500" />
+                    <span>Connecting...</span>
+                  </>
+                )}
+              </div>
+              <span>Press Enter to send</span>
+            </div>
           </div>
         </div>
       </DialogContent>
