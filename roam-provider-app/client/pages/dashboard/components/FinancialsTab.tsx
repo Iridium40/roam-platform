@@ -1067,7 +1067,24 @@ export default function FinancialsTab({
 
       {/* Tabs for detailed views */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className={`grid w-full ${isOwner ? 'grid-cols-5' : 'grid-cols-4'}`}>
+        {/* Mobile: Dropdown selector */}
+        <div className="md:hidden w-full">
+          <Select value={activeTab} onValueChange={setActiveTab}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select a tab" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="overview">Overview</SelectItem>
+              <SelectItem value="payouts">Payouts</SelectItem>
+              <SelectItem value="transactions">Transactions</SelectItem>
+              {isOwner && <SelectItem value="tips">Tips</SelectItem>}
+              <SelectItem value="settings">Settings</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        
+        {/* Desktop: Tab list */}
+        <TabsList className={`hidden md:grid w-full ${isOwner ? 'grid-cols-5' : 'grid-cols-4'}`}>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="payouts">Payouts</TabsTrigger>
           <TabsTrigger value="transactions">Transactions</TabsTrigger>

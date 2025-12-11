@@ -4,7 +4,6 @@ import { AlertCircle, Package, Puzzle } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useSimplifiedServices } from '@/hooks/services/useSimplifiedServices';
 import { ServiceFilters, EligibleService } from '@/types/services';
-import { ServiceStatsSection } from './services/ServiceStatsSection';
 import { ServiceFiltersSection } from './services/ServiceFiltersSection';
 import { SimplifiedServiceListSection } from './services/SimplifiedServiceListSection';
 import { EditServiceModal } from './services/EditServiceModal';
@@ -21,7 +20,6 @@ export default function ServicesTabSimplified({
 }: ServicesTabSimplifiedProps) {
   const {
     eligibleServices,
-    serviceStats,
     loading,
     error,
     actions
@@ -90,6 +88,16 @@ export default function ServicesTabSimplified({
 
   return (
     <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-semibold">Services</h3>
+          <p className="text-sm text-foreground/60">
+            Manage your business services and pricing.
+          </p>
+        </div>
+      </div>
+
       {/* Error Alert */}
       {error && (
         <Alert variant="destructive">
@@ -97,9 +105,6 @@ export default function ServicesTabSimplified({
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
-
-      {/* Service Stats */}
-      <ServiceStatsSection stats={serviceStats} />
 
       {/* Tabs for Services and Add-ons */}
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'services' | 'addons')} className="w-full">

@@ -865,35 +865,45 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
             Manage your team members, roles, and permissions.
           </p>
         </div>
-
+        {(isOwner || isDispatcher) && (
+          <Button
+            onClick={() => setShowManualAddDialog(true)}
+            className="gap-2 bg-roam-blue hover:bg-roam-blue/90"
+          >
+            <Plus className="w-4 h-4" />
+            Add Staff
+          </Button>
+        )}
       </div>
-
-      {/* Add Staff */}
-      {(isOwner || isDispatcher) && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-lg">Staff Management</CardTitle>
-                <p className="text-sm text-foreground/60">
-                  Manage your team members, roles, and permissions
-                </p>
-              </div>
-              <Button
-                onClick={() => setShowManualAddDialog(true)}
-                className="gap-2 bg-roam-blue hover:bg-roam-blue/90"
-              >
-                <Plus className="w-4 h-4" />
-                Add Staff
-              </Button>
-            </div>
-          </CardHeader>
-        </Card>
-      )}
 
       {/* Staff Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid grid-cols-5 lg:w-auto lg:inline-grid">
+        {/* Mobile Dropdown */}
+        <div className="lg:hidden">
+          <Select value={activeTab} onValueChange={setActiveTab}>
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All ({staff.length})</SelectItem>
+              <SelectItem value="owners">
+                Owners ({staff.filter((s) => s.provider_role === "owner").length})
+              </SelectItem>
+              <SelectItem value="dispatchers">
+                Dispatchers ({staff.filter((s) => s.provider_role === "dispatcher").length})
+              </SelectItem>
+              <SelectItem value="providers">
+                Providers ({staff.filter((s) => s.provider_role === "provider").length})
+              </SelectItem>
+              <SelectItem value="pending">
+                Pending ({staff.filter((s) => s.verification_status === "pending").length})
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Desktop Tabs */}
+        <TabsList className="hidden lg:inline-grid lg:w-auto lg:grid-cols-5">
           <TabsTrigger value="all">All ({staff.length})</TabsTrigger>
           <TabsTrigger value="owners">
             Owners ({staff.filter((s) => s.provider_role === "owner").length})

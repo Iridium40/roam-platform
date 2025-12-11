@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle, Puzzle } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import { useSimplifiedAddons } from '@/hooks/addons/useSimplifiedAddons';
 import { AddonFilters, EligibleAddon } from '@/types/addons';
-import { AddonStatsSection } from './addons/AddonStatsSection';
 import { AddonFiltersSection } from './addons/AddonFiltersSection';
 import { SimplifiedAddonListSection } from './addons/SimplifiedAddonListSection';
 import { EditAddonModal } from './addons/EditAddonModal';
@@ -19,7 +18,6 @@ export default function AddonsTabSimplified({
 }: AddonsTabSimplifiedProps) {
   const {
     eligibleAddons,
-    addonStats,
     loading,
     error,
     actions
@@ -85,9 +83,6 @@ export default function AddonsTabSimplified({
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
-
-      {/* Addon Stats */}
-      <AddonStatsSection stats={addonStats} />
 
       {/* Filters */}
       <AddonFiltersSection

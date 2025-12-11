@@ -83,10 +83,10 @@ export function SimplifiedServiceListSection({
             <TableHeader>
               <TableRow>
                 <TableHead>Service</TableHead>
-                <TableHead>Base Price</TableHead>
-                <TableHead>Your Price</TableHead>
-                <TableHead>Duration</TableHead>
-                <TableHead>Delivery</TableHead>
+                <TableHead className="hidden md:table-cell">Base Price</TableHead>
+                <TableHead className="hidden md:table-cell">Your Price</TableHead>
+                <TableHead className="hidden md:table-cell">Duration</TableHead>
+                <TableHead className="hidden md:table-cell">Delivery</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -99,33 +99,28 @@ export function SimplifiedServiceListSection({
                 return (
                   <TableRow key={service.id} className={!isConfigured ? 'bg-muted/30' : ''}>
                     <TableCell>
-                      <div className="flex items-start space-x-3">
+                      <div className="flex items-center space-x-3">
                         {service.image_url && (
                           <img
                             src={service.image_url}
                             alt={service.name}
-                            className="w-12 h-12 rounded-lg object-cover"
+                            className="w-10 h-10 rounded-lg object-cover"
                           />
                         )}
-                        <div>
-                          <p className="font-medium">{service.name}</p>
-                          <p className="text-sm text-muted-foreground line-clamp-2">
-                            {service.description}
-                          </p>
-                        </div>
+                        <p className="font-medium">{service.name}</p>
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden md:table-cell">
                       <p className="text-sm text-muted-foreground">${service.min_price}</p>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden md:table-cell">
                       {isConfigured && service.business_price ? (
                         <p className="font-medium">${service.business_price}</p>
                       ) : (
                         <p className="text-sm text-muted-foreground">Not set</p>
                       )}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden md:table-cell">
                       {isConfigured && service.business_duration_minutes ? (
                         <div className="flex items-center gap-1">
                           <Clock className="h-4 w-4 text-muted-foreground" />
@@ -135,7 +130,7 @@ export function SimplifiedServiceListSection({
                         <p className="text-sm text-muted-foreground">Not set</p>
                       )}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden md:table-cell">
                       {isConfigured && service.delivery_type ? (
                         <div className="flex items-center gap-2">
                           {getDeliveryTypeIcon(service.delivery_type)}
@@ -157,11 +152,10 @@ export function SimplifiedServiceListSection({
                     <TableCell className="text-right">
                       <Button
                         variant="ghost"
-                        size="sm"
+                        size="icon"
                         onClick={() => onEdit(service)}
                       >
-                        <Edit className="mr-2 h-4 w-4" />
-                        {isConfigured ? 'Edit' : 'Configure'}
+                        <Edit className="h-4 w-4" />
                       </Button>
                     </TableCell>
                   </TableRow>

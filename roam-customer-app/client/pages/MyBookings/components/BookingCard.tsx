@@ -142,6 +142,23 @@ export const BookingCard: React.FC<BookingCardProps> = ({
     booking.booking_status === "declined" ||
     (new Date(`${booking.date} ${booking.time}`) < new Date() && booking.booking_status !== "in_progress");
 
+  // Check if booking is in a final state and more than 1 day past the booking date
+  // In this case, we hide the message button
+  const isFinalStatus = 
+    booking.booking_status === "completed" ||
+    booking.booking_status === "cancelled" || 
+    booking.booking_status === "declined" || 
+    booking.booking_status === "no_show";
+  
+  const isMoreThanOneDayPastBooking = () => {
+    const bookingDate = new Date(`${booking.date} ${booking.time}`);
+    const oneDayAfterBooking = new Date(bookingDate.getTime() + 24 * 60 * 60 * 1000);
+    return new Date() > oneDayAfterBooking;
+  };
+
+  // Hide message button if in final state AND more than 1 day past booking date
+  const shouldHideMessageButton = isFinalStatus && isMoreThanOneDayPastBooking();
+
   return (
     <>
       <Card className="hover:shadow-md transition-shadow">
@@ -314,14 +331,8 @@ export const BookingCard: React.FC<BookingCardProps> = ({
 
               {/* Action Buttons */}
               <div className="flex items-center gap-2 flex-shrink-0">
-                {/* Message Button - for active bookings */}
-                {(() => {
-                  const isFinalStatus = booking.booking_status === 'completed' || 
-                                       booking.booking_status === 'cancelled' || 
-                                       booking.booking_status === 'declined' || 
-                                       booking.booking_status === 'no_show';
-                  return !isFinalStatus;
-                })() && (
+                {/* Message Button - hide for final bookings more than 1 day past */}
+                {!shouldHideMessageButton && (
                   <Button
                     size="sm"
                     className="bg-roam-blue hover:bg-roam-blue/90 text-white font-medium relative"
@@ -706,8 +717,8 @@ export const BookingCard: React.FC<BookingCardProps> = ({
               </div>
             )}
 
-            {/* Past Booking - Message Button */}
-            {isPastBooking && booking.providers && booking.booking_status !== "completed" && (
+            {/* Past Booking - Message Button (hide if more than 1 day past booking date) */}
+            {isPastBooking && booking.providers && booking.booking_status !== "completed" && !shouldHideMessageButton && (
               <Button
                 size="sm"
                 className="w-full bg-roam-blue hover:bg-roam-blue/90 text-white font-medium relative"
@@ -730,6 +741,26 @@ export const BookingCard: React.FC<BookingCardProps> = ({
             {/* Completed Booking Actions */}
             {booking.booking_status === "completed" && (
               <div className="space-y-2">
+                {/* Message Button for completed bookings within 1 day */}
+                {!shouldHideMessageButton && booking.providers && (
+                  <Button
+                    size="sm"
+                    className="w-full bg-roam-blue hover:bg-roam-blue/90 text-white font-medium relative"
+                    onClick={handleMessageClick}
+                    title={`Message ${booking.providers.first_name} ${booking.providers.last_name} about this booking`}
+                  >
+                    <MessageCircle className="w-4 h-4 mr-2" />
+                    Message Provider
+                    {unreadCount > 0 && (
+                      <Badge
+                        variant="destructive"
+                        className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs font-bold rounded-full"
+                      >
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </Badge>
+                    )}
+                  </Button>
+                )}
                 {(() => {
                   console.log('🔍 Mobile Review Check Debug:', {
                     bookingId: booking.id,

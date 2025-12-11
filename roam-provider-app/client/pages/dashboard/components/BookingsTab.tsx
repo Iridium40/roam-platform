@@ -409,9 +409,13 @@ export default function BookingsTab({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Bookings</h1>
-        <p className="text-sm text-gray-600">Manage and track all your bookings</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-semibold">Bookings</h3>
+          <p className="text-sm text-foreground/60">
+            Manage and track all your bookings.
+          </p>
+        </div>
       </div>
 
       {/* Booking Statistics - Only visible to owners */}

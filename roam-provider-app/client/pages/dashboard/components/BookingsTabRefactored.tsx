@@ -127,6 +127,16 @@ export function BookingsTab({ providerData, business }: BookingsTabProps) {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-semibold">Bookings</h3>
+          <p className="text-sm text-foreground/60">
+            Manage and track all your bookings.
+          </p>
+        </div>
+      </div>
+
       {/* Filters Section with all controls */}
       <BookingFiltersSection
         searchQuery={searchQuery}

@@ -14,7 +14,6 @@ import {
   Users,
   Hash,
   Calendar,
-  X,
 } from 'lucide-react';
 import { useConversations } from '@roam/shared';
 import type { ConversationMessage as DBConversationMessage, Conversation } from '@roam/shared';
@@ -443,7 +442,7 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
       <DialogContent className="max-w-2xl h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
         {/* Custom Header with gradient background */}
         <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-5 rounded-t-lg">
-          <div className="flex items-start justify-between">
+          <div className="flex items-start">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
                 <MessageCircle className="h-6 w-6 text-white" />
@@ -453,12 +452,6 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
                 <p className="text-blue-100 text-sm">with {providerName}</p>
               </div>
             </div>
-            <button 
-              onClick={onClose}
-              className="text-white/80 hover:text-white transition-colors p-1 rounded-full hover:bg-white/10"
-            >
-              <X className="h-5 w-5" />
-            </button>
           </div>
           
           {/* Booking Reference & Date */}
