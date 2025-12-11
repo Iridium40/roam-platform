@@ -100,21 +100,27 @@ export default function BookingListSection({
     </div>
   );
 
+  // Debug: Log when component renders with current tab
+  console.log('📋 BookingListSection render:', { activeTab, activeCount: activeBookings.length, closedCount: closedBookings.length });
+
   return (
     <Tabs value={activeTab} onValueChange={(value) => {
       console.log('🔄 Tab change requested:', { from: activeTab, to: value });
-      setActiveTab(value);
+      if (value !== activeTab) {
+        setActiveTab(value);
+        console.log('✅ setActiveTab called with:', value);
+      }
     }} className="w-full">
-      <TabsList className="grid w-full grid-cols-2">
+      <TabsList className="grid w-full grid-cols-2 h-12">
         <TabsTrigger 
           value="active"
-          className={activeTab === 'active' ? 'bg-blue-500 text-white' : ''}
+          className="data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-sm transition-all"
         >
           Active Bookings ({activeBookings.length})
         </TabsTrigger>
         <TabsTrigger 
           value="closed"
-          className={activeTab === 'closed' ? 'bg-blue-500 text-white' : ''}
+          className="data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-sm transition-all"
         >
           Closed Bookings ({closedBookings.length})
         </TabsTrigger>

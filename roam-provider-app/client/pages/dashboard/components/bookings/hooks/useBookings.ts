@@ -33,11 +33,6 @@ export function useBookings(providerData: any, business: any) {
   const [selectedDateFilter, setSelectedDateFilter] = useState<string | null>(null);
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
   const [activeTab, setActiveTab] = useState("active");
-  
-  // Wrapper for setActiveTab
-  const handleSetActiveTab = (tab: string) => {
-    setActiveTab(tab);
-  };
   const [selectedBooking, setSelectedBooking] = useState<any>(null);
   
   // Pagination state
@@ -259,6 +254,7 @@ export function useBookings(providerData: any, business: any) {
 
   // Reset pagination when tab changes
   useEffect(() => {
+    console.log('🔄 useBookings: Tab changed, resetting pagination for:', activeTab);
     if (activeTab === "active") setActivePage(1);
     if (activeTab === "closed") setClosedPage(1);
   }, [activeTab]);
@@ -570,7 +566,7 @@ export function useBookings(providerData: any, business: any) {
     showUnassignedOnly,
     setShowUnassignedOnly,
     activeTab,
-    setActiveTab: handleSetActiveTab,
+    setActiveTab,
     selectedBooking,
     setSelectedBooking,
     
