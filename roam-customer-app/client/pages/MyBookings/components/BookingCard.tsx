@@ -133,12 +133,14 @@ export const BookingCard: React.FC<BookingCardProps> = ({
     (booking.booking_status === "pending" || booking.booking_status === "confirmed") &&
     !isWithin24Hours(booking);
 
-  // Check if booking is in the past (completed, cancelled, no_show, or past date)
+  // Check if booking is in the past (completed, cancelled, no_show, declined, or past date but NOT in_progress)
+  // in_progress bookings have a past start time but are still active
   const isPastBooking = 
     booking.booking_status === "completed" ||
     booking.booking_status === "cancelled" || 
     booking.booking_status === "no_show" ||
-    new Date(`${booking.date} ${booking.time}`) < new Date();
+    booking.booking_status === "declined" ||
+    (new Date(`${booking.date} ${booking.time}`) < new Date() && booking.booking_status !== "in_progress");
 
   return (
     <>
@@ -290,11 +292,6 @@ export const BookingCard: React.FC<BookingCardProps> = ({
                      booking.booking_status === 'declined' ? 'Booking declined' :
                      'No show'}
                   </span>
-                  {booking.booking_status === "confirmed" && (
-                    <span className="text-xs text-roam-blue bg-roam-blue/10 px-2 py-0.5 rounded-full">
-                      Messaging Available
-                    </span>
-                  )}
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <div 
@@ -524,11 +521,6 @@ export const BookingCard: React.FC<BookingCardProps> = ({
                  booking.booking_status === 'declined' ? 'Booking declined' :
                  'No show'}
               </span>
-              {booking.booking_status === "confirmed" && (
-                <span className="text-xs text-roam-blue bg-roam-blue/10 px-2 py-0.5 rounded-full">
-                  Messaging Available
-                </span>
-              )}
             </div>
             {/* Progress Bar */}
             <div className="w-full bg-gray-200 rounded-full h-2">
@@ -613,14 +605,51 @@ export const BookingCard: React.FC<BookingCardProps> = ({
 
           {/* Action Buttons - Full Width Horizontal Row */}
           <div className="pt-2 border-t border-gray-100">
-            {/* Active Booking Actions */}
-            {!isPastBooking && (booking.booking_status === "confirmed" || booking.booking_status === "pending" || booking.booking_status === "in_progress") && (
+            {/* In Progress Booking Actions */}
+            {!isPastBooking && booking.booking_status === "in_progress" && (
+              <div className="grid grid-cols-2 gap-2">
+                {/* Message Button */}
+                {booking.providers && (
+                  <Button
+                    size="sm"
+                    className="bg-roam-blue hover:bg-roam-blue/90 text-white font-medium relative"
+                    onClick={handleMessageClick}
+                    title={`Message ${booking.providers.first_name} ${booking.providers.last_name} about this booking`}
+                  >
+                    <MessageCircle className="w-4 h-4 mr-1.5" />
+                    <span className="text-xs">Message</span>
+                    {unreadCount > 0 && (
+                      <Badge
+                        variant="destructive"
+                        className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs font-bold rounded-full"
+                      >
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </Badge>
+                    )}
+                  </Button>
+                )}
+                
+                {/* Add More button */}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-purple-500 text-purple-600 hover:bg-purple-50"
+                  onClick={() => setShowAddMoreModal(true)}
+                >
+                  <Plus className="w-4 h-4 mr-1.5" />
+                  <span className="text-xs">Add More Services</span>
+                </Button>
+              </div>
+            )}
+
+            {/* Pending/Confirmed Booking Actions */}
+            {!isPastBooking && (booking.booking_status === "confirmed" || booking.booking_status === "pending") && (
               <div className="grid grid-cols-3 gap-2">
                 {/* Message Button */}
                 {booking.providers && (
                   <Button
                     size="sm"
-                    className="bg-roam-blue hover:bg-roam-blue/90 text-white font-medium relative flex-1"
+                    className="bg-roam-blue hover:bg-roam-blue/90 text-white font-medium relative"
                     onClick={handleMessageClick}
                     title={`Message ${booking.providers.first_name} ${booking.providers.last_name} about this booking`}
                   >
@@ -638,54 +667,37 @@ export const BookingCard: React.FC<BookingCardProps> = ({
                 )}
                 
                 {/* Reschedule Button */}
-                {(booking.booking_status === "pending" || booking.booking_status === "confirmed") && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                  onClick={() => onReschedule(booking)}
+                >
+                  <Edit className="w-4 h-4 mr-1.5" />
+                  <span className="text-xs">Reschedule</span>
+                </Button>
+                
+                {/* Cancel Button */}
+                {canCancelBooking ? (
                   <Button
                     size="sm"
                     variant="outline"
-                    className="border-gray-300 text-gray-700 hover:bg-gray-50 flex-1"
-                    onClick={() => onReschedule(booking)}
+                    className="border-red-200 text-red-600 hover:bg-red-50"
+                    onClick={() => onCancel(booking)}
                   >
-                    <Edit className="w-4 h-4 mr-1.5" />
-                    <span className="text-xs">Reschedule</span>
+                    <X className="w-4 h-4 mr-1.5" />
+                    <span className="text-xs">Cancel</span>
                   </Button>
-                )}
-                
-                {/* Cancel Button or More Menu */}
-                {(booking.booking_status === "pending" || booking.booking_status === "confirmed") && (
-                  canCancelBooking ? (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="border-red-200 text-red-600 hover:bg-red-50 flex-1"
-                      onClick={() => onCancel(booking)}
-                    >
-                      <X className="w-4 h-4 mr-1.5" />
-                      <span className="text-xs">Cancel</span>
-                    </Button>
-                  ) : (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="border-gray-200 text-gray-400 cursor-not-allowed flex-1"
-                      disabled
-                      title="Cannot cancel within 24 hours of appointment"
-                    >
-                      <X className="w-4 h-4 mr-1.5" />
-                      <span className="text-xs">24h Lock</span>
-                    </Button>
-                  )
-                )}
-                
-                {/* Add More button - Only show for in_progress bookings */}
-                {booking.booking_status === 'in_progress' && (
+                ) : (
                   <Button
                     size="sm"
                     variant="outline"
-                    className="border-purple-500 text-purple-600 hover:bg-purple-50 col-span-2"
-                    onClick={() => setShowAddMoreModal(true)}
+                    className="border-gray-200 text-gray-400 cursor-not-allowed"
+                    disabled
+                    title="Cannot cancel within 24 hours of appointment"
                   >
-                    <Plus className="w-4 h-4 mr-1.5" />
-                    <span className="text-xs">Add More Services</span>
+                    <X className="w-4 h-4 mr-1.5" />
+                    <span className="text-xs">24h Lock</span>
                   </Button>
                 )}
               </div>
