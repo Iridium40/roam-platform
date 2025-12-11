@@ -966,183 +966,293 @@ export default function Index() {
           </div>
 
           {promotions.length > 0 ? (
-            <div className="relative">
-              {/* Navigation Arrows */}
-              {promotionPages.length > 1 && (
-                <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={prevPromotionSlide}
-                    disabled={currentPromotionSlide === 0}
-                    className="absolute left-4 top-1/2 -translate-y-1/2 z-10 bg-white/90 border-roam-blue text-roam-blue hover:bg-roam-blue hover:text-white shadow-lg disabled:opacity-50"
+            <>
+              {/* Mobile View - Show all promotions stacked */}
+              <div className="md:hidden grid grid-cols-1 gap-6 px-4">
+                {promotions.map((promotion) => (
+                  <Card
+                    key={promotion.id}
+                    className="group hover:shadow-2xl transition-all duration-500 hover:-translate-y-3 border-0 shadow-xl bg-white overflow-hidden rounded-lg w-full"
                   >
-                    <ChevronLeft className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={nextPromotionSlide}
-                    disabled={currentPromotionSlide >= promotionPages.length - 1}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 z-10 bg-white/90 border-roam-blue text-roam-blue hover:text-white shadow-lg disabled:opacity-50"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </Button>
-                </>
-              )}
-              <div className="overflow-hidden">
-                <div
-                  className="flex transition-transform duration-300 ease-in-out"
-                  style={{
-                    transform: `translateX(-${currentPromotionSlide * 100}%)`,
-                  }}
-                >
-                  {promotionPages.map((page, pageIndex) => (
-                    <div
-                      key={`promotion-page-${pageIndex}`}
-                      className="flex gap-6 w-full flex-none px-4"
-                    >
-                      {page.map((promotion) => (
-                        <Card
-                          key={promotion.id}
-                          className="group hover:shadow-2xl transition-all duration-500 hover:-translate-y-3 border-0 shadow-xl bg-white overflow-hidden rounded-lg flex-shrink-0 w-full md:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)]"
-                        >
-                          {/* Hero Image Section */}
-                          <div className="relative h-64 bg-gradient-to-br from-roam-yellow/20 via-roam-light-blue/10 to-roam-blue/5 overflow-hidden">
-                            {promotion.imageUrl ? (
-                              <img
-                                src={promotion.imageUrl}
-                                alt={promotion.title}
-                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                              />
-                            ) : (
-                              <div className="flex items-center justify-center h-full">
-                                {promotion.business && promotion.business.logo ? (
-                                  <div className="flex flex-col items-center space-y-3">
-                                    <div className="w-20 h-20 rounded-2xl overflow-hidden bg-white shadow-xl border-4 border-white">
-                                      <img
-                                        src={promotion.business.logo}
-                                        alt={promotion.business.name}
-                                        className="w-full h-full object-cover"
-                                      />
-                                    </div>
-                                    <h3 className="text-lg font-bold text-roam-blue">
-                                      {promotion.business.name}
-                                    </h3>
-                                  </div>
-                                ) : (
-                                  <div className="flex flex-col items-center space-y-3">
-                                    <div className="w-20 h-20 rounded-2xl bg-roam-yellow/20 flex items-center justify-center">
-                                      <Tag className="w-10 h-10 text-roam-blue" />
-                                    </div>
-                                    <h3 className="text-xl font-bold text-roam-blue">
-                                      SPECIAL OFFER
-                                    </h3>
-                                  </div>
-                                )}
+                    {/* Hero Image Section */}
+                    <div className="relative h-64 bg-gradient-to-br from-roam-yellow/20 via-roam-light-blue/10 to-roam-blue/5 overflow-hidden">
+                      {promotion.imageUrl ? (
+                        <img
+                          src={promotion.imageUrl}
+                          alt={promotion.title}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                        />
+                      ) : (
+                        <div className="flex items-center justify-center h-full">
+                          {promotion.business && promotion.business.logo ? (
+                            <div className="flex flex-col items-center space-y-3">
+                              <div className="w-20 h-20 rounded-2xl overflow-hidden bg-white shadow-xl border-4 border-white">
+                                <img
+                                  src={promotion.business.logo}
+                                  alt={promotion.business.name}
+                                  className="w-full h-full object-cover"
+                                />
                               </div>
-                            )}
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent"></div>
-
-                            {/* Savings Badge - Bottom Right */}
-                            {formatSavings(promotion) && (
-                              <div className="absolute bottom-4 right-4">
-                                <div className="bg-red-500 text-white px-4 py-2 rounded-2xl shadow-lg font-bold text-lg">
-                                  {formatSavings(promotion)}
-                                </div>
-                              </div>
-                            )}
-
-                          </div>
-
-                          <CardContent className="p-6">
-                            {/* Promotion Title & Service Info */}
-                            <div className="mb-4">
-                              <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-roam-blue transition-colors">
-                                {promotion.title}
+                              <h3 className="text-lg font-bold text-roam-blue">
+                                {promotion.business.name}
                               </h3>
-                              {promotion.service && (
-                                <span className="inline-block px-3 py-1 text-xs font-medium bg-green-100 text-green-700 rounded-full">
-                                  {promotion.service.name}
-                                </span>
+                            </div>
+                          ) : (
+                            <div className="flex flex-col items-center space-y-3">
+                              <div className="w-20 h-20 rounded-2xl bg-roam-yellow/20 flex items-center justify-center">
+                                <Tag className="w-10 h-10 text-roam-blue" />
+                              </div>
+                              <h3 className="text-xl font-bold text-roam-blue">
+                                SPECIAL OFFER
+                              </h3>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent"></div>
+
+                      {/* Savings Badge - Bottom Right */}
+                      {formatSavings(promotion) && (
+                        <div className="absolute bottom-4 right-4">
+                          <div className="bg-red-500 text-white px-4 py-2 rounded-2xl shadow-lg font-bold text-lg">
+                            {formatSavings(promotion)}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <CardContent className="p-6">
+                      {/* Promotion Title & Service Info */}
+                      <div className="mb-4">
+                        <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-roam-blue transition-colors">
+                          {promotion.title}
+                        </h3>
+                        {promotion.service && (
+                          <span className="inline-block px-3 py-1 text-xs font-medium bg-green-100 text-green-700 rounded-full">
+                            {promotion.service.name}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Description */}
+                      <p className="text-gray-600 text-sm leading-relaxed line-clamp-2 mb-4">
+                        {promotion.description}
+                      </p>
+
+                      {/* Business Info */}
+                      {promotion.business && (
+                        <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
+                          <Building className="w-4 h-4 text-roam-blue" />
+                          <span>{promotion.business.name}</span>
+                        </div>
+                      )}
+
+                      {/* Claim Button */}
+                      <Button
+                        asChild
+                        className="w-full bg-gradient-to-r from-roam-blue to-roam-light-blue hover:from-roam-blue/90 hover:to-roam-light-blue/90 text-white font-semibold py-3 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]"
+                      >
+                        <Link
+                          to={(() => {
+                            const baseParams = `promotion=${promotion.id}&promo_code=${promotion.promoCode}`;
+
+                            if (promotion.business && promotion.service) {
+                              return `/book-service/${promotion.service.id}?${baseParams}&business_id=${promotion.business.id}`;
+                            } else if (promotion.business) {
+                              return `/business/${promotion.business.id}?${baseParams}`;
+                            } else if (promotion.service) {
+                              return `/book-service/${promotion.service.id}?${baseParams}`;
+                            } else {
+                              return `/services?${baseParams}`;
+                            }
+                          })()}
+                        >
+                          <Tag className="w-4 h-4 mr-2" />
+                          {promotion.business && promotion.service
+                            ? "Claim Offer"
+                            : promotion.business
+                              ? "Book with Business"
+                              : promotion.service
+                                ? "Book This Service"
+                                : "Claim Offer"}
+                        </Link>
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              {/* Desktop View - Carousel */}
+              <div className="hidden md:block relative">
+                {/* Navigation Arrows */}
+                {promotionPages.length > 1 && (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={prevPromotionSlide}
+                      disabled={currentPromotionSlide === 0}
+                      className="absolute left-4 top-1/2 -translate-y-1/2 z-10 bg-white/90 border-roam-blue text-roam-blue hover:bg-roam-blue hover:text-white shadow-lg disabled:opacity-50"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={nextPromotionSlide}
+                      disabled={currentPromotionSlide >= promotionPages.length - 1}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 z-10 bg-white/90 border-roam-blue text-roam-blue hover:text-white shadow-lg disabled:opacity-50"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </Button>
+                  </>
+                )}
+                <div className="overflow-hidden">
+                  <div
+                    className="flex transition-transform duration-300 ease-in-out"
+                    style={{
+                      transform: `translateX(-${currentPromotionSlide * 100}%)`,
+                    }}
+                  >
+                    {promotionPages.map((page, pageIndex) => (
+                      <div
+                        key={`promotion-page-${pageIndex}`}
+                        className="w-full flex-none grid grid-cols-2 lg:grid-cols-3 gap-6 px-4"
+                      >
+                        {page.map((promotion) => (
+                          <Card
+                            key={promotion.id}
+                            className="group hover:shadow-2xl transition-all duration-500 hover:-translate-y-3 border-0 shadow-xl bg-white overflow-hidden rounded-lg w-full"
+                          >
+                            {/* Hero Image Section */}
+                            <div className="relative h-64 bg-gradient-to-br from-roam-yellow/20 via-roam-light-blue/10 to-roam-blue/5 overflow-hidden">
+                              {promotion.imageUrl ? (
+                                <img
+                                  src={promotion.imageUrl}
+                                  alt={promotion.title}
+                                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                                />
+                              ) : (
+                                <div className="flex items-center justify-center h-full">
+                                  {promotion.business && promotion.business.logo ? (
+                                    <div className="flex flex-col items-center space-y-3">
+                                      <div className="w-20 h-20 rounded-2xl overflow-hidden bg-white shadow-xl border-4 border-white">
+                                        <img
+                                          src={promotion.business.logo}
+                                          alt={promotion.business.name}
+                                          className="w-full h-full object-cover"
+                                        />
+                                      </div>
+                                      <h3 className="text-lg font-bold text-roam-blue">
+                                        {promotion.business.name}
+                                      </h3>
+                                    </div>
+                                  ) : (
+                                    <div className="flex flex-col items-center space-y-3">
+                                      <div className="w-20 h-20 rounded-2xl bg-roam-yellow/20 flex items-center justify-center">
+                                        <Tag className="w-10 h-10 text-roam-blue" />
+                                      </div>
+                                      <h3 className="text-xl font-bold text-roam-blue">
+                                        SPECIAL OFFER
+                                      </h3>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent"></div>
+
+                              {/* Savings Badge - Bottom Right */}
+                              {formatSavings(promotion) && (
+                                <div className="absolute bottom-4 right-4">
+                                  <div className="bg-red-500 text-white px-4 py-2 rounded-2xl shadow-lg font-bold text-lg">
+                                    {formatSavings(promotion)}
+                                  </div>
+                                </div>
                               )}
                             </div>
 
-                            {/* Description */}
-                            <p className="text-gray-600 text-sm leading-relaxed line-clamp-2 mb-4">
-                              {promotion.description}
-                            </p>
-
-                            {/* Business Info */}
-                            {promotion.business && (
-                              <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
-                                <Building className="w-4 h-4 text-roam-blue" />
-                                <span>{promotion.business.name}</span>
+                            <CardContent className="p-6">
+                              {/* Promotion Title & Service Info */}
+                              <div className="mb-4">
+                                <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-roam-blue transition-colors">
+                                  {promotion.title}
+                                </h3>
+                                {promotion.service && (
+                                  <span className="inline-block px-3 py-1 text-xs font-medium bg-green-100 text-green-700 rounded-full">
+                                    {promotion.service.name}
+                                  </span>
+                                )}
                               </div>
-                            )}
 
-                            {/* Claim Button */}
-                            <Button
-                              asChild
-                              className="w-full bg-gradient-to-r from-roam-blue to-roam-light-blue hover:from-roam-blue/90 hover:to-roam-light-blue/90 text-white font-semibold py-3 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]"
-                            >
-                              <Link
-                                to={(() => {
-                                  const baseParams = `promotion=${promotion.id}&promo_code=${promotion.promoCode}`;
+                              {/* Description */}
+                              <p className="text-gray-600 text-sm leading-relaxed line-clamp-2 mb-4">
+                                {promotion.description}
+                              </p>
 
-                                  // If promotion has both business and service, start the booking flow
-                                  if (promotion.business && promotion.service) {
-                                    return `/book-service/${promotion.service.id}?${baseParams}&business_id=${promotion.business.id}`;
-                                  }
-                                  // If only business, go to business profile
-                                  else if (promotion.business) {
-                                    return `/business/${promotion.business.id}?${baseParams}`;
-                                  }
-                                  // If only service, start service booking flow
-                                  else if (promotion.service) {
-                                    return `/book-service/${promotion.service.id}?${baseParams}`;
-                                  }
-                                  // Default fallback
-                                  else {
-                                    return `/services?${baseParams}`;
-                                  }
-                                })()}
+                              {/* Business Info */}
+                              {promotion.business && (
+                                <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
+                                  <Building className="w-4 h-4 text-roam-blue" />
+                                  <span>{promotion.business.name}</span>
+                                </div>
+                              )}
+
+                              {/* Claim Button */}
+                              <Button
+                                asChild
+                                className="w-full bg-gradient-to-r from-roam-blue to-roam-light-blue hover:from-roam-blue/90 hover:to-roam-light-blue/90 text-white font-semibold py-3 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]"
                               >
-                                <Tag className="w-4 h-4 mr-2" />
-                                {promotion.business && promotion.service
-                                  ? "Claim Offer"
-                                  : promotion.business
-                                    ? "Book with Business"
-                                    : promotion.service
-                                      ? "Book This Service"
-                                      : "Claim Offer"}
-                              </Link>
-                            </Button>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              </div>
+                                <Link
+                                  to={(() => {
+                                    const baseParams = `promotion=${promotion.id}&promo_code=${promotion.promoCode}`;
 
-              {/* Carousel indicators - only show when there are multiple pages */}
-              {promotionPages.length > 1 && (
-                <div className="flex justify-center mt-6 gap-2">
-                  {promotionPages.map((_, index) => (
-                    <button
-                      key={index}
-                      onClick={() => setCurrentPromotionSlide(index)}
-                      className={`w-3 h-3 rounded-full transition-colors ${
-                        index === currentPromotionSlide
-                          ? "bg-roam-blue"
-                          : "bg-gray-300 hover:bg-gray-400"
-                      }`}
-                    />
-                  ))}
+                                    if (promotion.business && promotion.service) {
+                                      return `/book-service/${promotion.service.id}?${baseParams}&business_id=${promotion.business.id}`;
+                                    } else if (promotion.business) {
+                                      return `/business/${promotion.business.id}?${baseParams}`;
+                                    } else if (promotion.service) {
+                                      return `/book-service/${promotion.service.id}?${baseParams}`;
+                                    } else {
+                                      return `/services?${baseParams}`;
+                                    }
+                                  })()}
+                                >
+                                  <Tag className="w-4 h-4 mr-2" />
+                                  {promotion.business && promotion.service
+                                    ? "Claim Offer"
+                                    : promotion.business
+                                      ? "Book with Business"
+                                      : promotion.service
+                                        ? "Book This Service"
+                                        : "Claim Offer"}
+                                </Link>
+                              </Button>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              )}
-            </div>
+
+                {/* Carousel indicators - only show when there are multiple pages */}
+                {promotionPages.length > 1 && (
+                  <div className="flex justify-center mt-6 gap-2">
+                    {promotionPages.map((_, index) => (
+                      <button
+                        key={index}
+                        onClick={() => setCurrentPromotionSlide(index)}
+                        className={`w-3 h-3 rounded-full transition-colors ${
+                          index === currentPromotionSlide
+                            ? "bg-roam-blue"
+                            : "bg-gray-300 hover:bg-gray-400"
+                        }`}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
           ) : (
             <div className="text-center py-8">
               <Tag className="w-16 h-16 text-gray-400 mx-auto mb-4" />
