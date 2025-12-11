@@ -23,6 +23,7 @@ import {
   Building,
   User,
   CreditCard,
+  RotateCcw,
 } from "lucide-react";
 
 interface BookingCardProps {
@@ -58,6 +59,9 @@ export default function BookingCard({
 
   // Check if a provider is assigned to the booking
   const hasProviderAssigned = Boolean(booking.providers && booking.providers.id) || Boolean(booking.provider_id);
+
+  // Check if booking has been rescheduled
+  const isRescheduled = Boolean(booking.original_booking_date || booking.original_booking_time);
 
   const getStatusActions = (status: string) => {
     // Check if booking is scheduled for today or in the past
@@ -190,9 +194,21 @@ export default function BookingCard({
             
             {/* Service Details */}
             <div className="flex-1 min-w-0">
-              <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                {booking.services?.name || "Service"}
-              </h3>
+              <div className="flex items-center space-x-2 mb-1">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {booking.services?.name || "Service"}
+                </h3>
+                {isRescheduled && (
+                  <Badge 
+                    variant="outline" 
+                    className="bg-orange-50 text-orange-700 border-orange-200 text-xs px-2 py-0.5 flex items-center gap-1"
+                    title={`Rescheduled from ${booking.original_booking_date || 'original date'} at ${booking.original_booking_time ? formatDisplayTime(booking.original_booking_time) : 'original time'}`}
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                    Rescheduled
+                  </Badge>
+                )}
+              </div>
               <div className="flex items-center space-x-4 text-sm text-gray-600">
                 <div className="flex items-center space-x-1">
                   <Calendar className="w-4 h-4" />
@@ -203,6 +219,14 @@ export default function BookingCard({
                   <span>{formatDisplayTime(booking.start_time)} ({booking.services?.duration_minutes || 0} min)</span>
                 </div>
               </div>
+              {isRescheduled && (
+                <div className="mt-2 text-xs text-orange-600 bg-orange-50 border border-orange-200 rounded px-2 py-1 inline-flex items-center gap-1">
+                  <RotateCcw className="w-3 h-3" />
+                  <span>
+                    Originally scheduled: {booking.original_booking_date || 'N/A'} at {booking.original_booking_time ? formatDisplayTime(booking.original_booking_time) : 'N/A'}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
