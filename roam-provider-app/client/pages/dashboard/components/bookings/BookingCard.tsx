@@ -157,8 +157,8 @@ export default function BookingCard({
 
   return (
     <Card className="overflow-hidden bg-white rounded-lg shadow-sm border border-gray-200">
-      {/* Main Content */}
-      <div className="p-6">
+      {/* Desktop Layout */}
+      <div className="hidden lg:block p-6">
         {/* Top Section - Service Info */}
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-start space-x-4">
@@ -296,41 +296,41 @@ export default function BookingCard({
             </div>
           </div>
           
-                 <div className="flex items-start space-x-2">
-                   <MapPin className="w-4 h-4 text-gray-500 mt-0.5" />
-                   <div>
-                     <div className="text-sm font-medium text-gray-900">Location</div>
-                     <div className="text-sm text-gray-600 max-w-xs">
-                       {booking.customer_locations ? (
-                         <a
-                           href={`https://maps.google.com/maps?q=${encodeURIComponent(
-                             `${booking.customer_locations.address_line1 || ""} ${booking.customer_locations.address_line2 || ""}, ${booking.customer_locations.city || ""}, ${booking.customer_locations.state || ""} ${booking.customer_locations.postal_code || ""}`
-                           )}`}
-                           target="_blank"
-                           rel="noopener noreferrer"
-                           className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
-                           title="Click to open in Google Maps"
-                         >
-                           {`${booking.customer_locations.address_line1 || ""} ${booking.customer_locations.address_line2 || ""}, ${booking.customer_locations.city || ""}, ${booking.customer_locations.state || ""} ${booking.customer_locations.postal_code || ""}`}
-                         </a>
-                       ) : booking.business_locations ? (
-                         <a
-                           href={`https://maps.google.com/maps?q=${encodeURIComponent(
-                             `${booking.business_locations.location_name || ""} ${booking.business_locations.address_line1 || ""}, ${booking.business_locations.city || ""}, ${booking.business_locations.state || ""}`
-                           )}`}
-                           target="_blank"
-                           rel="noopener noreferrer"
-                           className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
-                           title="Click to open in Google Maps"
-                         >
-                           {`${booking.business_locations.location_name || ""} ${booking.business_locations.address_line1 || ""}, ${booking.business_locations.city || ""}, ${booking.business_locations.state || ""}`}
-                         </a>
-                       ) : (
-                         "Location not specified"
-                       )}
-                     </div>
-                   </div>
-                 </div>
+          <div className="flex items-start space-x-2">
+            <MapPin className="w-4 h-4 text-gray-500 mt-0.5" />
+            <div>
+              <div className="text-sm font-medium text-gray-900">Location</div>
+              <div className="text-sm text-gray-600 max-w-xs">
+                {booking.customer_locations ? (
+                  <a
+                    href={`https://maps.google.com/maps?q=${encodeURIComponent(
+                      `${booking.customer_locations.address_line1 || ""} ${booking.customer_locations.address_line2 || ""}, ${booking.customer_locations.city || ""}, ${booking.customer_locations.state || ""} ${booking.customer_locations.postal_code || ""}`
+                    )}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                    title="Click to open in Google Maps"
+                  >
+                    {`${booking.customer_locations.address_line1 || ""} ${booking.customer_locations.address_line2 || ""}, ${booking.customer_locations.city || ""}, ${booking.customer_locations.state || ""} ${booking.customer_locations.postal_code || ""}`}
+                  </a>
+                ) : booking.business_locations ? (
+                  <a
+                    href={`https://maps.google.com/maps?q=${encodeURIComponent(
+                      `${booking.business_locations.location_name || ""} ${booking.business_locations.address_line1 || ""}, ${booking.business_locations.city || ""}, ${booking.business_locations.state || ""}`
+                    )}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                    title="Click to open in Google Maps"
+                  >
+                    {`${booking.business_locations.location_name || ""} ${booking.business_locations.address_line1 || ""}, ${booking.business_locations.city || ""}, ${booking.business_locations.state || ""}`}
+                  </a>
+                ) : (
+                  "Location not specified"
+                )}
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Customer and Provider Info */}
@@ -471,6 +471,279 @@ export default function BookingCard({
             )}
           </div>
         )}
+      </div>
+
+      {/* Mobile Layout */}
+      <div className="lg:hidden p-4 space-y-4">
+        {/* Header - Service & Price */}
+        <div className="flex items-start gap-3">
+          {/* Customer Avatar */}
+          <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
+            {(() => {
+              if (booking.customer_profiles?.image_url) {
+                return (
+                  <img
+                    src={booking.customer_profiles.image_url}
+                    alt={`${booking.customer_profiles.first_name || ""} ${booking.customer_profiles.last_name || ""}`}
+                    className="w-full h-full object-cover rounded-lg"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                );
+              } else {
+                return (
+                  <div className="w-full h-full bg-blue-600 rounded-lg flex items-center justify-center">
+                    {booking.customer_profiles?.first_name?.[0] || booking.customer_profiles?.last_name?.[0] ? (
+                      <span className="text-white font-semibold text-sm">
+                        {booking.customer_profiles.first_name[0] || booking.customer_profiles.last_name[0]}
+                      </span>
+                    ) : (
+                      <User className="w-6 h-6 text-white" />
+                    )}
+                  </div>
+                );
+              }
+            })()}
+          </div>
+
+          {/* Service Name & Customer */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <h3 className="font-semibold text-base text-gray-900 leading-tight">
+                    {booking.services?.name || "Service"}
+                  </h3>
+                  {isRescheduled && (
+                    <Badge 
+                      variant="outline" 
+                      className="bg-orange-50 text-orange-700 border-orange-200 text-xs px-1.5 py-0 flex items-center gap-0.5"
+                    >
+                      <RotateCcw className="w-2.5 h-2.5" />
+                      <span className="text-[10px]">Rescheduled</span>
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-sm text-gray-600 mt-0.5">
+                  {booking.customer_profiles
+                    ? `${booking.customer_profiles.first_name || ""} ${booking.customer_profiles.last_name || ""}`
+                    : "Unknown Customer"
+                  }
+                </p>
+              </div>
+              <span className="text-lg font-bold text-blue-600 flex-shrink-0">
+                ${parseFloat(booking.total_amount || '0').toFixed(2)}
+              </span>
+            </div>
+            
+            {/* Payment Badge */}
+            {(() => {
+              const hasPaymentTransaction = booking.business_payment_transactions && 
+                (Array.isArray(booking.business_payment_transactions) 
+                  ? booking.business_payment_transactions.length > 0
+                  : !!booking.business_payment_transactions);
+              
+              return (
+                <div className="flex items-center gap-1 mt-1">
+                  <Badge 
+                    variant="outline" 
+                    className={`text-xs px-1.5 py-0 ${hasPaymentTransaction ? 'bg-green-50 text-green-700 border-green-200' : 'bg-yellow-50 text-yellow-700 border-yellow-200'}`}
+                  >
+                    {hasPaymentTransaction ? (
+                      <><CreditCard className="w-3 h-3 mr-1" />Paid</>
+                    ) : (
+                      <><AlertCircle className="w-3 h-3 mr-1" />Pending</>
+                    )}
+                  </Badge>
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+
+        {/* Schedule Card */}
+        <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3 text-sm">
+              <div className="flex items-center gap-1.5 text-gray-700">
+                <Calendar className="w-4 h-4 text-blue-600" />
+                <span>{booking.booking_date}</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-gray-700">
+                <Clock className="w-4 h-4 text-blue-600" />
+                <span>{formatDisplayTime(booking.start_time)}</span>
+              </div>
+            </div>
+            <span className="text-xs text-gray-500">{booking.services?.duration_minutes || 0} min</span>
+          </div>
+          
+          {/* Booking Reference */}
+          <div className="flex items-center gap-2 pt-2 border-t border-gray-200">
+            <Hash className="w-3.5 h-3.5 text-blue-600" />
+            <span className="text-xs text-gray-500 uppercase tracking-wide">Ref:</span>
+            <span className="text-sm font-mono font-medium text-gray-800">
+              {booking.booking_reference || `BK${Math.random().toString(36).substr(2, 4).toUpperCase()}`}
+            </span>
+          </div>
+
+          {/* Rescheduled Info */}
+          {isRescheduled && (
+            <div className="flex items-center gap-1.5 pt-2 border-t border-gray-200 text-xs text-orange-600">
+              <RotateCcw className="w-3 h-3" />
+              <span>Originally: {booking.original_booking_date || 'N/A'} at {booking.original_booking_time ? formatDisplayTime(booking.original_booking_time) : 'N/A'}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Status Section */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-gray-700">
+              {getStatusMessage(booking.booking_status)}
+            </span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-2">
+            <div 
+              className={`h-2 rounded-full transition-all duration-300 ${
+                booking.booking_status === 'pending' ? 'bg-yellow-500' :
+                booking.booking_status === 'confirmed' ? 'bg-blue-500' :
+                booking.booking_status === 'in_progress' ? 'bg-purple-500' :
+                booking.booking_status === 'completed' ? 'bg-green-500' :
+                'bg-red-500'
+              }`}
+              style={{ width: `${getProgressPercentage(booking.booking_status)}%` }}
+            ></div>
+          </div>
+        </div>
+
+        {/* People & Location Section */}
+        <div className="space-y-2">
+          {/* Provider Assignment */}
+          <div className="flex items-center gap-2">
+            <UserCheck className="w-4 h-4 text-gray-500 flex-shrink-0" />
+            <span className="text-sm text-gray-700">
+              {booking.providers 
+                ? `${booking.providers.first_name || ""} ${booking.providers.last_name || ""}`
+                : "Unassigned Provider"
+              }
+            </span>
+          </div>
+
+          {/* Location */}
+          <div className="flex items-start gap-2">
+            <MapPin className="w-4 h-4 text-gray-500 mt-0.5 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              {booking.customer_locations ? (
+                <a
+                  href={`https://maps.google.com/maps?q=${encodeURIComponent(
+                    `${booking.customer_locations.address_line1 || ""}, ${booking.customer_locations.city || ""}, ${booking.customer_locations.state || ""}`
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-blue-600 hover:underline"
+                >
+                  {booking.customer_locations.address_line1}, {booking.customer_locations.city}, {booking.customer_locations.state}
+                </a>
+              ) : booking.business_locations ? (
+                <a
+                  href={`https://maps.google.com/maps?q=${encodeURIComponent(
+                    `${booking.business_locations.address_line1 || ""}, ${booking.business_locations.city || ""}, ${booking.business_locations.state || ""}`
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-blue-600 hover:underline"
+                >
+                  {booking.business_locations.location_name || booking.business_locations.address_line1}, {booking.business_locations.city}
+                </a>
+              ) : (
+                <span className="text-sm text-gray-600">Location not specified</span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Special Instructions */}
+        {booking.special_instructions && (
+          <div className="p-2.5 bg-yellow-50 border border-yellow-200 rounded-md">
+            <div className="flex items-start gap-2">
+              <MessageCircle className="w-4 h-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+              <p className="text-sm text-yellow-700">{booking.special_instructions}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Action Buttons - Full Width */}
+        <div className="pt-2 border-t border-gray-100 space-y-2">
+          {/* Primary Actions Row */}
+          <div className="grid grid-cols-2 gap-2">
+            {/* Message Button */}
+            <Button
+              onClick={() => setIsChatOpen(true)}
+              size="sm"
+              className="bg-blue-600 hover:bg-blue-700 text-white relative"
+            >
+              <MessageCircle className="w-4 h-4 mr-1.5" />
+              <span className="text-xs">Message</span>
+              {unreadCount > 0 && (
+                <Badge
+                  variant="destructive"
+                  className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs font-bold rounded-full"
+                >
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </Badge>
+              )}
+            </Button>
+
+            {/* Details Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-gray-300 text-gray-700"
+              onClick={() => onViewDetails(booking)}
+            >
+              <span className="text-xs">{hasProviderAssigned ? "Details" : "Assign Provider"}</span>
+            </Button>
+          </div>
+
+          {/* Status Action Buttons */}
+          {showActions && statusActions.length > 0 && (
+            <div className={`grid gap-2 ${statusActions.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+              {statusActions.map((action: any) => {
+                const Icon = action.icon;
+                const isDisabled = action.disabled || false;
+                return (
+                  <Button
+                    key={action.status}
+                    variant={action.variant}
+                    size="sm"
+                    disabled={isDisabled}
+                    onClick={() => {
+                      if (isDisabled) return;
+                      if (action.status === "declined") {
+                        setIsDeclineModalOpen(true);
+                      } else {
+                        onUpdateStatus(booking.id, action.status);
+                      }
+                    }}
+                    className={`flex items-center justify-center ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    title={action.tooltip}
+                  >
+                    <Icon className="w-4 h-4 mr-1.5" />
+                    <span className="text-xs">{action.label}</span>
+                  </Button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Provider Assignment Warning */}
+          {!hasProviderAssigned && booking.booking_status === "pending" && (
+            <p className="text-xs text-amber-600 text-center">
+              ⚠️ Assign a provider before accepting
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Chat Modal */}
