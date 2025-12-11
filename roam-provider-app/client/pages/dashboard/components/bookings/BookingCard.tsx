@@ -158,236 +158,204 @@ export default function BookingCard({
   return (
     <Card className="overflow-hidden bg-white rounded-lg shadow-sm border border-gray-200">
       {/* Desktop Layout */}
-      <div className="hidden lg:block p-6">
-        {/* Top Section - Service Info */}
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex items-start space-x-4">
-            {/* Customer Avatar */}
-            <div className="w-16 h-16 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
-              {(() => {
-                if (booking.customer_profiles?.image_url) {
-                  return (
-                    <img
-                      src={booking.customer_profiles.image_url}
-                      alt={`${booking.customer_profiles.first_name || ""} ${booking.customer_profiles.last_name || ""}`}
-                      className="w-full h-full object-cover rounded-lg"
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none';
-                      }}
-                    />
-                  );
-                } else {
-                  return (
-                    <div className="w-full h-full bg-blue-600 rounded-lg flex items-center justify-center">
-                      {booking.customer_profiles?.first_name?.[0] || booking.customer_profiles?.last_name?.[0] ? (
-                        <span className="text-white font-semibold text-lg">
-                          {booking.customer_profiles.first_name[0] || booking.customer_profiles.last_name[0]}
-                        </span>
-                      ) : (
-                        <User className="w-8 h-8 text-white" />
-                      )}
-                    </div>
-                  );
-                }
-              })()}
-            </div>
-            
-            {/* Service Details */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center space-x-2 mb-1">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  {booking.services?.name || "Service"}
-                </h3>
-                {isRescheduled && (
-                  <Badge 
-                    variant="outline" 
-                    className="bg-orange-50 text-orange-700 border-orange-200 text-xs px-2 py-0.5 flex items-center gap-1"
-                    title={`Rescheduled from ${booking.original_booking_date || 'original date'} at ${booking.original_booking_time ? formatDisplayTime(booking.original_booking_time) : 'original time'}`}
-                  >
-                    <RotateCcw className="w-3 h-3" />
-                    Rescheduled
-                  </Badge>
-                )}
-              </div>
-              <div className="flex items-center space-x-4 text-sm text-gray-600">
-                <div className="flex items-center space-x-1">
-                  <Calendar className="w-4 h-4" />
-                  <span>{booking.booking_date}</span>
-                </div>
-                <div className="flex items-center space-x-1">
-                  <Clock className="w-4 h-4" />
-                  <span>{formatDisplayTime(booking.start_time)} ({booking.services?.duration_minutes || 0} min)</span>
-                </div>
-              </div>
-              {isRescheduled && (
-                <div className="mt-2 text-xs text-orange-600 bg-orange-50 border border-orange-200 rounded px-2 py-1 inline-flex items-center gap-1">
-                  <RotateCcw className="w-3 h-3" />
-                  <span>
-                    Originally scheduled: {booking.original_booking_date || 'N/A'} at {booking.original_booking_time ? formatDisplayTime(booking.original_booking_time) : 'N/A'}
-                  </span>
-                </div>
-              )}
-            </div>
+      <div className="hidden lg:block p-6 space-y-4">
+        {/* Header Row - Service, Customer, Price */}
+        <div className="flex items-start gap-4">
+          {/* Customer Avatar */}
+          <div className="w-14 h-14 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
+            {(() => {
+              if (booking.customer_profiles?.image_url) {
+                return (
+                  <img
+                    src={booking.customer_profiles.image_url}
+                    alt={`${booking.customer_profiles.first_name || ""} ${booking.customer_profiles.last_name || ""}`}
+                    className="w-full h-full object-cover rounded-lg"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                );
+              } else {
+                return (
+                  <div className="w-full h-full bg-blue-600 rounded-lg flex items-center justify-center">
+                    {booking.customer_profiles?.first_name?.[0] || booking.customer_profiles?.last_name?.[0] ? (
+                      <span className="text-white font-semibold text-lg">
+                        {booking.customer_profiles.first_name[0] || booking.customer_profiles.last_name[0]}
+                      </span>
+                    ) : (
+                      <User className="w-7 h-7 text-white" />
+                    )}
+                  </div>
+                );
+              }
+            })()}
           </div>
-
-          {/* Top Right - More Options & Price */}
-          <div className="flex flex-col items-end space-y-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="text-xs px-3 py-1 h-8"
-              onClick={() => onViewDetails(booking)}
-            >
-              {hasProviderAssigned ? "Details" : "Assign Provider"}
-            </Button>
-            {booking.total_amount && (
-              <div className="text-right">
+          
+          {/* Service & Customer Details */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    {booking.services?.name || "Service"}
+                  </h3>
+                  {isRescheduled && (
+                    <Badge 
+                      variant="outline" 
+                      className="bg-orange-50 text-orange-700 border-orange-200 text-xs px-2 py-0.5 flex items-center gap-1"
+                      title={`Rescheduled from ${booking.original_booking_date || 'original date'} at ${booking.original_booking_time ? formatDisplayTime(booking.original_booking_time) : 'original time'}`}
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      Rescheduled
+                    </Badge>
+                  )}
+                  {/* Payment Badge */}
+                  {(() => {
+                    const hasPaymentTransaction = booking.business_payment_transactions && 
+                      (Array.isArray(booking.business_payment_transactions) 
+                        ? booking.business_payment_transactions.length > 0
+                        : !!booking.business_payment_transactions);
+                    
+                    return (
+                      <Badge 
+                        variant="outline" 
+                        className={`text-xs px-2 py-0.5 ${hasPaymentTransaction ? 'bg-green-50 text-green-700 border-green-200' : 'bg-yellow-50 text-yellow-700 border-yellow-200'}`}
+                      >
+                        {hasPaymentTransaction ? (
+                          <><CreditCard className="w-3 h-3 mr-1" />Paid</>
+                        ) : (
+                          <><AlertCircle className="w-3 h-3 mr-1" />Payment Pending</>
+                        )}
+                      </Badge>
+                    );
+                  })()}
+                </div>
+                <p className="text-sm text-gray-600 mt-0.5">
+                  <span className="font-medium">Customer:</span>{" "}
+                  {booking.customer_profiles
+                    ? `${booking.customer_profiles.first_name || ""} ${booking.customer_profiles.last_name || ""}`
+                    : "Unknown Customer"
+                  }
+                  {booking.customer_profiles?.phone && (
+                    <span className="text-gray-400 ml-2">• {booking.customer_profiles.phone}</span>
+                  )}
+                </p>
+              </div>
+              
+              {/* Price */}
+              <div className="text-right flex-shrink-0">
                 <div className="text-2xl font-bold text-blue-600">
                   ${parseFloat(booking.total_amount || '0').toFixed(2)}
                 </div>
-                {/* Payment Success Indicator */}
-                {(() => {
-                  // Check if payment transaction exists (payment was successful)
-                  const hasPaymentTransaction = booking.business_payment_transactions && 
-                    (Array.isArray(booking.business_payment_transactions) 
-                      ? booking.business_payment_transactions.length > 0
-                      : !!booking.business_payment_transactions);
-                  
-                  if (hasPaymentTransaction) {
-                    return (
-                      <div className="flex items-center justify-end space-x-1 mt-1">
-                        <Badge 
-                          variant="outline" 
-                          className="bg-green-50 text-green-700 border-green-200 text-xs px-2 py-0.5"
-                        >
-                          <CreditCard className="w-3 h-3 mr-1" />
-                          Payment Received
-                        </Badge>
-                      </div>
-                    );
-                  } else {
-                    return (
-                      <div className="flex items-center justify-end space-x-1 mt-1">
-                        <Badge 
-                          variant="outline" 
-                          className="bg-yellow-50 text-yellow-700 border-yellow-200 text-xs px-2 py-0.5"
-                        >
-                          <AlertCircle className="w-3 h-3 mr-1" />
-                          Payment Pending
-                        </Badge>
-                      </div>
-                    );
-                  }
-                })()}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Schedule & Reference Card */}
+        <div className="bg-gray-50 rounded-lg p-4">
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            {/* Schedule Info */}
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-2 text-gray-700">
+                <Calendar className="w-4 h-4 text-blue-600" />
+                <span className="font-medium">{booking.booking_date}</span>
+              </div>
+              <div className="flex items-center gap-2 text-gray-700">
+                <Clock className="w-4 h-4 text-blue-600" />
+                <span className="font-medium">{formatDisplayTime(booking.start_time)}</span>
+                <span className="text-gray-500">({booking.services?.duration_minutes || 0} min)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Hash className="w-4 h-4 text-blue-600" />
+                <span className="text-sm text-gray-500 uppercase tracking-wide">Ref:</span>
+                <span className="font-mono font-semibold text-gray-800">
+                  {booking.booking_reference || `BK${Math.random().toString(36).substr(2, 4).toUpperCase()}`}
+                </span>
+              </div>
+            </div>
+            
+            {/* Rescheduled Info */}
+            {isRescheduled && (
+              <div className="flex items-center gap-1.5 text-xs text-orange-600 bg-orange-50 border border-orange-200 rounded px-2 py-1">
+                <RotateCcw className="w-3 h-3" />
+                <span>Originally: {booking.original_booking_date || 'N/A'} at {booking.original_booking_time ? formatDisplayTime(booking.original_booking_time) : 'N/A'}</span>
               </div>
             )}
           </div>
         </div>
 
-        {/* Business & Location Info */}
-        <div className="flex items-start space-x-6 mb-4">
-          <div className="flex items-start space-x-2">
-            <Building className="w-4 h-4 text-gray-500 mt-0.5" />
+        {/* People & Location Row */}
+        <div className="grid grid-cols-3 gap-4">
+          {/* Provider */}
+          <div className="flex items-start gap-2">
+            <UserCheck className="w-4 h-4 text-gray-500 mt-0.5 flex-shrink-0" />
             <div>
-              <div className="text-sm font-medium text-gray-900">Business</div>
-              <div className="text-sm text-gray-600">
+              <div className="text-xs text-gray-500 uppercase tracking-wide">Provider</div>
+              <div className="text-sm font-medium text-gray-900">
+                {booking.providers 
+                  ? `${booking.providers.first_name || ""} ${booking.providers.last_name || ""}`
+                  : "Unassigned"
+                }
+              </div>
+              {booking.providers?.phone && (
+                <div className="text-xs text-gray-500">{booking.providers.phone}</div>
+              )}
+            </div>
+          </div>
+
+          {/* Business */}
+          <div className="flex items-start gap-2">
+            <Building className="w-4 h-4 text-gray-500 mt-0.5 flex-shrink-0" />
+            <div>
+              <div className="text-xs text-gray-500 uppercase tracking-wide">Business</div>
+              <div className="text-sm font-medium text-gray-900">
                 {booking.business_locations?.location_name || "Main Location"}
               </div>
             </div>
           </div>
           
-          <div className="flex items-start space-x-2">
-            <MapPin className="w-4 h-4 text-gray-500 mt-0.5" />
+          {/* Location */}
+          <div className="flex items-start gap-2">
+            <MapPin className="w-4 h-4 text-gray-500 mt-0.5 flex-shrink-0" />
             <div>
-              <div className="text-sm font-medium text-gray-900">Location</div>
-              <div className="text-sm text-gray-600 max-w-xs">
+              <div className="text-xs text-gray-500 uppercase tracking-wide">Service Location</div>
+              <div className="text-sm">
                 {booking.customer_locations ? (
                   <a
                     href={`https://maps.google.com/maps?q=${encodeURIComponent(
-                      `${booking.customer_locations.address_line1 || ""} ${booking.customer_locations.address_line2 || ""}, ${booking.customer_locations.city || ""}, ${booking.customer_locations.state || ""} ${booking.customer_locations.postal_code || ""}`
+                      `${booking.customer_locations.address_line1 || ""}, ${booking.customer_locations.city || ""}, ${booking.customer_locations.state || ""}`
                     )}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
-                    title="Click to open in Google Maps"
+                    className="text-blue-600 hover:text-blue-800 hover:underline"
                   >
-                    {`${booking.customer_locations.address_line1 || ""} ${booking.customer_locations.address_line2 || ""}, ${booking.customer_locations.city || ""}, ${booking.customer_locations.state || ""} ${booking.customer_locations.postal_code || ""}`}
+                    {booking.customer_locations.address_line1}, {booking.customer_locations.city}, {booking.customer_locations.state}
                   </a>
                 ) : booking.business_locations ? (
                   <a
                     href={`https://maps.google.com/maps?q=${encodeURIComponent(
-                      `${booking.business_locations.location_name || ""} ${booking.business_locations.address_line1 || ""}, ${booking.business_locations.city || ""}, ${booking.business_locations.state || ""}`
+                      `${booking.business_locations.address_line1 || ""}, ${booking.business_locations.city || ""}, ${booking.business_locations.state || ""}`
                     )}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
-                    title="Click to open in Google Maps"
+                    className="text-blue-600 hover:text-blue-800 hover:underline"
                   >
-                    {`${booking.business_locations.location_name || ""} ${booking.business_locations.address_line1 || ""}, ${booking.business_locations.city || ""}, ${booking.business_locations.state || ""}`}
+                    {booking.business_locations.address_line1}, {booking.business_locations.city}
                   </a>
                 ) : (
-                  "Location not specified"
+                  <span className="text-gray-600">Location not specified</span>
                 )}
               </div>
             </div>
           </div>
         </div>
 
-        {/* Customer and Provider Info */}
-        <div className="flex items-start justify-between mb-4">
-          {/* Customer Info */}
-          <div className="flex items-start space-x-2">
-            <Users className="w-4 h-4 text-gray-500 mt-0.5" />
-            <div>
-              <div className="text-sm font-medium text-gray-900">Customer</div>
-              <div className="text-sm text-gray-600">
-                {booking.customer_profiles
-                  ? `${booking.customer_profiles.first_name || ""} ${booking.customer_profiles.last_name || ""}`
-                  : "Unknown Customer"
-                }
-              </div>
-              {booking.customer_profiles?.phone && (
-                <div className="text-xs text-gray-500 mt-1">
-                  {booking.customer_profiles.phone}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Provider Info */}
-          <div className="flex items-start space-x-2">
-            <UserCheck className="w-4 h-4 text-gray-500 mt-0.5" />
-            <div>
-              <div className="text-sm font-medium text-gray-900">Provider</div>
-              <div className="text-sm text-gray-600">
-                {booking.providers 
-                  ? `${booking.providers.first_name || ""} ${booking.providers.last_name || ""}`
-                  : "Unassigned Provider"
-                }
-              </div>
-              {booking.providers?.phone && (
-                <div className="text-xs text-gray-500 mt-1">
-                  {booking.providers.phone}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Booking Reference */}
-        <div className="flex items-center space-x-2 mb-4">
-          <Hash className="w-4 h-4 text-gray-500" />
-          <span className="text-sm font-medium text-gray-900">BOOKING REFERENCE:</span>
-          <span className="text-sm font-bold text-gray-900">
-            {booking.booking_reference || `BK${Math.random().toString(36).substr(2, 4).toUpperCase()}`}
-          </span>
-        </div>
-
         {/* Special Instructions */}
         {booking.special_instructions && (
-          <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-            <div className="flex items-start space-x-2">
-              <MessageCircle className="w-4 h-4 text-yellow-600 mt-0.5" />
+          <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <div className="flex items-start gap-2">
+              <MessageCircle className="w-4 h-4 text-yellow-600 mt-0.5 flex-shrink-0" />
               <div>
                 <p className="text-sm font-medium text-yellow-800">Special Instructions:</p>
                 <p className="text-sm text-yellow-700">{booking.special_instructions}</p>
@@ -396,47 +364,60 @@ export default function BookingCard({
           </div>
         )}
 
-        {/* Status Section */}
-        <div className="mb-4">
-          <div className="text-center mb-2">
-            <p className="text-sm text-gray-600">{getStatusMessage(booking.booking_status)}</p>
-          </div>
-          <div className="flex items-center space-x-3">
-            <div className="flex-1 bg-gray-200 rounded-full h-2">
-              <div 
-                className={`h-2 rounded-full transition-all duration-300 ${
-                  booking.booking_status === 'pending' ? 'bg-yellow-500' :
-                  booking.booking_status === 'confirmed' ? 'bg-blue-500' :
-                  booking.booking_status === 'in_progress' ? 'bg-purple-500' :
-                  booking.booking_status === 'completed' ? 'bg-green-500' :
-                  'bg-red-500'
-                }`}
-                style={{ width: `${getProgressPercentage(booking.booking_status)}%` }}
-              ></div>
+        {/* Status & Actions Section */}
+        <div className="pt-4 border-t border-gray-100">
+          <div className="flex items-center justify-between gap-4">
+            {/* Status */}
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-2">
+                <span className="text-sm font-medium text-gray-700">{getStatusMessage(booking.booking_status)}</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div 
+                  className={`h-2 rounded-full transition-all duration-300 ${
+                    booking.booking_status === 'pending' ? 'bg-yellow-500' :
+                    booking.booking_status === 'confirmed' ? 'bg-blue-500' :
+                    booking.booking_status === 'in_progress' ? 'bg-purple-500' :
+                    booking.booking_status === 'completed' ? 'bg-green-500' :
+                    'bg-red-500'
+                  }`}
+                  style={{ width: `${getProgressPercentage(booking.booking_status)}%` }}
+                ></div>
+              </div>
             </div>
-            <Button
-              onClick={() => setIsChatOpen(true)}
-              size="sm"
-              className="bg-blue-600 hover:bg-blue-700 text-white p-2 h-8 w-8 rounded-lg relative"
-            >
-              <MessageCircle className="w-4 h-4" />
-              {unreadCount > 0 && (
-                <Badge
-                  variant="destructive"
-                  className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs font-bold rounded-full"
-                >
-                  {unreadCount > 9 ? '9+' : unreadCount}
-                </Badge>
-              )}
-            </Button>
-          </div>
-        </div>
 
-        {/* Action Buttons */}
-        {showActions && statusActions.length > 0 && (
-          <div className="flex flex-col items-center space-y-2 mb-4">
-            <div className="flex items-center justify-center space-x-2">
-              {statusActions.map((action: any) => {
+            {/* Action Buttons */}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {/* Message Button */}
+              <Button
+                onClick={() => setIsChatOpen(true)}
+                size="sm"
+                className="bg-blue-600 hover:bg-blue-700 text-white relative"
+              >
+                <MessageCircle className="w-4 h-4 mr-1.5" />
+                Message
+                {unreadCount > 0 && (
+                  <Badge
+                    variant="destructive"
+                    className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs font-bold rounded-full"
+                  >
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </Badge>
+                )}
+              </Button>
+
+              {/* Details Button */}
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-gray-300"
+                onClick={() => onViewDetails(booking)}
+              >
+                {hasProviderAssigned ? "Details" : "Assign Provider"}
+              </Button>
+
+              {/* Status Actions */}
+              {showActions && statusActions.map((action: any) => {
                 const Icon = action.icon;
                 const isDisabled = action.disabled || false;
                 return (
@@ -447,30 +428,30 @@ export default function BookingCard({
                     disabled={isDisabled}
                     onClick={() => {
                       if (isDisabled) return;
-                      // For decline action, open the modal to capture reason
                       if (action.status === "declined") {
                         setIsDeclineModalOpen(true);
                       } else {
                         onUpdateStatus(booking.id, action.status);
                       }
                     }}
-                    className={`flex items-center space-x-2 px-4 py-2 ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    className={isDisabled ? 'opacity-50 cursor-not-allowed' : ''}
                     title={action.tooltip}
                   >
-                    <Icon className="w-4 h-4" />
-                    <span>{action.label}</span>
+                    <Icon className="w-4 h-4 mr-1.5" />
+                    {action.label}
                   </Button>
                 );
               })}
             </div>
-            {/* Show helpful message if Accept is disabled */}
-            {!hasProviderAssigned && booking.booking_status === "pending" && (
-              <p className="text-xs text-amber-600 text-center">
-                ⚠️ Assign a provider using "Details & Assignment" before accepting
-              </p>
-            )}
           </div>
-        )}
+          
+          {/* Provider Assignment Warning */}
+          {!hasProviderAssigned && booking.booking_status === "pending" && (
+            <p className="text-xs text-amber-600 text-right mt-2">
+              ⚠️ Assign a provider before accepting
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Mobile Layout */}
