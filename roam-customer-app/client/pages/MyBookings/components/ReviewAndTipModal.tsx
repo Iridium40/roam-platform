@@ -83,7 +83,7 @@ const ReviewAndTipModal: React.FC<ReviewAndTipModalProps> = ({
   });
 
   // Quick pick tip amounts
-  const quickPickAmounts = [10, 20, 40];
+  const quickPickAmounts = [20, 40];
 
   const handleReviewChange = (field: keyof ReviewFormData, value: number | string) => {
     setReviewData(prev => ({
@@ -565,18 +565,6 @@ const ReviewAndTipModal: React.FC<ReviewAndTipModalProps> = ({
                   )}
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="tip-message" className="text-sm font-medium">
-                    Message (Optional)
-                  </Label>
-                  <Textarea
-                    id="tip-message"
-                    placeholder="Add a personal message..."
-                    value={tipData.customer_message}
-                    onChange={(e) => handleTipChange('customer_message', e.target.value)}
-                    rows={3}
-                  />
-                </div>
               </div>
 
               <div className="flex gap-3">

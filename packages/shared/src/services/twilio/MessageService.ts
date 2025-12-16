@@ -222,31 +222,36 @@ export class MessageService {
         .messages
         .list({ limit });
 
-      // Fetch media details for messages that have media
+      // Process messages and extract media info if available
       const messageList = await Promise.all(messages.map(async (message: any) => {
-        let media: MediaAttachment[] = [];
+        let media: MediaAttachment[] | undefined;
         
-        // Check if message has media attached
-        if (message.media && message.media.length > 0) {
+        // Check if message has media - the media property contains count and links
+        // We need to fetch individual message to get full media details
+        if (message.media) {
           try {
-            // Fetch media details for each media item
-            const mediaItems = await this.conversationsService
+            // Fetch the individual message to get media details
+            const fullMessage = await this.conversationsService
               .conversations(conversationSid)
               .messages(message.sid)
-              .media
-              .list();
+              .fetch();
             
-            media = await Promise.all(mediaItems.map(async (mediaItem: any) => {
-              return {
-                sid: mediaItem.sid,
-                contentType: mediaItem.contentType,
-                filename: mediaItem.filename,
-                size: mediaItem.size,
-                url: mediaItem.contentTemporaryUrl || null,
-              };
-            }));
+            // If the message has media, the SDK returns media info
+            if (fullMessage.media) {
+              // Media is returned as an object with sid and other properties
+              // For now, we'll construct the URL based on the media info
+              media = [{
+                sid: fullMessage.media.sid || message.sid,
+                contentType: fullMessage.media.content_type || fullMessage.media.contentType || 'application/octet-stream',
+                filename: fullMessage.media.filename,
+                size: fullMessage.media.size,
+                // The temporary URL needs to be fetched separately or constructed
+                url: fullMessage.media.url || null,
+              }];
+            }
           } catch (mediaError) {
-            console.warn('Could not fetch media for message:', message.sid, mediaError);
+            // Silently fail for media fetch - message still displays
+            console.warn('Could not fetch media details for message:', message.sid);
           }
         }
 
@@ -259,7 +264,7 @@ export class MessageService {
           dateUpdated: message.dateUpdated,
           index: message.index,
           delivery: message.delivery,
-          media: media.length > 0 ? media : undefined,
+          media,
         };
       }));
 
