@@ -939,6 +939,7 @@ The ROAM Team
           review_url: reviewLink,
           provider_id: provider?.id || booking.provider_id || '',
           booking_reference: booking.booking_reference || 'N/A',
+          booking_id: booking.id, // Added for new booking details page URL
         },
         metadata: {
           booking_id: booking.id,
@@ -970,7 +971,7 @@ The ROAM Team
           booking_time: bookingTime,
           booking_location: locationAddress,
           decline_reason: declineReason,
-          booking_url: 'https://roamyourbestlife.com/customer/bookings',
+          booking_id: booking.id, // Added for booking details page URL
           booking_reference: booking.booking_reference || 'N/A',
         },
         metadata: {

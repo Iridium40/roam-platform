@@ -37,6 +37,8 @@ export type NotificationType =
   | 'customer_booking_accepted'
   | 'customer_booking_completed'
   | 'customer_booking_reminder'
+  | 'customer_booking_declined'
+  | 'customer_booking_no_show'
   | 'provider_new_booking'
   | 'provider_booking_cancelled'
   | 'provider_booking_rescheduled'
@@ -321,6 +323,14 @@ export class NotificationService {
       customer_booking_reminder: {
         email: 'customer_booking_reminder_email',
         sms: 'customer_booking_reminder_sms',
+      },
+      customer_booking_declined: {
+        email: 'customer_booking_declined_email',
+        sms: 'customer_booking_declined_sms',
+      },
+      customer_booking_no_show: {
+        email: 'customer_booking_no_show_email',
+        sms: 'customer_booking_no_show_sms',
       },
       provider_new_booking: {
         email: 'provider_new_booking_email',

@@ -6,11 +6,13 @@ import twilio from 'twilio';
 // Initialize Resend for email sending
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-type NotificationType = 
+type NotificationType =
   | 'customer_welcome'
   | 'customer_booking_accepted'
   | 'customer_booking_completed'
   | 'customer_booking_reminder'
+  | 'customer_booking_declined'
+  | 'customer_booking_no_show'
   | 'provider_new_booking'
   | 'provider_booking_cancelled'
   | 'provider_booking_rescheduled'
@@ -356,6 +358,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       'customer_booking_accepted',
       'customer_booking_completed',
       'customer_booking_reminder',
+      'customer_booking_declined',
+      'customer_booking_no_show',
       'provider_new_booking',
       'provider_booking_cancelled',
       'provider_booking_rescheduled',
