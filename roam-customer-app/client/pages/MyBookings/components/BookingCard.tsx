@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -29,6 +30,7 @@ import {
   Map,
   CreditCard,
   Plus,
+  FileText,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
@@ -62,11 +64,17 @@ export const BookingCard: React.FC<BookingCardProps> = ({
   onMessage,
   onRefresh,
 }) => {
+  const navigate = useNavigate();
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [showTipModal, setShowTipModal] = useState(false);
   const [showAddMoreModal, setShowAddMoreModal] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const { customer } = useAuth();
+
+  // Navigate to booking details page
+  const handleViewDetails = () => {
+    navigate(`/my-bookings/${booking.id}`);
+  };
 
   // Fetch unread message count for this booking
   useEffect(() => {
@@ -331,6 +339,17 @@ export const BookingCard: React.FC<BookingCardProps> = ({
 
               {/* Action Buttons */}
               <div className="flex items-center gap-2 flex-shrink-0">
+                {/* Details Button - Always show */}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-roam-blue text-roam-blue hover:bg-roam-blue/10"
+                  onClick={handleViewDetails}
+                >
+                  <FileText className="w-4 h-4 mr-1.5" />
+                  Details
+                </Button>
+
                 {/* Message Button - hide for final bookings more than 1 day past */}
                 {!shouldHideMessageButton && (
                   <Button
@@ -616,6 +635,17 @@ export const BookingCard: React.FC<BookingCardProps> = ({
 
           {/* Action Buttons - Full Width Horizontal Row */}
           <div className="pt-2 border-t border-gray-100">
+            {/* Details Button - Always show at top */}
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-full mb-2 border-roam-blue text-roam-blue hover:bg-roam-blue/10"
+              onClick={handleViewDetails}
+            >
+              <FileText className="w-4 h-4 mr-1.5" />
+              <span className="text-xs">View Details</span>
+            </Button>
+
             {/* In Progress Booking Actions */}
             {!isPastBooking && booking.booking_status === "in_progress" && (
               <div className="grid grid-cols-2 gap-2">

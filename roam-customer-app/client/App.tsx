@@ -29,6 +29,7 @@ const SimpleMyBookingsTest = lazy(() => import("./pages/SimpleMyBookingsTest"));
 const MinimalMyBookings = lazy(() => import("./pages/MinimalMyBookings"));
 const WorkingMyBookings = lazy(() => import("./pages/WorkingMyBookings"));
 const MyBookings = lazy(() => import("./pages/MyBookings"));
+const BookingDetails = lazy(() => import("./pages/BookingDetails"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const BookService = lazy(() => import("./pages/BookService"));
 const BookingSuccess = lazy(() => import("./pages/BookingSuccess"));
@@ -101,6 +102,14 @@ const App = () => (
                   element={
                     <ProtectedRoute>
                       <MyBookings />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/my-bookings/:bookingId"
+                  element={
+                    <ProtectedRoute>
+                      <BookingDetails />
                     </ProtectedRoute>
                   }
                 />
