@@ -664,7 +664,7 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
+      <DialogContent className="max-w-2xl h-[85vh] flex flex-col p-0 gap-0 overflow-hidden" hideCloseButton>
         {/* Custom Header with gradient background */}
         <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-5 rounded-t-lg">
           <div className="flex items-start justify-between">
