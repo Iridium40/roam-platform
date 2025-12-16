@@ -121,9 +121,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 }
 
-// Enable body parsing for JSON data
+// Enable body parsing with increased size limit for file uploads
+// Vercel Pro allows up to 4.5MB by default, we set higher for larger documents
 export const config = {
   api: {
-    bodyParser: true,
-  },
+    bodyParser: {
+      sizeLimit: '10mb'  // Increase limit for document uploads
+    }
+  }
 };
