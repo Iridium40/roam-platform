@@ -11,8 +11,10 @@ export class MessageService {
   private client: twilio.Twilio;
   // Loosen type; Twilio Conversations namespace types not exported in v5 layout used here.
   private conversationsService: any;
+  private config: TwilioConfig;
 
   constructor(config: TwilioConfig) {
+    this.config = config;
     this.client = twilio(config.accountSid, config.authToken);
     this.conversationsService = this.client.conversations.v1.services(config.conversationsServiceSid);
   }
@@ -20,6 +22,8 @@ export class MessageService {
   /**
    * Upload media to Twilio Media Content Service (MCS)
    * Returns a mediaSid that can be used when sending a message
+   * 
+   * Uses direct HTTP request to MCS API with raw binary data
    */
   async uploadMedia(options: UploadMediaOptions): Promise<TwilioResponse> {
     try {
@@ -29,21 +33,36 @@ export class MessageService {
         size: options.file.length
       });
 
-      // Use the Twilio SDK to upload media
-      const media = await this.conversationsService
-        .media
-        .create({
-          media: options.file,
-          contentType: options.contentType,
-        });
+      // Twilio MCS API endpoint
+      const mcsUrl = `https://mcs.us1.twilio.com/v1/Services/${this.config.conversationsServiceSid}/Media`;
+      
+      // Make HTTP request to MCS API with raw binary body
+      // Convert Buffer to Uint8Array for fetch compatibility
+      const uint8Array = new Uint8Array(options.file);
+      
+      const response = await fetch(mcsUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Basic ' + Buffer.from(`${this.config.accountSid}:${this.config.authToken}`).toString('base64'),
+          'Content-Type': options.contentType,
+        },
+        body: uint8Array,
+      });
 
-      console.log('✅ Media uploaded successfully:', media.sid);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ MCS API error:', response.status, errorText);
+        throw new Error(`MCS upload failed: ${response.status} - ${errorText}`);
+      }
+
+      const mediaData = await response.json();
+      console.log('✅ Media uploaded successfully:', mediaData.sid);
 
       return {
         success: true,
         data: {
-          sid: media.sid,
-          contentType: media.contentType,
+          sid: mediaData.sid,
+          contentType: mediaData.content_type || options.contentType,
           filename: options.filename,
           size: options.file.length,
         },
