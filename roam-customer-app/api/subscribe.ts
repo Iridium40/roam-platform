@@ -142,7 +142,7 @@ export default async function handler(req: Request, res: Response) {
             </head>
             <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
               <div style="background: linear-gradient(135deg, #0EA5E9 0%, #06B6D4 100%); padding: 40px 20px; text-align: center; border-radius: 10px 10px 0 0;">
-                <img src="https://roamyourbestlife.com/logo-email.png" alt="ROAM Logo" style="width: 200px; height: auto; margin-bottom: 20px;" />
+                <img src="https://cdn.builder.io/api/v1/image/assets%2Fa42b6f9ec53e4654a92af75aad56d14f%2F993952d908754e5dbe0cceda03eb2224?format=webp&width=200" alt="ROAM Logo" style="width: 200px; height: auto; margin-bottom: 20px;" />
                 <h1 style="color: white; margin: 0; font-size: 32px; font-weight: bold;">Welcome to ROAM!</h1>
                 <p style="color: white; font-size: 18px; margin: 10px 0 0 0;">We're launching soon 🎉</p>
               </div>

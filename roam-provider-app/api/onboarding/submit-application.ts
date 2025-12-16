@@ -9,7 +9,8 @@ const supabase = createClient(
 
 // Email configuration
 const ROAM_EMAIL_CONFIG = {
-  logoUrl: "/logo-email.png",
+  // Use CDN URL for reliable email logo display (emails require absolute URLs)
+  logoUrl: "https://cdn.builder.io/api/v1/image/assets%2Fa42b6f9ec53e4654a92af75aad56d14f%2F993952d908754e5dbe0cceda03eb2224?format=webp&width=200",
   brandColor: "#4F46E5", // roam-blue
   fromEmail: "providersupport@roamyourbestlife.com",
   fromName: "ROAM Provider Support",

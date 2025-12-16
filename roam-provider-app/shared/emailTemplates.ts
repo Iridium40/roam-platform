@@ -1,7 +1,8 @@
 // Shared email template utility for consistent ROAM branding across all emails
 
 export const ROAM_EMAIL_CONFIG = {
-  logoUrl: "/logo-email.png",
+  // Use CDN URL for reliable email logo display (emails require absolute URLs)
+  logoUrl: "https://cdn.builder.io/api/v1/image/assets%2Fa42b6f9ec53e4654a92af75aad56d14f%2F993952d908754e5dbe0cceda03eb2224?format=webp&width=200",
   brandColor: "#4F46E5", // roam-blue
   fromEmail: "providersupport@roamyourbestlife.com",
   fromName: "ROAM Provider Support",
@@ -10,19 +11,8 @@ export const ROAM_EMAIL_CONFIG = {
 };
 
 export function getROAMEmailTemplate(content: string, baseUrl?: string): string {
-  // Construct absolute logo URL for email compatibility
-  // Emails require absolute URLs, not relative paths
-  let logoUrl = ROAM_EMAIL_CONFIG.logoUrl;
-  if (baseUrl) {
-    logoUrl = `${baseUrl}${ROAM_EMAIL_CONFIG.logoUrl}`;
-  } else {
-    // Fallback: try to construct from environment variables
-    const fallbackBaseUrl = 
-      process.env.VERCEL_URL 
-        ? `https://${process.env.VERCEL_URL}` 
-        : process.env.PROVIDER_APP_API_URL || 'https://provider.roamyourbestlife.com';
-    logoUrl = `${fallbackBaseUrl}${ROAM_EMAIL_CONFIG.logoUrl}`;
-  }
+  // Logo URL is now a direct CDN URL - no construction needed
+  const logoUrl = ROAM_EMAIL_CONFIG.logoUrl;
 
   return `
     <!DOCTYPE html>

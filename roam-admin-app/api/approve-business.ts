@@ -272,7 +272,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             const emailPayload = {
               from: "ROAM Provider Support <providersupport@roamyourbestlife.com>",
               to: [userEmail],
-              subject: "🎉 Your Business Has Been Approved!",
+              subject: "🎉 Your Business Application Has Been Approved - Complete Setup to Access Your Account",
               html: `
                 <!DOCTYPE html>
                 <html>
@@ -280,54 +280,85 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                   <meta charset="utf-8">
                   <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 </head>
-                <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-                  <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+                <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9fafb;">
+                  <!-- Logo Header -->
+                  <div style="background-color: #f5f5f5; padding: 30px 20px; text-align: center; border-radius: 10px 10px 0 0;">
+                    <img src="https://cdn.builder.io/api/v1/image/assets%2Fa42b6f9ec53e4654a92af75aad56d14f%2F993952d908754e5dbe0cceda03eb2224?format=webp&width=200" alt="ROAM - Your Best Life. Everywhere." style="max-width: 200px; height: auto;" />
+                  </div>
+                  
+                  <!-- Success Banner -->
+                  <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
                     <h1 style="color: white; margin: 0; font-size: 28px;">🎉 Congratulations!</h1>
-                    <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px;">Your Business Has Been Approved</p>
+                    <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px;">Your Business Application Has Been Approved</p>
                   </div>
                   
                   <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 10px 10px;">
                     <p style="font-size: 16px; margin: 0 0 20px 0;">Hi ${firstName},</p>
                     
                     <p style="font-size: 16px; margin: 0 0 20px 0;">
-                      Great news! Your business application for <strong>${businessProfile.business_name}</strong> has been reviewed and approved.
+                      Great news! Your business application for <strong>${businessProfile.business_name}</strong> has been reviewed and <strong style="color: #059669;">approved</strong>.
                     </p>
                     
-                    ${approvalNotes ? `
+                    <!-- Important Notice -->
                     <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; border-radius: 4px;">
-                      <p style="margin: 0; color: #78350f; line-height: 1.5;">${approvalNotes}</p>
+                      <p style="margin: 0; color: #92400e; font-weight: 600;">⚠️ Important: Complete Phase 2 Setup Required</p>
+                      <p style="margin: 10px 0 0 0; color: #78350f; line-height: 1.5;">
+                        To access your provider account and start receiving bookings, you <strong>must complete Phase 2 onboarding</strong> using the link below. Your account will be activated once this step is finished.
+                      </p>
+                    </div>
+                    
+                    ${approvalNotes ? `
+                    <div style="background: #f0fdf4; border-left: 4px solid #22c55e; padding: 15px; margin: 20px 0; border-radius: 4px;">
+                      <p style="margin: 0; color: #166534; font-weight: 600;">Admin Notes:</p>
+                      <p style="margin: 5px 0 0 0; color: #15803d; line-height: 1.5;">${approvalNotes}</p>
                     </div>
                     ` : ''}
                     
                     <p style="font-size: 16px; margin: 20px 0;">
-                      You can now continue with Phase 2 of your onboarding process. Click the button below to get started:
+                      Click the button below to complete your business setup:
                     </p>
                     
                     <div style="text-align: center; margin: 30px 0;">
-                      <a href="${approvalUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">
-                        Continue Phase 2 Onboarding
+                      <a href="${approvalUrl}" style="display: inline-block; background: #4F46E5; color: white; padding: 15px 30px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">
+                        Complete Phase 2 Setup
                       </a>
+                    </div>
+                    
+                    <!-- What's Included -->
+                    <div style="background: #f8fafc; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                      <p style="margin: 0 0 15px 0; font-weight: 600; color: #1e293b;">📋 Phase 2 Setup Includes:</p>
+                      <ul style="margin: 0; padding-left: 20px; color: #475569;">
+                        <li style="margin-bottom: 8px;">Business profile & branding</li>
+                        <li style="margin-bottom: 8px;">Business hours & availability</li>
+                        <li style="margin-bottom: 8px;">Banking & payment setup (Stripe)</li>
+                        <li style="margin-bottom: 8px;">Service pricing configuration</li>
+                      </ul>
                     </div>
                     
                     <p style="font-size: 14px; color: #6b7280; margin: 20px 0 0 0;">
                       Or copy and paste this link into your browser:<br>
-                      <a href="${approvalUrl}" style="color: #667eea; word-break: break-all;">${approvalUrl}</a>
+                      <a href="${approvalUrl}" style="color: #4F46E5; word-break: break-all;">${approvalUrl}</a>
                     </p>
                     
                     <p style="font-size: 14px; color: #6b7280; margin: 20px 0 0 0;">
-                      <strong>Note:</strong> This link will expire in 7 days. If you need a new link, please contact support.
+                      <strong>Note:</strong> This secure link will expire in 7 days. If you need a new link, please contact support.
                     </p>
                     
                     <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
                     
                     <p style="font-size: 14px; color: #6b7280; margin: 0;">
-                      If you have any questions, please don't hesitate to reach out to our support team.
+                      Questions? Contact us at <a href="mailto:providersupport@roamyourbestlife.com" style="color: #4F46E5;">providersupport@roamyourbestlife.com</a>
                     </p>
                     
                     <p style="font-size: 14px; color: #6b7280; margin: 20px 0 0 0;">
                       Best regards,<br>
-                      The ROAM Platform Team
+                      <strong>The ROAM Provider Support Team</strong>
                     </p>
+                  </div>
+                  
+                  <!-- Footer -->
+                  <div style="text-align: center; padding: 20px; color: #9ca3af; font-size: 12px;">
+                    <p style="margin: 0;">© ${new Date().getFullYear()} ROAM. All rights reserved.</p>
                   </div>
                 </body>
                 </html>

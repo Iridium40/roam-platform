@@ -14,8 +14,9 @@ interface EmailOptions {
 export class EmailService {
   private static fromEmail = "providersupport@roamyourbestlife.com";
   private static fromName = "ROAM Provider Support";
+  // Use CDN URL for reliable email logo display (emails require absolute URLs)
   private static logoUrl =
-    "/logo-email.png";
+    "https://cdn.builder.io/api/v1/image/assets%2Fa42b6f9ec53e4654a92af75aad56d14f%2F993952d908754e5dbe0cceda03eb2224?format=webp&width=200";
   private static brandColor = "#4F46E5"; // roam-blue
   private static supportEmail = "providersupport@roamyourbestlife.com";
 

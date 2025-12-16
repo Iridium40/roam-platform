@@ -292,7 +292,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
   <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
     <div style="background-color: #2C5F7D; padding: 30px 20px; text-align: center;">
-      <img src="${baseUrl}/logo-email.png" alt="ROAM Logo" style="max-width: 200px; height: auto;">
+      <img src="https://cdn.builder.io/api/v1/image/assets%2Fa42b6f9ec53e4654a92af75aad56d14f%2F993952d908754e5dbe0cceda03eb2224?format=webp&width=200" alt="ROAM Logo" style="max-width: 200px; height: auto;">
     </div>
     
     <div style="padding: 40px 30px;">

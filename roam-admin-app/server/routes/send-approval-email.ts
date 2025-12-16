@@ -111,8 +111,8 @@ export async function handleSendApprovalEmail(req: Request, res: Response) {
     console.log("=== SENDING EMAIL VIA RESEND ===");
     console.log("Sending approval email via Resend to:", contactEmail);
 
-    // Logo URL from Supabase storage
-    const logoUrl = 'https://vssomyuyhicaxsgiaupo.supabase.co/storage/v1/object/public/email-brand-images/ROAM/roam-logo-email.png';
+    // Logo URL from CDN for reliable email display
+    const logoUrl = 'https://cdn.builder.io/api/v1/image/assets%2Fa42b6f9ec53e4654a92af75aad56d14f%2F993952d908754e5dbe0cceda03eb2224?format=webp&width=200';
 
     const emailPayload = {
       from: "ROAM Provider Support <providersupport@roamyourbestlife.com>",
