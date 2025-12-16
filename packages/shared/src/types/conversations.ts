@@ -1,11 +1,25 @@
+export interface MediaAttachment {
+  sid: string;
+  contentType: string;
+  filename?: string;
+  size?: number;
+  url?: string;
+}
+
 export interface ConversationMessage {
   id: string;
-  conversation_id: string;
-  author_id: string;
-  author_type: string;
-  content: string;
-  created_at: string;
-  is_read: boolean;
+  conversation_id?: string;
+  author_id?: string;
+  author_type?: string;
+  content?: string;
+  created_at?: string;
+  is_read?: boolean;
+  media?: MediaAttachment[];
+  // Fields from Twilio API response
+  author?: string;
+  authorName?: string;
+  timestamp?: string;
+  attributes?: Record<string, any> | string;
 }
 
 export interface ConversationParticipant {

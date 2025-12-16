@@ -2,7 +2,9 @@ import twilio from "twilio";
 import type { 
   TwilioConfig, 
   MessageData, 
-  TwilioResponse
+  TwilioResponse,
+  UploadMediaOptions,
+  MediaAttachment
 } from "./types";
 
 export class MessageService {
@@ -16,7 +18,66 @@ export class MessageService {
   }
 
   /**
-   * Send message to conversation
+   * Upload media to Twilio Media Content Service (MCS)
+   * Returns a mediaSid that can be used when sending a message
+   */
+  async uploadMedia(options: UploadMediaOptions): Promise<TwilioResponse> {
+    try {
+      console.log('📤 Uploading media to Twilio MCS:', {
+        contentType: options.contentType,
+        filename: options.filename,
+        size: options.file.length
+      });
+
+      // Use the Twilio SDK to upload media
+      const media = await this.conversationsService
+        .media
+        .create({
+          media: options.file,
+          contentType: options.contentType,
+        });
+
+      console.log('✅ Media uploaded successfully:', media.sid);
+
+      return {
+        success: true,
+        data: {
+          sid: media.sid,
+          contentType: media.contentType,
+          filename: options.filename,
+          size: options.file.length,
+        },
+        message: 'Media uploaded successfully',
+      };
+    } catch (error) {
+      console.error('❌ Failed to upload media:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to upload media',
+      };
+    }
+  }
+
+  /**
+   * Get temporary URL for media content
+   */
+  async getMediaUrl(messageSid: string, conversationSid: string, mediaSid: string): Promise<string | null> {
+    try {
+      const media = await this.conversationsService
+        .conversations(conversationSid)
+        .messages(messageSid)
+        .media(mediaSid)
+        .fetch();
+
+      return media.contentTemporaryUrl || null;
+    } catch (error) {
+      console.error('❌ Failed to get media URL:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Send message to conversation (supports text and/or media)
    */
   async sendMessage(
     conversationSid: string, 
@@ -33,6 +94,7 @@ export class MessageService {
         author,
         bodyLength,
         attributesLength,
+        hasMedia: !!messageData.mediaSid,
         totalPayloadSize: bodyLength + attributesLength,
         attributes: messageData.attributes
       });
@@ -43,15 +105,26 @@ export class MessageService {
         throw new Error(`Message attributes exceed Twilio's 16KB limit: ${attributesLength} bytes`);
       }
 
+      // Build the message payload - body is optional if media is present
+      const createPayload: any = {
+        author: author,
+        attributes: attributesString,
+      };
+
+      // Add body if provided
+      if (messageData.body) {
+        createPayload.body = messageData.body;
+      }
+
+      // Add mediaSid if provided
+      if (messageData.mediaSid) {
+        createPayload.mediaSid = messageData.mediaSid;
+      }
+
       const message = await this.conversationsService
         .conversations(conversationSid)
         .messages
-        .create({
-          body: messageData.body,
-          author: author,
-          attributes: attributesString,
-          mediaSid: messageData.mediaSid,
-        });
+        .create(createPayload);
 
       console.log('Message sent successfully:', message.sid);
 
@@ -64,6 +137,7 @@ export class MessageService {
           attributes: message.attributes,
           dateCreated: message.dateCreated,
           index: message.index,
+          media: message.media,
         },
         message: 'Message sent successfully',
       };
@@ -115,7 +189,7 @@ export class MessageService {
   }
 
   /**
-   * List messages in conversation
+   * List messages in conversation (with media info)
    */
   async listMessages(
     conversationSid: string, 
@@ -129,15 +203,45 @@ export class MessageService {
         .messages
         .list({ limit });
 
-      const messageList = messages.map((message: any) => ({
-        sid: message.sid,
-        body: message.body,
-        author: message.author,
-        attributes: message.attributes,
-        dateCreated: message.dateCreated,
-        dateUpdated: message.dateUpdated,
-        index: message.index,
-        delivery: message.delivery,
+      // Fetch media details for messages that have media
+      const messageList = await Promise.all(messages.map(async (message: any) => {
+        let media: MediaAttachment[] = [];
+        
+        // Check if message has media attached
+        if (message.media && message.media.length > 0) {
+          try {
+            // Fetch media details for each media item
+            const mediaItems = await this.conversationsService
+              .conversations(conversationSid)
+              .messages(message.sid)
+              .media
+              .list();
+            
+            media = await Promise.all(mediaItems.map(async (mediaItem: any) => {
+              return {
+                sid: mediaItem.sid,
+                contentType: mediaItem.contentType,
+                filename: mediaItem.filename,
+                size: mediaItem.size,
+                url: mediaItem.contentTemporaryUrl || null,
+              };
+            }));
+          } catch (mediaError) {
+            console.warn('Could not fetch media for message:', message.sid, mediaError);
+          }
+        }
+
+        return {
+          sid: message.sid,
+          body: message.body,
+          author: message.author,
+          attributes: message.attributes,
+          dateCreated: message.dateCreated,
+          dateUpdated: message.dateUpdated,
+          index: message.index,
+          delivery: message.delivery,
+          media: media.length > 0 ? media : undefined,
+        };
       }));
 
       return {

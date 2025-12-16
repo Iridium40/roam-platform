@@ -312,15 +312,38 @@ export class TwilioConversationsService {
   }
 
   /**
-   * Send a message to a conversation
+   * Upload media to Twilio for use in messages
+   * Returns a mediaSid that can be used when sending a message
+   */
+  async uploadMedia(
+    file: Buffer,
+    contentType: string,
+    filename?: string
+  ): Promise<{ mediaSid: string }> {
+    const result = await this.messageService.uploadMedia({
+      file,
+      contentType,
+      filename,
+    });
+
+    if (!result.success || !result.data) {
+      throw new Error(result.error || 'Failed to upload media');
+    }
+
+    return { mediaSid: result.data.sid };
+  }
+
+  /**
+   * Send a message to a conversation (supports text and/or media)
    * Stores message notification in Supabase and updates last_message_at
    */
   async sendMessage(
     conversationSid: string,
-    message: string,
+    message: string | undefined,
     userId: string,
     userType: 'customer' | 'provider' | 'owner' | 'dispatcher',
-    _bookingId?: string
+    _bookingId?: string,
+    mediaSid?: string
   ): Promise<{ messageSid: string }> {
     // Get user details for the message
     let userDetails: { first_name?: string; last_name?: string } | null = null;
@@ -361,11 +384,13 @@ export class TwilioConversationsService {
     // The frontend can fetch images from profiles separately
     const messageResult = await this.messageService.sendMessage(conversationSid, {
       body: message,
+      mediaSid: mediaSid,
       attributes: {
         userId,
         userType: actualRole, // Store the actual role from database
         role: actualRole, // Also include as 'role' for clarity
         authorName,
+        hasMedia: !!mediaSid, // Flag to indicate message has media
         // imageUrl removed to prevent HTTP 413 errors
         timestamp: new Date().toISOString(),
       },
@@ -435,7 +460,7 @@ export class TwilioConversationsService {
   }
 
   /**
-   * Get messages for a conversation
+   * Get messages for a conversation (includes media attachments)
    */
   async getMessages(conversationSid: string, limit: number = 50): Promise<any[]> {
     console.log('📥 Fetching messages for conversation:', { conversationSid, limit });
@@ -460,15 +485,24 @@ export class TwilioConversationsService {
       const author_type = authorParts[0] || undefined;
       const author_id = authorParts.slice(1).join('-') || undefined; // Handle UUIDs with dashes
       
+      let parsedAttributes = {};
+      try {
+        parsedAttributes = msg.attributes ? JSON.parse(msg.attributes) : {};
+      } catch (e) {
+        parsedAttributes = {};
+      }
+      
       return {
         id: msg.sid,
         content: msg.body,
         author: msg.author,
         author_type,
         author_id,
-        authorName: msg.attributes ? JSON.parse(msg.attributes).authorName : msg.author,
+        authorName: (parsedAttributes as any).authorName || msg.author,
         timestamp: msg.dateCreated?.toISOString() || new Date().toISOString(),
-        attributes: msg.attributes ? JSON.parse(msg.attributes) : {},
+        attributes: parsedAttributes,
+        // Include media attachments if present
+        media: msg.media || undefined,
       };
     });
     

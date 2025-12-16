@@ -96,10 +96,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     if (action === 'send-message') {
-      const { conversationSid, message, userId, userType, bookingId } = body;
+      const { conversationSid, message, userId, userType, bookingId, mediaSid } = body;
       
-      if (!conversationSid || !message || !userId || !userType) {
-        return res.status(400).json({ error: 'Conversation SID, message, user ID, and user type are required' });
+      // Message text is optional if mediaSid is provided
+      if (!conversationSid || (!message && !mediaSid) || !userId || !userType) {
+        return res.status(400).json({ error: 'Conversation SID, (message or mediaSid), user ID, and user type are required' });
       }
 
       try {
@@ -108,7 +109,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           message,
           userId,
           userType,
-          bookingId
+          bookingId,
+          mediaSid
         );
 
         return res.status(200).json({
@@ -119,6 +121,36 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         console.error('Error sending message:', error);
         return res.status(500).json({ 
           error: 'Failed to send message',
+          details: error.message 
+        });
+      }
+    }
+
+    if (action === 'upload-media') {
+      const { fileData, contentType, filename } = body;
+      
+      if (!fileData || !contentType) {
+        return res.status(400).json({ error: 'File data (base64) and content type are required' });
+      }
+
+      try {
+        // Convert base64 to buffer
+        const buffer = Buffer.from(fileData, 'base64');
+        
+        const result = await conversationsService.uploadMedia(
+          buffer,
+          contentType,
+          filename
+        );
+
+        return res.status(200).json({
+          success: true,
+          mediaSid: result.mediaSid,
+        });
+      } catch (error: any) {
+        console.error('Error uploading media:', error);
+        return res.status(500).json({ 
+          error: 'Failed to upload media',
           details: error.message 
         });
       }

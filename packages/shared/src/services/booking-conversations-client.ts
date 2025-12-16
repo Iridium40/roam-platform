@@ -25,10 +25,11 @@ type CreateConversationPayload = {
 type SendMessagePayload = {
   action: 'send-message';
   conversationSid: string;
-  message: string;
+  message?: string;
   userId: string;
   userType: BookingParticipantRole;
   bookingId?: string;
+  mediaSid?: string;
 };
 
 type GetMessagesPayload = {
@@ -36,7 +37,14 @@ type GetMessagesPayload = {
   conversationSid: string;
 };
 
-type ApiPayload = CreateConversationPayload | SendMessagePayload | GetMessagesPayload;
+type UploadMediaPayload = {
+  action: 'upload-media';
+  fileData: string; // base64 encoded file data
+  contentType: string;
+  filename?: string;
+};
+
+type ApiPayload = CreateConversationPayload | SendMessagePayload | GetMessagesPayload | UploadMediaPayload;
 
 interface ApiResponseBase {
   success?: boolean;
@@ -137,13 +145,14 @@ export class BookingConversationsClient {
 
   async sendMessage(
     conversationId: string,
-    message: string,
+    message: string | undefined,
     userId: string,
     userType: BookingParticipantRole,
     bookingId?: string,
+    mediaSid?: string,
   ): Promise<void> {
-    if (!conversationId || !message || !userId || !userType) {
-      throw new Error('conversationId, message, userId, and userType are required');
+    if (!conversationId || (!message && !mediaSid) || !userId || !userType) {
+      throw new Error('conversationId, (message or mediaSid), userId, and userType are required');
     }
 
     const payload: SendMessagePayload = {
@@ -153,9 +162,63 @@ export class BookingConversationsClient {
       userId,
       userType,
       bookingId,
+      mediaSid,
     };
 
     await this.request(payload);
+  }
+
+  /**
+   * Upload media to Twilio for use in messages
+   * @param file - The file to upload
+   * @returns The mediaSid that can be used when sending a message
+   */
+  async uploadMedia(file: File): Promise<{ mediaSid: string }> {
+    // Convert file to base64
+    const fileData = await this.fileToBase64(file);
+    
+    const payload: UploadMediaPayload = {
+      action: 'upload-media',
+      fileData,
+      contentType: file.type,
+      filename: file.name,
+    };
+
+    const response = await this.request<{ mediaSid: string }>(payload);
+    return { mediaSid: response.mediaSid };
+  }
+
+  /**
+   * Send a message with an attachment
+   * Convenience method that uploads the file and sends the message in one call
+   */
+  async sendMessageWithAttachment(
+    conversationId: string,
+    userId: string,
+    userType: BookingParticipantRole,
+    file: File,
+    message?: string,
+    bookingId?: string,
+  ): Promise<void> {
+    // First upload the media
+    const { mediaSid } = await this.uploadMedia(file);
+    
+    // Then send the message with the media
+    await this.sendMessage(conversationId, message, userId, userType, bookingId, mediaSid);
+  }
+
+  private fileToBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        // Remove the data URL prefix (e.g., "data:image/png;base64,")
+        const base64 = result.split(',')[1];
+        resolve(base64);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
   }
 }
 

@@ -51,7 +51,8 @@ export type {
   Conversation,
   CreateConversationParams,
   SendMessageParams,
-  AddParticipantParams
+  AddParticipantParams,
+  MediaAttachment,
 } from './types/conversations';
 
 // Services
@@ -87,6 +88,10 @@ export type {
   DeliveryStatus,
   ConversationState,
   EnvironmentConfig,
+  // Media attachment types
+  MediaAttachment as TwilioMediaAttachment,
+  UploadMediaOptions,
+  MessageWithMedia,
 } from './services/twilio/types';
 
 // Client-safe exports

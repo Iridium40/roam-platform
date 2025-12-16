@@ -22,9 +22,33 @@ export interface ParticipantData {
 }
 
 export interface MessageData {
-  body: string;
+  body?: string;
   attributes?: Record<string, any>;
   mediaSid?: string;
+}
+
+// Media attachment types
+export interface MediaAttachment {
+  sid: string;
+  contentType: string;
+  filename?: string;
+  size?: number;
+  url?: string;
+}
+
+export interface UploadMediaOptions {
+  file: Buffer;
+  contentType: string;
+  filename?: string;
+}
+
+export interface MessageWithMedia {
+  sid: string;
+  body?: string;
+  author: string;
+  attributes: Record<string, any>;
+  dateCreated: string;
+  media?: MediaAttachment[];
 }
 
 export interface WebhookData {
@@ -89,7 +113,7 @@ export interface ConversationMessage {
   sid: string;
   accountSid: string;
   conversationSid: string;
-  body: string;
+  body?: string;
   author: string;
   attributes: Record<string, any>;
   dateCreated: string;
@@ -101,6 +125,7 @@ export interface ConversationMessage {
     undelivered: string;
     failed: string;
   };
+  media?: MediaAttachment[];
 }
 
 export interface ConversationDetails {

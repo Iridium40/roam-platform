@@ -18,7 +18,14 @@ import {
   Hash,
   Calendar,
   X,
+  Paperclip,
+  Loader2,
+  FileIcon,
+  ImageIcon,
+  Download,
+  Smile,
 } from 'lucide-react';
+import EmojiPicker, { EmojiClickData, Theme } from 'emoji-picker-react';
 import { useAuth } from '@/contexts/auth/AuthProvider';
 import { supabase } from '@/lib/supabase';
 import {
@@ -26,6 +33,7 @@ import {
   type BookingConversationParticipant,
   type BookingConversationParticipantData,
   type ConversationMessageWithAuthor,
+  type MediaAttachment,
 } from '@roam/shared';
 
 // Format time as 12-hour with am/pm (e.g., "10:30am")
@@ -214,10 +222,28 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
   const [participants, setParticipants] = useState<BookingConversationParticipant[]>([]);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [activeConversationSid, setActiveConversationSid] = useState<string | null>(conversationSid || null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Allowed file types for attachments
+  const ALLOWED_FILE_TYPES = [
+    'image/jpeg',
+    'image/png',
+    'image/gif',
+    'image/webp',
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  ];
+  const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
   const loadMessages = useCallback(
     async (conversationId: string) => {
@@ -382,31 +408,111 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
     };
   }, [isOpen, activeConversationSid, loadMessages]);
 
+  // Handle emoji selection
+  const handleEmojiClick = useCallback((emojiData: EmojiClickData) => {
+    setNewMessage(prev => prev + emojiData.emoji);
+    setShowEmojiPicker(false);
+    // Focus back on input after emoji selection
+    inputRef.current?.focus();
+  }, []);
+
+  // Close emoji picker when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target as Node)) {
+        setShowEmojiPicker(false);
+      }
+    };
+
+    if (showEmojiPicker) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showEmojiPicker]);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!ALLOWED_FILE_TYPES.includes(file.type)) {
+      setError('File type not supported. Please upload an image or PDF.');
+      return;
+    }
+
+    // Validate file size
+    if (file.size > MAX_FILE_SIZE) {
+      setError('File is too large. Maximum size is 10MB.');
+      return;
+    }
+
+    setSelectedFile(file);
+    setError(null);
+  };
+
+  const handleRemoveFile = () => {
+    setSelectedFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   const handleSendMessage = async () => {
     console.log('🚀 Send message clicked', {
       hasMessage: !!newMessage.trim(),
+      hasFile: !!selectedFile,
       activeConversationSid,
       hasClient: !!bookingConversationsClient,
       currentUserId,
       currentUserType,
     });
 
-    if (!newMessage.trim() || !activeConversationSid || !bookingConversationsClient || !currentUserId) {
+    const hasContent = newMessage.trim() || selectedFile;
+    if (!hasContent || !activeConversationSid || !bookingConversationsClient || !currentUserId) {
       console.warn('❌ Send blocked - missing required data');
       return;
     }
 
     try {
       setSending(true);
-      console.log('📤 Sending message...', { conversationSid: activeConversationSid });
       
-      await bookingConversationsClient.sendMessage(
-        activeConversationSid,
-        newMessage.trim(),
-        currentUserId,
-        (currentUserType as 'customer' | 'provider' | 'owner' | 'dispatcher'),
-        booking?.id
-      );
+      if (selectedFile) {
+        // Send message with attachment
+        console.log('📤 Sending message with attachment...', { 
+          conversationSid: activeConversationSid,
+          fileName: selectedFile.name,
+          fileType: selectedFile.type,
+        });
+        
+        setUploading(true);
+        await bookingConversationsClient.sendMessageWithAttachment(
+          activeConversationSid,
+          currentUserId,
+          (currentUserType as 'customer' | 'provider' | 'owner' | 'dispatcher'),
+          selectedFile,
+          newMessage.trim() || undefined,
+          booking?.id
+        );
+        setUploading(false);
+        setSelectedFile(null);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+      } else {
+        // Send text-only message
+        console.log('📤 Sending message...', { conversationSid: activeConversationSid });
+        
+        await bookingConversationsClient.sendMessage(
+          activeConversationSid,
+          newMessage.trim(),
+          currentUserId,
+          (currentUserType as 'customer' | 'provider' | 'owner' | 'dispatcher'),
+          booking?.id
+        );
+      }
       
       console.log('✅ Message sent successfully');
       setNewMessage('');
@@ -414,6 +520,7 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
     } catch (error) {
       console.error('❌ Error sending message:', error);
       setError(error instanceof Error ? error.message : 'Failed to send message');
+      setUploading(false);
     } finally {
       setSending(false);
     }
@@ -512,6 +619,41 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
     [participantMap, currentUserId, provider, booking]
   );
 
+
+  // Helper to render media attachments
+  const renderMediaAttachment = (media: MediaAttachment) => {
+    const isImage = media.contentType?.startsWith('image/');
+    
+    if (isImage && media.url) {
+      return (
+        <div key={media.sid} className="mt-2">
+          <a href={media.url} target="_blank" rel="noopener noreferrer">
+            <img 
+              src={media.url} 
+              alt={media.filename || 'Attachment'} 
+              className="max-w-[200px] max-h-[200px] rounded-lg object-cover cursor-pointer hover:opacity-90 transition-opacity"
+            />
+          </a>
+        </div>
+      );
+    }
+    
+    // Non-image file (PDF, doc, etc.)
+    return (
+      <div key={media.sid} className="mt-2">
+        <a 
+          href={media.url || '#'} 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="flex items-center gap-2 p-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors"
+        >
+          <FileIcon className="h-5 w-5" />
+          <span className="text-sm truncate max-w-[150px]">{media.filename || 'Attachment'}</span>
+          <Download className="h-4 w-4 ml-auto" />
+        </a>
+      </div>
+    );
+  };
 
   // Get service name from either services.name or service_name
   const serviceName = booking?.services?.name || booking?.service_name || 'Service';
@@ -688,9 +830,13 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
                                     isProviderSide ? 'bg-roam-blue text-white' : 'bg-white border shadow-sm'
                                   }`}
                                 >
-                                  <p className="text-sm whitespace-pre-wrap break-words">
-                                    {message.content || message.author_name || ''}
-                                  </p>
+                                  {message.content && (
+                                    <p className="text-sm whitespace-pre-wrap break-words">
+                                      {message.content}
+                                    </p>
+                                  )}
+                                  {/* Render media attachments */}
+                                  {(message as any).media?.map((media: MediaAttachment) => renderMediaAttachment(media))}
                                   <div className="flex items-center justify-end mt-1 text-[11px] opacity-80">
                                     <span className={isProviderSide ? 'text-white/80' : 'text-gray-500'}>
                                       {formatMessageTime(timestamp)}
@@ -711,8 +857,80 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
 
           {/* Message Input - Fixed at bottom */}
           <div className="p-4 bg-white border-t">
-            <div className="flex gap-3 items-center">
+            {/* Selected file preview */}
+            {selectedFile && (
+              <div className="mb-3 p-2 bg-gray-50 rounded-lg flex items-center gap-2">
+                {selectedFile.type.startsWith('image/') ? (
+                  <ImageIcon className="h-5 w-5 text-blue-600" />
+                ) : (
+                  <FileIcon className="h-5 w-5 text-blue-600" />
+                )}
+                <span className="text-sm text-gray-700 truncate flex-1">{selectedFile.name}</span>
+                <span className="text-xs text-gray-400">
+                  {(selectedFile.size / 1024).toFixed(1)}KB
+                </span>
+                <button
+                  onClick={handleRemoveFile}
+                  className="p-1 hover:bg-gray-200 rounded-full"
+                  disabled={sending}
+                >
+                  <X className="h-4 w-4 text-gray-500" />
+                </button>
+              </div>
+            )}
+            
+            <div className="flex gap-2 items-center relative">
+              {/* Hidden file input */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept={ALLOWED_FILE_TYPES.join(',')}
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+              
+              {/* Attachment button */}
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={sending || !activeConversationSid}
+                className="h-10 w-10 flex-shrink-0 text-gray-500 hover:text-blue-600 hover:bg-blue-50"
+              >
+                <Paperclip className="h-5 w-5" />
+              </Button>
+              
+              {/* Emoji button */}
+              <div className="relative" ref={emojiPickerRef}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                  disabled={sending || !activeConversationSid}
+                  className="h-10 w-10 flex-shrink-0 text-gray-500 hover:text-blue-600 hover:bg-blue-50"
+                >
+                  <Smile className="h-5 w-5" />
+                </Button>
+                
+                {/* Emoji Picker */}
+                {showEmojiPicker && (
+                  <div className="absolute bottom-12 left-0 z-50">
+                    <EmojiPicker
+                      onEmojiClick={handleEmojiClick}
+                      theme={Theme.LIGHT}
+                      width={320}
+                      height={400}
+                      searchPlaceholder="Search emoji..."
+                      previewConfig={{ showPreview: false }}
+                    />
+                  </div>
+                )}
+              </div>
+              
               <Input
+                ref={inputRef}
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
                 onKeyPress={handleKeyPress}
@@ -722,13 +940,27 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
               />
               <Button
                 onClick={handleSendMessage}
-                disabled={!newMessage.trim() || sending || !activeConversationSid}
+                disabled={(!newMessage.trim() && !selectedFile) || sending || !activeConversationSid}
                 size="icon"
                 className="bg-blue-600 hover:bg-blue-700 h-10 w-10 rounded-full flex-shrink-0"
               >
-                <Send className="h-4 w-4" />
+                {uploading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
               </Button>
             </div>
+            
+            {/* Error display */}
+            {error && (
+              <div className="mt-2 p-2 bg-red-50 text-red-600 text-sm rounded-lg flex items-center justify-between">
+                <span>{error}</span>
+                <button onClick={() => setError(null)} className="p-1 hover:bg-red-100 rounded">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </DialogContent>

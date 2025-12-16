@@ -1,6 +1,8 @@
-import type { ConversationMessage } from './conversations';
+import type { ConversationMessage, MediaAttachment } from './conversations';
 
 export type BookingParticipantRole = 'customer' | 'provider' | 'owner' | 'dispatcher';
+
+export type { MediaAttachment };
 
 export interface BookingConversationParticipantData {
   userId: string;
