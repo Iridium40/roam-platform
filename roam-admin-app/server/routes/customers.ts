@@ -74,7 +74,7 @@ export async function handleCustomers(req: Request, res: Response) {
     // Merge user_settings and auth data into customer data
     const enhancedCustomers = (customers || []).map(customer => {
       const settings = settingsMap[customer.user_id] || {};
-      const authData = authDataMap[customer.user_id] || {};
+      const authData = authDataMap[customer.user_id] || { email: null, last_sign_in_at: null };
       return {
         ...customer,
         email_notifications: settings.email_notifications ?? true,
