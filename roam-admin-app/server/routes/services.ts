@@ -30,6 +30,8 @@ export async function handleServices(req: Request, res: Response) {
 // Get all service-related data (services, categories, subcategories, addons, eligibility)
 export async function handleAllServiceData(req: Request, res: Response) {
   try {
+    console.log('[handleAllServiceData] Starting to fetch all service data...');
+    
     // Fetch all data in parallel
     const [
       servicesResult,
@@ -90,12 +92,45 @@ export async function handleAllServiceData(req: Request, res: Response) {
         .order("created_at", { ascending: false }),
     ]);
 
-    // Check for errors
-    if (servicesResult.error) throw servicesResult.error;
-    if (categoriesResult.error) throw categoriesResult.error;
-    if (subcategoriesResult.error) throw subcategoriesResult.error;
-    if (addonsResult.error) throw addonsResult.error;
-    if (addonEligibilityResult.error) throw addonEligibilityResult.error;
+    // Check for errors with detailed logging
+    const errors: string[] = [];
+    if (servicesResult.error) {
+      console.error('[handleAllServiceData] Services error:', servicesResult.error);
+      errors.push(`services: ${servicesResult.error.message}`);
+    }
+    if (categoriesResult.error) {
+      console.error('[handleAllServiceData] Categories error:', categoriesResult.error);
+      errors.push(`categories: ${categoriesResult.error.message}`);
+    }
+    if (subcategoriesResult.error) {
+      console.error('[handleAllServiceData] Subcategories error:', subcategoriesResult.error);
+      errors.push(`subcategories: ${subcategoriesResult.error.message}`);
+    }
+    if (addonsResult.error) {
+      console.error('[handleAllServiceData] Addons error:', addonsResult.error);
+      errors.push(`addons: ${addonsResult.error.message}`);
+    }
+    if (addonEligibilityResult.error) {
+      console.error('[handleAllServiceData] Addon eligibility error:', addonEligibilityResult.error);
+      errors.push(`addonEligibility: ${addonEligibilityResult.error.message}`);
+    }
+
+    if (errors.length > 0) {
+      console.error('[handleAllServiceData] Database errors:', errors);
+      return res.status(500).json({ 
+        success: false, 
+        error: 'Database query errors',
+        details: errors
+      });
+    }
+
+    console.log('[handleAllServiceData] Successfully fetched:', {
+      services: servicesResult.data?.length || 0,
+      categories: categoriesResult.data?.length || 0,
+      subcategories: subcategoriesResult.data?.length || 0,
+      addons: addonsResult.data?.length || 0,
+      addonEligibility: addonEligibilityResult.data?.length || 0,
+    });
 
     res.json({
       success: true,
@@ -108,10 +143,12 @@ export async function handleAllServiceData(req: Request, res: Response) {
       }
     });
   } catch (error) {
-    console.error('Error fetching all service data:', error);
+    console.error('[handleAllServiceData] Unexpected error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     res.status(500).json({ 
       success: false, 
-      error: 'Failed to fetch service data' 
+      error: 'Failed to fetch service data',
+      details: errorMessage
     });
   }
 }
