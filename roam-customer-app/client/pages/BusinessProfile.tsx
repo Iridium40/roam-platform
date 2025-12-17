@@ -653,9 +653,9 @@ export default function BusinessProfile() {
                               
                               {/* Duration and Delivery Type Badges */}
                               <div className="mb-4 flex flex-wrap gap-2">
-                                <Badge variant="outline" className="text-sm">
-                                  <Clock className="w-3 h-3 mr-1" />
-                                  {service.business_duration_minutes || service.duration_minutes} Minutes
+                                <Badge className="bg-purple-100 text-purple-700 border-purple-300 border px-2.5 py-1 text-sm font-semibold">
+                                  <Clock className="w-3.5 h-3.5 mr-1" />
+                                  {service.business_duration_minutes || service.duration_minutes} min
                                 </Badge>
                                 {service.delivery_type && (
                                   (() => {

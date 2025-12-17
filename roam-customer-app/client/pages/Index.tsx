@@ -1457,10 +1457,12 @@ export default function Index() {
                                 {service.description}
                               </p>
 
-                              {/* Stats Row */}
-                              <div className="flex items-center gap-1 text-sm text-gray-600 mb-4">
-                                <Clock className="w-4 h-4 text-roam-blue" />
-                                <span>{service.duration}</span>
+                              {/* Duration Badge - Prominent for service selection */}
+                              <div className="mb-4">
+                                <span className="inline-flex items-center bg-purple-100 text-purple-700 border border-purple-300 px-3 py-1.5 rounded-full font-semibold text-sm">
+                                  <Clock className="w-4 h-4 mr-1.5" />
+                                  {service.duration}
+                                </span>
                               </div>
 
                               {/* Book Button */}

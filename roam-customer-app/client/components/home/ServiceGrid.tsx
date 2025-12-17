@@ -266,9 +266,9 @@ export const ServiceGrid: React.FC<ServiceGridProps> = ({
                               </span>
                             </div>
                             <Badge
-                              variant="outline"
-                              className="border-roam-blue text-roam-blue"
+                              className="bg-purple-100 text-purple-700 border-purple-300 border px-2.5 py-1 font-semibold"
                             >
+                              <Clock className="w-3.5 h-3.5 mr-1 inline" />
                               {service.duration}
                             </Badge>
                           </div>

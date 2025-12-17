@@ -223,7 +223,10 @@ export const BookingCard: React.FC<BookingCardProps> = ({
                 <div className="flex items-center gap-2 text-gray-700">
                   <Clock className="w-4 h-4 text-roam-blue" />
                   <span className="font-medium">{booking.time}</span>
-                  <span className="text-gray-500">({booking.duration})</span>
+                </div>
+                <div className="flex items-center gap-1.5 bg-roam-blue/10 text-roam-blue px-2.5 py-1 rounded-full">
+                  <Clock className="w-3.5 h-3.5" />
+                  <span className="font-semibold text-sm">{booking.duration}</span>
                 </div>
                 {booking.booking_reference && (
                   <div className="flex items-center gap-2">
@@ -588,7 +591,10 @@ export const BookingCard: React.FC<BookingCardProps> = ({
                   <span>{booking.time}</span>
                 </div>
               </div>
-              <span className="text-xs text-foreground/50">{booking.duration}</span>
+              <div className="flex items-center gap-1 bg-roam-blue/15 text-roam-blue px-2 py-0.5 rounded-full">
+                <Clock className="w-3 h-3" />
+                <span className="font-semibold text-xs">{booking.duration}</span>
+              </div>
             </div>
             
             {/* Booking Reference */}

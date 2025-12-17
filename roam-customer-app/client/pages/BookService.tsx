@@ -1709,8 +1709,9 @@ export default function BookService() {
                 )}
                 {/* Service badge overlay */}
                 <div className="absolute top-4 left-4">
-                  <Badge className="bg-white/90 text-roam-blue shadow-sm">
-                    {service.duration_minutes} min session
+                  <Badge className="bg-purple-600 text-white shadow-lg px-3 py-1.5 text-sm font-bold">
+                    <Clock className="w-4 h-4 mr-1.5 inline" />
+                    {service.duration_minutes} min
                   </Badge>
                 </div>
                 <div className="absolute top-4 right-4">
@@ -1740,8 +1741,9 @@ export default function BookService() {
               <Badge variant="secondary" className="text-sm">
                 ${service.min_price} starting
               </Badge>
-              <Badge variant="outline" className="text-sm">
-                {service.duration_minutes} minutes
+              <Badge className="bg-purple-100 text-purple-700 border-purple-300 border px-3 py-1 text-sm font-semibold">
+                <Clock className="w-3.5 h-3.5 mr-1.5 inline" />
+                {service.duration_minutes} min
               </Badge>
               {promotion && (
                 <Badge variant="default" className="text-sm bg-green-500 hover:bg-green-600">
