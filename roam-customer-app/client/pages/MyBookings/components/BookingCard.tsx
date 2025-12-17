@@ -302,56 +302,56 @@ export const BookingCard: React.FC<BookingCardProps> = ({
             </div>
           </div>
 
-          {/* Status & Actions Section */}
+          {/* Status Section */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-gray-700">
+                {booking.booking_status === 'pending' ? 'Awaiting confirmation' : 
+                 booking.booking_status === 'confirmed' ? 'Confirmed' :
+                 booking.booking_status === 'in_progress' ? 'Service in progress' : 
+                 booking.booking_status === 'completed' ? 'Service completed' :
+                 booking.booking_status === 'cancelled' ? 'Booking cancelled' :
+                 booking.booking_status === 'declined' ? 'Booking declined' :
+                 'No show'}
+              </span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div 
+                className={`h-2 rounded-full transition-all duration-300 ${
+                  booking.booking_status === 'pending' ? 'bg-yellow-500' :
+                  booking.booking_status === 'confirmed' ? 'bg-blue-500' :
+                  booking.booking_status === 'in_progress' ? 'bg-purple-500' :
+                  booking.booking_status === 'completed' ? 'bg-green-500' :
+                  'bg-red-500'
+                }`}
+                style={{ 
+                  width: booking.booking_status === 'pending' ? '25%' : 
+                         booking.booking_status === 'confirmed' ? '50%' : 
+                         booking.booking_status === 'in_progress' ? '75%' : 
+                         '100%' 
+                }}
+              ></div>
+            </div>
+          </div>
+
+          {/* Action Buttons - Vertical stacked like mobile */}
           <div className="pt-4 border-t border-gray-100">
-            <div className="flex items-center justify-between gap-4">
-              {/* Status */}
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2">
-                  <span className="text-sm font-medium text-gray-700">
-                    {booking.booking_status === 'pending' ? 'Awaiting confirmation' : 
-                     booking.booking_status === 'confirmed' ? 'Confirmed' :
-                     booking.booking_status === 'in_progress' ? 'Service in progress' : 
-                     booking.booking_status === 'completed' ? 'Service completed' :
-                     booking.booking_status === 'cancelled' ? 'Booking cancelled' :
-                     booking.booking_status === 'declined' ? 'Booking declined' :
-                     'No show'}
-                  </span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div 
-                    className={`h-2 rounded-full transition-all duration-300 ${
-                      booking.booking_status === 'pending' ? 'bg-yellow-500' :
-                      booking.booking_status === 'confirmed' ? 'bg-blue-500' :
-                      booking.booking_status === 'in_progress' ? 'bg-purple-500' :
-                      booking.booking_status === 'completed' ? 'bg-green-500' :
-                      'bg-red-500'
-                    }`}
-                    style={{ 
-                      width: booking.booking_status === 'pending' ? '25%' : 
-                             booking.booking_status === 'confirmed' ? '50%' : 
-                             booking.booking_status === 'in_progress' ? '75%' : 
-                             '100%' 
-                    }}
-                  ></div>
-                </div>
-              </div>
+            {/* Details Button - Always show at top */}
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-full mb-2 border-roam-blue text-roam-blue hover:bg-roam-blue/10"
+              onClick={handleViewDetails}
+            >
+              <FileText className="w-4 h-4 mr-1.5" />
+              View Details
+            </Button>
 
-              {/* Action Buttons */}
-              <div className="flex items-center gap-2 flex-shrink-0">
-                {/* Details Button - Always show */}
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="border-roam-blue text-roam-blue hover:bg-roam-blue/10"
-                  onClick={handleViewDetails}
-                >
-                  <FileText className="w-4 h-4 mr-1.5" />
-                  Details
-                </Button>
-
-                {/* Message Button - hide for final bookings more than 1 day past */}
-                {!shouldHideMessageButton && (
+            {/* In Progress Booking Actions */}
+            {!isPastBooking && booking.booking_status === "in_progress" && (
+              <div className="grid grid-cols-2 gap-2">
+                {/* Message Button */}
+                {booking.providers && (
                   <Button
                     size="sm"
                     className="bg-roam-blue hover:bg-roam-blue/90 text-white font-medium relative"
@@ -369,23 +369,58 @@ export const BookingCard: React.FC<BookingCardProps> = ({
                     )}
                   </Button>
                 )}
+                
+                {/* Add More button */}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-purple-500 text-purple-600 hover:bg-purple-50"
+                  onClick={() => setShowAddMoreModal(true)}
+                >
+                  <Plus className="w-4 h-4 mr-1.5" />
+                  Add More Services
+                </Button>
+              </div>
+            )}
 
-                {/* Reschedule Button */}
-                {!isPastBooking && (booking.booking_status === "pending" || booking.booking_status === "confirmed") && (
+            {/* Pending/Confirmed Booking Actions */}
+            {!isPastBooking && (booking.booking_status === "confirmed" || booking.booking_status === "pending") && (
+              <div className="space-y-2">
+                {/* Message Button - Full Width */}
+                {booking.providers && (
+                  <Button
+                    size="sm"
+                    className="w-full bg-roam-blue hover:bg-roam-blue/90 text-white font-medium relative"
+                    onClick={handleMessageClick}
+                  >
+                    <MessageCircle className="w-4 h-4 mr-1.5" />
+                    Message
+                    {unreadCount > 0 && (
+                      <Badge
+                        variant="destructive"
+                        className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs font-bold rounded-full"
+                      >
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </Badge>
+                    )}
+                  </Button>
+                )}
+                
+                {/* Reschedule & Cancel Buttons - Side by Side */}
+                <div className="grid grid-cols-2 gap-2">
+                  {/* Reschedule Button */}
                   <Button
                     size="sm"
                     variant="outline"
-                    className="border-gray-300 text-gray-700"
+                    className="border-gray-300 text-gray-700 hover:bg-gray-50"
                     onClick={() => onReschedule(booking)}
                   >
                     <Edit className="w-4 h-4 mr-1.5" />
                     Reschedule
                   </Button>
-                )}
-
-                {/* Cancel Button */}
-                {!isPastBooking && (booking.booking_status === "pending" || booking.booking_status === "confirmed") && (
-                  canCancelBooking ? (
+                  
+                  {/* Cancel Button */}
+                  {canCancelBooking ? (
                     <Button
                       size="sm"
                       variant="outline"
@@ -399,75 +434,104 @@ export const BookingCard: React.FC<BookingCardProps> = ({
                     <Button
                       size="sm"
                       variant="outline"
-                      className="border-gray-200 text-gray-400"
+                      className="border-gray-200 text-gray-400 cursor-not-allowed"
                       disabled
-                      title="Cannot cancel within 24 hours"
+                      title="Cannot cancel within 24 hours of appointment"
                     >
                       <X className="w-4 h-4 mr-1.5" />
                       24h Lock
                     </Button>
-                  )
-                )}
+                  )}
+                </div>
+              </div>
+            )}
 
-                {/* Add More button - Only show for in_progress bookings */}
-                {booking.booking_status === 'in_progress' && (
+            {/* Past Booking - Message Button (hide if more than 1 day past booking date) */}
+            {isPastBooking && booking.providers && booking.booking_status !== "completed" && !shouldHideMessageButton && (
+              <Button
+                size="sm"
+                className="w-full bg-roam-blue hover:bg-roam-blue/90 text-white font-medium relative"
+                onClick={handleMessageClick}
+              >
+                <MessageCircle className="w-4 h-4 mr-2" />
+                Message Provider
+                {unreadCount > 0 && (
+                  <Badge
+                    variant="destructive"
+                    className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs font-bold rounded-full"
+                  >
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </Badge>
+                )}
+              </Button>
+            )}
+
+            {/* Completed Booking Actions */}
+            {booking.booking_status === "completed" && (
+              <div className="space-y-2">
+                {/* Message Button for completed bookings within 1 day */}
+                {!shouldHideMessageButton && booking.providers && (
                   <Button
                     size="sm"
-                    variant="outline"
-                    className="border-purple-500 text-purple-600 hover:bg-purple-50"
-                    onClick={() => setShowAddMoreModal(true)}
+                    className="w-full bg-roam-blue hover:bg-roam-blue/90 text-white font-medium relative"
+                    onClick={handleMessageClick}
                   >
-                    <Plus className="w-4 h-4 mr-1.5" />
-                    Add More
+                    <MessageCircle className="w-4 h-4 mr-2" />
+                    Message Provider
+                    {unreadCount > 0 && (
+                      <Badge
+                        variant="destructive"
+                        className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs font-bold rounded-full"
+                      >
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </Badge>
+                    )}
                   </Button>
                 )}
-
-                {/* Completed Booking Actions */}
-                {booking.booking_status === "completed" && (
-                  <>
-                    {booking.reviews && booking.reviews.length > 0 ? (
-                      <>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="border-green-500 text-green-600 hover:bg-green-50"
-                          onClick={() => setShowReviewModal(true)}
-                        >
-                          <CheckCircle className="w-4 h-4 mr-1.5" />
-                          View Review
-                        </Button>
-                        <span className="text-sm text-gray-500">
-                          {booking.reviews[0].overall_rating}/5
-                          {booking.tips && booking.tips.length > 0 && (
-                            <> • ${parseFloat(booking.tips[0].tip_amount || '0').toFixed(2)} tip</>
-                          )}
-                        </span>
-                      </>
-                    ) : (
-                      <>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="border-purple-500 text-purple-600 hover:bg-purple-50"
-                          onClick={() => setShowTipModal(true)}
-                        >
-                          <CreditCard className="w-4 h-4 mr-1.5" />
-                          Send Tip
-                        </Button>
-                        <Button
-                          size="sm" 
-                          className="bg-roam-blue hover:bg-roam-blue/90"
-                          onClick={() => setShowReviewModal(true)}
-                        >
-                          <Star className="w-4 h-4 mr-1.5" />
-                          Leave Review
-                        </Button>
-                      </>
-                    )}
-                  </>
+                {booking.reviews && booking.reviews.length > 0 ? (
+                  <div className="space-y-2">
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      className="w-full border-green-500 text-green-600 hover:bg-green-50"
+                      onClick={() => setShowReviewModal(true)}
+                    >
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      View Review & Tip
+                    </Button>
+                    <div className="flex items-center justify-center gap-3 text-sm text-gray-500">
+                      <span>{booking.reviews[0].overall_rating}/5 stars</span>
+                      {booking.tips && booking.tips.length > 0 && (
+                        <>
+                          <span>•</span>
+                          <span>${parseFloat(booking.tips[0].tip_amount || '0').toFixed(2)} tip</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-purple-500 text-purple-600 hover:bg-purple-50"
+                      onClick={() => setShowTipModal(true)}
+                    >
+                      <CreditCard className="w-4 h-4 mr-1.5" />
+                      Send Tip
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      className="bg-roam-blue hover:bg-roam-blue/90"
+                      onClick={() => setShowReviewModal(true)}
+                    >
+                      <Star className="w-4 h-4 mr-1.5" />
+                      Leave Review
+                    </Button>
+                  </div>
                 )}
               </div>
-            </div>
+            )}
           </div>
         </div>
 
