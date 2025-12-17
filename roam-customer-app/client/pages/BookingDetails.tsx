@@ -31,6 +31,7 @@ import {
   Phone,
   Mail,
   RefreshCw,
+  ExternalLink,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
@@ -720,47 +721,90 @@ export default function BookingDetails() {
                     </>
                   )}
 
-                  {/* Action Buttons */}
+                  {/* Action Buttons - Vertical stacked like booking cards */}
                   <Separator />
-                  <div className="flex flex-wrap gap-3">
-                    {/* Message Button */}
-                    <Button
-                      onClick={() => setShowMessageModal(true)}
-                      className="bg-roam-blue hover:bg-roam-blue/90"
-                    >
-                      <MessageCircle className="w-4 h-4 mr-2" />
-                      Message Provider
-                    </Button>
-
-                    {/* Reschedule Button */}
-                    {!isPastBooking && (booking.booking_status === "pending" || booking.booking_status === "confirmed") && (
-                      <Button variant="outline" onClick={() => setShowRescheduleModal(true)}>
-                        <Edit className="w-4 h-4 mr-2" />
-                        Reschedule
-                      </Button>
-                    )}
-
-                    {/* Cancel Button */}
-                    {!isPastBooking && canCancelBooking && (
-                      <Button
-                        variant="outline"
-                        className="border-red-200 text-red-600 hover:bg-red-50"
-                        onClick={() => setShowCancelModal(true)}
-                      >
-                        <X className="w-4 h-4 mr-2" />
-                        Cancel Booking
-                      </Button>
-                    )}
-
-                    {/* Add More Services Button */}
+                  <div className="space-y-2">
+                    {/* In Progress Booking Actions */}
                     {booking.booking_status === "in_progress" && (
+                      <div className="grid grid-cols-2 gap-2">
+                        {/* Message Button */}
+                        <Button
+                          onClick={() => setShowMessageModal(true)}
+                          className="bg-roam-blue hover:bg-roam-blue/90"
+                        >
+                          <MessageCircle className="w-4 h-4 mr-2" />
+                          Message Provider
+                        </Button>
+                        
+                        {/* Add More Services Button */}
+                        <Button
+                          variant="outline"
+                          className="border-purple-500 text-purple-600 hover:bg-purple-50"
+                          onClick={() => setShowAddMoreModal(true)}
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          Add More Services
+                        </Button>
+                      </div>
+                    )}
+
+                    {/* Pending/Confirmed Booking Actions */}
+                    {!isPastBooking && (booking.booking_status === "pending" || booking.booking_status === "confirmed") && (
+                      <div className="space-y-2">
+                        {/* Message Button - Full Width */}
+                        <Button
+                          onClick={() => setShowMessageModal(true)}
+                          className="w-full bg-roam-blue hover:bg-roam-blue/90"
+                        >
+                          <MessageCircle className="w-4 h-4 mr-2" />
+                          Message Provider
+                        </Button>
+                        
+                        {/* Reschedule & Cancel Buttons - Side by Side */}
+                        <div className="grid grid-cols-2 gap-2">
+                          {/* Reschedule Button */}
+                          <Button
+                            variant="outline"
+                            className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                            onClick={() => setShowRescheduleModal(true)}
+                          >
+                            <Edit className="w-4 h-4 mr-2" />
+                            Reschedule
+                          </Button>
+                          
+                          {/* Cancel Button */}
+                          {canCancelBooking ? (
+                            <Button
+                              variant="outline"
+                              className="border-red-200 text-red-600 hover:bg-red-50"
+                              onClick={() => setShowCancelModal(true)}
+                            >
+                              <X className="w-4 h-4 mr-2" />
+                              Cancel
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              className="border-gray-200 text-gray-400 cursor-not-allowed"
+                              disabled
+                              title="Cannot cancel within 24 hours of appointment"
+                            >
+                              <X className="w-4 h-4 mr-2" />
+                              24h Lock
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Past Booking Actions (completed, cancelled, etc.) */}
+                    {isPastBooking && (
                       <Button
-                        variant="outline"
-                        className="border-purple-500 text-purple-600 hover:bg-purple-50"
-                        onClick={() => setShowAddMoreModal(true)}
+                        onClick={() => setShowMessageModal(true)}
+                        className="w-full bg-roam-blue hover:bg-roam-blue/90"
                       >
-                        <Plus className="w-4 h-4 mr-2" />
-                        Add More Services
+                        <MessageCircle className="w-4 h-4 mr-2" />
+                        Message Provider
                       </Button>
                     )}
                   </div>
@@ -1081,6 +1125,22 @@ export default function BookingDetails() {
                           </a>
                         )}
                       </div>
+                      
+                      {/* View Profile Button */}
+                      {booking.providers?.id && (
+                        <div className="mt-4">
+                          <Link to={`/providers/${booking.providers.id}`}>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="border-roam-blue text-roam-blue hover:bg-roam-blue/10"
+                            >
+                              <ExternalLink className="w-4 h-4 mr-2" />
+                              View Profile
+                            </Button>
+                          </Link>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </CardContent>
