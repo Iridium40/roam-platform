@@ -1158,9 +1158,9 @@ export default function BookingDetails() {
                       </div>
                       
                       {/* View Profile Button */}
-                      {booking.providers?.id && (
+                      {booking.providers?.user_id && (
                         <div className="mt-4">
-                          <Link to={`/providers/${booking.providers.id}`}>
+                          <Link to={`/provider/${booking.providers.user_id}`}>
                             <Button
                               variant="outline"
                               size="sm"
