@@ -181,6 +181,18 @@ export function createServer() {
     }
   );
 
+  app.post("/api/stripe/create-tip-payment-intent",
+    async (req, res) => {
+      try {
+        const tipPaymentIntentHandler = await import("../api/stripe/create-tip-payment-intent");
+        await tipPaymentIntentHandler.default(req, res);
+      } catch (error) {
+        console.error("Error importing tip payment intent handler:", error);
+        res.status(500).json({ error: "Failed to load tip payment intent handler" });
+      }
+    }
+  );
+
   // Webhook handler function (used by both routes)
   const handleStripeWebhook = async (req: any, res: any) => {
     console.log('🎯 [WEBHOOK] Received webhook request from Stripe');
