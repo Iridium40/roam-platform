@@ -280,7 +280,27 @@ export default function BookingDetails() {
         throw new Error("Booking not found or you don't have access to it.");
       }
 
-      // Transform booking data
+      // Fetch reviews separately (more reliable than join)
+      const { data: reviewsData, error: reviewsError } = await supabase
+        .from("reviews")
+        .select("*")
+        .eq("booking_id", bookingId);
+
+      if (reviewsError) {
+        console.error("Error fetching reviews:", reviewsError);
+      }
+
+      // Fetch tips separately (more reliable than join)
+      const { data: tipsData, error: tipsError } = await supabase
+        .from("tips")
+        .select("*")
+        .eq("booking_id", bookingId);
+
+      if (tipsError) {
+        console.error("Error fetching tips:", tipsError);
+      }
+
+      // Transform booking data with explicitly fetched reviews and tips
       const transformedBooking: BookingWithDetails = {
         ...bookingData,
         service_name: bookingData.services?.name || "Service",
@@ -291,7 +311,18 @@ export default function BookingDetails() {
         duration: bookingData.services?.duration_minutes
           ? `${bookingData.services.duration_minutes} min`
           : "60 min",
+        // Use explicitly fetched reviews and tips instead of relying on join
+        reviews: reviewsData || [],
+        tips: tipsData || [],
       };
+
+      console.log("📋 Booking Details loaded:", {
+        bookingId,
+        reviewsCount: reviewsData?.length || 0,
+        tipsCount: tipsData?.length || 0,
+        reviews: reviewsData,
+        tips: tipsData,
+      });
 
       setBooking(transformedBooking);
 
