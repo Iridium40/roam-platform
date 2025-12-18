@@ -31,6 +31,7 @@ export interface BookingNotificationData {
     start_time: string;
     total_amount: number;
     special_instructions?: string | null;
+    booking_reference?: string | null;
   };
   service: {
     name: string;
