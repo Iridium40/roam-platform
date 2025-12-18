@@ -376,7 +376,7 @@ export default function BookingsTab({
     let address = "";
 
     if (booking.customer_locations) {
-      address = `${booking.customer_locations.location_name || ""} ${booking.customer_locations.street_address || ""}${booking.customer_locations.unit_number ? `, ${booking.customer_locations.unit_number}` : ""}, ${booking.customer_locations.city || ""}, ${booking.customer_locations.state || ""}`;
+      address = `${booking.customer_locations.location_name || ""} ${booking.customer_locations.address_line1 || ""}${booking.customer_locations.address_line2 ? `, ${booking.customer_locations.address_line2}` : ""}, ${booking.customer_locations.city || ""}, ${booking.customer_locations.state || ""}`;
     } else if (booking.business_locations) {
       address = `${booking.business_locations.location_name || ""} ${booking.business_locations.address_line1 || ""}, ${booking.business_locations.city || ""}, ${booking.business_locations.state || ""}`;
     }
@@ -711,9 +711,9 @@ export default function BookingsTab({
                             </div>
                             <div className="text-xs text-gray-500 truncate">
                               {booking.customer_locations
-                                ? `${booking.customer_locations.location_name || ""} ${booking.customer_locations.street_address || ""}${booking.customer_locations.unit_number ? `, ${booking.customer_locations.unit_number}` : ""}, ${booking.customer_locations.city || ""}, ${booking.customer_locations.state || ""}`
+                                ? `${booking.customer_locations.address_line1 || ""}${booking.customer_locations.address_line2 ? ` ${booking.customer_locations.address_line2}` : ""}, ${booking.customer_locations.city || ""}, ${booking.customer_locations.state || ""} ${booking.customer_locations.postal_code || ""}`.trim()
                                 : booking.business_locations
-                                ? `${booking.business_locations.location_name || ""} ${booking.business_locations.address_line1 || ""}, ${booking.business_locations.city || ""}, ${booking.business_locations.state || ""}`
+                                ? `${booking.business_locations.address_line1 || ""}, ${booking.business_locations.city || ""}, ${booking.business_locations.state || ""}`
                                 : "Location not specified"
                               }
                             </div>
@@ -916,9 +916,9 @@ export default function BookingsTab({
                             </div>
                             <div className="text-xs text-gray-500 truncate">
                               {booking.customer_locations
-                                ? `${booking.customer_locations.location_name || ""} ${booking.customer_locations.street_address || ""}${booking.customer_locations.unit_number ? `, ${booking.customer_locations.unit_number}` : ""}, ${booking.customer_locations.city || ""}, ${booking.customer_locations.state || ""}`
+                                ? `${booking.customer_locations.address_line1 || ""}${booking.customer_locations.address_line2 ? ` ${booking.customer_locations.address_line2}` : ""}, ${booking.customer_locations.city || ""}, ${booking.customer_locations.state || ""} ${booking.customer_locations.postal_code || ""}`.trim()
                                 : booking.business_locations
-                                ? `${booking.business_locations.location_name || ""} ${booking.business_locations.address_line1 || ""}, ${booking.business_locations.city || ""}, ${booking.business_locations.state || ""}`
+                                ? `${booking.business_locations.address_line1 || ""}, ${booking.business_locations.city || ""}, ${booking.business_locations.state || ""}`
                                 : "Location not specified"
                               }
                             </div>
@@ -1121,9 +1121,9 @@ export default function BookingsTab({
                             </div>
                             <div className="text-xs text-gray-500 truncate">
                               {booking.customer_locations
-                                ? `${booking.customer_locations.location_name || ""} ${booking.customer_locations.street_address || ""}${booking.customer_locations.unit_number ? `, ${booking.customer_locations.unit_number}` : ""}, ${booking.customer_locations.city || ""}, ${booking.customer_locations.state || ""}`
+                                ? `${booking.customer_locations.address_line1 || ""}${booking.customer_locations.address_line2 ? ` ${booking.customer_locations.address_line2}` : ""}, ${booking.customer_locations.city || ""}, ${booking.customer_locations.state || ""} ${booking.customer_locations.postal_code || ""}`.trim()
                                 : booking.business_locations
-                                ? `${booking.business_locations.location_name || ""} ${booking.business_locations.address_line1 || ""}, ${booking.business_locations.city || ""}, ${booking.business_locations.state || ""}`
+                                ? `${booking.business_locations.address_line1 || ""}, ${booking.business_locations.city || ""}, ${booking.business_locations.state || ""}`
                                 : "Location not specified"
                               }
                             </div>
