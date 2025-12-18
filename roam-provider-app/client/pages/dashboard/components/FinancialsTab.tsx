@@ -1405,7 +1405,7 @@ export default function FinancialsTab({
             </CardContent>
           </Card>
 
-          {/* Business Payment Transactions (Provider Payouts) */}
+          {/* Business Payment Transactions (Booking Earnings) */}
           {businessPaymentTransactions.length > 0 && (
             <Card>
               <CardHeader>
@@ -1413,9 +1413,9 @@ export default function FinancialsTab({
                   <div>
                     <CardTitle className="flex items-center space-x-2">
                       <Building2 className="w-5 h-5" />
-                      <span>Provider Payouts</span>
+                      <span>Booking Earnings</span>
                     </CardTitle>
-                    <CardDescription>Your earnings transferred to your account</CardDescription>
+                    <CardDescription>Earnings from confirmed bookings (paid out weekly on Fridays)</CardDescription>
                   </div>
                   <Button
                     variant="outline"
@@ -1429,7 +1429,7 @@ export default function FinancialsTab({
                 </div>
               </CardHeader>
               <CardContent>
-                {/* Provider Payouts Filters */}
+                {/* Booking Earnings Filters */}
                 <div className="mb-6 p-4 bg-gray-50 rounded-lg border">
                   <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
                     {/* Date Range */}
