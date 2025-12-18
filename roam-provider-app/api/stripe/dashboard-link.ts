@@ -56,26 +56,70 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Retrieve account to verify it exists and get account type
       const account = await stripe.accounts.retrieve(stripeAccountId);
       
-      // Create login link
-      // For Express accounts, this creates a one-time login link that automatically logs them in
-      // Users don't need separate Stripe login credentials - the link handles authentication
-      // The link expires after a short period (typically 5 minutes) for security
-      const loginLink = await stripe.accounts.createLoginLink(stripeAccountId);
+      console.log('Stripe account retrieved:', {
+        id: account.id,
+        type: account.type,
+        detailsSubmitted: account.details_submitted,
+        chargesEnabled: account.charges_enabled,
+        payoutsEnabled: account.payouts_enabled,
+      });
+
+      // For Standard accounts, redirect to the main Stripe dashboard
+      if (account.type === 'standard') {
+        return res.json({
+          url: 'https://dashboard.stripe.com/',
+          accountType: 'standard',
+          message: 'Standard accounts use the main Stripe dashboard',
+        });
+      }
+
+      // For Express/Custom accounts, try to create a login link
+      // This only works if the account has completed onboarding (details_submitted = true)
+      if (account.details_submitted) {
+        try {
+          const loginLink = await stripe.accounts.createLoginLink(stripeAccountId);
+          return res.json({
+            url: loginLink.url,
+            created: loginLink.created,
+            accountType: account.type,
+          });
+        } catch (loginLinkError: any) {
+          console.error('Login link creation failed:', loginLinkError.message);
+          // Fall through to account link below
+        }
+      }
+
+      // If login link fails or account hasn't completed onboarding,
+      // create an account link to continue/complete onboarding
+      console.log('Creating account link for onboarding completion...');
+      const baseUrl = process.env.VITE_PUBLIC_APP_URL || 'https://www.roamprovider.com';
+      
+      const accountLink = await stripe.accountLinks.create({
+        account: stripeAccountId,
+        refresh_url: `${baseUrl}/dashboard?tab=financials&stripe_refresh=true`,
+        return_url: `${baseUrl}/dashboard?tab=financials&stripe_success=true`,
+        type: 'account_onboarding',
+        collect: 'eventually_due',
+      });
 
       return res.json({
-        url: loginLink.url,
-        created: loginLink.created,
-        accountType: account.type, // 'express' or 'standard'
+        url: accountLink.url,
+        accountType: account.type,
+        requiresOnboarding: !account.details_submitted,
+        message: account.details_submitted 
+          ? 'Redirecting to Stripe dashboard...'
+          : 'Please complete your Stripe account setup',
       });
+
     } catch (stripeError: any) {
       console.error('Stripe API error:', stripeError);
       
-      // If login link creation fails, provide helpful error message
+      // If all else fails, provide a generic Stripe dashboard link
       if (stripeError.type === 'StripeInvalidRequestError') {
         return res.status(400).json({ 
           error: 'Unable to create dashboard access link',
-          details: 'Your Stripe account may need additional setup. Please contact support.',
-          stripeError: stripeError.message
+          details: stripeError.message,
+          fallbackUrl: 'https://dashboard.stripe.com/',
         });
       }
       

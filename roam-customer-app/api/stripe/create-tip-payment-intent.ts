@@ -60,6 +60,36 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
+    // Validate business has an active Stripe Connect account for tip transfer
+    const { data: connectedAccount, error: connectError } = await supabase
+      .from('stripe_connect_accounts')
+      .select('account_id, charges_enabled, payouts_enabled')
+      .eq('business_id', business_id)
+      .single();
+
+    if (connectError || !connectedAccount?.account_id) {
+      console.error('❌ Business does not have a Stripe Connect account for tips:', { business_id, connectError });
+      return res.status(400).json({ 
+        error: 'Tips not available',
+        details: 'This business has not completed payment setup for receiving tips.',
+        code: 'BUSINESS_TIP_NOT_CONFIGURED'
+      });
+    }
+
+    if (!connectedAccount.charges_enabled || !connectedAccount.payouts_enabled) {
+      console.warn('⚠️ Business Stripe Connect account has restricted capabilities for tips:', { 
+        business_id, 
+        chargesEnabled: connectedAccount.charges_enabled,
+        payoutsEnabled: connectedAccount.payouts_enabled 
+      });
+      // Allow tips but log warning - payouts may be pending
+    }
+
+    console.log('✅ Business Stripe Connect account validated for tips:', {
+      businessId: business_id,
+      accountId: connectedAccount.account_id,
+    });
+
     // Get customer details - customer_id is the customer_profile id, not user_id
     const { data: customer, error: customerError } = await supabase
       .from('customer_profiles')
@@ -146,17 +176,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Calculate amounts in cents
     const tipAmountCents = Math.round(tip_amount * 100);
     
-    // Calculate Stripe processing fees (2.9% + 30 cents)
-    const stripeFeePercentage = 0.029; // 2.9%
-    const stripeFeeFixed = 30; // 30 cents
-    const stripeFeeAmount = Math.round(tip_amount * stripeFeePercentage * 100) + stripeFeeFixed;
-    const providerNetAmount = tipAmountCents - stripeFeeAmount;
+    // Calculate platform fee (5% of tip to cover Stripe fees)
+    // Business receives 95% of the tip
+    const platformFeePercentage = 0.05; // 5%
+    const platformFeeAmount = Math.round(tip_amount * platformFeePercentage * 100); // in cents
+    const providerNetAmount = tipAmountCents - platformFeeAmount; // 95% to provider
 
     console.log('💰 Tip calculation:', {
       tip_amount,
       tipAmountCents,
-      stripeFeeAmount,
-      providerNetAmount: providerNetAmount / 100
+      platformFeePercentage: '5%',
+      platformFeeAmount: platformFeeAmount / 100,
+      providerNetAmount: providerNetAmount / 100,
+      connectedAccountId: connectedAccount.account_id,
     });
 
     // Create Payment Intent for tip
@@ -174,9 +206,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         provider_id,
         business_id,
         tip_amount: tip_amount.toString(),
-        stripe_fee: (stripeFeeAmount / 100).toString(),
-        provider_net: (providerNetAmount / 100).toString(),
+        platform_fee: (platformFeeAmount / 100).toString(), // 5% platform fee
+        provider_net: (providerNetAmount / 100).toString(), // 95% to provider
+        transfer_amount_cents: providerNetAmount.toString(), // For webhook to create transfer
         customer_message: customer_message || '',
+        // Stripe Connect: Store connected account for transfer
+        connectedAccountId: connectedAccount.account_id,
       },
       automatic_payment_methods: {
         enabled: true,
@@ -200,8 +235,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         tip_percentage: null, // Can be calculated later if needed
         stripe_payment_intent_id: paymentIntent.id,
         payment_status: 'pending',
-        platform_fee_amount: stripeFeeAmount / 100,
-        provider_net_amount: providerNetAmount / 100,
+        platform_fee_amount: platformFeeAmount / 100, // 5% platform fee
+        provider_net_amount: providerNetAmount / 100, // 95% to provider
         customer_message: customer_message || null,
       })
       .select()
@@ -219,8 +254,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       amount: tip_amount,
       breakdown: {
         tipAmount: tip_amount,
-        stripeFee: stripeFeeAmount / 100,
-        providerNet: providerNetAmount / 100
+        platformFee: platformFeeAmount / 100, // 5% platform fee
+        providerNet: providerNetAmount / 100  // 95% to provider
       }
     });
 

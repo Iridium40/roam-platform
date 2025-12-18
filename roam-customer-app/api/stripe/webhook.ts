@@ -254,6 +254,38 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         processed = true;
         break;
 
+      // Stripe Connect Transfer Events
+      case 'transfer.created':
+        try {
+          const transfer = event.data.object as Stripe.Transfer;
+          console.log('💸 Transfer created:', transfer.id, 'Amount:', transfer.amount / 100);
+          await handleTransferCreated(transfer);
+          processed = true;
+        } catch (err: any) {
+          console.error('Error handling transfer.created:', err);
+          // Don't throw - transfer recording is not critical for booking flow
+          processed = true;
+        }
+        break;
+
+      case 'transfer.reversed':
+        try {
+          const transfer = event.data.object as Stripe.Transfer;
+          console.log('🔄 Transfer reversed:', transfer.id);
+          await handleTransferReversed(transfer);
+          processed = true;
+        } catch (err: any) {
+          console.error('Error handling transfer.reversed:', err);
+          processed = true;
+        }
+        break;
+
+      case 'transfer.updated':
+        // Log but don't process - we handle creation and reversal separately
+        console.log('ℹ️ Transfer updated:', (event.data.object as Stripe.Transfer).id);
+        processed = true;
+        break;
+
       default:
         // Log unhandled events for debugging
         console.log(`⚠️ Unhandled webhook event type: ${event.type}`);
@@ -1339,6 +1371,77 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
       } else {
         console.log(`✅ Business payment transaction created (${transactionType}):`, businessPaymentTransaction?.id);
       }
+
+      // Create Stripe Transfer to connected account for service amount
+      // This ensures business receives their portion of the payment
+      const connectedAccountId = paymentIntent.metadata?.connectedAccountId;
+      const transferAmountCents = paymentIntent.metadata?.transferAmount 
+        ? parseInt(paymentIntent.metadata.transferAmount)
+        : Math.round(serviceAmount * 100); // Fallback to calculated service amount
+
+      if (connectedAccountId && paymentIntent.latest_charge && transferAmountCents > 0) {
+        try {
+          const chargeId = typeof paymentIntent.latest_charge === 'string'
+            ? paymentIntent.latest_charge
+            : paymentIntent.latest_charge.id;
+
+          console.log('💸 Creating Stripe Transfer to connected account (webhook):', {
+            amount: transferAmountCents / 100,
+            amountCents: transferAmountCents,
+            destination: connectedAccountId,
+            sourceTransaction: chargeId,
+            transactionType: transactionType,
+          });
+
+          const transfer = await stripe.transfers.create({
+            amount: transferAmountCents,
+            currency: 'usd',
+            destination: connectedAccountId,
+            source_transaction: chargeId,
+            metadata: {
+              booking_id: bookingId,
+              payment_intent_id: paymentIntent.id,
+              transfer_type: transactionType === 'additional_service' ? 'additional_service_payment' : 'booking_service_payment',
+              service_amount: serviceAmount.toString(),
+              platform_fee: platformFee.toString(),
+            },
+            description: transactionType === 'additional_service'
+              ? `Additional service payment for booking ${booking.booking_reference || bookingId}`
+              : `Service payment for booking ${booking.booking_reference || bookingId}`,
+          });
+
+          console.log('✅ Stripe Transfer created successfully (webhook):', {
+            transferId: transfer.id,
+            amount: transferAmountCents / 100,
+            destination: connectedAccountId,
+          });
+
+          // Update business_payment_transactions with transfer ID
+          if (businessPaymentTransaction?.id) {
+            await supabase
+              .from('business_payment_transactions')
+              .update({ stripe_transfer_id: transfer.id })
+              .eq('id', businessPaymentTransaction.id);
+            console.log('✅ Updated business_payment_transactions with transfer ID');
+          }
+
+        } catch (transferError: any) {
+          console.error('❌ Error creating Stripe Transfer (webhook):', transferError);
+          console.error('❌ Transfer error details:', {
+            message: transferError.message,
+            code: transferError.code,
+            type: transferError.type,
+          });
+          // Don't fail the webhook - payment was successful, transfer can be retried
+          console.warn('⚠️ Transfer creation failed but payment was recorded successfully');
+        }
+      } else {
+        console.warn('⚠️ Missing data for transfer creation:', {
+          hasConnectedAccountId: !!connectedAccountId,
+          hasLatestCharge: !!paymentIntent.latest_charge,
+          transferAmountCents,
+        });
+      }
     }
 
     // Save payment method to database if it's attached to a customer
@@ -1440,9 +1543,11 @@ async function handleTipPaymentIntent(paymentIntent: Stripe.PaymentIntent) {
     provider_id,
     business_id,
     tip_amount,
-    stripe_fee,
-    provider_net,
+    platform_fee, // 5% platform fee
+    provider_net, // 95% to provider
+    transfer_amount_cents, // Amount to transfer in cents
     customer_message,
+    connectedAccountId, // Connected account to transfer to
   } = paymentIntent.metadata;
 
   try {
@@ -1450,45 +1555,72 @@ async function handleTipPaymentIntent(paymentIntent: Stripe.PaymentIntent) {
       paymentIntentId: paymentIntent.id,
       bookingId: booking_id,
       tipAmount: tip_amount,
+      platformFee: platform_fee,
+      providerNet: provider_net,
+      connectedAccountId,
     });
 
-    // Retrieve actual Stripe fees from the charge's balance transaction
-    // Tips don't have a service fee, but Stripe processing fees are deducted
-    let actualStripeFee = 0;
-    let actualProviderNet = parseFloat(tip_amount || '0');
+    // Use the 5% platform fee structure from metadata
+    const platformFeeAmount = parseFloat(platform_fee || '0');
+    const providerNetAmount = parseFloat(provider_net || tip_amount || '0');
     
-    if (paymentIntent.latest_charge) {
+    console.log('💰 Tip fee breakdown:', {
+      tipAmount: parseFloat(tip_amount),
+      platformFee: platformFeeAmount,
+      providerNet: providerNetAmount,
+    });
+
+    // Create Stripe Transfer to connected account for 95% of tip
+    let stripeTransferId: string | null = null;
+    
+    if (connectedAccountId && paymentIntent.latest_charge) {
       try {
-        const chargeId = typeof paymentIntent.latest_charge === 'string' 
-          ? paymentIntent.latest_charge 
+        const chargeId = typeof paymentIntent.latest_charge === 'string'
+          ? paymentIntent.latest_charge
           : paymentIntent.latest_charge.id;
         
-        const charge = await stripe.charges.retrieve(chargeId, {
-          expand: ['balance_transaction']
+        // Use transfer_amount_cents from metadata, or calculate 95% of tip
+        const transferAmountCents = transfer_amount_cents 
+          ? parseInt(transfer_amount_cents) 
+          : Math.round(parseFloat(tip_amount) * 0.95 * 100);
+        
+        console.log('💸 Creating Stripe Transfer for tip to connected account:', {
+          amount: transferAmountCents / 100,
+          amountCents: transferAmountCents,
+          destination: connectedAccountId,
+          sourceTransaction: chargeId,
         });
         
-        if (charge.balance_transaction) {
-          const balanceTransaction = typeof charge.balance_transaction === 'string'
-            ? await stripe.balanceTransactions.retrieve(charge.balance_transaction)
-            : charge.balance_transaction;
-          
-          // Stripe fee is the difference between amount and net (after Stripe fees)
-          actualStripeFee = (balanceTransaction.fee || 0) / 100; // Convert from cents to dollars
-          actualProviderNet = (balanceTransaction.net || 0) / 100; // Convert from cents to dollars
-          
-          console.log(`💰 Actual Stripe fees from balance transaction: $${actualStripeFee.toFixed(2)}, Provider net: $${actualProviderNet.toFixed(2)}`);
-        }
-      } catch (feeError: any) {
-        console.warn('⚠️ Could not retrieve actual Stripe fees from balance transaction, using metadata:', feeError.message);
-        // Fallback to metadata values if balance transaction retrieval fails
-        actualStripeFee = parseFloat(stripe_fee || '0');
-        actualProviderNet = parseFloat(provider_net || tip_amount || '0');
+        const transfer = await stripe.transfers.create({
+          amount: transferAmountCents,
+          currency: 'usd',
+          destination: connectedAccountId,
+          source_transaction: chargeId,
+          metadata: {
+            booking_id: booking_id,
+            payment_intent_id: paymentIntent.id,
+            transfer_type: 'tip',
+            tip_amount: tip_amount,
+            platform_fee: platformFeeAmount.toString(),
+            provider_id: provider_id,
+          },
+          description: `Tip for booking ${booking_id}`,
+        });
+        
+        stripeTransferId = transfer.id;
+        console.log('✅ Tip transfer created successfully:', {
+          transferId: transfer.id,
+          amount: transferAmountCents / 100,
+          destination: connectedAccountId,
+        });
+        
+      } catch (transferError: any) {
+        console.error('❌ Error creating tip transfer:', transferError);
+        console.warn('⚠️ Tip payment recorded but transfer failed - may need manual resolution');
+        // Don't fail the tip processing - record it and handle transfer manually if needed
       }
     } else {
-      // Fallback to metadata values if no charge available
-      actualStripeFee = parseFloat(stripe_fee || '0');
-      actualProviderNet = parseFloat(provider_net || tip_amount || '0');
-      console.log('⚠️ No charge available, using estimated fees from metadata');
+      console.warn('⚠️ No connected account ID or charge ID - skipping tip transfer');
     }
 
     // Check if tip record already exists (created when payment intent was created)
@@ -1508,8 +1640,9 @@ async function handleTipPaymentIntent(paymentIntent: Stripe.PaymentIntent) {
         .update({
           payment_status: 'completed',
           payment_processed_at: new Date().toISOString(),
-          platform_fee_amount: actualStripeFee, // Actual Stripe fees from balance transaction
-          provider_net_amount: actualProviderNet, // Actual net amount after Stripe fees
+          platform_fee_amount: platformFeeAmount, // 5% platform fee
+          provider_net_amount: providerNetAmount, // 95% to provider
+          stripe_transfer_id: stripeTransferId, // Transfer ID if created
           updated_at: new Date().toISOString(),
         })
         .eq('id', existingTip.id)
@@ -1527,23 +1660,24 @@ async function handleTipPaymentIntent(paymentIntent: Stripe.PaymentIntent) {
       // Create new tip record if it doesn't exist (fallback)
       console.log('📝 Creating new tip record (fallback)');
       const { data: newTip, error: insertError } = await supabase
-      .from('tips')
-      .insert({
-        booking_id,
-        customer_id,
-        provider_id,
-        business_id,
-        tip_amount: parseFloat(tip_amount),
+        .from('tips')
+        .insert({
+          booking_id,
+          customer_id,
+          provider_id,
+          business_id,
+          tip_amount: parseFloat(tip_amount),
           tip_percentage: null,
-        payment_status: 'completed',
-        stripe_payment_intent_id: paymentIntent.id,
-          platform_fee_amount: actualStripeFee, // Actual Stripe fees from balance transaction
-          provider_net_amount: actualProviderNet, // Actual net amount after Stripe fees
+          payment_status: 'completed',
+          stripe_payment_intent_id: paymentIntent.id,
+          platform_fee_amount: platformFeeAmount, // 5% platform fee
+          provider_net_amount: providerNetAmount, // 95% to provider
+          stripe_transfer_id: stripeTransferId, // Transfer ID if created
           customer_message: customer_message || null,
           payment_processed_at: new Date().toISOString(),
-      })
-      .select()
-      .single();
+        })
+        .select()
+        .single();
 
       if (insertError) {
         console.error('❌ Error creating tip record:', insertError);
@@ -1583,13 +1717,14 @@ async function handleTipPaymentIntent(paymentIntent: Stripe.PaymentIntent) {
         provider_id,
         business_id,
         tip_amount: parseFloat(tip_amount),
-        stripe_fee: actualStripeFee, // Actual Stripe fees from balance transaction
-        provider_net: actualProviderNet, // Actual net amount after Stripe fees
+        platform_fee: platformFeeAmount, // 5% platform fee
+        provider_net: providerNetAmount, // 95% to provider
+        stripe_transfer_id: stripeTransferId,
         customer_message: customer_message || ''
       }
     });
 
-    console.log('✅ Tip payment processed successfully');
+    console.log('✅ Tip payment processed successfully with transfer');
 
   } catch (error) {
     console.error('❌ Error processing tip payment intent:', error);
@@ -1597,4 +1732,166 @@ async function handleTipPaymentIntent(paymentIntent: Stripe.PaymentIntent) {
   }
 }
 
+/**
+ * Handle transfer.created webhook event
+ * Records the transfer ID in business_payment_transactions
+ */
+async function handleTransferCreated(transfer: Stripe.Transfer) {
+  console.log('💸 Processing transfer.created:', {
+    transferId: transfer.id,
+    amount: transfer.amount / 100,
+    destination: transfer.destination,
+    metadata: transfer.metadata,
+  });
+
+  try {
+    const bookingId = transfer.metadata?.booking_id;
+    const paymentIntentId = transfer.metadata?.payment_intent_id;
+    const transferType = transfer.metadata?.transfer_type;
+
+    if (!bookingId) {
+      console.log('ℹ️ Transfer has no booking_id in metadata - may be a non-booking transfer');
+      return;
+    }
+
+    // Update business_payment_transactions with transfer ID
+    const { data: existingTransaction, error: fetchError } = await supabase
+      .from('business_payment_transactions')
+      .select('id, stripe_transfer_id')
+      .eq('booking_id', bookingId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (fetchError) {
+      console.error('❌ Error fetching business_payment_transaction:', fetchError);
+      return;
+    }
+
+    if (existingTransaction) {
+      // Only update if transfer_id is not already set
+      if (!existingTransaction.stripe_transfer_id) {
+        const { error: updateError } = await supabase
+          .from('business_payment_transactions')
+          .update({
+            stripe_transfer_id: transfer.id,
+          })
+          .eq('id', existingTransaction.id);
+
+        if (updateError) {
+          console.error('❌ Error updating business_payment_transaction with transfer ID:', updateError);
+        } else {
+          console.log('✅ Updated business_payment_transaction with transfer ID:', transfer.id);
+        }
+      } else {
+        console.log('ℹ️ business_payment_transaction already has transfer_id:', existingTransaction.stripe_transfer_id);
+      }
+    } else {
+      console.log('⚠️ No business_payment_transaction found for booking:', bookingId);
+    }
+
+    // Record transfer in financial_transactions for audit trail
+    const { error: financialError } = await supabase
+      .from('financial_transactions')
+      .insert({
+        booking_id: bookingId,
+        amount: transfer.amount / 100,
+        currency: transfer.currency.toUpperCase().substring(0, 3),
+        stripe_transaction_id: transfer.id,
+        payment_method: 'transfer',
+        description: `Stripe Connect transfer to business - ${transferType || 'booking_service_payment'}`,
+        transaction_type: 'transfer',
+        status: 'completed',
+        processed_at: new Date().toISOString(),
+        metadata: {
+          transfer_type: transferType,
+          destination_account: transfer.destination,
+          source_transaction: transfer.source_transaction,
+          payment_intent_id: paymentIntentId,
+        },
+      });
+
+    if (financialError) {
+      // Ignore duplicate errors
+      if (financialError.code !== '23505') {
+        console.error('❌ Error recording transfer in financial_transactions:', financialError);
+      }
+    } else {
+      console.log('✅ Transfer recorded in financial_transactions');
+    }
+
+  } catch (error: any) {
+    console.error('❌ Error handling transfer.created:', error);
+    // Don't throw - transfer recording is not critical
+  }
+}
+
+/**
+ * Handle transfer.reversed webhook event
+ * Updates business_payment_transactions to mark transfer as reversed
+ */
+async function handleTransferReversed(transfer: Stripe.Transfer) {
+  console.log('🔄 Processing transfer.reversed:', {
+    transferId: transfer.id,
+    reversed: transfer.reversed,
+    amount: transfer.amount / 100,
+    amountReversed: transfer.amount_reversed / 100,
+    metadata: transfer.metadata,
+  });
+
+  try {
+    const bookingId = transfer.metadata?.booking_id;
+
+    // Update business_payment_transactions to mark transfer as reversed
+    if (transfer.id) {
+      const { error: updateError } = await supabase
+        .from('business_payment_transactions')
+        .update({
+          stripe_tax_reported: false, // Mark as needing update
+          stripe_tax_report_error: `Transfer reversed. Amount reversed: $${(transfer.amount_reversed / 100).toFixed(2)}`,
+        })
+        .eq('stripe_transfer_id', transfer.id);
+
+      if (updateError) {
+        console.error('❌ Error updating business_payment_transaction for reversal:', updateError);
+      } else {
+        console.log('✅ Marked business_payment_transaction as reversed');
+      }
+    }
+
+    // Record reversal in financial_transactions for audit trail
+    if (bookingId) {
+      const { error: financialError } = await supabase
+        .from('financial_transactions')
+        .insert({
+          booking_id: bookingId,
+          amount: transfer.amount_reversed / 100,
+          currency: transfer.currency.toUpperCase().substring(0, 3),
+          stripe_transaction_id: `${transfer.id}_reversal`,
+          payment_method: 'transfer_reversal',
+          description: 'Stripe Connect transfer reversal',
+          transaction_type: 'refund',
+          status: 'completed',
+          processed_at: new Date().toISOString(),
+          metadata: {
+            original_transfer_id: transfer.id,
+            destination_account: transfer.destination,
+            reversal_reason: 'webhook_transfer_reversed',
+          },
+        });
+
+      if (financialError) {
+        if (financialError.code !== '23505') {
+          console.error('❌ Error recording transfer reversal in financial_transactions:', financialError);
+        }
+      } else {
+        console.log('✅ Transfer reversal recorded in financial_transactions');
+      }
+    }
+
+  } catch (error: any) {
+    console.error('❌ Error handling transfer.reversed:', error);
+    // Don't throw - reversal recording is not critical
+  }
+}
 

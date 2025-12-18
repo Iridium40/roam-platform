@@ -63,6 +63,43 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
+    // Validate business has an active Stripe Connect account for payment splitting
+    const { data: connectedAccount, error: connectError } = await supabase
+      .from('stripe_connect_accounts')
+      .select('account_id, charges_enabled, payouts_enabled')
+      .eq('business_id', businessId)
+      .single();
+
+    if (connectError || !connectedAccount?.account_id) {
+      console.error('❌ Business does not have a Stripe Connect account:', { businessId, connectError });
+      return res.status(400).json({ 
+        error: 'Business not ready for payments',
+        details: 'This business has not completed payment setup. Please contact support.',
+        code: 'BUSINESS_PAYMENT_NOT_CONFIGURED'
+      });
+    }
+
+    if (!connectedAccount.charges_enabled) {
+      console.error('❌ Business Stripe Connect account cannot accept charges:', { businessId, accountId: connectedAccount.account_id });
+      return res.status(400).json({ 
+        error: 'Business payment account restricted',
+        details: 'This business cannot currently accept payments. Please contact support.',
+        code: 'BUSINESS_CHARGES_DISABLED'
+      });
+    }
+
+    if (!connectedAccount.payouts_enabled) {
+      console.warn('⚠️ Business Stripe Connect account has payouts disabled:', { businessId, accountId: connectedAccount.account_id });
+      // Allow booking but log warning - payouts can be enabled later
+    }
+
+    console.log('✅ Business Stripe Connect account validated:', {
+      businessId,
+      accountId: connectedAccount.account_id,
+      chargesEnabled: connectedAccount.charges_enabled,
+      payoutsEnabled: connectedAccount.payouts_enabled
+    });
+
     let serviceAmount: number;
     let service: any;
 
@@ -329,6 +366,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         serviceId,
         businessId,
         serviceAmount: serviceAmount.toString(),
+        serviceAmountCents: serviceAmountCents.toString(), // For transfer calculation
         platformFee: (platformFee / 100).toString(),
         discountAmount: (discountAmount / 100).toString(),
         bookingDate: bookingDate || '',
@@ -337,7 +375,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         specialInstructions: specialInstructions || '',
         promotionId: promotionId || '',
         guestPhone: guestPhone || '',
-        paymentType: isAddMoreService ? 'additional_service' : 'initial_booking', // Track payment type
+        paymentType: isAddMoreService ? 'additional_service' : 'initial_booking',
+        // Stripe Connect: Store connected account for transfer on capture
+        connectedAccountId: connectedAccount.account_id,
+        transferAmount: serviceAmountCents.toString(), // Amount to transfer to business (service amount in cents)
       },
       automatic_payment_methods: {
         enabled: true,
@@ -374,14 +415,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       total: totalAmount / 100
     };
 
-    console.log('💰 Payment breakdown for Add More Service:', {
+    console.log('💰 Payment breakdown:', {
       customServiceAmountCents: customServiceAmount,
       serviceAmountDollars: serviceAmount,
       platformFeeCents: platformFee,
       platformFeeDollars: platformFee / 100,
       totalAmountCents: totalAmount,
       totalAmountDollars: totalAmount / 100,
-      breakdown
+      breakdown,
+      stripeConnect: {
+        connectedAccountId: connectedAccount.account_id,
+        transferAmountCents: serviceAmountCents,
+        transferAmountDollars: serviceAmount,
+      }
     });
 
     return res.status(200).json({

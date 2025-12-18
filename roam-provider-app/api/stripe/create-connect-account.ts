@@ -397,6 +397,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     console.log("Stripe Connect account created:", account.id);
 
+    // Set payout schedule to weekly on Friday
+    // This ensures predictable payout timing for refund policy enforcement
+    try {
+      await stripe.accounts.update(account.id, {
+        settings: {
+          payouts: {
+            schedule: {
+              interval: 'weekly',
+              weekly_anchor: 'friday',
+            },
+          },
+        },
+      });
+      console.log("✅ Payout schedule set to weekly on Friday for account:", account.id);
+    } catch (payoutScheduleError: any) {
+      console.warn("⚠️ Could not set payout schedule (non-fatal):", payoutScheduleError.message);
+      // Continue anyway - payout schedule can be set later via Stripe Dashboard
+    }
+
     // Store account information in stripe_connect_accounts table
     const { error: dbError } = await supabase
       .from("stripe_connect_accounts")

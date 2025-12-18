@@ -340,9 +340,77 @@ export async function processBookingAcceptance(
             .limit(1)
             .maybeSingle();
 
+          // Create Stripe Transfer to business connected account
+          // This transfers the service amount (what business earns) to their connected account
+          // ROAM keeps the platform fee in the platform account
+          let stripeTransferId: string | null = null;
+          
+          if (stripeConnectAccountId) {
+            try {
+              // Get the charge ID from the captured payment intent for source_transaction
+              const chargeId = typeof capturedPaymentIntent.latest_charge === 'string'
+                ? capturedPaymentIntent.latest_charge
+                : capturedPaymentIntent.latest_charge?.id;
+              
+              if (chargeId) {
+                console.log('💸 Creating Stripe Transfer to connected account:', {
+                  amount: netPaymentAmount,
+                  amountCents: Math.round(netPaymentAmount * 100),
+                  destination: stripeConnectAccountId,
+                  sourceTransaction: chargeId,
+                });
+                
+                const transfer = await stripe.transfers.create({
+                  amount: Math.round(netPaymentAmount * 100), // Service amount in cents
+                  currency: 'usd',
+                  destination: stripeConnectAccountId,
+                  source_transaction: chargeId, // Links transfer to the original charge
+                  metadata: {
+                    booking_id: bookingId,
+                    payment_intent_id: capturedPaymentIntent.id,
+                    transfer_type: 'booking_service_payment',
+                    service_amount: netPaymentAmount.toString(),
+                    platform_fee: platformFee.toString(),
+                  },
+                  description: `Service payment for booking ${booking.booking_reference || bookingId}`,
+                });
+                
+                stripeTransferId = transfer.id;
+                console.log('✅ Stripe Transfer created successfully:', {
+                  transferId: transfer.id,
+                  amount: netPaymentAmount,
+                  destination: stripeConnectAccountId,
+                });
+              } else {
+                console.warn('⚠️ No charge ID found on payment intent - cannot create transfer');
+              }
+            } catch (transferError: any) {
+              console.error('❌ Error creating Stripe Transfer:', transferError);
+              console.error('❌ Transfer error details:', {
+                message: transferError.message,
+                code: transferError.code,
+                type: transferError.type,
+              });
+              // Don't fail the booking acceptance - log and continue
+              // The transfer can be manually created later if needed
+              console.warn('⚠️ Transfer creation failed but payment was captured successfully');
+            }
+          } else {
+            console.warn('⚠️ No connected account ID found - skipping transfer creation');
+          }
+
           if (existingBusinessTransaction) {
             console.log('⚠️ Business payment transaction already exists for this payment intent:', existingBusinessTransaction.id);
             console.log('⚠️ Skipping duplicate insert - webhook may have already created it');
+            
+            // Update existing transaction with transfer ID if we created one
+            if (stripeTransferId) {
+              await supabase
+                .from('business_payment_transactions')
+                .update({ stripe_transfer_id: stripeTransferId })
+                .eq('id', existingBusinessTransaction.id);
+              console.log('✅ Updated existing business_payment_transaction with transfer ID');
+            }
           } else {
             const { data: businessTransaction, error: businessError } = await supabase
               .from('business_payment_transactions')
@@ -356,6 +424,7 @@ export async function processBookingAcceptance(
                 tax_year: currentYear,
                 stripe_payment_intent_id: capturedPaymentIntent.id,
                 stripe_connect_account_id: stripeConnectAccountId,
+                stripe_transfer_id: stripeTransferId, // Include transfer ID
                 transaction_description: 'Platform service payment',
                 booking_reference: booking.booking_reference || null,
                 transaction_type: 'initial_booking',
@@ -382,6 +451,7 @@ export async function processBookingAcceptance(
             serviceFeeCharged: true,
             serviceAmountCharged: true,
             paymentIntentId: capturedPaymentIntent.id,
+            stripeTransferId: stripeTransferId,
           });
 
           return {
@@ -583,6 +653,55 @@ export async function processBookingAcceptance(
       },
     });
 
+    // Create Stripe Transfer to business connected account for the service amount
+    let stripeTransferId: string | null = null;
+    
+    if (stripeConnectAccountId) {
+      try {
+        // Get the charge ID from the service amount payment intent
+        const chargeId = typeof serviceAmountPaymentIntent.latest_charge === 'string'
+          ? serviceAmountPaymentIntent.latest_charge
+          : serviceAmountPaymentIntent.latest_charge?.id;
+        
+        if (chargeId) {
+          console.log('💸 Creating Stripe Transfer to connected account (separate payment):', {
+            amount: serviceAmount,
+            amountCents: Math.round(serviceAmount * 100),
+            destination: stripeConnectAccountId,
+            sourceTransaction: chargeId,
+          });
+          
+          const transfer = await stripe.transfers.create({
+            amount: Math.round(serviceAmount * 100), // Service amount in cents
+            currency: 'usd',
+            destination: stripeConnectAccountId,
+            source_transaction: chargeId,
+            metadata: {
+              booking_id: bookingId,
+              payment_intent_id: serviceAmountPaymentIntent.id,
+              transfer_type: 'booking_service_payment',
+              service_amount: serviceAmount.toString(),
+              platform_fee: serviceFeeAmount.toString(),
+            },
+            description: `Service payment for booking ${booking.booking_reference || bookingId}`,
+          });
+          
+          stripeTransferId = transfer.id;
+          console.log('✅ Stripe Transfer created successfully:', {
+            transferId: transfer.id,
+            amount: serviceAmount,
+            destination: stripeConnectAccountId,
+          });
+        } else {
+          console.warn('⚠️ No charge ID found on service amount payment intent - cannot create transfer');
+        }
+      } catch (transferError: any) {
+        console.error('❌ Error creating Stripe Transfer:', transferError);
+        // Don't fail the booking acceptance - log and continue
+        console.warn('⚠️ Transfer creation failed but payment was captured successfully');
+      }
+    }
+
     // Create business_payment_transaction for immediate charge
     if (businessId) {
       await supabase.from('business_payment_transactions').insert({
@@ -595,16 +714,18 @@ export async function processBookingAcceptance(
         tax_year: currentYear,
         stripe_payment_intent_id: serviceAmountPaymentIntent.id,
         stripe_connect_account_id: stripeConnectAccountId,
+        stripe_transfer_id: stripeTransferId, // Include transfer ID
         booking_reference: booking.booking_reference || null,
         transaction_description: `Service payment for booking ${booking.booking_reference || bookingId}`,
-        transaction_type: 'initial_booking', // Will be added after migration
-      } as any); // Type assertion needed until migration adds column
+        transaction_type: 'initial_booking',
+      } as any);
     }
 
     console.log('✅ Payment processed successfully:', {
       bookingId,
       serviceFeePaymentIntentId: serviceFeePaymentIntent.id,
       serviceAmountPaymentIntentId: serviceAmountPaymentIntent.id,
+      stripeTransferId: stripeTransferId,
       serviceFeeCharged: true,
       serviceAmountCharged: true,
     });
@@ -984,7 +1105,9 @@ export async function handleBookingCancellation(
     let transferReversed = false;
     let transferReversalId: string | null = null;
 
-    // If business received a transfer and service amount was charged, reverse it
+    // If business received a transfer and service amount was charged, try to reverse it
+    // Note: Transfers can only be reversed if they haven't been paid out to the business yet
+    // Connected accounts are set to payout weekly on Friday
     if (businessPaymentTransaction?.stripe_transfer_id && booking.remaining_balance_charged) {
       const business = Array.isArray(booking.business_profiles) 
         ? booking.business_profiles[0] 
@@ -1012,72 +1135,112 @@ export async function handleBookingCancellation(
 
       if (stripeConnectAccountId) {
         try {
-          console.log('🔄 Reversing Stripe Connect transfer to business:', {
-            transferId: businessPaymentTransaction.stripe_transfer_id,
-            amount: businessPaymentTransaction.net_payment_amount,
-            connectAccountId: stripeConnectAccountId,
+          // First, retrieve the transfer to check if it can be reversed
+          const transfer = await stripe.transfers.retrieve(businessPaymentTransaction.stripe_transfer_id);
+          
+          console.log('🔍 Checking transfer reversal eligibility:', {
+            transferId: transfer.id,
+            amount: transfer.amount / 100,
+            reversed: transfer.reversed,
+            amountReversed: transfer.amount_reversed / 100,
           });
+          
+          // Check if transfer has already been fully reversed
+          if (transfer.reversed) {
+            console.log('ℹ️ Transfer already fully reversed');
+            transferReversed = true;
+          } else {
+            // Attempt to reverse the transfer
+            // This will fail if the funds have already been paid out to the business
+            console.log('🔄 Attempting to reverse Stripe Connect transfer:', {
+              transferId: businessPaymentTransaction.stripe_transfer_id,
+              amount: businessPaymentTransaction.net_payment_amount,
+              connectAccountId: stripeConnectAccountId,
+            });
 
-          // Reverse the transfer
-          const reversal = await stripe.transfers.createReversal(
-            businessPaymentTransaction.stripe_transfer_id,
-            {
-              amount: Math.round(businessPaymentTransaction.net_payment_amount * 100), // Convert to cents
-              description: `Transfer reversal - booking ${bookingId} cancelled`,
+            const reversal = await stripe.transfers.createReversal(
+              businessPaymentTransaction.stripe_transfer_id,
+              {
+                amount: Math.round(businessPaymentTransaction.net_payment_amount * 100), // Convert to cents
+                description: `Transfer reversal - booking ${bookingId} cancelled`,
+                metadata: {
+                  booking_id: bookingId,
+                  reason: 'customer_cancellation',
+                  cancelled_by: cancelledBy,
+                },
+              }
+            );
+
+            transferReversed = true;
+            transferReversalId = reversal.id;
+
+            console.log('✅ Stripe Connect transfer reversed:', reversal.id);
+
+            // Update business_payment_transactions to record the reversal
+            await supabase
+              .from('business_payment_transactions')
+              .update({
+                stripe_tax_reported: false, // Mark as needing tax report update
+                stripe_tax_report_error: `Transfer reversed due to cancellation. Reversal ID: ${reversal.id}`,
+              })
+              .eq('id', businessPaymentTransaction.id);
+
+            // Record reversal transaction
+            await supabase.from('financial_transactions').insert({
+              booking_id: bookingId,
+              amount: businessPaymentTransaction.net_payment_amount,
+              currency: 'USD',
+              stripe_transaction_id: reversal.id,
+              payment_method: 'transfer_reversal',
+              description: `Transfer reversal - business service amount refunded due to cancellation`,
+              transaction_type: 'refund',
+              status: 'completed',
+              processed_at: new Date().toISOString(),
               metadata: {
-                booking_id: bookingId,
+                original_transfer_id: businessPaymentTransaction.stripe_transfer_id,
+                reversal_type: 'business_service_amount',
                 reason: 'customer_cancellation',
-                cancelled_by: cancelledBy,
+                connect_account_id: stripeConnectAccountId,
               },
-            }
-          );
-
-          transferReversed = true;
-          transferReversalId = reversal.id;
-
-          console.log('✅ Stripe Connect transfer reversed:', reversal.id);
-
-          // Update business_payment_transactions to record the reversal
-          await supabase
-            .from('business_payment_transactions')
-            .update({
-              stripe_tax_reported: false, // Mark as needing tax report update
-              stripe_tax_report_error: `Transfer reversed due to cancellation. Reversal ID: ${reversal.id}`,
-            })
-            .eq('id', businessPaymentTransaction.id);
-
-          // Record reversal transaction
-          await supabase.from('financial_transactions').insert({
-            booking_id: bookingId,
-            amount: businessPaymentTransaction.net_payment_amount,
-            currency: 'USD',
-            stripe_transaction_id: reversal.id,
-            payment_method: 'transfer_reversal',
-            description: `Transfer reversal - business service amount refunded due to cancellation`,
-            transaction_type: 'refund',
-            status: 'completed',
-            processed_at: new Date().toISOString(),
-            metadata: {
-              original_transfer_id: businessPaymentTransaction.stripe_transfer_id,
-              reversal_type: 'business_service_amount',
-              reason: 'customer_cancellation',
-              connect_account_id: stripeConnectAccountId,
-            },
-          });
+            });
+          }
 
         } catch (reversalError: any) {
           console.error('⚠️ Error reversing Stripe Connect transfer:', reversalError);
-          // Don't fail the refund if transfer reversal fails - log and continue
-          // The transfer reversal might fail if:
-          // - Transfer was already reversed
-          // - Transfer hasn't been paid out yet (can't reverse pending transfers)
-          // - Transfer is too old
-          console.warn('⚠️ Transfer reversal failed, but customer refund will proceed:', reversalError.message);
+          
+          // Check if the error is because funds were already paid out
+          if (reversalError.code === 'balance_insufficient' || 
+              reversalError.message?.includes('insufficient') ||
+              reversalError.message?.includes('payout')) {
+            console.warn('⚠️ Transfer cannot be reversed - funds may have been paid out to business');
+            console.warn('⚠️ Weekly payouts occur on Friday - if payout already processed, no refund available');
+            // In this case, we cannot refund the customer because the business already has the money
+            return {
+              success: false,
+              error: 'Refund not available - funds have already been paid out to the business. Per cancellation policy, refunds are only available if the transfer has not been disbursed.',
+              refundAmount: 0,
+            };
+          }
+          
+          // For other errors, log but continue with customer refund attempt
+          console.warn('⚠️ Transfer reversal failed:', reversalError.message);
         }
       }
     }
 
+    // Only proceed with customer refund if transfer was reversed successfully
+    // Platform fees (service_fee) are NEVER refunded
+    if (!transferReversed && businessPaymentTransaction?.stripe_transfer_id) {
+      console.log('⚠️ Transfer not reversed - cannot issue customer refund');
+      return {
+        success: false,
+        error: 'Refund not available - transfer to business could not be reversed. The funds may have already been paid out.',
+        refundAmount: 0,
+      };
+    }
+
     // Create partial refund for service amount only (to customer)
+    // Note: Platform fee (service_fee) is NON-REFUNDABLE
     const refund = await stripe.refunds.create({
       payment_intent: paymentIntentIdToRefund,
       amount: Math.round(refundAmount * 100), // Convert to cents
