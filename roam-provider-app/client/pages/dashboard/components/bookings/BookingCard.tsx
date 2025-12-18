@@ -301,21 +301,36 @@ export default function BookingCard({
                   )}
                   {/* Payment Badge */}
                   {(() => {
-                    const hasPaymentTransaction = booking.business_payment_transactions && 
+                    const paymentTransaction = booking.business_payment_transactions && 
                       (Array.isArray(booking.business_payment_transactions) 
-                        ? booking.business_payment_transactions.length > 0
-                        : !!booking.business_payment_transactions);
+                        ? booking.business_payment_transactions[0]
+                        : booking.business_payment_transactions);
+                    
+                    const hasPayment = !!paymentTransaction;
+                    const paymentStatus = paymentTransaction?.payment_status || '';
+                    const isAuthorized = paymentStatus === 'requires_capture' || paymentStatus === 'authorized';
+                    const isCaptured = paymentStatus === 'succeeded' || paymentStatus === 'captured' || paymentStatus === 'completed';
+                    
+                    let badgeClass = 'bg-yellow-50 text-yellow-700 border-yellow-200';
+                    let badgeText = 'Payment Pending';
+                    let BadgeIcon = AlertCircle;
+                    
+                    if (hasPayment && isCaptured) {
+                      badgeClass = 'bg-green-50 text-green-700 border-green-200';
+                      badgeText = 'Paid';
+                      BadgeIcon = CreditCard;
+                    } else if (hasPayment && isAuthorized) {
+                      badgeClass = 'bg-blue-50 text-blue-700 border-blue-200';
+                      badgeText = 'Authorized';
+                      BadgeIcon = CreditCard;
+                    }
                     
                     return (
                       <Badge 
                         variant="outline" 
-                        className={`text-xs px-2 py-0.5 ${hasPaymentTransaction ? 'bg-green-50 text-green-700 border-green-200' : 'bg-yellow-50 text-yellow-700 border-yellow-200'}`}
+                        className={`text-xs px-2 py-0.5 ${badgeClass}`}
                       >
-                        {hasPaymentTransaction ? (
-                          <><CreditCard className="w-3 h-3 mr-1" />Paid</>
-                        ) : (
-                          <><AlertCircle className="w-3 h-3 mr-1" />Payment Pending</>
-                        )}
+                        <BadgeIcon className="w-3 h-3 mr-1" />{badgeText}
                       </Badge>
                     );
                   })()}
@@ -612,22 +627,37 @@ export default function BookingCard({
             
             {/* Payment Badge */}
             {(() => {
-              const hasPaymentTransaction = booking.business_payment_transactions && 
+              const paymentTransaction = booking.business_payment_transactions && 
                 (Array.isArray(booking.business_payment_transactions) 
-                  ? booking.business_payment_transactions.length > 0
-                  : !!booking.business_payment_transactions);
+                  ? booking.business_payment_transactions[0]
+                  : booking.business_payment_transactions);
+              
+              const hasPayment = !!paymentTransaction;
+              const paymentStatus = paymentTransaction?.payment_status || '';
+              const isAuthorized = paymentStatus === 'requires_capture' || paymentStatus === 'authorized';
+              const isCaptured = paymentStatus === 'succeeded' || paymentStatus === 'captured' || paymentStatus === 'completed';
+              
+              let badgeClass = 'bg-yellow-50 text-yellow-700 border-yellow-200';
+              let badgeText = 'Pending';
+              let BadgeIcon = AlertCircle;
+              
+              if (hasPayment && isCaptured) {
+                badgeClass = 'bg-green-50 text-green-700 border-green-200';
+                badgeText = 'Paid';
+                BadgeIcon = CreditCard;
+              } else if (hasPayment && isAuthorized) {
+                badgeClass = 'bg-blue-50 text-blue-700 border-blue-200';
+                badgeText = 'Authorized';
+                BadgeIcon = CreditCard;
+              }
               
               return (
                 <div className="flex items-center gap-1 mt-1">
                   <Badge 
                     variant="outline" 
-                    className={`text-xs px-1.5 py-0 ${hasPaymentTransaction ? 'bg-green-50 text-green-700 border-green-200' : 'bg-yellow-50 text-yellow-700 border-yellow-200'}`}
+                    className={`text-xs px-1.5 py-0 ${badgeClass}`}
                   >
-                    {hasPaymentTransaction ? (
-                      <><CreditCard className="w-3 h-3 mr-1" />Paid</>
-                    ) : (
-                      <><AlertCircle className="w-3 h-3 mr-1" />Pending</>
-                    )}
+                    <BadgeIcon className="w-3 h-3 mr-1" />{badgeText}
                   </Badge>
                 </div>
               );

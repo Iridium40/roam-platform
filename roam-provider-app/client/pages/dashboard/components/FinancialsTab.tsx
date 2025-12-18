@@ -158,16 +158,18 @@ export default function FinancialsTab({
 
     // Apply filters
     return uniqueTransactions.filter((transaction: any) => {
-      // Filter by date range
-      if (transactionFilters.startDate) {
-        const transactionDate = new Date(transaction.payment_date || transaction.processed_at || transaction.created_at);
-        if (transactionDate < new Date(transactionFilters.startDate)) return false;
-      }
-      if (transactionFilters.endDate) {
-        const transactionDate = new Date(transaction.payment_date || transaction.processed_at || transaction.created_at);
-        const endDate = new Date(transactionFilters.endDate);
-        endDate.setHours(23, 59, 59, 999);
-        if (transactionDate > endDate) return false;
+      // Filter by date range - compare date strings to avoid timezone issues
+      const rawDate = transaction.payment_date || transaction.processed_at || transaction.created_at;
+      if (rawDate && (transactionFilters.startDate || transactionFilters.endDate)) {
+        // Extract just the date portion (YYYY-MM-DD) for comparison
+        const transactionDateStr = rawDate.split('T')[0];
+        
+        if (transactionFilters.startDate && transactionDateStr < transactionFilters.startDate) {
+          return false;
+        }
+        if (transactionFilters.endDate && transactionDateStr > transactionFilters.endDate) {
+          return false;
+        }
       }
 
       // Filter by provider - handle different data structures
