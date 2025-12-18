@@ -607,13 +607,14 @@ export default function FinancialsTab({
       }
 
       // Load business_payment_transactions (this table has business_id directly)
-      // Join with bookings to get provider_id and provider details
+      // Join with bookings to get provider_id, provider details, and booking_reference
       const { data: businessPaymentData, error: businessPaymentError } = await supabase
         .from('business_payment_transactions')
         .select(`
           *,
           bookings (
             provider_id,
+            booking_reference,
             providers (
               id,
               first_name,
@@ -1528,7 +1529,11 @@ export default function FinancialsTab({
                       );
                     }
 
-                    return filtered.map((payout) => (
+                    return filtered.map((payout) => {
+                      // Get booking reference from joined bookings data
+                      const bookingRef = payout.bookings?.booking_reference || payout.booking_reference;
+                      
+                      return (
                     <div key={payout.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                       <div className="flex items-center space-x-3">
                         <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-green-100">
@@ -1539,7 +1544,7 @@ export default function FinancialsTab({
                             ${payout.net_payment_amount.toFixed(2)} to you
                           </p>
                           <p className="text-xs text-gray-600">
-                            {payout.booking_id && `Booking ID: ${payout.booking_id}`}
+                            {bookingRef ? `Ref: ${bookingRef}` : payout.booking_id && `Booking: ${payout.booking_id.slice(0, 8)}...`}
                           </p>
                           <p className="text-xs text-gray-500">
                             {new Date(payout.payment_date).toLocaleDateString()}
@@ -1558,7 +1563,8 @@ export default function FinancialsTab({
                         </p>
                       </div>
                     </div>
-                  ));
+                      );
+                    });
                   })()}
                 </div>
               </CardContent>
