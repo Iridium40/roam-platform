@@ -2758,6 +2758,11 @@ export default function BookService() {
                       }}
                       onError={(error) => {
                         console.error('❌ Payment error:', error);
+                        toast({
+                          variant: "destructive",
+                          title: "Payment Failed",
+                          description: error,
+                        });
                       }}
                     />
                   </Elements>

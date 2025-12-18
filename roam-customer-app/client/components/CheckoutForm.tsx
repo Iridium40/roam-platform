@@ -15,6 +15,90 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Link } from 'react-router-dom';
 
+/**
+ * Get a user-friendly error message for Stripe payment errors
+ */
+function getPaymentErrorMessage(error: any): string {
+  // Handle card_error type with specific decline codes
+  if (error.type === 'card_error') {
+    const declineCode = error.decline_code;
+    const code = error.code;
+
+    // Map decline codes to user-friendly messages
+    const declineMessages: Record<string, string> = {
+      'insufficient_funds': 'Your card has insufficient funds. Please try a different card or add funds to your account.',
+      'card_velocity_exceeded': 'You have exceeded the transaction limit for this card. Please try again later or use a different card.',
+      'lost_card': 'This card has been reported lost. Please use a different card.',
+      'stolen_card': 'This card has been reported stolen. Please use a different card.',
+      'expired_card': 'Your card has expired. Please use a different card or update your card details.',
+      'incorrect_cvc': 'The security code (CVC) you entered is incorrect. Please check and try again.',
+      'incorrect_number': 'The card number you entered is incorrect. Please check and try again.',
+      'invalid_expiry_month': 'The expiration month is invalid. Please check and try again.',
+      'invalid_expiry_year': 'The expiration year is invalid. Please check and try again.',
+      'processing_error': 'An error occurred while processing your card. Please try again or use a different card.',
+      'do_not_honor': 'Your card was declined. Please contact your bank or try a different card.',
+      'generic_decline': 'Your card was declined. Please try a different card or contact your bank.',
+      'fraudulent': 'This transaction was flagged as potentially fraudulent. Please contact your bank.',
+      'card_not_supported': 'This card type is not supported. Please use a Visa, Mastercard, American Express, or Discover card.',
+      'currency_not_supported': 'This card does not support USD transactions. Please use a different card.',
+      'duplicate_transaction': 'A duplicate transaction was detected. Please wait a moment before trying again.',
+      'incorrect_zip': 'The ZIP code you entered does not match the card. Please check and try again.',
+      'invalid_account': 'This card account is invalid. Please use a different card.',
+      'new_account_information_available': 'Your card information may have changed. Please contact your bank or try a different card.',
+      'no_action_taken': 'Your card was declined. Please try again or use a different card.',
+      'not_permitted': 'This transaction is not permitted by your card. Please contact your bank or try a different card.',
+      'pickup_card': 'Your card cannot be used for this transaction. Please contact your bank.',
+      'restricted_card': 'Your card is restricted. Please contact your bank or try a different card.',
+      'revocation_of_all_authorizations': 'All authorizations have been revoked for this card. Please contact your bank.',
+      'revocation_of_authorization': 'The authorization was revoked. Please try again or use a different card.',
+      'security_violation': 'A security issue was detected. Please contact your bank.',
+      'service_not_allowed': 'This service is not allowed for your card. Please try a different card.',
+      'stop_payment_order': 'A stop payment was placed on this card. Please contact your bank.',
+      'transaction_not_allowed': 'This transaction is not allowed. Please contact your bank or try a different card.',
+      'try_again_later': 'Unable to process this transaction right now. Please try again in a few minutes.',
+      'withdrawal_count_limit_exceeded': 'You have exceeded the withdrawal limit for this card. Please try again later or use a different card.',
+    };
+
+    if (declineCode && declineMessages[declineCode]) {
+      return declineMessages[declineCode];
+    }
+
+    // Handle by error code if no specific decline code
+    const codeMessages: Record<string, string> = {
+      'card_declined': 'Your card was declined. Please try a different card or contact your bank.',
+      'expired_card': 'Your card has expired. Please use a different card.',
+      'incorrect_cvc': 'The security code (CVC) is incorrect. Please check and try again.',
+      'incorrect_number': 'The card number is incorrect. Please check and try again.',
+      'invalid_card_type': 'This card type is not supported. Please use a different card.',
+      'invalid_expiry_month': 'The expiration month is invalid. Please check and try again.',
+      'invalid_expiry_year': 'The expiration year is invalid. Please check and try again.',
+      'postal_code_invalid': 'The ZIP/postal code is invalid. Please check and try again.',
+    };
+
+    if (code && codeMessages[code]) {
+      return codeMessages[code];
+    }
+  }
+
+  // Handle validation errors
+  if (error.type === 'validation_error') {
+    return 'Please check your card details and try again.';
+  }
+
+  // Handle API errors
+  if (error.type === 'api_error') {
+    return 'A temporary error occurred. Please try again in a moment.';
+  }
+
+  // Handle rate limit errors
+  if (error.type === 'rate_limit_error') {
+    return 'Too many requests. Please wait a moment and try again.';
+  }
+
+  // Default: use Stripe's message or a generic fallback
+  return error.message || 'Payment failed. Please try again or use a different payment method.';
+}
+
 interface CheckoutFormProps {
   bookingDetails: {
     id?: string;
@@ -323,7 +407,8 @@ export function CheckoutForm({ bookingDetails, clientSecret, onSuccess, onError 
 
       if (error) {
         console.error('Payment failed:', error);
-        onError(error.message || 'Payment failed');
+        const userFriendlyMessage = getPaymentErrorMessage(error);
+        onError(userFriendlyMessage);
       } else if (paymentIntent && (paymentIntent.status === 'succeeded' || paymentIntent.status === 'requires_capture')) {
         // Payment succeeded (charged) OR authorized (requires_capture - will be charged when booking is accepted)
         if (paymentIntent.status === 'requires_capture') {
