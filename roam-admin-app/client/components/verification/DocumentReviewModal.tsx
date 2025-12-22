@@ -106,7 +106,9 @@ export function DocumentReviewModal({
     }
   };
 
-  const canApproveBusiness = businessDocuments.length > 0 && 
+  // Documents are optional - business can be approved without documents
+  // But if documents exist, they must all be verified
+  const canApproveBusiness = businessDocuments.length === 0 || 
     businessDocuments.every(doc => doc.verification_status === "verified");
 
   return (

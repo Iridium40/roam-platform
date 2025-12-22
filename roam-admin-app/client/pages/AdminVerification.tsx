@@ -789,34 +789,27 @@ export default function AdminVerification() {
           }))
         });
         
-        // Check if there are any unverified documents
+        // Check if there are any unverified documents (only if documents exist)
         const unverifiedDocs = documents.filter(
           (doc: any) => doc.verification_status !== "verified"
         );
         
-        if (documents.length === 0) {
-          toast({
-            title: "Cannot Approve Business",
-            description: "This business has no documents uploaded. At least one verified document is required for approval.",
-            variant: "destructive",
-          });
-          return; // Stop the approval process
-        }
-        
-        if (unverifiedDocs.length > 0) {
+        // Documents are optional - businesses can be approved without documents
+        // But if documents exist, they must all be verified before approval
+        if (documents.length > 0 && unverifiedDocs.length > 0) {
           const unverifiedList = unverifiedDocs
             .map((doc: any) => `${doc.document_type} (${doc.verification_status})`)
             .join(", ");
           
           toast({
             title: "Cannot Approve Business",
-            description: `All documents must be verified before approval. Unverified documents: ${unverifiedList}`,
+            description: `All uploaded documents must be verified before approval. Unverified documents: ${unverifiedList}`,
             variant: "destructive",
           });
           return; // Stop the approval process
         }
         
-        console.log("All documents verified. Proceeding with approval...");
+        console.log("Proceeding with approval (documents verified or none uploaded)...");
       }
 
       const updateData: any = {
@@ -1708,25 +1701,24 @@ export default function AdminVerification() {
                                   <Button
                                     size="sm"
                                     onClick={() => {
-                                      const hasUnverifiedDocs = (cardDocuments[business.id] || []).some(
+                                      const docs = cardDocuments[business.id] || [];
+                                      const hasUnverifiedDocs = docs.some(
                                         (doc) => doc.verification_status !== "verified"
                                       );
-                                      const hasNoDocs = (cardDocuments[business.id] || []).length === 0;
                                       
-                                      if (!hasUnverifiedDocs && !hasNoDocs) {
+                                      // Documents are optional - only check if docs exist and are unverified
+                                      if (docs.length > 0 && hasUnverifiedDocs) {
+                                        toast({
+                                          title: "Cannot Approve",
+                                          description: "All uploaded documents must be verified before approval",
+                                          variant: "destructive",
+                                        });
+                                      } else {
                                         handleVerificationAction(
                                           business.id,
                                           "approve",
                                           "Business approved by admin",
                                         );
-                                      } else {
-                                        toast({
-                                          title: "Cannot Approve",
-                                          description: hasNoDocs 
-                                            ? "No documents uploaded yet" 
-                                            : "All documents must be verified before approval",
-                                          variant: "destructive",
-                                        });
                                       }
                                     }}
                                     className="bg-green-600 hover:bg-green-700 flex-1"
