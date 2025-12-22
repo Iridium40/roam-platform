@@ -1446,17 +1446,19 @@ export default function BookService() {
     return originalPrice;
   };
 
-  // Calculate service fee based on platform fee percentage
+  // Calculate service fee based on platform fee percentage (includes addons)
   const calculateServiceFee = () => {
     const basePrice = calculateDiscountedPrice();
-    return (basePrice * platformFeePercentage) / 100;
+    const addonsTotal = calculateAddonsTotal();
+    return ((basePrice + addonsTotal) * platformFeePercentage) / 100;
   };
 
   // Calculate total price including platform fee (covers operational costs including payment processing)
   const calculateTotalWithFees = () => {
     const basePrice = calculateDiscountedPrice();
+    const addonsTotal = calculateAddonsTotal();
     const serviceFee = calculateServiceFee();
-    return basePrice + serviceFee;
+    return basePrice + addonsTotal + serviceFee;
   };
 
   const handleCheckout = async () => {
