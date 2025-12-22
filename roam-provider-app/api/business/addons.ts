@@ -72,7 +72,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // PUT: Update business addon
+    // PUT: Update or create business addon (upsert)
     if (req.method === 'PUT') {
       const { business_id, addon_id, custom_price, is_available } = req.body;
 
@@ -82,52 +82,36 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
       }
 
-      // Validate that this business addon exists
-      const { data: existing, error: checkError } = await supabase
+      // Build upsert payload
+      const upsertData: any = {
+        business_id,
+        addon_id,
+      };
+      if (custom_price !== undefined) upsertData.custom_price = custom_price;
+      if (is_available !== undefined) upsertData.is_available = is_available;
+
+      // Upsert: insert if not exists, update if exists
+      // Uses the unique constraint on (business_id, addon_id)
+      const { data: upserted, error: upsertError } = await supabase
         .from('business_addons')
-        .select('id')
-        .eq('business_id', business_id)
-        .eq('addon_id', addon_id)
-        .single();
-
-      if (checkError || !existing) {
-        return res.status(404).json({ 
-          error: 'Business addon not found',
-          details: 'This addon is not configured for this business'
-        });
-      }
-
-      // Build update payload
-      const updateData: any = {};
-      if (custom_price !== undefined) updateData.custom_price = custom_price;
-      if (is_available !== undefined) updateData.is_available = is_available;
-
-      if (Object.keys(updateData).length === 0) {
-        return res.status(400).json({ 
-          error: 'No update fields provided' 
-        });
-      }
-
-      // Update the business addon
-      const { data: updated, error: updateError } = await supabase
-        .from('business_addons')
-        .update(updateData)
-        .eq('business_id', business_id)
-        .eq('addon_id', addon_id)
+        .upsert(upsertData, {
+          onConflict: 'business_id,addon_id',
+          ignoreDuplicates: false
+        })
         .select()
         .single();
 
-      if (updateError) {
-        console.error('Error updating business addon:', updateError);
+      if (upsertError) {
+        console.error('Error upserting business addon:', upsertError);
         return res.status(500).json({ 
-          error: 'Failed to update business addon',
-          details: updateError.message 
+          error: 'Failed to save business addon',
+          details: upsertError.message 
         });
       }
 
       return res.status(200).json({
         success: true,
-        addon: updated
+        addon: upserted
       });
     }
 
