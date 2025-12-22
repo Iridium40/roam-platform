@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
 import { AdminLayout } from "@/components/layout/admin-layout";
 import { ROAMDataTable, Column } from "@/components/ui/roam-data-table";
 import {
