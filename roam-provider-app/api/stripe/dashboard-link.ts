@@ -34,19 +34,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'Business ID required' });
     }
 
-    // Get business profile with stripe account
-    const { data: business, error: businessError } = await supabase
-      .from('business_profiles')
-      .select('stripe_account_id, owner_id')
-      .eq('id', business_id)
+    // Get Stripe Connect account for this business
+    const { data: connectAccount, error: connectError } = await supabase
+      .from('stripe_connect_accounts')
+      .select('account_id, charges_enabled, payouts_enabled')
+      .eq('business_id', business_id)
       .single();
 
-    if (businessError || !business) {
-      return res.status(404).json({ error: 'Business not found' });
+    if (connectError || !connectAccount) {
+      console.error('Stripe Connect account not found:', { business_id, error: connectError });
+      return res.status(404).json({ error: 'Stripe Connect account not found for this business' });
     }
 
-    // Use stripe_account_id from business_profiles
-    const stripeAccountId = business.stripe_account_id;
+    const stripeAccountId = connectAccount.account_id;
 
     if (!stripeAccountId) {
       return res.status(400).json({ error: 'Stripe account not connected' });

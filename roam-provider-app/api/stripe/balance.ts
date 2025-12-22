@@ -36,18 +36,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'Business ID required' });
     }
 
-    // Get business profile with stripe account
-    const { data: business, error: businessError } = await supabase
-      .from('business_profiles')
-      .select('stripe_account_id, owner_id')
-      .eq('id', business_id)
+    // Get Stripe Connect account for this business
+    const { data: connectAccount, error: connectError } = await supabase
+      .from('stripe_connect_accounts')
+      .select('account_id, charges_enabled, payouts_enabled')
+      .eq('business_id', business_id)
       .single();
 
-    if (businessError || !business) {
-      return res.status(404).json({ error: 'Business not found' });
+    if (connectError || !connectAccount) {
+      return res.status(404).json({ error: 'Stripe Connect account not found' });
     }
 
-    if (!business.stripe_account_id) {
+    if (!connectAccount.account_id) {
       return res.status(400).json({ 
         error: 'Stripe account not connected',
         needsOnboarding: true 
@@ -56,11 +56,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Get balance from Stripe
     const balance = await stripe.balance.retrieve({
-      stripeAccount: business.stripe_account_id,
+      stripeAccount: connectAccount.account_id,
     });
 
     // Get account to check payout settings
-    const account = await stripe.accounts.retrieve(business.stripe_account_id);
+    const account = await stripe.accounts.retrieve(connectAccount.account_id);
 
     // Format response
     const available = balance.available.length > 0 
