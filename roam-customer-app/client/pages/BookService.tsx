@@ -189,6 +189,15 @@ interface Provider {
   provider_role?: string;
 }
 
+interface ServiceAddon {
+  id: string;
+  name: string;
+  description: string | null;
+  image_url: string | null;
+  is_recommended: boolean;
+  price: number;  // Business custom_price
+}
+
 export default function BookService() {
   const { serviceId } = useParams();
   const [searchParams] = useSearchParams();
@@ -262,7 +271,12 @@ export default function BookService() {
   const [guestEmail, setGuestEmail] = useState('');
   const [guestPhone, setGuestPhone] = useState('');
 
-  // Calculate total amount for booking (including any promotions)
+  // Addon selection state
+  const [availableAddons, setAvailableAddons] = useState<ServiceAddon[]>([]);
+  const [selectedAddons, setSelectedAddons] = useState<string[]>([]); // addon IDs
+  const [addonsLoading, setAddonsLoading] = useState(false);
+
+  // Calculate total amount for booking (including any promotions and addons)
   const calculateTotalAmount = (): number => {
     if (!service || !selectedBusiness) return 0;
     
@@ -280,7 +294,97 @@ export default function BookService() {
       }
     }
     
-    return basePrice;
+    // Add addon costs
+    const addonsTotal = selectedAddons.reduce((total, addonId) => {
+      const addon = availableAddons.find(a => a.id === addonId);
+      return total + (addon?.price || 0);
+    }, 0);
+    
+    return basePrice + addonsTotal;
+  };
+
+  // Calculate total for selected addons
+  const calculateAddonsTotal = (): number => {
+    return selectedAddons.reduce((total, addonId) => {
+      const addon = availableAddons.find(a => a.id === addonId);
+      return total + (addon?.price || 0);
+    }, 0);
+  };
+
+  // Load available addons for the selected service and business
+  const loadAvailableAddons = async (serviceId: string, businessId: string) => {
+    setAddonsLoading(true);
+    try {
+      // Get eligible addons for this service
+      const { data: eligibleAddons, error: eligibilityError } = await supabase
+        .from('service_addon_eligibility')
+        .select(`
+          addon_id,
+          is_recommended,
+          service_addons (
+            id,
+            name,
+            description,
+            image_url,
+            is_active
+          )
+        `)
+        .eq('service_id', serviceId);
+
+      if (eligibilityError || !eligibleAddons || eligibleAddons.length === 0) {
+        console.log('📦 No eligible addons found for service:', serviceId);
+        setAvailableAddons([]);
+        return;
+      }
+
+      // Get business-specific pricing for these addons
+      const addonIds = eligibleAddons.map(e => e.addon_id);
+      const { data: businessAddons, error: businessError } = await supabase
+        .from('business_addons')
+        .select('addon_id, custom_price, is_available')
+        .eq('business_id', businessId)
+        .in('addon_id', addonIds)
+        .eq('is_available', true);
+
+      if (businessError) {
+        console.error('Error fetching business addons:', businessError);
+      }
+
+      // Combine eligibility with business pricing
+      // Only include addons that the business offers and has priced
+      const addonsWithPricing: ServiceAddon[] = eligibleAddons
+        .filter(ea => {
+          const serviceAddon = ea.service_addons as any;
+          return serviceAddon?.is_active;
+        })
+        .map(ea => {
+          const serviceAddon = ea.service_addons as any;
+          const businessAddon = businessAddons?.find(ba => ba.addon_id === ea.addon_id);
+          
+          // Only include addons that the business offers
+          if (!businessAddon) return null;
+          
+          return {
+            id: serviceAddon.id,
+            name: serviceAddon.name,
+            description: serviceAddon.description,
+            image_url: serviceAddon.image_url,
+            is_recommended: ea.is_recommended || false,
+            price: businessAddon.custom_price || 0,
+          };
+        })
+        .filter(Boolean) as ServiceAddon[];
+
+      console.log('📦 Available addons loaded:', addonsWithPricing.length);
+      setAvailableAddons(addonsWithPricing);
+      // Clear selected addons when available addons change
+      setSelectedAddons([]);
+    } catch (error) {
+      console.error('Error loading addons:', error);
+      setAvailableAddons([]);
+    } finally {
+      setAddonsLoading(false);
+    }
   };
 
   // Time slots data
@@ -459,6 +563,16 @@ export default function BookService() {
       }
     }
   }, [selectedDeliveryType]);
+
+  // Load available addons when service and business are selected
+  useEffect(() => {
+    if (service?.id && selectedBusiness?.id) {
+      loadAvailableAddons(service.id, selectedBusiness.id);
+    } else {
+      setAvailableAddons([]);
+      setSelectedAddons([]);
+    }
+  }, [service?.id, selectedBusiness?.id]);
 
   // Load businesses that offer this service with pricing and availability validation
   const loadBusinesses = async () => {
@@ -1509,6 +1623,25 @@ export default function BookService() {
           .eq('id', promotion.id);
       }
 
+      // Step 2.5: Create booking addons if any selected
+      if (selectedAddons.length > 0) {
+        const addonRecords = selectedAddons.map(addonId => ({
+          booking_id: newBooking.id,
+          addon_id: addonId,
+          added_at: new Date().toISOString(),
+        }));
+
+        const { error: addonsError } = await supabase
+          .from('booking_addons')
+          .insert(addonRecords);
+
+        if (addonsError) {
+          console.error('⚠️ Error creating booking addons (non-fatal):', addonsError);
+        } else {
+          console.log('✅ Booking addons created:', selectedAddons.length);
+        }
+      }
+
       // Step 3: Create Payment Intent
       const paymentPayload = {
         bookingId: newBooking.id,
@@ -1523,6 +1656,9 @@ export default function BookService() {
         deliveryType,
         specialInstructions: bookingDetails.special_instructions,
         promotionId: promotion?.id || null,
+        // Addon information
+        addon_ids: selectedAddons,
+        addons_total: calculateAddonsTotal(),
         // Customer address for tax calculation
         customerAddress: selectedCustomerLocation ? {
           line1: selectedCustomerLocation.street_address,
@@ -2583,10 +2719,25 @@ export default function BookService() {
                         </span>
                       </div>
                     )}
+                    {/* Show selected addons in price breakdown */}
+                    {selectedAddons.length > 0 && (
+                      <div className="border-t border-gray-100 pt-2 mt-2">
+                        <span className="text-sm text-gray-500 font-medium">Add-ons:</span>
+                        {selectedAddons.map(addonId => {
+                          const addon = availableAddons.find(a => a.id === addonId);
+                          return addon ? (
+                            <div key={addonId} className="flex justify-between text-sm mt-1">
+                              <span className="text-gray-600 pl-2">• {addon.name}</span>
+                              <span className="font-medium">+${addon.price.toFixed(2)}</span>
+                            </div>
+                          ) : null;
+                        })}
+                      </div>
+                    )}
                     <div className="border-t border-gray-200 pt-3 mt-3">
                       <div className="flex justify-between">
                         <span className="text-gray-600">Subtotal:</span>
-                        <span className="font-medium">${calculateDiscountedPrice().toFixed(2)}</span>
+                        <span className="font-medium">${(calculateDiscountedPrice() + calculateAddonsTotal()).toFixed(2)}</span>
                       </div>
                       {platformFeePercentage > 0 && (
                         <div className="flex justify-between items-center">
@@ -2611,6 +2762,71 @@ export default function BookService() {
                     </div>
                   </div>
                 </div>
+
+                {/* Addon Selection Section */}
+                {availableAddons.length > 0 && (
+                  <div className="bg-gray-50 rounded-lg p-6 mb-6">
+                    <h3 className="font-semibold mb-2 flex items-center">
+                      <span className="mr-2">✨</span>
+                      Enhance Your Service
+                    </h3>
+                    <p className="text-sm text-gray-600 mb-4">
+                      Add extras to customize your experience
+                    </p>
+                    
+                    <div className="space-y-3">
+                      {availableAddons.map((addon) => (
+                        <div
+                          key={addon.id}
+                          className={`border rounded-lg p-4 cursor-pointer transition-all ${
+                            selectedAddons.includes(addon.id)
+                              ? 'border-roam-blue bg-blue-50'
+                              : 'border-gray-200 hover:border-gray-300 bg-white'
+                          }`}
+                          onClick={() => {
+                            setSelectedAddons(prev =>
+                              prev.includes(addon.id)
+                                ? prev.filter(id => id !== addon.id)
+                                : [...prev, addon.id]
+                            );
+                          }}
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-3">
+                              <div className={`w-5 h-5 rounded border-2 flex items-center justify-center mt-0.5 flex-shrink-0 ${
+                                selectedAddons.includes(addon.id)
+                                  ? 'border-roam-blue bg-roam-blue'
+                                  : 'border-gray-300'
+                              }`}>
+                                {selectedAddons.includes(addon.id) && (
+                                  <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                  </svg>
+                                )}
+                              </div>
+                              <div>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="font-medium">{addon.name}</span>
+                                  {addon.is_recommended && (
+                                    <Badge variant="secondary" className="text-xs bg-green-100 text-green-700">
+                                      Recommended
+                                    </Badge>
+                                  )}
+                                </div>
+                                {addon.description && (
+                                  <p className="text-sm text-gray-500 mt-1">{addon.description}</p>
+                                )}
+                              </div>
+                            </div>
+                            <span className="font-semibold text-roam-blue whitespace-nowrap ml-4">
+                              +${addon.price.toFixed(2)}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

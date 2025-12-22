@@ -51,7 +51,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       specialInstructions,
       promotionId,
       customerAddress,
-      serviceAmount: customServiceAmount // For "Add More Service" - amount in cents
+      serviceAmount: customServiceAmount, // For "Add More Service" - amount in cents
+      addon_ids, // Selected addon IDs
+      addons_total // Total addon amount in dollars
     } = req.body;
     
     console.log('🔍 Extracted customServiceAmount:', customServiceAmount);
@@ -358,6 +360,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       amount: totalAmount,
       currency: 'usd',
       customer: stripeCustomerId,
+      description: `ROAM Booking: ${service?.name || 'Service'}`,
       capture_method: captureMethod, // Manual for new bookings, automatic for add more services
       confirm: false, // Explicitly set to false - will be confirmed on frontend
       metadata: {
@@ -376,6 +379,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         promotionId: promotionId || '',
         guestPhone: guestPhone || '',
         paymentType: isAddMoreService ? 'additional_service' : 'initial_booking',
+        // Addon information
+        addon_ids: addon_ids ? JSON.stringify(addon_ids) : '',
+        addons_total: addons_total?.toString() || '0',
         // Stripe Connect: Store connected account for transfer on capture
         connectedAccountId: connectedAccount.account_id,
         transferAmount: serviceAmountCents.toString(), // Amount to transfer to business (service amount in cents)
@@ -423,6 +429,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       totalAmountCents: totalAmount,
       totalAmountDollars: totalAmount / 100,
       breakdown,
+      addons: {
+        addonIds: addon_ids || [],
+        addonsTotal: addons_total || 0,
+      },
       stripeConnect: {
         connectedAccountId: connectedAccount.account_id,
         transferAmountCents: serviceAmountCents,
