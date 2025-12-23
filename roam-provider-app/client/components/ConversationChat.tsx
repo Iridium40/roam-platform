@@ -639,10 +639,24 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
     }
     
     // Non-image file (PDF, doc, etc.)
+    // If no URL is available, show a disabled state
+    if (!media.url) {
+      return (
+        <div key={media.sid} className="mt-2">
+          <div className="flex items-center gap-2 p-2 bg-white/10 rounded-lg opacity-60 cursor-not-allowed">
+            <FileIcon className="h-5 w-5" />
+            <span className="text-sm truncate max-w-[150px]">{media.filename || 'Attachment'}</span>
+            <span className="text-xs text-gray-400 ml-auto">Unavailable</span>
+          </div>
+        </div>
+      );
+    }
+    
     return (
       <div key={media.sid} className="mt-2">
         <a 
-          href={media.url || '#'} 
+          href={media.url}
+          download={media.filename || 'attachment'}
           target="_blank" 
           rel="noopener noreferrer"
           className="flex items-center gap-2 p-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors"

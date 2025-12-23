@@ -237,16 +237,27 @@ export class MessageService {
               .fetch();
             
             // If the message has media, the SDK returns media info
-            if (fullMessage.media) {
+            if (fullMessage.media && fullMessage.media.sid) {
               // Media is returned as an object with sid and other properties
-              // For now, we'll construct the URL based on the media info
+              // We need to fetch the temporary content URL from the media endpoint
+              let mediaUrl: string | null = null;
+              try {
+                const mediaDetails = await this.conversationsService
+                  .conversations(conversationSid)
+                  .messages(message.sid)
+                  .media(fullMessage.media.sid)
+                  .fetch();
+                mediaUrl = mediaDetails.contentTemporaryUrl || null;
+              } catch (urlError) {
+                console.warn('Could not fetch media URL for:', fullMessage.media.sid);
+              }
+              
               media = [{
-                sid: fullMessage.media.sid || message.sid,
+                sid: fullMessage.media.sid,
                 contentType: fullMessage.media.content_type || fullMessage.media.contentType || 'application/octet-stream',
                 filename: fullMessage.media.filename,
                 size: fullMessage.media.size,
-                // The temporary URL needs to be fetched separately or constructed
-                url: fullMessage.media.url || null,
+                url: mediaUrl,
               }];
             }
           } catch (mediaError) {
