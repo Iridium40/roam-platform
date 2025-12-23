@@ -80,7 +80,7 @@ export default function BookingCard({
   onUpdateStatus,
   formatDisplayTime,
   showActions = true,
-  unreadCount: propUnreadCount = 0,
+  unreadCount: propUnreadCount,
 }: BookingCardProps) {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isDeclineModalOpen, setIsDeclineModalOpen] = useState(false);
@@ -89,9 +89,62 @@ export default function BookingCard({
     status: null,
   });
   const [isProcessing, setIsProcessing] = useState(false);
-  // Use prop value if provided, otherwise default to 0
-  const unreadCount = propUnreadCount;
+  const [fetchedUnreadCount, setFetchedUnreadCount] = useState(0);
   const { provider } = useProviderAuth();
+
+  // Fetch unread message count for this booking (same approach as customer app)
+  useEffect(() => {
+    if (!booking?.id || !provider?.user_id) {
+      setFetchedUnreadCount(0);
+      return;
+    }
+
+    const fetchUnreadCount = async () => {
+      try {
+        // Get conversation metadata for this booking
+        const { data: conversation, error: convError } = await supabase
+          .from('conversation_metadata')
+          .select('id')
+          .eq('booking_id', booking.id)
+          .eq('is_active', true)
+          .maybeSingle();
+
+        if (convError || !conversation?.id) {
+          setFetchedUnreadCount(0);
+          return;
+        }
+
+        // Get unread message count - use user_id to match auth.users
+        const { count, error: countError } = await supabase
+          .from('message_notifications')
+          .select('*', { count: 'exact', head: true })
+          .eq('conversation_id', conversation.id)
+          .eq('user_id', provider.user_id)
+          .eq('is_read', false);
+
+        if (countError) {
+          console.error('Error fetching unread count:', countError);
+          setFetchedUnreadCount(0);
+          return;
+        }
+
+        setFetchedUnreadCount(count || 0);
+      } catch (error) {
+        console.error('Error fetching unread count:', error);
+        setFetchedUnreadCount(0);
+      }
+    };
+
+    fetchUnreadCount();
+
+    // Poll for updates every 30 seconds
+    const interval = setInterval(fetchUnreadCount, 30000);
+
+    return () => clearInterval(interval);
+  }, [booking?.id, provider?.user_id]);
+
+  // Use fetched count, fall back to prop if provided
+  const unreadCount = fetchedUnreadCount || propUnreadCount || 0;
 
   // Handle status action with confirmation
   const handleStatusAction = (status: string) => {
