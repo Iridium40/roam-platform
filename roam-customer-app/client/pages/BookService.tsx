@@ -1516,10 +1516,12 @@ export default function BookService() {
       customer_location_id = selectedCustomerLocation?.id && !selectedCustomerLocation.id.startsWith('temp-') ? selectedCustomerLocation.id : null;
     }
 
-    // Calculate service amount (base price after discounts)
-    const serviceAmount = calculateTotalAmount();
+    // Calculate service amount (base price after discounts + addons)
+    const baseServiceAmount = calculateTotalAmount();
+    const addonsTotal = calculateAddonsTotal();
+    const serviceAmount = baseServiceAmount + addonsTotal;
     
-    // Calculate service fee (20% of service amount)
+    // Calculate service fee (20% of service amount including addons)
     const serviceFeePercentage = 0.2; // Fixed 20% service fee
     const serviceFee = serviceAmount * serviceFeePercentage;
     
@@ -1528,6 +1530,15 @@ export default function BookService() {
     
     // Remaining balance is the service amount (what the business receives)
     const remainingBalance = serviceAmount;
+    
+    console.log('💰 Checkout amounts:', {
+      baseServiceAmount,
+      addonsTotal,
+      serviceAmount,
+      serviceFee,
+      totalAmount,
+      selectedAddons,
+    });
 
     const bookingDetails = {
       service_id: service.id,

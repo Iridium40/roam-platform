@@ -174,6 +174,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           error: `Invalid pricing configuration for ${service.name}` 
         });
       }
+      
+      // Add addons total to service amount if any addons were selected
+      if (addons_total && typeof addons_total === 'number' && addons_total > 0) {
+        console.log('✅ Adding addons to service amount:', {
+          baseServiceAmount: serviceAmount,
+          addonsTotal: addons_total,
+          addonIds: addon_ids || [],
+        });
+        serviceAmount += addons_total;
+      }
     }
 
     // Fetch platform fee from system configuration
@@ -411,8 +421,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .eq('id', bookingId);
     }
 
+    // Calculate base service amount (without addons) for breakdown display
+    const addonsAmount = (addons_total && typeof addons_total === 'number') ? addons_total : 0;
+    const baseServiceAmount = serviceAmount - addonsAmount;
+    
     const breakdown = {
-      serviceAmount: serviceAmount,
+      serviceAmount: baseServiceAmount,
+      addonsAmount: addonsAmount,
+      addonsCount: addon_ids?.length || 0,
       platformFee: platformFee / 100,
       discountAmount: discountAmount / 100,
       taxAmount: taxAmount / 100,
