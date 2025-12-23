@@ -397,6 +397,7 @@ import type { EmailService } from '@roam/shared/services';
 - **[Unified Service Architecture Analysis](./UNIFIED_SERVICE_ARCHITECTURE_ANALYSIS.md)** - Platform-wide service standardization plan
 
 ### **Authentication & OAuth**
+- **[Apple OAuth Quick Start](./APPLE_OAUTH_QUICK_START.md)** - ⭐ **NEW** Quick guide to finding your Apple organization
 - **[Apple OAuth Setup Guide](./APPLE_OAUTH_SETUP_GUIDE.md)** - ⭐ **NEW** Complete guide for configuring Sign in with Apple
 
 ### **Active Development Documents**
