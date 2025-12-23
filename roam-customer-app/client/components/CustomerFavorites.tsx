@@ -390,7 +390,7 @@ export function CustomerFavorites() {
                         size="sm" 
                         className="flex-1 bg-roam-blue hover:bg-roam-blue/90"
                       >
-                        <Link to={`/provider/${favorite.providers.user_id || favorite.provider_id}?booking=true`}>
+                        <Link to={`/provider/${favorite.providers?.id || favorite.provider_id}?booking=true`}>
                           <Calendar className="w-4 h-4 mr-2" />
                           Book Now
                         </Link>

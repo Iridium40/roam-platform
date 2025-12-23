@@ -80,13 +80,8 @@ export default function ProviderProfile() {
       if (!providerId) return;
       
       try {
-        // Load provider/owner details
-        // First try to find by provider id directly, then fall back to user_id
-        let providerData = null;
-        let providerError = null;
-
-        // Try by provider id first
-        const { data: byProviderId, error: byProviderIdError } = await supabase
+        // Load provider/owner details by provider id
+        const { data: providerData, error: providerError } = await supabase
           .from('providers')
           .select(`
             id,
@@ -106,40 +101,7 @@ export default function ProviderProfile() {
           .eq('id', providerId)
           .in('provider_role', ['owner', 'provider'])
           .eq('is_active', true)
-          .maybeSingle();
-
-        if (byProviderId) {
-          providerData = byProviderId;
-        } else {
-          // Fall back to user_id lookup (take first result if multiple)
-          const { data: byUserId, error: byUserIdError } = await supabase
-            .from('providers')
-            .select(`
-              id,
-              user_id,
-              first_name,
-              last_name,
-              bio,
-              image_url,
-              cover_image_url,
-              provider_role,
-              business_id,
-              business_profiles (
-                business_name,
-                id
-              )
-            `)
-            .eq('user_id', providerId)
-            .in('provider_role', ['owner', 'provider'])
-            .eq('is_active', true)
-            .limit(1);
-
-          if (byUserIdError) {
-            providerError = byUserIdError;
-          } else if (byUserId && byUserId.length > 0) {
-            providerData = byUserId[0];
-          }
-        }
+          .single();
 
         if (providerError) throw providerError;
         if (!providerData) throw new Error('Provider not found');

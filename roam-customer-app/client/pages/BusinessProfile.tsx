@@ -757,7 +757,7 @@ export default function BusinessProfile() {
                         <Card 
                           key={provider.id} 
                           className="hover:shadow-lg transition-all cursor-pointer group border-2 hover:border-roam-blue/30 relative"
-                          onClick={() => window.location.href = `/provider/${provider.user_id}`}
+                          onClick={() => window.location.href = `/provider/${provider.id}`}
                         >
                           <CardContent className="p-6">
                             <div className="flex gap-4">
