@@ -240,14 +240,14 @@ export class MessageService {
             if (fullMessage.media && fullMessage.media.sid) {
               // Media is returned as an object with sid and other properties
               // We need to fetch the temporary content URL from the media endpoint
-              let mediaUrl: string | null = null;
+              let mediaUrl: string | undefined = undefined;
               try {
                 const mediaDetails = await this.conversationsService
                   .conversations(conversationSid)
                   .messages(message.sid)
                   .media(fullMessage.media.sid)
                   .fetch();
-                mediaUrl = mediaDetails.contentTemporaryUrl || null;
+                mediaUrl = mediaDetails.contentTemporaryUrl || undefined;
               } catch (urlError) {
                 console.warn('Could not fetch media URL for:', fullMessage.media.sid);
               }
