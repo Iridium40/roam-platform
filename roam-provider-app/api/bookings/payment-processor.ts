@@ -810,7 +810,27 @@ export async function processBookingDecline(
             paymentIntent.status === 'requires_confirmation' ||
             paymentIntent.status === 'requires_capture') {
           await stripe.paymentIntents.cancel(paymentIntent.id);
-          console.log(`✅ ${type} payment intent cancelled:`, paymentIntent.id);
+          console.log(`✅ ${type} payment intent cancelled (authorization released, no charge):`, paymentIntent.id);
+          
+          // Record authorization release (NOT a refund - no money was taken)
+          // Use 'authorization_released' type so it's not confused with actual refunds
+          await supabase.from('financial_transactions').insert({
+            booking_id: bookingId,
+            amount: paymentIntent.amount / 100,
+            currency: 'USD',
+            stripe_transaction_id: paymentIntent.id,
+            payment_method: 'card',
+            description: `Authorization released - ${type} (booking declined by provider, no charge made)`,
+            transaction_type: 'authorization_released',
+            status: 'completed',
+            processed_at: new Date().toISOString(),
+            metadata: {
+              original_payment_intent: paymentIntent.id,
+              reason: 'booking_declined',
+              payment_type: type,
+              was_charged: false,
+            },
+          });
         } else if (paymentIntent.status === 'succeeded') {
           // If payment was already charged, we need to refund it
           console.log(`⚠️ ${type} payment already charged, processing refund`);

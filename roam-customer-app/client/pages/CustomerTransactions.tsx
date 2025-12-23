@@ -174,6 +174,8 @@ export default function CustomerTransactions() {
         return <ArrowUpRight className="w-4 h-4 text-red-500" />;
       case 'refund':
         return <ArrowDownRight className="w-4 h-4 text-green-500" />;
+      case 'authorization_released':
+        return <X className="w-4 h-4 text-gray-500" />;
       case 'tip':
         return <DollarSign className="w-4 h-4 text-blue-500" />;
       default:
@@ -196,6 +198,8 @@ export default function CustomerTransactions() {
         return 'Payment';
       case 'refund':
         return 'Refund';
+      case 'authorization_released':
+        return 'Cancelled';
       case 'tip':
         return 'Tip';
       default:
@@ -203,7 +207,7 @@ export default function CustomerTransactions() {
     }
   };
 
-  const filteredTransactions = transactions.filter((transaction) => {
+  const filteredTransactions = displayableTransactions.filter((transaction) => {
     if (filter === 'all') return true;
     const txType = transaction.transaction_type?.toLowerCase();
     
@@ -221,9 +225,15 @@ export default function CustomerTransactions() {
     })
     .reduce((sum, t) => sum + Number(t.amount), 0);
 
+  // Only count actual refunds (money returned to customer), not authorization releases
   const totalRefunds = transactions
     .filter(t => t.transaction_type?.toLowerCase() === 'refund' && t.status?.toLowerCase() === 'completed')
     .reduce((sum, t) => sum + Number(t.amount), 0);
+
+  // Filter out authorization releases from the main view (no money changed hands)
+  const displayableTransactions = transactions.filter(t => 
+    t.transaction_type?.toLowerCase() !== 'authorization_released'
+  );
 
   if (loading) {
     return (
@@ -295,7 +305,7 @@ export default function CustomerTransactions() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Transactions</p>
-                  <p className="text-2xl font-bold">{transactions.length}</p>
+                  <p className="text-2xl font-bold">{displayableTransactions.length}</p>
                 </div>
                 <div className="bg-purple-100 p-3 rounded-full">
                   <Receipt className="w-6 h-6 text-purple-600" />
