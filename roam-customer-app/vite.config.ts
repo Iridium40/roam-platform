@@ -26,8 +26,9 @@ export default defineConfig({
     alias: {
       "@": path.resolve(__dirname, "./client"),
       "@shared": path.resolve(__dirname, "./shared"),
-      // Stub out Twilio and Node.js modules for browser - they're only used server-side
+      // Stub out Twilio, Stripe, and Node.js modules for browser - they're only used server-side
       "twilio": path.resolve(__dirname, "./client/utils/twilio-stub.ts"),
+      "stripe": path.resolve(__dirname, "./client/utils/stripe-stub.ts"),
       "agent-base": path.resolve(__dirname, "./client/utils/node-stub.ts"),
       "https-proxy-agent": path.resolve(__dirname, "./client/utils/node-stub.ts"),
       "http-proxy-agent": path.resolve(__dirname, "./client/utils/node-stub.ts"),
@@ -55,11 +56,13 @@ export default defineConfig({
         assetFileNames: 'assets/[name]-[hash].[ext]',
       },
       external: (id) => {
-        // Exclude Twilio and Node.js-specific modules from browser bundle
+        // Exclude Twilio, Stripe, and Node.js-specific modules from browser bundle
         if (
           id === 'twilio' ||
           id.startsWith('twilio/') ||
           id.startsWith('@twilio/') ||
+          id === 'stripe' ||
+          id.startsWith('stripe/') ||
           id === 'agent-base' ||
           id === 'https-proxy-agent' ||
           id === 'http-proxy-agent' ||
