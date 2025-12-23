@@ -288,11 +288,35 @@ components/
 
 ## 🔐 Authentication & Authorization
 
+### OAuth Providers
+
+The ROAM platform supports multiple OAuth providers for user authentication:
+
+- **Google OAuth** - Configured in Supabase Auth providers
+- **Facebook OAuth** - Configured in Supabase Auth providers  
+- **Apple OAuth (Sign in with Apple)** - Requires Apple Developer Organization account
+
+**Setup Guides:**
+- For **Apple OAuth** setup, see: [APPLE_OAUTH_SETUP_GUIDE.md](./APPLE_OAUTH_SETUP_GUIDE.md)
+- Includes step-by-step instructions for:
+  - Creating Apple Developer Organization account
+  - Configuring Services ID and App ID
+  - Setting up Supabase Apple OAuth provider
+  - Finding your organization for Xcode use
+
 ### Supabase Auth Integration
 ```typescript
 // Auth context pattern
 const { data: session } = await supabase.auth.getSession();
 const user = session?.user;
+
+// OAuth sign in (Apple, Google, Facebook)
+const { data, error } = await supabase.auth.signInWithOAuth({
+  provider: "apple", // or "google", "facebook"
+  options: {
+    redirectTo: `${window.location.origin}/auth/callback`,
+  },
+});
 
 // RLS (Row Level Security) queries
 const { data } = await supabase
