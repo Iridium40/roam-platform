@@ -9,3 +9,12 @@ import twilioConversationsHandler from "../../packages/shared/dist/api/twilio-co
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   return twilioConversationsHandler(req, res);
 }
+
+// Enable body parsing with increased size limit for media uploads
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '10mb'
+    }
+  }
+};

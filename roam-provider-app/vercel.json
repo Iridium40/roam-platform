@@ -4,6 +4,10 @@
   "outputDirectory": "dist/spa",
   "installCommand": "cd .. && npm install && cd roam-provider-app",
   "functions": {
+    "api/twilio-conversations.ts": {
+      "memory": 1024,
+      "maxDuration": 30
+    },
     "api/**/*.ts": {
       "memory": 1024,
       "maxDuration": 10
