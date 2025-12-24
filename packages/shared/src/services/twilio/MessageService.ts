@@ -226,15 +226,37 @@ export class MessageService {
       const messageList = await Promise.all(messages.map(async (message: any) => {
         let media: MediaAttachment[] | undefined;
         
-        // Check if message has media - the media property contains count and links
-        // We need to fetch individual message to get full media details
-        if (message.media) {
+        // Parse attributes to check for hasMedia flag
+        let parsedAttributes: any = {};
+        try {
+          parsedAttributes = message.attributes ? JSON.parse(message.attributes) : {};
+        } catch (e) {
+          // Ignore parse errors
+        }
+        
+        // Check if message has media - either via media property or hasMedia attribute
+        const hasMediaFlag = parsedAttributes.hasMedia === true;
+        const hasMediaProperty = !!message.media;
+        
+        console.log(`📎 Message ${message.sid} media check:`, {
+          hasMediaProperty,
+          hasMediaFlag,
+          mediaProperty: message.media,
+        });
+        
+        if (hasMediaProperty || hasMediaFlag) {
           try {
             // Fetch the individual message to get media details
+            console.log(`📎 Fetching media details for message: ${message.sid}`);
             const fullMessage = await this.conversationsService
               .conversations(conversationSid)
               .messages(message.sid)
               .fetch();
+            
+            console.log(`📎 Full message media:`, {
+              hasSid: !!fullMessage.media?.sid,
+              media: fullMessage.media,
+            });
             
             // If the message has media, the SDK returns media info
             if (fullMessage.media && fullMessage.media.sid) {
@@ -242,14 +264,16 @@ export class MessageService {
               // We need to fetch the temporary content URL from the media endpoint
               let mediaUrl: string | undefined = undefined;
               try {
+                console.log(`📎 Fetching media URL for: ${fullMessage.media.sid}`);
                 const mediaDetails = await this.conversationsService
                   .conversations(conversationSid)
                   .messages(message.sid)
                   .media(fullMessage.media.sid)
                   .fetch();
                 mediaUrl = mediaDetails.contentTemporaryUrl || undefined;
+                console.log(`📎 Media URL fetched:`, { hasUrl: !!mediaUrl });
               } catch (urlError) {
-                console.warn('Could not fetch media URL for:', fullMessage.media.sid);
+                console.warn('Could not fetch media URL for:', fullMessage.media.sid, urlError);
               }
               
               media = [{
@@ -259,10 +283,11 @@ export class MessageService {
                 size: fullMessage.media.size,
                 url: mediaUrl,
               }];
+              console.log(`📎 Media attachment created:`, media[0]);
             }
           } catch (mediaError) {
             // Silently fail for media fetch - message still displays
-            console.warn('Could not fetch media details for message:', message.sid);
+            console.warn('Could not fetch media details for message:', message.sid, mediaError);
           }
         }
 
