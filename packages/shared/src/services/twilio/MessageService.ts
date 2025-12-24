@@ -274,16 +274,16 @@ export class MessageService {
                 }
                 
                 // Fetch the temporary content URL using direct REST API call
-                // The SDK doesn't expose .media() method on message instances
+                // Media is stored in Twilio's Media Content Service (MCS), not Conversations API
                 let mediaUrl: string | undefined = undefined;
                 try {
                   console.log(`📎 Fetching media URL for: ${mediaSid}`);
                   
-                  // Use direct REST API call to fetch media details
-                  // Endpoint: /v1/Services/{ServiceSid}/Conversations/{ConversationSid}/Messages/{MessageSid}/Media/{MediaSid}
-                  const mediaApiUrl = `https://conversations.twilio.com/v1/Services/${this.config.conversationsServiceSid}/Conversations/${conversationSid}/Messages/${message.sid}/Media/${mediaSid}`;
+                  // Use MCS (Media Content Service) API to fetch media details
+                  // Endpoint: https://mcs.us1.twilio.com/v1/Services/{ServiceSid}/Media/{MediaSid}
+                  const mcsApiUrl = `https://mcs.us1.twilio.com/v1/Services/${this.config.conversationsServiceSid}/Media/${mediaSid}`;
                   
-                  const response = await fetch(mediaApiUrl, {
+                  const response = await fetch(mcsApiUrl, {
                     method: 'GET',
                     headers: {
                       'Authorization': 'Basic ' + Buffer.from(`${this.config.accountSid}:${this.config.authToken}`).toString('base64'),
@@ -293,10 +293,36 @@ export class MessageService {
                   
                   if (response.ok) {
                     const mediaDetails = await response.json();
-                    mediaUrl = mediaDetails.content_temporary_url || mediaDetails.contentTemporaryUrl || undefined;
-                    console.log(`📎 Media URL fetched:`, { hasUrl: !!mediaUrl, url: mediaUrl?.substring(0, 80) });
+                    // MCS returns 'url' for the content URL
+                    mediaUrl = mediaDetails.url || mediaDetails.content_temporary_url || mediaDetails.contentTemporaryUrl || undefined;
+                    console.log(`📎 Media URL fetched from MCS:`, { 
+                      hasUrl: !!mediaUrl, 
+                      url: mediaUrl?.substring(0, 80),
+                      mediaDetails: Object.keys(mediaDetails),
+                    });
                   } else {
-                    console.warn(`📎 Media fetch failed with status ${response.status}:`, await response.text());
+                    const errorText = await response.text();
+                    console.warn(`📎 MCS media fetch failed with status ${response.status}:`, errorText);
+                    
+                    // Fallback: Try Conversations API endpoint
+                    console.log(`📎 Trying fallback Conversations API for: ${mediaSid}`);
+                    const convApiUrl = `https://conversations.twilio.com/v1/Services/${this.config.conversationsServiceSid}/Conversations/${conversationSid}/Messages/${message.sid}/Media/${mediaSid}`;
+                    
+                    const fallbackResponse = await fetch(convApiUrl, {
+                      method: 'GET',
+                      headers: {
+                        'Authorization': 'Basic ' + Buffer.from(`${this.config.accountSid}:${this.config.authToken}`).toString('base64'),
+                        'Content-Type': 'application/json',
+                      },
+                    });
+                    
+                    if (fallbackResponse.ok) {
+                      const fallbackDetails = await fallbackResponse.json();
+                      mediaUrl = fallbackDetails.content_temporary_url || fallbackDetails.url || undefined;
+                      console.log(`📎 Media URL fetched from Conversations API fallback:`, { hasUrl: !!mediaUrl });
+                    } else {
+                      console.warn(`📎 Fallback also failed with status ${fallbackResponse.status}`);
+                    }
                   }
                 } catch (urlError) {
                   console.warn('Could not fetch media URL for:', mediaSid, urlError);
