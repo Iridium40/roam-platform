@@ -146,6 +146,12 @@ export default function BookingCard({
   // Use fetched count, fall back to prop if provided
   const unreadCount = fetchedUnreadCount || propUnreadCount || 0;
 
+  // Handle message button click - reset unread count immediately (like customer app)
+  const handleMessageClick = () => {
+    setFetchedUnreadCount(0);
+    setIsChatOpen(true);
+  };
+
   // Handle status action with confirmation
   const handleStatusAction = (status: string) => {
     // Decline has its own modal with reason input
@@ -549,7 +555,7 @@ export default function BookingCard({
             <div className={`grid gap-2 ${canMessage() ? 'grid-cols-2' : 'grid-cols-1'}`}>
               {canMessage() && (
                 <Button
-                  onClick={() => setIsChatOpen(true)}
+                  onClick={handleMessageClick}
                   size="sm"
                   className="bg-blue-600 hover:bg-blue-700 text-white relative"
                 >
@@ -836,7 +842,7 @@ export default function BookingCard({
             {/* Message Button - Hidden for final status bookings more than 1 day past */}
             {canMessage() && (
               <Button
-                onClick={() => setIsChatOpen(true)}
+                onClick={handleMessageClick}
                 size="sm"
                 className="bg-blue-600 hover:bg-blue-700 text-white relative"
               >
