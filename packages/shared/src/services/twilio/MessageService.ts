@@ -253,37 +253,50 @@ export class MessageService {
               .messages(message.sid)
               .fetch();
             
+            // Media can be an array or a single object depending on Twilio SDK version
+            const mediaArray = Array.isArray(fullMessage.media) ? fullMessage.media : 
+                              (fullMessage.media?.sid ? [fullMessage.media] : []);
+            
             console.log(`📎 Full message media:`, {
-              hasSid: !!fullMessage.media?.sid,
+              isArray: Array.isArray(fullMessage.media),
+              mediaCount: mediaArray.length,
               media: fullMessage.media,
             });
             
-            // If the message has media, the SDK returns media info
-            if (fullMessage.media && fullMessage.media.sid) {
-              // Media is returned as an object with sid and other properties
-              // We need to fetch the temporary content URL from the media endpoint
-              let mediaUrl: string | undefined = undefined;
-              try {
-                console.log(`📎 Fetching media URL for: ${fullMessage.media.sid}`);
-                const mediaDetails = await this.conversationsService
-                  .conversations(conversationSid)
-                  .messages(message.sid)
-                  .media(fullMessage.media.sid)
-                  .fetch();
-                mediaUrl = mediaDetails.contentTemporaryUrl || undefined;
-                console.log(`📎 Media URL fetched:`, { hasUrl: !!mediaUrl });
-              } catch (urlError) {
-                console.warn('Could not fetch media URL for:', fullMessage.media.sid, urlError);
+            // Process all media items
+            if (mediaArray.length > 0) {
+              media = [];
+              for (const mediaItem of mediaArray) {
+                const mediaSid = mediaItem.sid;
+                if (!mediaSid) {
+                  console.warn('📎 Media item missing sid:', mediaItem);
+                  continue;
+                }
+                
+                // Fetch the temporary content URL from the media endpoint
+                let mediaUrl: string | undefined = undefined;
+                try {
+                  console.log(`📎 Fetching media URL for: ${mediaSid}`);
+                  const mediaDetails = await this.conversationsService
+                    .conversations(conversationSid)
+                    .messages(message.sid)
+                    .media(mediaSid)
+                    .fetch();
+                  mediaUrl = mediaDetails.contentTemporaryUrl || undefined;
+                  console.log(`📎 Media URL fetched:`, { hasUrl: !!mediaUrl, url: mediaUrl?.substring(0, 50) });
+                } catch (urlError) {
+                  console.warn('Could not fetch media URL for:', mediaSid, urlError);
+                }
+                
+                media.push({
+                  sid: mediaSid,
+                  contentType: mediaItem.content_type || mediaItem.contentType || 'application/octet-stream',
+                  filename: mediaItem.filename,
+                  size: mediaItem.size,
+                  url: mediaUrl,
+                });
+                console.log(`📎 Media attachment created:`, media[media.length - 1]);
               }
-              
-              media = [{
-                sid: fullMessage.media.sid,
-                contentType: fullMessage.media.content_type || fullMessage.media.contentType || 'application/octet-stream',
-                filename: fullMessage.media.filename,
-                size: fullMessage.media.size,
-                url: mediaUrl,
-              }];
-              console.log(`📎 Media attachment created:`, media[0]);
             }
           } catch (mediaError) {
             // Silently fail for media fetch - message still displays
