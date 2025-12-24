@@ -362,6 +362,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const isAddMoreService = hasCustomAmount && bookingId; // Add more service if bookingId exists and custom amount provided
     const captureMethod = isAddMoreService ? 'automatic' : 'manual';
     
+    // Fetch booking reference number for the Stripe description
+    let bookingReference = '';
+    if (bookingId) {
+      const { data: booking } = await supabase
+        .from('bookings')
+        .select('booking_reference')
+        .eq('id', bookingId)
+        .single();
+      
+      bookingReference = booking?.booking_reference || '';
+    }
+    
     // Create Payment Intent
     // For new bookings: Payment is AUTHORIZED at checkout but NOT CHARGED until booking is accepted
     // For add more services: Payment is CHARGED immediately when customer submits
@@ -370,7 +382,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       amount: totalAmount,
       currency: 'usd',
       customer: stripeCustomerId,
-      description: `ROAM Booking: ${service?.name || 'Service'}`,
+      description: bookingReference 
+        ? `${bookingReference}: ${service?.name || 'Service'}` 
+        : `ROAM Booking: ${service?.name || 'Service'}`,
       capture_method: captureMethod, // Manual for new bookings, automatic for add more services
       confirm: false, // Explicitly set to false - will be confirmed on frontend
       metadata: {
