@@ -409,7 +409,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // If bookingId provided, update booking with payment details
     // Note: stripe_payment_intent_id is NOT stored on bookings table
-    // It will be stored in business_payment_transactions by the webhook
+    // It is stored in business_payment_transactions and financial_transactions
     if (bookingId) {
       await supabase
         .from('bookings')
@@ -419,6 +419,98 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           payment_status: 'pending'
         })
         .eq('id', bookingId);
+
+      // CRITICAL: Save payment intent ID immediately to business_payment_transactions
+      // Don't rely solely on webhook - this ensures the payment intent can be found later
+      // when the provider accepts the booking and payment needs to be captured
+      const bookingDate = new Date();
+      const paymentDate = bookingDate.toISOString().split('T')[0];
+      const taxYear = bookingDate.getFullYear();
+
+      console.log('💾 Saving payment intent to business_payment_transactions:', {
+        bookingId,
+        paymentIntentId: paymentIntent.id,
+        grossAmount: totalAmount / 100,
+        platformFee: platformFee / 100,
+        netAmount: serviceAmount,
+      });
+
+      const { error: bptError } = await supabase
+        .from('business_payment_transactions')
+        .upsert({
+          booking_id: bookingId,
+          business_id: businessId,
+          payment_date: paymentDate,
+          gross_payment_amount: totalAmount / 100,
+          platform_fee: platformFee / 100,
+          net_payment_amount: serviceAmount,
+          tax_year: taxYear,
+          stripe_payment_intent_id: paymentIntent.id,
+          stripe_connect_account_id: connectedAccount.account_id,
+          transaction_description: 'Platform service payment (pending capture)',
+          transaction_type: isAddMoreService ? 'additional_service' : 'initial_booking',
+        }, {
+          onConflict: 'booking_id,stripe_payment_intent_id',
+          ignoreDuplicates: true,
+        });
+
+      if (bptError) {
+        // Log but don't fail - try insert if upsert fails
+        console.warn('⚠️ Upsert to business_payment_transactions failed, trying insert:', bptError);
+        const { error: insertError } = await supabase
+          .from('business_payment_transactions')
+          .insert({
+            booking_id: bookingId,
+            business_id: businessId,
+            payment_date: paymentDate,
+            gross_payment_amount: totalAmount / 100,
+            platform_fee: platformFee / 100,
+            net_payment_amount: serviceAmount,
+            tax_year: taxYear,
+            stripe_payment_intent_id: paymentIntent.id,
+            stripe_connect_account_id: connectedAccount.account_id,
+            transaction_description: 'Platform service payment (pending capture)',
+            transaction_type: isAddMoreService ? 'additional_service' : 'initial_booking',
+          });
+
+        if (insertError && insertError.code !== '23505') { // Ignore duplicate errors
+          console.error('⚠️ Failed to save payment intent to business_payment_transactions:', insertError);
+          // Continue anyway - webhook may still save it
+        } else {
+          console.log('✅ Payment intent saved to business_payment_transactions via insert');
+        }
+      } else {
+        console.log('✅ Payment intent saved to business_payment_transactions');
+      }
+
+      // Also save to financial_transactions for audit trail
+      const { error: ftError } = await supabase
+        .from('financial_transactions')
+        .insert({
+          booking_id: bookingId,
+          amount: totalAmount / 100,
+          currency: 'USD',
+          stripe_transaction_id: paymentIntent.id,
+          payment_method: 'card',
+          description: 'Service booking payment authorized (pending capture)',
+          transaction_type: 'booking_payment',
+          status: 'pending', // Pending because payment is authorized but not captured
+          processed_at: new Date().toISOString(),
+          metadata: {
+            customer_id: customerId,
+            service_id: serviceId,
+            business_id: businessId,
+            capture_status: 'requires_capture',
+            payment_type: isAddMoreService ? 'additional_service' : 'initial_booking',
+          },
+        });
+
+      if (ftError && ftError.code !== '23505') { // Ignore duplicates
+        console.warn('⚠️ Failed to save to financial_transactions:', ftError);
+        // Continue anyway - not critical
+      } else if (!ftError) {
+        console.log('✅ Payment intent saved to financial_transactions');
+      }
     }
 
     // Calculate base service amount (without addons) for breakdown display
