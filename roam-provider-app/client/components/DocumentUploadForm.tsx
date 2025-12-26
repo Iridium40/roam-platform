@@ -79,7 +79,7 @@ const documentRequirements: Record<DocumentType, DocumentRequirement> = {
   liability_insurance: {
     title: "Liability Insurance",
     description: "Professional liability insurance certificate",
-    required: false,
+    required: true,
     acceptedFormats: [".pdf", ".jpg", ".jpeg", ".png"],
     maxSize: 5, // MB
     examples: [
@@ -115,8 +115,8 @@ const documentRequirements: Record<DocumentType, DocumentRequirement> = {
   },
   business_license: {
     title: "Business License",
-    description: "Business registration or operating license (if applicable)",
-    required: false,
+    description: "Business registration or operating license",
+    required: true,
     acceptedFormats: [".pdf", ".jpg", ".jpeg", ".png"],
     maxSize: 5, // MB
     examples: ["Business Registration", "DBA Certificate", "Operating License"],
@@ -155,9 +155,9 @@ export function DocumentUploadForm({
   // separately via Stripe Identity in the previous step
   const getRequiredDocuments = (): RequiredDocuments => {
     const base: RequiredDocuments = {
-      liability_insurance: false,
+      liability_insurance: true, // Liability insurance is mandatory for all providers
       professional_license: false,
-      business_license: false,
+      business_license: true, // Business license is mandatory for all providers
     };
 
     return base;
@@ -548,9 +548,18 @@ export function DocumentUploadForm({
   };
 
   const canSubmit = () => {
-    // All documents are optional in Phase 1 onboarding
-    // Only check that no uploads are currently in progress
-    return uploadingCount === 0;
+    // Check that no uploads are currently in progress
+    if (uploadingCount > 0) return false;
+    
+    // Check that required documents have been uploaded
+    const hasBusinessLicense = documents.some(
+      (doc) => doc.type === "business_license" && doc.status === "uploaded"
+    );
+    const hasLiabilityInsurance = documents.some(
+      (doc) => doc.type === "liability_insurance" && doc.status === "uploaded"
+    );
+    
+    return hasBusinessLicense && hasLiabilityInsurance;
   };
 
   const handleSubmit = async () => {

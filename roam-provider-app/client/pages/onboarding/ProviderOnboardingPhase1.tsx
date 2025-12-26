@@ -42,7 +42,7 @@ interface Phase1State {
 const phase1Steps = [
   { id: "application", title: "Business Application", icon: Building },
   { id: "identity_verification", title: "Identity Verification", icon: User },
-  { id: "business_documents", title: "Documents (Optional)", icon: FileText },
+  { id: "business_documents", title: "Business Documents", icon: FileText },
 ];
 
 export default function ProviderOnboardingPhase1() {

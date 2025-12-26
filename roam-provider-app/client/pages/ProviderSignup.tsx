@@ -191,19 +191,19 @@ export default function ProviderSignup() {
                     <ul className="space-y-2 text-sm text-foreground/70">
                       <li className="flex items-start gap-2">
                         <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                        <span>Government-issued ID for verification</span>
+                        <span><strong>Driver's License</strong> — for identity verification</span>
                       </li>
                       <li className="flex items-start gap-2">
                         <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                        <span>Business information and licenses</span>
+                        <span><strong>Business License</strong> — registration or DBA certificate</span>
                       </li>
                       <li className="flex items-start gap-2">
                         <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                        <span>Bank account for payments</span>
+                        <span><strong>Liability Insurance</strong> — proof of coverage</span>
                       </li>
                       <li className="flex items-start gap-2">
                         <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                        <span>Professional photos (optional)</span>
+                        <span>Professional license/certification (optional)</span>
                       </li>
                     </ul>
                   </div>
