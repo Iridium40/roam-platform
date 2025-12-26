@@ -13,6 +13,7 @@ import { ProtectedRoute, RoleBasedRedirect } from "@/components/ProtectedRoute";
 import SystemBrandingInitializer from "@/components/SystemBrandingInitializer";
 import AnnouncementPopup from "@/components/AnnouncementPopup";
 import Layout from "./components/layout/Layout";
+import ScrollToTop from "./components/ScrollToTop";
 
 // Type declaration for React root container
 declare global {
@@ -58,6 +59,7 @@ const App = () => (
       <Sonner />
       <SystemBrandingInitializer />
       <BrowserRouter>
+        <ScrollToTop />
         <AuthProvider>
           <Routes>
             {/* Public marketing pages */}
