@@ -77,8 +77,8 @@ export default function ProviderSignup() {
                     <DollarSign className="w-4 h-4 text-roam-blue" />
                   </div>
                   <div>
-                    <h4 className="font-semibold text-foreground mb-1">Earn More</h4>
-                    <p className="text-sm text-foreground/70">Keep 80% of your earnings with our competitive commission structure</p>
+                    <h4 className="font-semibold text-foreground mb-1">Keep 100% of Your Earnings</h4>
+                    <p className="text-sm text-foreground/70">No commission fees — customers pay the platform fee, you keep every dollar you charge</p>
                   </div>
                 </div>
                 
