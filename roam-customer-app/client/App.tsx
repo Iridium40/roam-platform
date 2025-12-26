@@ -16,7 +16,6 @@ import { Loader2 } from "lucide-react";
 import { PageErrorBoundary } from "@/components/ErrorBoundary";
 import AnnouncementPopup from "@/components/AnnouncementPopup";
 import { CustomerFavorites } from "@/components/CustomerFavorites";
-import FloatingChatButton from "@/components/FloatingChatButton";
 
 // Lazy load pages for better performance
 const Index = lazy(() => import("./pages/Index"));
@@ -206,7 +205,6 @@ const App = () => (
         </PageErrorBoundary>
       </BrowserRouter>
       <AnnouncementPopup appType="customer" />
-      <FloatingChatButton />
     </TooltipProvider>
   </QueryClientProvider>
 );export default App;

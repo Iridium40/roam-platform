@@ -163,7 +163,7 @@ export function Comparison() {
           The Math That Makes Sense
         </h2>
         <p className="mt-3 text-muted-foreground">
-          The ROAM difference is $20–$30 more per booking.
+          Other platforms take 20–30% from <strong>your</strong> earnings. With ROAM, <strong>customers</strong> pay the platform fee—you keep every dollar you charge.
         </p>
       </div>
 
@@ -230,34 +230,31 @@ export function Comparison() {
 
       {/* Clear statements */}
       <div className="mx-auto mt-6 max-w-5xl grid gap-4 sm:grid-cols-3">
-        <div className="rounded-2xl border bg-card p-4 shadow-sm">
-          <div className="font-semibold">ROAM</div>
+        <div className="rounded-2xl border-2 border-primary/30 bg-card p-4 shadow-sm">
+          <div className="font-semibold text-primary">ROAM</div>
           <p className="mt-2 text-sm text-muted-foreground">
             You charge <span className="font-medium text-foreground">$100</span>{" "}
-            → You receive{" "}
-            <span className="font-medium text-foreground">$100</span>. Customer
-            pays <span className="font-medium text-foreground">$20</span> ROAM
-            service fee.
+            → You keep{" "}
+            <span className="font-medium text-primary">$100</span>.<br />
+            Customer pays your rate + platform fee for the convenience of one-stop booking.
           </p>
         </div>
         <div className="rounded-2xl border bg-card p-4 shadow-sm">
-          <div className="font-semibold">Other A (30% commission)</div>
+          <div className="font-semibold text-destructive">Other A (30% commission)</div>
           <p className="mt-2 text-sm text-muted-foreground">
             You charge <span className="font-medium text-foreground">$100</span>{" "}
-            → You receive{" "}
-            <span className="font-medium text-foreground">$70</span>. Customer
-            pays <span className="font-medium text-foreground">$0</span>; you
-            pay <span className="font-medium text-foreground">30%</span>.
+            → You only get{" "}
+            <span className="font-medium text-destructive">$70</span>.<br />
+            Platform takes <span className="font-medium text-destructive">$30</span> from your earnings.
           </p>
         </div>
         <div className="rounded-2xl border bg-card p-4 shadow-sm">
-          <div className="font-semibold">Other B (20% commission)</div>
+          <div className="font-semibold text-destructive">Other B (20% commission)</div>
           <p className="mt-2 text-sm text-muted-foreground">
             You charge <span className="font-medium text-foreground">$100</span>{" "}
-            → You receive{" "}
-            <span className="font-medium text-foreground">$80</span>. Customer
-            pays <span className="font-medium text-foreground">$0</span>; you
-            pay <span className="font-medium text-foreground">20%</span>.
+            → You only get{" "}
+            <span className="font-medium text-destructive">$80</span>.<br />
+            Platform takes <span className="font-medium text-destructive">$20</span> from your earnings.
           </p>
         </div>
       </div>
