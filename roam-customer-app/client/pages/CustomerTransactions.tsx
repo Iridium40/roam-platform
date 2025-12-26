@@ -207,17 +207,6 @@ export default function CustomerTransactions() {
     }
   };
 
-  const filteredTransactions = displayableTransactions.filter((transaction) => {
-    if (filter === 'all') return true;
-    const txType = transaction.transaction_type?.toLowerCase();
-    
-    // Map transaction types to filter categories
-    if (filter === 'payment') {
-      return txType === 'payment' || txType === 'service_payment' || txType === 'booking_payment';
-    }
-    return txType === filter;
-  });
-
   const totalSpent = transactions
     .filter(t => {
       const txType = t.transaction_type?.toLowerCase();
@@ -234,6 +223,17 @@ export default function CustomerTransactions() {
   const displayableTransactions = transactions.filter(t => 
     t.transaction_type?.toLowerCase() !== 'authorization_released'
   );
+
+  const filteredTransactions = displayableTransactions.filter((transaction) => {
+    if (filter === 'all') return true;
+    const txType = transaction.transaction_type?.toLowerCase();
+    
+    // Map transaction types to filter categories
+    if (filter === 'payment') {
+      return txType === 'payment' || txType === 'service_payment' || txType === 'booking_payment';
+    }
+    return txType === filter;
+  });
 
   if (loading) {
     return (
