@@ -120,47 +120,71 @@ export function BusinessSettingsTab({ providerData, business, onBusinessUpdate }
 
     setDocumentsLoading(true);
     try {
-      // Convert file to base64 for server transmission
-      const base64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = () => {
-          if (typeof reader.result === 'string') {
-            // Remove the data URL prefix to get just the base64
-            const base64 = reader.result.split(',')[1];
-            resolve(base64);
-          } else {
-            reject(new Error('Failed to convert file to base64'));
-          }
-        };
-        reader.onerror = error => reject(error);
-      });
+      // Validate file size (50MB max)
+      const maxSize = 50 * 1024 * 1024; // 50MB in bytes
+      if (file.size > maxSize) {
+        throw new Error(`File size exceeds 50MB limit. Maximum allowed size is 50MB.`);
+      }
 
-      // Upload via server endpoint to avoid RLS policy issues
-      const response = await fetch('/api/business/upload-document', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      // Sanitize filename for storage
+      const sanitizeFileName = (filename: string) => {
+        return filename
+          .replace(/[^a-zA-Z0-9.-]/g, '_') // Replace special characters with underscores
+          .replace(/_+/g, '_') // Replace multiple underscores with single
+          .replace(/^_|_$/g, ''); // Remove leading/trailing underscores
+      };
+
+      const sanitizedFileName = sanitizeFileName(file.name);
+      const fileExt = file.name.split('.').pop() || 'pdf';
+      const timestamp = Date.now();
+      const uniqueFileName = `${documentType}_${timestamp}.${fileExt}`;
+      const storagePath = `provider-documents/${business.id}/${uniqueFileName}`;
+
+      // Upload directly to Supabase storage (bypasses Vercel body size limit)
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('roam-file-storage')
+        .upload(storagePath, file, {
+          contentType: file.type || 'application/pdf',
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (uploadError) {
+        console.error('Supabase upload error:', uploadError);
+        throw new Error(`Upload failed: ${uploadError.message}`);
+      }
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('roam-file-storage')
+        .getPublicUrl(storagePath);
+
+      if (!urlData || !urlData.publicUrl) {
+        throw new Error('Failed to get public URL');
+      }
+
+      // Create document record in database
+      const { data: documentData, error: dbError } = await supabase
+        .from('business_documents')
+        .insert({
           business_id: business.id,
           document_type: documentType,
           document_name: file.name,
-          file: base64,
-          file_type: file.type,
-          file_size: file.size,
-        }),
-      });
+          file_url: urlData.publicUrl,
+          file_size_bytes: file.size,
+          verification_status: 'pending'
+        })
+        .select()
+        .single();
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Upload failed' }));
-        throw new Error(errorData.error || `Upload failed with status ${response.status}`);
-      }
-
-      const result = await response.json();
-
-      if (!result.success) {
-        throw new Error(result.error || 'Upload failed');
+      if (dbError) {
+        console.error("Database error:", dbError);
+        // Try to clean up uploaded file
+        await supabase.storage
+          .from('roam-file-storage')
+          .remove([storagePath]);
+        
+        throw new Error(`Failed to create document record: ${dbError.message}`);
       }
 
       toast({
