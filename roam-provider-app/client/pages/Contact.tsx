@@ -294,11 +294,11 @@ function FAQ() {
   const faqs = [
     {
       question: "How do I get paid?",
-      answer: "Payments are automatically transferred to your linked bank account within 2 business days after completing a service. No invoicing required!",
+      answer: "Payments are automatically transferred to your linked bank account once a week on Thursday. No invoicing required!",
     },
     {
       question: "What does ROAM charge?",
-      answer: "ROAM charges a 12% platform fee on each booking. This covers payment processing, marketing, customer support, and all platform features.",
+      answer: "ROAM charges a 20% platform fee on each booking. This covers payment processing, marketing, customer support, and all platform features.",
     },
     {
       question: "Can I set my own prices?",
@@ -306,7 +306,7 @@ function FAQ() {
     },
     {
       question: "How do I handle cancellations?",
-      answer: "Our cancellation policy protects both providers and customers. Cancellations 24+ hours in advance have no penalties. Within 24 hours, providers receive 50% of the service fee.",
+      answer: "Our straightforward cancellation policy is easy to understand for both providers and customers. Cancellations made more than 24 hours in advance receive a 100% refund of service fees (platform fees are not refunded). Cancellations within 24 hours receive no refund.",
     },
     {
       question: "Do I need insurance?",

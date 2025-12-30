@@ -44,24 +44,29 @@ INSERT INTO public.notification_templates (
       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     }
     .header {
-      background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
-      color: white;
-      padding: 30px;
       text-align: center;
       border-radius: 8px 8px 0 0;
       margin: -40px -40px 30px -40px;
+      overflow: hidden;
     }
-    .logo {
-      margin-bottom: 15px;
+    .logo-section {
+      background-color: #f8f9fa;
+      padding: 25px 30px;
     }
     .logo img {
       max-width: 150px;
       height: auto;
     }
+    .title-section {
+      background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+      color: white;
+      padding: 20px 30px;
+    }
     .header h1 {
       margin: 0;
       font-size: 24px;
       font-weight: 600;
+      color: #f5c542;
     }
     .content {
       margin-bottom: 30px;
@@ -133,10 +138,12 @@ INSERT INTO public.notification_templates (
 <body>
   <div class="email-container">
     <div class="header">
-      <div class="logo">
+      <div class="logo-section">
         <img src="https://cdn.builder.io/api/v1/image/assets%2Fa42b6f9ec53e4654a92af75aad56d14f%2F993952d908754e5dbe0cceda03eb2224?format=webp&width=150" alt="ROAM" />
       </div>
-      <h1>New Booking Received!</h1>
+      <div class="title-section">
+        <h1>New Booking Received!</h1>
+      </div>
     </div>
     <div class="content">
       <p>Hello,</p>

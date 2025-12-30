@@ -13,11 +13,11 @@ export default function FAQ() {
     },
     {
       q: "What if I need to cancel or reschedule?",
-      a: `You can cancel or reschedule up to 24 hours before your appointment through the app. Cancellations within 24 hours may incur a fee depending on the provider's policy, which is clearly shown before booking.`,
+      a: `Our straightforward cancellation policy is easy to understand. Cancellations made more than 24 hours in advance receive a 100% refund of service fees (platform fees are not refunded). Cancellations within 24 hours receive no refund.`,
     },
     {
       q: "How does pricing work?",
-      a: `All prices are displayed upfront before you book. The total includes the service price, a 20% platform fee, and standard Stripe processing fees. No hidden charges, ever.`,
+      a: `Pricing includes a service fee and a platform fee of 20%. That is it.`,
     },
     {
       q: "Is my payment information secure?",

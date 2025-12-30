@@ -30,12 +30,24 @@ VALUES (
 )
 ON CONFLICT (key) DO NOTHING;
 
+-- Insert the Supabase anon key for Edge Function authorization
+-- IMPORTANT: Update this for each environment!
+-- You can find this in Supabase Dashboard -> Settings -> API -> anon/public key
+INSERT INTO public.app_config (key, value, description)
+VALUES (
+  'supabase_anon_key',
+  'YOUR_SUPABASE_ANON_KEY_HERE',
+  'Supabase anon key for Edge Function authorization (update per environment)'
+)
+ON CONFLICT (key) DO NOTHING;
+
 -- Create function to call Edge Function for new booking notifications
 CREATE OR REPLACE FUNCTION public.notify_new_booking()
 RETURNS TRIGGER AS $$
 DECLARE
   edge_function_url TEXT;
   supabase_base_url TEXT;
+  supabase_anon_key TEXT;
   request_id BIGINT;
 BEGIN
   -- Only trigger for new bookings (INSERT operations)
@@ -45,20 +57,31 @@ BEGIN
     FROM public.app_config
     WHERE key = 'supabase_url';
     
+    -- Get the Supabase anon key from app_config table
+    SELECT value INTO supabase_anon_key
+    FROM public.app_config
+    WHERE key = 'supabase_anon_key';
+    
     -- Fallback to dev URL if not configured
     IF supabase_base_url IS NULL THEN
       supabase_base_url := 'https://vssomyuyhicaxsgiaupo.supabase.co';
     END IF;
     
+    -- Check if anon key is configured
+    IF supabase_anon_key IS NULL OR supabase_anon_key = 'YOUR_SUPABASE_ANON_KEY_HERE' THEN
+      RAISE WARNING 'Supabase anon key not configured in app_config. Notification will fail.';
+      RETURN NEW;
+    END IF;
+    
     -- Construct the Edge Function URL
     edge_function_url := supabase_base_url || '/functions/v1/notify-new-booking';
     
-    -- Make async HTTP POST to Edge Function
+    -- Make async HTTP POST to Edge Function using anon key for authorization
     SELECT net.http_post(
       url := edge_function_url,
       headers := jsonb_build_object(
         'Content-Type', 'application/json',
-        'Authorization', 'Bearer ' || current_setting('request.jwt.claim.sub', true)
+        'Authorization', 'Bearer ' || supabase_anon_key
       ),
       body := jsonb_build_object(
         'type', 'INSERT',
@@ -106,13 +129,29 @@ COMMENT ON FUNCTION public.notify_new_booking() IS
   'Calls notify-new-booking Edge Function when a new booking is created';
 
 -- ============================================================================
+-- CONFIGURATION REQUIRED
+-- ============================================================================
+-- After running this migration, you MUST set the anon key:
+--
+-- UPDATE public.app_config 
+-- SET value = 'your-supabase-anon-key-here',
+--     updated_at = NOW()
+-- WHERE key = 'supabase_anon_key';
+--
+-- Find your anon key in: Supabase Dashboard -> Settings -> API -> anon/public
+-- ============================================================================
 -- PRODUCTION DEPLOYMENT NOTE
 -- ============================================================================
--- When deploying to production, update the supabase_url in app_config:
+-- When deploying to production, update BOTH values in app_config:
 --
 -- UPDATE public.app_config 
 -- SET value = 'https://YOUR_PROD_PROJECT_REF.supabase.co',
 --     updated_at = NOW()
 -- WHERE key = 'supabase_url';
+--
+-- UPDATE public.app_config 
+-- SET value = 'your-prod-anon-key',
+--     updated_at = NOW()
+-- WHERE key = 'supabase_anon_key';
 --
 -- ============================================================================
