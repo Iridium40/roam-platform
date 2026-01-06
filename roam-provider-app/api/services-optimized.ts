@@ -108,7 +108,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Call the optimized database function
-    const { data, error } = (await supabase
+    // Note: Function returns TABLE, so we get the first row (should only be one)
+    const { data: rpcResults, error } = await supabase
       .rpc('get_business_eligible_services_optimized', {
         p_business_id: business_id,
         p_search: search && typeof search === 'string' ? search : null,
@@ -117,16 +118,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         p_subcategory_id: subcategory_id && typeof subcategory_id === 'string' ? subcategory_id : null,
         p_limit: parseInt(typeof limit === 'string' ? limit : '50', 10),
         p_offset: parseInt(typeof offset === 'string' ? offset : '0', 10)
-      })
-      .single()) as { data: ServiceRPCResponse | null; error: any };
+      });
 
     if (error) {
       console.error('Error calling get_business_eligible_services_optimized:', error);
+      
+      // Fallback if function doesn't exist yet
+      if (error.code === '42883') {
+        return await fallbackServices(supabase, business_id, req.query, res);
+      }
+      
       return res.status(500).json({ 
         error: 'Failed to fetch services',
         details: error.message 
       });
     }
+
+    // Get the first row from the table result (should only be one row)
+    const data = (rpcResults && rpcResults.length > 0) ? rpcResults[0] : null;
 
     // Return the optimized response
     return res.status(200).json({
@@ -159,3 +168,136 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 }
 
+// Fallback function when the optimized database function doesn't exist
+async function fallbackServices(
+  supabase: any,
+  businessId: string,
+  query: any,
+  res: VercelResponse
+) {
+  try {
+    // Use the old endpoint logic as fallback
+    // Fetch eligible services using the business_service_subcategories join
+    const { data: eligibleServices, error: servicesError } = await supabase
+      .from('business_service_subcategories')
+      .select(`
+        subcategory_id,
+        service_subcategories!inner(
+          id,
+          service_subcategory_type,
+          category_id,
+          service_categories!inner(
+            id,
+            service_category_type
+          ),
+          services!inner(
+            id,
+            name,
+            description,
+            min_price,
+            duration_minutes,
+            image_url,
+            business_services!left(
+              id,
+              business_price,
+              business_duration_minutes,
+              delivery_type,
+              is_active
+            )
+          )
+        )
+      `)
+      .eq('business_id', businessId)
+      .eq('is_active', true);
+
+    if (servicesError) {
+      console.error('Fallback services query error:', servicesError);
+      return res.status(500).json({ 
+        error: 'Failed to fetch services',
+        details: servicesError.message 
+      });
+    }
+
+    // Transform the nested data structure
+    const services: any[] = [];
+    const serviceMap = new Map<string, any>();
+
+    eligibleServices?.forEach((bss: any) => {
+      const subcategory = bss.service_subcategories;
+      const category = subcategory?.service_categories;
+      const service = subcategory?.services;
+
+      if (!service) return;
+
+      const serviceId = service.id;
+      const businessService = service.business_services?.[0];
+
+      if (!serviceMap.has(serviceId)) {
+        services.push({
+          id: serviceId,
+          name: service.name,
+          description: service.description,
+          min_price: service.min_price,
+          duration_minutes: service.duration_minutes,
+          image_url: service.image_url,
+          subcategory_id: subcategory.id,
+          subcategory_name: subcategory.service_subcategory_type,
+          category_id: category.id,
+          category_name: category.service_category_type,
+          is_configured: !!businessService,
+          business_service_id: businessService?.id || null,
+          business_price: businessService?.business_price || null,
+          business_duration_minutes: businessService?.business_duration_minutes || null,
+          delivery_type: businessService?.delivery_type || null,
+          business_is_active: businessService?.is_active || false,
+          service_subcategories: {
+            id: subcategory.id,
+            service_subcategory_type: subcategory.service_subcategory_type,
+            service_categories: {
+              id: category.id,
+              service_category_type: category.service_category_type,
+            },
+          },
+        });
+        serviceMap.set(serviceId, true);
+      }
+    });
+
+    // Calculate stats
+    const activeServices = services.filter((s: any) => s.business_is_active);
+    const stats = {
+      total_services: services.length,
+      active_services: activeServices.length,
+      configured_services: services.filter((s: any) => s.is_configured).length,
+      unconfigured_services: services.filter((s: any) => !s.is_configured).length,
+      avg_price: activeServices.length > 0
+        ? activeServices.reduce((sum: number, s: any) => sum + (s.business_price || s.min_price || 0), 0) / activeServices.length
+        : 0,
+      total_value: activeServices.reduce((sum: number, s: any) => sum + (s.business_price || s.min_price || 0), 0),
+      category_count: new Set(services.map((s: any) => s.category_id)).size,
+      subcategory_count: new Set(services.map((s: any) => s.subcategory_id)).size,
+    };
+
+    return res.status(200).json({
+      business_id: businessId,
+      eligible_services: services,
+      service_count: services.length,
+      stats,
+      pagination: {
+        limit: 50,
+        offset: 0,
+        total: services.length,
+      },
+      _meta: {
+        fallback_mode: true,
+        message: 'Using fallback mode. Run migration for optimized queries.',
+      },
+    });
+  } catch (error) {
+    console.error('Fallback services error:', error);
+    return res.status(500).json({ 
+      error: 'Internal server error',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+}
