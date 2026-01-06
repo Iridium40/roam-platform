@@ -293,12 +293,40 @@ export class MessageService {
                   
                   if (response.ok) {
                     const mediaDetails = await response.json();
-                    // MCS returns 'url' for the content URL
-                    mediaUrl = mediaDetails.url || mediaDetails.content_temporary_url || mediaDetails.contentTemporaryUrl || undefined;
+                    // MCS API returns:
+                    // - url: The API resource path (NOT the content URL!) - e.g., "/v1/Services/IS.../Media/ME..."
+                    // - links.content: The actual content URL
+                    // - links.content_direct_temporary: Temporary signed URL for direct access
+                    // We should prefer links.content_direct_temporary > links.content > construct from base URL
+                    
+                    // Check for the correct content URL in links object first
+                    if (mediaDetails.links?.content_direct_temporary) {
+                      mediaUrl = mediaDetails.links.content_direct_temporary;
+                    } else if (mediaDetails.links?.content) {
+                      mediaUrl = mediaDetails.links.content;
+                    } else if (mediaDetails.content_temporary_url) {
+                      // Fallback to legacy field names
+                      mediaUrl = mediaDetails.content_temporary_url;
+                    } else if (mediaDetails.contentTemporaryUrl) {
+                      mediaUrl = mediaDetails.contentTemporaryUrl;
+                    } else {
+                      // Last resort: construct the content URL from the MCS base URL
+                      // The content URL is the media URL + /Content
+                      mediaUrl = `${mcsApiUrl}/Content`;
+                    }
+                    
+                    // Ensure URL is absolute (not relative)
+                    if (mediaUrl && !mediaUrl.startsWith('http')) {
+                      // If it's a relative URL, prepend the MCS base URL
+                      mediaUrl = `https://mcs.us1.twilio.com${mediaUrl.startsWith('/') ? '' : '/'}${mediaUrl}`;
+                    }
+                    
                     console.log(`📎 Media URL fetched from MCS:`, { 
                       hasUrl: !!mediaUrl, 
-                      url: mediaUrl?.substring(0, 80),
+                      url: mediaUrl?.substring(0, 100),
                       mediaDetails: Object.keys(mediaDetails),
+                      hasLinks: !!mediaDetails.links,
+                      linksKeys: mediaDetails.links ? Object.keys(mediaDetails.links) : [],
                     });
                   } else {
                     const errorText = await response.text();
@@ -318,14 +346,39 @@ export class MessageService {
                     
                     if (fallbackResponse.ok) {
                       const fallbackDetails = await fallbackResponse.json();
-                      mediaUrl = fallbackDetails.content_temporary_url || fallbackDetails.url || undefined;
-                      console.log(`📎 Media URL fetched from Conversations API fallback:`, { hasUrl: !!mediaUrl });
+                      // Same handling for Conversations API response
+                      if (fallbackDetails.links?.content_direct_temporary) {
+                        mediaUrl = fallbackDetails.links.content_direct_temporary;
+                      } else if (fallbackDetails.links?.content) {
+                        mediaUrl = fallbackDetails.links.content;
+                      } else if (fallbackDetails.content_temporary_url) {
+                        mediaUrl = fallbackDetails.content_temporary_url;
+                      } else {
+                        // Construct the content URL
+                        mediaUrl = `${convApiUrl}/Content`;
+                      }
+                      
+                      // Ensure URL is absolute
+                      if (mediaUrl && !mediaUrl.startsWith('http')) {
+                        mediaUrl = `https://conversations.twilio.com${mediaUrl.startsWith('/') ? '' : '/'}${mediaUrl}`;
+                      }
+                      
+                      console.log(`📎 Media URL fetched from Conversations API fallback:`, { 
+                        hasUrl: !!mediaUrl,
+                        hasLinks: !!fallbackDetails.links,
+                      });
                     } else {
                       console.warn(`📎 Fallback also failed with status ${fallbackResponse.status}`);
+                      // Last resort: construct the content URL directly
+                      mediaUrl = `https://mcs.us1.twilio.com/v1/Services/${this.config.conversationsServiceSid}/Media/${mediaSid}/Content`;
+                      console.log(`📎 Using constructed content URL as last resort:`, mediaUrl);
                     }
                   }
                 } catch (urlError) {
                   console.warn('Could not fetch media URL for:', mediaSid, urlError);
+                  // Even on error, try to construct a content URL
+                  mediaUrl = `https://mcs.us1.twilio.com/v1/Services/${this.config.conversationsServiceSid}/Media/${mediaSid}/Content`;
+                  console.log(`📎 Using constructed content URL after error:`, mediaUrl);
                 }
                 
                 media.push({
