@@ -727,16 +727,14 @@ export default function ProviderDashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
           <div className="flex items-center space-x-6">
-            <div className="flex items-center space-x-3">
+            <div className="flex flex-col items-start">
               <img
                 src="/default-placeholder.png"
                 alt="ROAM"
                 className="h-8 w-auto"
               />
-              <span className="text-lg font-semibold text-gray-900">
-                Provider
-                <br />
-                &nbsp;Management
+              <span className="text-xs font-medium text-gray-500 tracking-wide uppercase">
+                Provider Management
               </span>
             </div>
             
