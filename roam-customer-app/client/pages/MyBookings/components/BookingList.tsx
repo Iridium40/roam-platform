@@ -1,6 +1,7 @@
 import React from "react";
 import { Card } from "@/components/ui/card";
 import { Calendar, Clock, MessageCircle } from "lucide-react";
+import { logger } from "@/utils/logger";
 import type { BookingWithDetails } from "@/types/index";
 import { BookingCard } from "./BookingCard";
 import { Pagination } from "./Pagination";
@@ -36,13 +37,8 @@ export const BookingList: React.FC<BookingListProps> = ({
   emptyStateMessage,
   emptyStateIcon: EmptyStateIcon,
 }) => {
-  console.log("BookingList component - received bookings:", {
-    bookingsLength: bookings.length,
-    currentPage,
-    totalPages,
-    sampleBooking: bookings[0]
-  });
-  console.log("BookingList - full bookings array:", bookings);
+  logger.debug("BookingList received bookings:", { count: bookings.length, currentPage, totalPages });
+  
   if (bookings.length === 0) {
     return (
       <Card className="p-12 text-center">

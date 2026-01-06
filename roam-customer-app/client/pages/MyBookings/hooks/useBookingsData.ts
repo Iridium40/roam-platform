@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
+import { logger } from "@/utils/logger";
 import type { BookingWithDetails } from "@/types/index";
 import useRealtimeBookings from "@/hooks/useRealtimeBookings";
 import { PAGINATION_CONFIG, getDateRange } from "../config/pagination.config";
@@ -37,7 +38,7 @@ export const useBookingsData = (currentUser: any) => {
       setLoading(true);
       setError(null);
 
-      console.log("🔄 REFRESH DEBUG: Manually refreshing bookings for user:", currentUser.id);
+      logger.debug("Refreshing bookings for user:", currentUser.id);
       
       // Calculate date range for refresh
       const { start: dateStart, end: dateEnd } = getDateRange(PAGINATION_CONFIG.defaultDateRange);
@@ -132,7 +133,7 @@ export const useBookingsData = (currentUser: any) => {
         .limit(PAGINATION_CONFIG.databaseQueryLimit);
 
       if (error) {
-        console.error("❌ REFRESH DEBUG: Error refreshing bookings:", error);
+        logger.error("Error refreshing bookings:", error);
         throw error;
       }
 
@@ -180,14 +181,11 @@ export const useBookingsData = (currentUser: any) => {
         updated_at: booking.created_at || new Date().toISOString(),
       }));
       
-      console.log("✅ REFRESH DEBUG: Successfully refreshed bookings:", {
-        count: transformedBookings.length,
-        bookings: transformedBookings
-      });
+      logger.debug("Successfully refreshed bookings:", { count: transformedBookings.length });
       
       setBookings(transformedBookings);
     } catch (err: any) {
-      console.error("❌ REFRESH DEBUG: Error refreshing bookings:", err);
+      logger.error("Error refreshing bookings:", err);
       setError(
         err.message || 
         err.details || 
@@ -202,7 +200,7 @@ export const useBookingsData = (currentUser: any) => {
   // Fetch bookings data on component mount
   useEffect(() => {
     if (!currentUser) {
-      console.log("⚠️ MY BOOKINGS DEBUG: No currentUser, loading=false");
+      logger.debug("No currentUser, skipping bookings fetch");
       setLoading(false);
       return;
     }
@@ -212,12 +210,7 @@ export const useBookingsData = (currentUser: any) => {
         setLoading(true);
         setError(null);
 
-        console.log("🔍 MY BOOKINGS DEBUG: Fetching bookings for user:", {
-          customer_id: currentUser.id,
-          user_id: currentUser.user_id,
-          email: currentUser.email,
-          full_customer_object: currentUser
-        });
+        logger.debug("Fetching bookings for user:", { customer_id: currentUser.id });
         
         // Calculate date range for initial load
         const { start: dateStart, end: dateEnd } = getDateRange(PAGINATION_CONFIG.defaultDateRange);
@@ -235,20 +228,15 @@ export const useBookingsData = (currentUser: any) => {
           .order("booking_date", { ascending: false })
           .limit(PAGINATION_CONFIG.databaseQueryLimit);
 
-        console.log("📊 MY BOOKINGS DEBUG: Simple query result:", { 
-          bookings_count: simpleData?.length || 0,
-          simpleData, 
-          simpleError 
-        });
+        logger.debug("Simple query result:", { count: simpleData?.length || 0 });
 
         if (simpleError) {
-          console.error("❌ MY BOOKINGS DEBUG: Error fetching bookings:", simpleError);
+          logger.error("Error fetching bookings:", simpleError);
           throw simpleError;
         }
 
         if (!simpleData || simpleData.length === 0) {
-          console.log("⚠️ MY BOOKINGS DEBUG: No bookings found for customer_id:", currentUser.id);
-          console.log("💡 MY BOOKINGS DEBUG: Try logging in as alan@roamyourbestlife.com or alan@smithhealthwellness.com");
+          logger.debug("No bookings found for customer:", currentUser.id);
           setBookings([]);
           return;
         }
@@ -342,20 +330,10 @@ export const useBookingsData = (currentUser: any) => {
           .order("booking_date", { ascending: false })
           .limit(PAGINATION_CONFIG.databaseQueryLimit);
 
-        console.log("📋 MY BOOKINGS DEBUG: Full query with joins result:", { 
-          bookings_count: data?.length || 0,
-          data, 
-          error 
-        });
+        logger.debug("Full query with joins result:", { count: data?.length || 0 });
 
         if (error) {
-          console.error("❌ MY BOOKINGS DEBUG: Error in full query:", {
-            message: error.message,
-            details: error.details,
-            hint: error.hint,
-            code: error.code,
-            fullError: error
-          });
+          logger.error("Error in full query:", { message: error.message, code: error.code });
           throw error;
         }
 
@@ -405,13 +383,10 @@ export const useBookingsData = (currentUser: any) => {
           updated_at: booking.created_at || new Date().toISOString(), // Use created_at as fallback since updated_at doesn't exist
         }));
         
-        console.log("✅ MY BOOKINGS DEBUG: Successfully transformed bookings:", {
-          count: transformedBookings.length,
-          bookings: transformedBookings
-        });
+        logger.debug("Successfully transformed bookings:", { count: transformedBookings.length });
         setBookings(transformedBookings);
       } catch (err: any) {
-        console.error("❌ MY BOOKINGS DEBUG: Error fetching bookings:", err);
+        logger.error("Error fetching bookings:", err);
         
         // Retry logic for network errors
         if (retryCount < 3 && (err.code === "NETWORK_ERROR" || err.message?.includes("fetch"))) {

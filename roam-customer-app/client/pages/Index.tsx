@@ -316,18 +316,9 @@ export default function Index() {
         });
 
         if (!featuredError && featuredServicesData) {
-          console.log('🔍 Featured Services Raw Data (Index):', featuredServicesData);
           const transformedFeatured = featuredServicesData.map(
             (service: any) => {
               const category = service.service_subcategories?.service_categories?.service_category_type || 'general';
-              console.log('🔍 Featured Service Category Debug (Index):', {
-                serviceName: service.name,
-                serviceId: service.id,
-                subcategoryId: service.subcategory_id,
-                subcategory: service.service_subcategories,
-                category: service.service_subcategories?.service_categories,
-                finalCategory: category
-              });
               return {
                 id: service.id,
                 title: service.name,
@@ -343,7 +334,6 @@ export default function Index() {
               };
             }
           );
-          console.log('🔍 Transformed Featured Services (Index):', transformedFeatured);
           setFeaturedServices(transformedFeatured);
         }
 
@@ -384,18 +374,9 @@ export default function Index() {
         });
 
         if (!popularError && popularServicesData) {
-          console.log('🔍 Popular Services Raw Data (Index):', popularServicesData);
           const transformedPopular = popularServicesData.map(
             (service: any) => {
               const category = service.service_subcategories?.service_categories?.service_category_type || 'general';
-              console.log('🔍 Popular Service Category Debug (Index):', {
-                serviceName: service.name,
-                serviceId: service.id,
-                subcategoryId: service.subcategory_id,
-                subcategory: service.service_subcategories,
-                category: service.service_subcategories?.service_categories,
-                finalCategory: category
-              });
               return {
                 id: service.id,
                 title: service.name,
@@ -413,7 +394,6 @@ export default function Index() {
               };
             }
           );
-          console.log('🔍 Transformed Popular Services (Index):', transformedPopular);
           setPopularServices(transformedPopular);
         }
 
@@ -726,12 +706,6 @@ export default function Index() {
 
   // Filter services based on selected category, search query, and delivery type
   const getFilteredServices = useCallback((services: FeaturedService[]) => {
-    console.log('🔍 Filtering Services Debug:', {
-      selectedCategory,
-      totalServices: services.length,
-      services: services.map(s => ({ name: s.name, category: s.category }))
-    });
-    
     return services.filter((service: FeaturedService) => {
       // Category filter
       let categoryMatch = true;
@@ -741,14 +715,6 @@ export default function Index() {
           [];
         const serviceCategory = service.category?.toLowerCase() || "";
         const serviceTitle = service.title?.toLowerCase() || "";
-
-        console.log('🔍 Category Filter Debug:', {
-          serviceName: service.name,
-          serviceCategory,
-          selectedCategory,
-          categoryKeywords,
-          willMatch: categoryKeywords.some(keyword => serviceCategory === keyword.toLowerCase())
-        });
 
         categoryMatch = categoryKeywords.some(
           (keyword) => serviceCategory === keyword.toLowerCase()
@@ -809,7 +775,6 @@ export default function Index() {
 
   // Reset carousel when filters change
   useEffect(() => {
-    console.log('Resetting carousel due to filter change');
     setCarouselSlides(prev => ({
       ...prev,
       currentServiceSlide: 0,
@@ -832,19 +797,13 @@ export default function Index() {
   const nextServiceSlide = useCallback(() => {
     const maxPage = Math.max(0, servicePages.length - 1);
     const newPage = Math.min(currentServiceSlide + 1, maxPage);
-    console.log('🔄 Next service slide clicked');
-    console.log('📊 Current state:', { currentServiceSlide, maxPage, newPage, servicesCount: filteredFeaturedServices.length, pagesCount: servicePages.length });
-    console.log('📋 Service pages:', servicePages.map((page, i) => ({ pageIndex: i, servicesInPage: page.length })));
     setCurrentServiceSlide(newPage);
-  }, [currentServiceSlide, servicePages, filteredFeaturedServices.length]);
+  }, [currentServiceSlide, servicePages]);
 
   const prevServiceSlide = useCallback(() => {
     const newPage = Math.max(currentServiceSlide - 1, 0);
-    console.log('🔄 Prev service slide clicked');
-    console.log('📊 Current state:', { currentServiceSlide, newPage, servicesCount: filteredFeaturedServices.length, pagesCount: servicePages.length });
-    console.log('📋 Service pages:', servicePages.map((page, i) => ({ pageIndex: i, servicesInPage: page.length })));
     setCurrentServiceSlide(newPage);
-  }, [currentServiceSlide, servicePages, filteredFeaturedServices.length]);
+  }, [currentServiceSlide]);
 
   // Most Popular Services: paginate into pages of 3
   const popularPages = useMemo(() => {
@@ -858,19 +817,13 @@ export default function Index() {
   const nextPopularSlide = useCallback(() => {
     const maxPage = Math.max(0, popularPages.length - 1);
     const newPage = Math.min(currentPopularSlide + 1, maxPage);
-    console.log('🔄 Next popular slide clicked');
-    console.log('📊 Popular state:', { currentPopularSlide, maxPage, newPage, servicesCount: filteredPopularServices.length, pagesCount: popularPages.length });
-    console.log('📋 Popular pages:', popularPages.map((page, i) => ({ pageIndex: i, servicesInPage: page.length })));
     setCurrentPopularSlide(newPage);
-  }, [currentPopularSlide, popularPages, filteredPopularServices.length]);
+  }, [currentPopularSlide, popularPages]);
 
   const prevPopularSlide = useCallback(() => {
     const newPage = Math.max(currentPopularSlide - 1, 0);
-    console.log('🔄 Prev popular slide clicked');
-    console.log('📊 Popular state:', { currentPopularSlide, newPage, servicesCount: filteredPopularServices.length, pagesCount: popularPages.length });
-    console.log('📋 Popular pages:', popularPages.map((page, i) => ({ pageIndex: i, servicesInPage: page.length })));
     setCurrentPopularSlide(newPage);
-  }, [currentPopularSlide, popularPages, filteredPopularServices.length]);
+  }, [currentPopularSlide]);
 
   // Special Promotions: paginate into pages of 3 for desktop, 1 for mobile
   const promotionPages = useMemo(() => {
@@ -885,17 +838,13 @@ export default function Index() {
   const nextPromotionSlide = useCallback(() => {
     const maxSlide = Math.max(0, promotionPages.length - 1);
     const newPage = Math.min(currentPromotionSlide + 1, maxSlide);
-    console.log('🔄 Next promotion slide clicked');
-    console.log('📊 Promotion state:', { currentPromotionSlide, maxSlide, newPage, promotionsCount: promotions.length, pagesCount: promotionPages.length });
     setCurrentPromotionSlide(newPage);
-  }, [currentPromotionSlide, promotionPages.length, promotions.length]);
+  }, [currentPromotionSlide, promotionPages.length]);
 
   const prevPromotionSlide = useCallback(() => {
     const newPage = Math.max(currentPromotionSlide - 1, 0);
-    console.log('🔄 Prev promotion slide clicked');
-    console.log('📊 Promotion state:', { currentPromotionSlide, newPage, promotionsCount: promotions.length, pagesCount: promotionPages.length });
     setCurrentPromotionSlide(newPage);
-  }, [currentPromotionSlide, promotionPages.length, promotions.length]);
+  }, [currentPromotionSlide]);
 
   // Featured Businesses are NOT filtered by search or delivery type
   // They remain static regardless of user's search/filter selections
@@ -914,17 +863,13 @@ export default function Index() {
   const nextBusinessSlide = useCallback(() => {
     const maxPage = Math.max(0, businessPages.length - 1);
     const newPage = Math.min(currentBusinessSlide + 1, maxPage);
-    console.log('🔄 Next business slide clicked');
-    console.log('📊 Business state:', { currentBusinessSlide, maxPage, newPage, businessesCount: featuredBusinesses.length, pagesCount: businessPages.length });
     setCurrentBusinessSlide(newPage);
-  }, [currentBusinessSlide, businessPages.length, featuredBusinesses.length]);
+  }, [currentBusinessSlide, businessPages.length]);
 
   const prevBusinessSlide = useCallback(() => {
     const newPage = Math.max(currentBusinessSlide - 1, 0);
-    console.log('🔄 Prev business slide clicked');
-    console.log('📊 Business state:', { currentBusinessSlide, newPage, businessesCount: featuredBusinesses.length, pagesCount: businessPages.length });
     setCurrentBusinessSlide(newPage);
-  }, [currentBusinessSlide, businessPages.length, featuredBusinesses.length]);
+  }, [currentBusinessSlide]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-accent/5 to-roam-light-blue/10">
@@ -1370,7 +1315,6 @@ export default function Index() {
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        console.log('Popular Prev button clicked!');
                         prevPopularSlide();
                       }}
                       disabled={currentPopularSlide === 0}
@@ -1385,7 +1329,6 @@ export default function Index() {
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        console.log('Popular Next button clicked!');
                         nextPopularSlide();
                       }}
                       disabled={currentPopularSlide >= popularPages.length - 1}

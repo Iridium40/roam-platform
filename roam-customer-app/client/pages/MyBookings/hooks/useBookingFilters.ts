@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import type { BookingWithDetails } from "@/types/index";
 import { PAGINATION_CONFIG, getPageSize } from "../config/pagination.config";
+import { logger } from "@/utils/logger";
 
 export const useBookingFilters = (bookings: BookingWithDetails[]) => {
   const [currentPage, setCurrentPage] = useState({
@@ -115,11 +116,9 @@ export const useBookingFilters = (bookings: BookingWithDetails[]) => {
       }),
     };
 
-    console.log("Filtered bookings result:", {
+    logger.debug("Filtered bookings result:", {
       active: result.active.length,
       closed: result.closed.length,
-      activeStatuses: result.active.map(b => ({ id: b.id, date: b.booking_date, status: b.booking_status })).slice(0, 3),
-      closedStatuses: result.closed.map(b => ({ id: b.id, date: b.booking_date, status: b.booking_status })).slice(0, 3)
     });
 
     return result;
@@ -167,19 +166,9 @@ export const useBookingFilters = (bookings: BookingWithDetails[]) => {
     closed: getPaginatedBookings(filteredBookings.closed, currentPage.closed),
   };
 
-  console.log("Pagination results:", {
-    active: {
-      filtered: filteredBookings.active.length,
-      paginated: paginatedBookings.active.length,
-      currentPage: currentPage.active,
-      totalPages: getTotalPages(filteredBookings.active.length)
-    },
-    closed: {
-      filtered: filteredBookings.closed.length,
-      paginated: paginatedBookings.closed.length,
-      currentPage: currentPage.closed,
-      totalPages: getTotalPages(filteredBookings.closed.length)
-    }
+  logger.debug("Pagination results:", {
+    active: { count: filteredBookings.active.length, page: currentPage.active },
+    closed: { count: filteredBookings.closed.length, page: currentPage.closed },
   });
 
   // Get total pages for each category

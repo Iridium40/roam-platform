@@ -20,21 +20,12 @@ import ScrollToTop from "@/components/ScrollToTop";
 
 // Lazy load pages for better performance
 const Index = lazy(() => import("./pages/Index"));
-const SimpleHomeIndex = lazy(() => import("./pages/SimpleHomeIndex"));
-const IndexFixed = lazy(() => import("./pages/IndexFixed"));
-const MyBookingsFixed = lazy(() => import("./pages/MyBookingsFixed"));
-const ProgressiveIndex = lazy(() => import("./pages/ProgressiveIndex"));
-const SimpleIndex = lazy(() => import("./pages/SimpleIndex"));
-const SimpleMyBookingsTest = lazy(() => import("./pages/SimpleMyBookingsTest"));
-const MinimalMyBookings = lazy(() => import("./pages/MinimalMyBookings"));
-const WorkingMyBookings = lazy(() => import("./pages/WorkingMyBookings"));
 const MyBookings = lazy(() => import("./pages/MyBookings"));
 const BookingDetails = lazy(() => import("./pages/BookingDetails"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const BookService = lazy(() => import("./pages/BookService"));
 const BookingSuccess = lazy(() => import("./pages/BookingSuccess"));
 const BusinessProfile = lazy(() => import("./pages/BusinessProfile"));
-const TwilioMessagingTest = lazy(() => import("./components/TwilioMessagingTest"));
 const ProviderProfile = lazy(() => import("./pages/ProviderProfile"));
 const MarketingLanding = lazy(() => import("./pages/MarketingLanding"));
 const About = lazy(() => import("./pages/About"));
@@ -70,7 +61,21 @@ const PageLoader = () => (
 
 // Placeholder components moved to separate file
 
-const queryClient = new QueryClient();
+// Configure QueryClient with optimized caching defaults for better performance
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // Data considered fresh for 5 minutes
+      gcTime: 1000 * 60 * 30, // Cache garbage collected after 30 minutes (formerly cacheTime)
+      retry: 2, // Retry failed requests twice
+      refetchOnWindowFocus: false, // Don't refetch when window regains focus
+      refetchOnReconnect: true, // Refetch when network reconnects
+    },
+    mutations: {
+      retry: 1, // Retry failed mutations once
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -113,34 +118,6 @@ const App = () => (
                       <BookingDetails />
                     </ProtectedRoute>
                   }
-                />
-                <Route
-                  path="/my-bookings-protected"
-                  element={
-                    <ProtectedRoute>
-                      <SimpleMyBookingsTest />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/my-bookings-full"
-                  element={<MinimalMyBookings />}
-                />
-                <Route
-                  path="/my-bookings-mock"
-                  element={
-                    <ProtectedRoute>
-                      <WorkingMyBookings />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/my-bookings-original"
-                  element={<MyBookings />}
-                />
-                <Route
-                  path="/test-twilio"
-                  element={<TwilioMessagingTest />}
                 />
                 <Route
                   path="/customer/favorites"

@@ -34,6 +34,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
+import { logger } from "@/utils/logger";
 import type { BookingWithDetails } from "@/types/index";
 import { formatBookingDate, isWithin24Hours, getDeliveryTypeLabel, getDeliveryTypeIcon } from "../utils/bookingCalculations";
 import ReviewAndTipModal from "./ReviewAndTipModal";
@@ -107,14 +108,14 @@ export const BookingCard: React.FC<BookingCardProps> = ({
           .eq('is_read', false);
 
         if (countError) {
-          console.error('Error fetching unread count:', countError);
+          logger.error('Error fetching unread count:', countError);
           setUnreadCount(0);
           return;
         }
 
         setUnreadCount(count || 0);
       } catch (error) {
-        console.error('Error fetching unread count:', error);
+        logger.error('Error fetching unread count:', error);
         setUnreadCount(0);
       }
     };
@@ -861,19 +862,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({
                     )}
                   </Button>
                 )}
-                {(() => {
-                  console.log('🔍 Mobile Review Check Debug:', {
-                    bookingId: booking.id,
-                    bookingStatus: booking.booking_status,
-                    reviews: booking.reviews,
-                    reviewsLength: booking.reviews?.length,
-                    hasReviews: booking.reviews && booking.reviews.length > 0,
-                    tips: booking.tips,
-                    tipsLength: booking.tips?.length,
-                    hasTips: booking.tips && booking.tips.length > 0
-                  });
-                  return booking.reviews && booking.reviews.length > 0;
-                })() ? (
+                {booking.reviews && booking.reviews.length > 0 ? (
                   <div className="space-y-2">
                     <Button 
                       size="sm" 

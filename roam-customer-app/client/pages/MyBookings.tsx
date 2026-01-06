@@ -23,6 +23,7 @@ import {
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, lazy, Suspense } from "react";
+import { logger } from "@/utils/logger";
 import type { BookingWithDetails } from "@/types/index";
 
 // Lazy load EnhancedConversationChat to avoid date-fns import issues on page load
@@ -45,13 +46,10 @@ export default function MyBookings() {
   const { customer, loading: authLoading } = useAuth();
   const currentUser = customer;
 
-  // Enhanced debug logging to diagnose data issues
-  console.log("🔐 MY BOOKINGS PAGE DEBUG:", {
+  logger.debug("MyBookings page state:", {
     is_authenticated: !!customer,
     auth_loading: authLoading,
     customer_id: customer?.id,
-    customer_email: customer?.email,
-    customer_object: customer
   });
 
   // State for modals
@@ -192,7 +190,7 @@ export default function MyBookings() {
               </h1>
               <Button
                 onClick={() => {
-                  console.log("🔄 MANUAL REFRESH TRIGGERED");
+                  logger.debug("Manual refresh triggered");
                   refreshBookings();
                 }}
                 variant="outline"
