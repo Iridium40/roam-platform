@@ -177,7 +177,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     initializeAuth();
   }, []);
 
-  const signInCustomer = async (email: string, password: string) => {
+  const signInCustomer = useCallback(async (email: string, password: string) => {
     setLoading(true);
     try {
       logger.debug("AuthContext signInCustomer: Starting authentication...");
@@ -302,9 +302,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const signUpCustomer = async (customerData: {
+  const signUpCustomer = useCallback(async (customerData: {
     email: string;
     password: string;
     firstName: string;
@@ -418,9 +418,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const signInWithGoogle = async () => {
+  const signInWithGoogle = useCallback(async () => {
     setLoading(true);
     try {
       logger.debug("AuthContext: Starting Google OAuth sign-in...");
@@ -445,9 +445,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const signInWithGoogleIdToken = async (idToken: string, nonce: string) => {
+  const signInWithGoogleIdToken = useCallback(async (idToken: string, nonce: string) => {
     setLoading(true);
     try {
       logger.debug("AuthContext: Starting Google ID token sign-in...");
@@ -478,9 +478,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const signInWithApple = async () => {
+  const signInWithApple = useCallback(async () => {
     setLoading(true);
     try {
       logger.debug("AuthContext: Starting Apple OAuth sign-in...");
@@ -505,7 +505,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   const handleOAuthUser = async (user: User) => {
     // Check if customer profile exists
@@ -590,7 +590,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return createdProfile;
   };
 
-  const resendVerificationEmail = async (email: string) => {
+  const resendVerificationEmail = useCallback(async (email: string) => {
     try {
       const { error } = await supabase.auth.resend({
         type: "signup",
@@ -609,9 +609,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       logger.error("Error resending verification email:", error);
       throw error;
     }
-  };
+  }, []);
 
-  const updateCustomerProfile = async (profileData: {
+  const updateCustomerProfile = useCallback(async (profileData: {
     firstName: string;
     lastName: string;
     email: string;
@@ -667,9 +667,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       logger.error("Error updating customer profile:", error);
       throw error;
     }
-  };
+  }, [customer]);
 
-  const uploadCustomerAvatar = async (file: File): Promise<string> => {
+  const uploadCustomerAvatar = useCallback(async (file: File): Promise<string> => {
     if (!customer) {
       throw new Error("No customer logged in");
     }
@@ -696,9 +696,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       logger.error("Error uploading customer avatar:", error);
       throw error;
     }
-  };
+  }, [customer]);
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     setLoading(true);
     try {
       logger.debug("AuthContext: Starting sign out...");
@@ -721,9 +721,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const refreshUser = async () => {
+  const refreshUser = useCallback(async () => {
     if (!customer) return;
 
     try {
@@ -754,7 +754,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } catch (error) {
       logger.error("Error refreshing user:", error);
     }
-  };
+  }, [customer]);
 
   const isCustomer = !!customer;
   const isAuthenticated = isCustomer;

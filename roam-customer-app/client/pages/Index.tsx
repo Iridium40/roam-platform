@@ -63,7 +63,11 @@ import type {
   FeaturedBusiness, 
   Promotion, 
   TransformedPromotion,
-  ServiceFilters 
+  ServiceFilters,
+  ServiceQueryResult,
+  BusinessQueryResult,
+  BusinessServiceQueryResult,
+  PromotionQueryResult,
 } from "@/types/index";
 
 // Lazy load heavy components
@@ -316,8 +320,8 @@ export default function Index() {
         });
 
         if (!featuredError && featuredServicesData) {
-          const transformedFeatured = featuredServicesData.map(
-            (service: any) => {
+          const transformedFeatured = (featuredServicesData as ServiceQueryResult[]).map(
+            (service) => {
               const category = service.service_subcategories?.service_categories?.service_category_type || 'general';
               return {
                 id: service.id,
@@ -374,8 +378,8 @@ export default function Index() {
         });
 
         if (!popularError && popularServicesData) {
-          const transformedPopular = popularServicesData.map(
-            (service: any) => {
+          const transformedPopular = (popularServicesData as ServiceQueryResult[]).map(
+            (service) => {
               const category = service.service_subcategories?.service_categories?.service_category_type || 'general';
               return {
                 id: service.id,
@@ -464,13 +468,13 @@ export default function Index() {
         });
 
         if (!businessesError && businessesData) {
-          const transformedBusinesses = businessesData.map((business: any) => {
+          const transformedBusinesses = (businessesData as BusinessQueryResult[]).map((business) => {
             // Extract unique subcategories from business_services (only active services)
             const subcategoriesSet = new Set<string>();
             if (business.business_services && Array.isArray(business.business_services)) {
               business.business_services
-                .filter((bs: any) => bs.is_active === true) // Only include active services
-                .forEach((bs: any) => {
+                .filter((bs) => bs.is_active === true) // Only include active services
+                .forEach((bs) => {
                   if (bs.services?.service_subcategories?.service_subcategory_type) {
                     subcategoriesSet.add(bs.services.service_subcategories.service_subcategory_type);
                   }
@@ -555,8 +559,8 @@ export default function Index() {
           const currentDate = new Date();
           currentDate.setHours(0, 0, 0, 0); // Set to start of day for accurate comparison
 
-          const transformedPromotions = promotionsData
-            .filter((promotion: any) => {
+          const transformedPromotions = (promotionsData as PromotionQueryResult[])
+            .filter((promotion) => {
               // Filter out promotions with expired end dates
               if (promotion.end_date) {
                 const endDate = new Date(promotion.end_date);
@@ -566,7 +570,7 @@ export default function Index() {
               // Keep promotions without end dates (ongoing promotions)
               return true;
             })
-            .map((promotion: any) => ({
+            .map((promotion) => ({
               id: promotion.id,
               title: promotion.title,
               description: promotion.description || "Limited time offer",

@@ -14,18 +14,97 @@ export type Tip = Database['public']['Tables']['tips']['Row'];
 // UI-specific types
 export interface FeaturedService {
   id: string;
-  name: string;
+  name?: string;
+  title: string; // Display name for UI
   category: string;
   description: string;
-  price_min: number;
-  price_max: number;
+  price: string; // Formatted price string (e.g., "$50")
+  image: string; // Image URL for display
   duration: string;
-  location_type: string;
-  image_url?: string;
   rating?: number;
+  // Legacy/optional fields
+  price_min?: number;
+  price_max?: number;
+  location_type?: string;
+  image_url?: string;
   reviews_count?: number;
   provider_name?: string;
   provider_id?: string;
+}
+
+// Supabase query result types for Index page
+export interface ServiceQueryResult {
+  id: string;
+  name: string;
+  description: string | null;
+  min_price: number | null;
+  duration_minutes: number | null;
+  image_url: string | null;
+  is_active: boolean | null;
+  is_featured?: boolean | null;
+  is_popular?: boolean | null;
+  subcategory_id: string | null;
+  service_subcategories: {
+    id: string;
+    service_subcategory_type: string;
+    service_categories: {
+      id: string;
+      service_category_type: string;
+    } | null;
+  } | null;
+}
+
+export interface BusinessServiceQueryResult {
+  is_active: boolean;
+  services: {
+    service_subcategories: {
+      service_subcategory_type: string;
+    } | null;
+  } | null;
+}
+
+export interface BusinessQueryResult {
+  id: string;
+  business_name: string;
+  description: string | null;
+  logo_url: string | null;
+  image_url: string | null;
+  business_type: string | null;
+  is_featured: boolean | null;
+  is_active: boolean | null;
+  business_locations: Array<{
+    city: string | null;
+    state: string | null;
+  }> | null;
+  business_services: BusinessServiceQueryResult[] | null;
+}
+
+export interface PromotionQueryResult {
+  id: string;
+  title: string | null;
+  description: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  is_active: boolean | null;
+  created_at: string | null;
+  business_id: string | null;
+  image_url: string | null;
+  promo_code: string | null;
+  discount_type: string | null;
+  discount_value: number | null;
+  max_discount: number | null;
+  service_id: string | null;
+  business_profiles: {
+    id: string;
+    business_name: string;
+    logo_url: string | null;
+    business_type: string | null;
+  } | null;
+  services: {
+    id: string;
+    name: string;
+    min_price: number | null;
+  } | null;
 }
 
 export interface PopularService extends FeaturedService {

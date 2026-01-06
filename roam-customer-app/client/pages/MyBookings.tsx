@@ -24,6 +24,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, lazy, Suspense } from "react";
 import { logger } from "@/utils/logger";
+import { ChatErrorBoundary } from "@/components/ErrorBoundary";
 import type { BookingWithDetails } from "@/types/index";
 
 // Lazy load EnhancedConversationChat to avoid date-fns import issues on page load
@@ -345,21 +346,23 @@ export default function MyBookings() {
 
       {/* Messaging Modal */}
       {showMessageModal && (
-        <Suspense fallback={
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-8">
-              <Loader2 className="w-8 h-8 animate-spin text-roam-blue mx-auto mb-4" />
-              <p>Loading chat...</p>
+        <ChatErrorBoundary>
+          <Suspense fallback={
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-lg p-8">
+                <Loader2 className="w-8 h-8 animate-spin text-roam-blue mx-auto mb-4" />
+                <p>Loading chat...</p>
+              </div>
             </div>
-          </div>
-        }>
-          <EnhancedConversationChat
-            isOpen={showMessageModal}
-            onClose={() => setShowMessageModal(false)}
-            booking={selectedBookingForMessage}
-            currentUser={currentUser}
-          />
-        </Suspense>
+          }>
+            <EnhancedConversationChat
+              isOpen={showMessageModal}
+              onClose={() => setShowMessageModal(false)}
+              booking={selectedBookingForMessage}
+              currentUser={currentUser}
+            />
+          </Suspense>
+        </ChatErrorBoundary>
       )}
 
       {/* Footer */}

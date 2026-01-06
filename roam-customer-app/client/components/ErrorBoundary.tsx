@@ -176,4 +176,114 @@ export const ComponentErrorBoundary: React.FC<{
   </ErrorBoundary>
 );
 
+// Specialized error boundary for booking flow
+export const BookingErrorBoundary: React.FC<{ 
+  children: ReactNode;
+  onRetry?: () => void;
+}> = ({ children, onRetry }) => (
+  <ErrorBoundary
+    fallback={
+      <Card className="w-full max-w-lg mx-auto my-8">
+        <CardHeader className="text-center">
+          <AlertTriangle className="w-12 h-12 text-amber-500 mx-auto mb-4" />
+          <CardTitle className="text-xl">Booking Error</CardTitle>
+        </CardHeader>
+        <CardContent className="text-center space-y-4">
+          <p className="text-foreground/70">
+            There was an issue with the booking process. Your payment has not been processed.
+          </p>
+          <div className="flex gap-3 justify-center">
+            {onRetry && (
+              <Button 
+                onClick={onRetry}
+                variant="outline"
+                className="flex items-center gap-2"
+              >
+                <RefreshCw className="w-4 h-4" />
+                Try Again
+              </Button>
+            )}
+            <Button 
+              onClick={() => window.location.href = '/services'}
+            >
+              Browse Services
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    }
+    showDetails={true}
+  >
+    {children}
+  </ErrorBoundary>
+);
+
+// Specialized error boundary for payment forms
+export const PaymentErrorBoundary: React.FC<{ 
+  children: ReactNode;
+  onCancel?: () => void;
+}> = ({ children, onCancel }) => (
+  <ErrorBoundary
+    fallback={
+      <div className="p-6 border border-red-200 rounded-lg bg-red-50">
+        <div className="flex items-center gap-2 text-red-700 mb-3">
+          <AlertTriangle className="w-6 h-6" />
+          <span className="font-semibold">Payment Error</span>
+        </div>
+        <p className="text-red-600 text-sm mb-4">
+          The payment form encountered an error. Your card has not been charged.
+          Please refresh and try again.
+        </p>
+        <div className="flex gap-3">
+          <Button 
+            onClick={() => window.location.reload()}
+            variant="outline"
+            size="sm"
+          >
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Refresh
+          </Button>
+          {onCancel && (
+            <Button 
+              onClick={onCancel}
+              variant="ghost"
+              size="sm"
+            >
+              Cancel
+            </Button>
+          )}
+        </div>
+      </div>
+    }
+  >
+    {children}
+  </ErrorBoundary>
+);
+
+// Specialized error boundary for chat/messaging
+export const ChatErrorBoundary: React.FC<{ 
+  children: ReactNode;
+}> = ({ children }) => (
+  <ErrorBoundary
+    fallback={
+      <div className="flex flex-col items-center justify-center p-8 text-center">
+        <AlertTriangle className="w-10 h-10 text-amber-500 mb-3" />
+        <p className="text-foreground/70 mb-4">
+          Unable to load messages. Please check your connection and try again.
+        </p>
+        <Button 
+          onClick={() => window.location.reload()}
+          variant="outline"
+          size="sm"
+        >
+          <RefreshCw className="w-4 h-4 mr-2" />
+          Reload Chat
+        </Button>
+      </div>
+    }
+  >
+    {children}
+  </ErrorBoundary>
+);
+
 export default ErrorBoundary;
