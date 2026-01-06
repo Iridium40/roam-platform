@@ -82,13 +82,18 @@ export function useSimplifiedServices() {
 
       const userId = provider!.provider!.user_id!;
       
-      // Backend uses service role key - no auth headers needed
-      const response = await fetch(`/api/business-eligible-services?business_id=${businessId}&user_id=${userId}`);
+      // Use optimized services API for better performance (server-side filtering and stats)
+      const queryParams = new URLSearchParams({
+        business_id: businessId,
+        user_id: userId,
+      });
+      
+      const response = await fetch(`/api/services-optimized?${queryParams}`);
 
       if (!response.ok) {
         let errorMessage = 'Failed to load services';
         try {
-          const errorData = await safeJsonParse(response, 'eligible services error');
+          const errorData = await safeJsonParse(response, 'services optimized error');
           errorMessage = errorData.error || errorMessage;
         } catch (parseError) {
           console.warn('Could not parse error response from services API');
@@ -96,28 +101,28 @@ export function useSimplifiedServices() {
         throw new Error(errorMessage);
       }
 
-      const data = await safeJsonParse(response, 'eligible services');
+      const data = await safeJsonParse(response, 'services optimized');
       const services = data.eligible_services || [];
       
       setEligibleServices(services);
 
-      // Calculate stats from the eligible services
-      const activeServices = services.filter((s: EligibleService) => s.business_is_active);
-      const totalRevenue = activeServices.reduce((sum: number, s: EligibleService) => {
-        return sum + (s.business_price || 0);
-      }, 0);
-      const avgPrice = activeServices.length > 0 ? totalRevenue / activeServices.length : 0;
-
-      const stats = {
-        total_services: services.length,
-        active_services: activeServices.length,
-        total_revenue: totalRevenue,
-        avg_price: avgPrice,
+      // Use server-side calculated stats (already optimized)
+      const serverStats = data.stats || {};
+      const stats: ServiceStats = {
+        total_services: serverStats.total_services || services.length,
+        active_services: serverStats.active_services || 0,
+        total_revenue: serverStats.total_value || 0,
+        avg_price: serverStats.avg_price || 0,
       };
       setServiceStats(stats);
 
       // Cache the data
       setCache(cacheKey, { services, stats });
+      
+      console.log("✅ Services loaded via optimized API:", {
+        count: services.length,
+        stats: serverStats,
+      });
 
     } catch (error) {
       console.error('Error loading services data:', error);

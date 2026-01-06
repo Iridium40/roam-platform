@@ -5,6 +5,7 @@ import { api } from "@/lib/api/endpoints";
 import { useAuth } from "@/contexts/auth/AuthProvider";
 import { supabase } from "@/lib/supabase";
 import { PAGINATION_CONFIG, getPageSize, getDateRange } from "../config/pagination.config";
+import { getAuthHeaders } from "@/lib/api/authUtils";
 
 interface BookingStats {
   totalBookings: number;
@@ -102,7 +103,7 @@ export function useBookings(providerData: any, business: any) {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Load bookings data with date range filtering
+  // Load bookings data with date range filtering using optimized API
   // Note: We load bookings from past AND future, then let categorization handle grouping
   const loadBookings = useCallback(async () => {
     if (!business?.id) return;
@@ -114,28 +115,37 @@ export function useBookings(providerData: any, business: any) {
       const startDateStr = start.toISOString().split('T')[0];
       const endDateStr = end.toISOString().split('T')[0];
       
-      // Use API endpoint with limit
-      // We don't filter by date on the API side to ensure we get future bookings
-      const response = await api.bookings.getBookings({
+      // Use optimized API endpoint with server-side filtering
+      const headers = await getAuthHeaders();
+      const queryParams = new URLSearchParams({
         business_id: business.id,
-        limit: PAGINATION_CONFIG.databaseQueryLimit,
+        date_from: startDateStr,
+        date_to: endDateStr,
+        limit: PAGINATION_CONFIG.databaseQueryLimit.toString(),
+      });
+      
+      const response = await fetch(`/api/bookings-optimized?${queryParams}`, {
+        headers,
       });
 
-      if (response.data && typeof response.data === 'object' && 'bookings' in response.data) {
-        const apiData = response.data as { bookings: any[]; stats?: any };
-        let bookingsData = apiData.bookings || [];
-        
-        // Filter by date range client-side to include past and future bookings
-        bookingsData = bookingsData.filter((booking: any) => {
-          if (!booking.booking_date) return false;
-          // Include bookings within our date range (past and future)
-          return booking.booking_date >= startDateStr && booking.booking_date <= endDateStr;
-        });
-        
-        setBookings(bookingsData);
-      } else {
-        throw new Error('No data received from API');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to load bookings: ${response.status}`);
       }
+
+      const data = await response.json();
+      
+      // The optimized API returns { bookings, stats, pagination }
+      const bookingsData = data.bookings || [];
+      setBookings(bookingsData);
+      
+      console.log("✅ Bookings loaded via optimized API:", {
+        count: bookingsData.length,
+        queryTime: data._meta?.query_time_ms,
+        fallbackMode: data._meta?.fallback_mode,
+        dateRange: { from: startDateStr, to: endDateStr },
+      });
+      
     } catch (error: any) {
       console.error("Error loading bookings:", error);
       toast({

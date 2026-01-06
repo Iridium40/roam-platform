@@ -70,7 +70,7 @@ export default function MessagesTab({ providerData, business }: MessagesTabProps
   const canSeeAllConversations = providerRole === "owner" || providerRole === "dispatcher";
   const isPollingRef = useRef(false);
 
-  // Load conversations (with optional silent mode for polling)
+  // Load conversations using optimized API (with optional silent mode for polling)
   const loadConversations = useCallback(async (silent: boolean = false) => {
     if (!user?.user_id) return;
     
@@ -83,14 +83,16 @@ export default function MessagesTab({ providerData, business }: MessagesTabProps
     isPollingRef.current = true;
 
     try {
-      const response = await fetch("/api/twilio-conversations/list-conversations", {
-        method: "POST",
+      // Use optimized conversations API - eliminates N+1 Twilio API calls
+      const queryParams = new URLSearchParams({
+        user_id: user.user_id,
+        user_type: providerRole,
+        ...(canSeeAllConversations && business?.id ? { business_id: business.id } : {}),
+      });
+      
+      const response = await fetch(`/api/conversations-optimized?${queryParams}`, {
+        method: "GET",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: user.user_id,
-          userType: providerRole,
-          businessId: canSeeAllConversations ? business?.id : undefined,
-        }),
       });
 
       if (!response.ok) {
@@ -98,7 +100,25 @@ export default function MessagesTab({ providerData, business }: MessagesTabProps
       }
 
       const data = await response.json();
-      setConversations(data.conversations || []);
+      
+      // Map the optimized API response to the expected format
+      const mappedConversations = (data.conversations || []).map((conv: any) => ({
+        metadataId: conv.metadataId || conv.id,
+        bookingId: conv.bookingId || conv.booking_id,
+        twilioConversationSid: conv.twilioConversationSid || conv.twilio_conversation_sid,
+        lastMessageAt: conv.lastMessageAt || conv.last_message_at,
+        unreadCount: conv.unreadCount || conv.unread_count || 0,
+        lastMessage: conv.lastMessage || conv.last_message,
+        booking: conv.booking,
+      }));
+      
+      setConversations(mappedConversations);
+      
+      console.log("✅ Conversations loaded via optimized API:", {
+        count: mappedConversations.length,
+        queryTime: data._meta?.query_time_ms,
+        fallbackMode: data._meta?.fallback_mode,
+      });
     } catch (error) {
       console.error("Error loading conversations:", error);
       if (!silent) {

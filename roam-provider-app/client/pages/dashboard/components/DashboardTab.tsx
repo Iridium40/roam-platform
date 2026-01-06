@@ -16,13 +16,33 @@ import {
   UserX,
   Bell,
 } from "lucide-react";
-import { supabase } from "@/lib/supabase";
 import { useNotificationCount } from "@/hooks/useNotificationCount";
+import { getAuthHeaders } from "@/lib/api/authUtils";
 
 interface DashboardTabProps {
   providerData: any;
   business: any;
   providerRole?: string; // 'owner', 'dispatcher', or 'provider'
+}
+
+// Interface for dashboard stats from optimized API
+interface DashboardStats {
+  total_bookings: number;
+  pending_bookings: number;
+  confirmed_bookings: number;
+  completed_bookings: number;
+  cancelled_bookings: number;
+  in_progress_bookings: number;
+  unassigned_bookings: number;
+  total_revenue: number;
+  total_staff: number;
+  active_staff: number;
+  total_services: number;
+  active_services: number;
+  total_locations: number;
+  active_locations: number;
+  todays_confirmed_count: number;
+  recent_bookings: any[];
 }
 
 export default function DashboardTab({
@@ -31,8 +51,7 @@ export default function DashboardTab({
   providerRole,
 }: DashboardTabProps) {
   const navigate = useNavigate();
-  const [bookings, setBookings] = useState<any[]>([]);
-  const [staffMembers, setStaffMembers] = useState<any[]>([]);
+  const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(false);
   
   // Get unread conversations count
@@ -88,7 +107,7 @@ export default function DashboardTab({
   const role = providerRole || providerData?.provider_role;
   const isOwner = role === 'owner';
 
-  // Load dashboard data
+  // Load dashboard data using optimized API endpoint
   const loadDashboardData = async () => {
     if (!providerData) return;
 
@@ -96,42 +115,64 @@ export default function DashboardTab({
       setLoading(true);
       const businessId = business?.id || providerData?.business_id;
 
-      // Load bookings
-      const { data: bookingsData, error: bookingsError } = await supabase
-        .from('bookings')
-        .select(`
-          *,
-          services:service_id(*),
-          customer_profiles:customer_id(id, user_id, first_name, last_name, email, phone, image_url),
-          providers:provider_id(id, user_id, first_name, last_name, email, image_url)
-        `)
-        .eq('business_id', businessId)
-        .order('created_at', { ascending: false });
-
-      if (bookingsError) throw bookingsError;
-      
-      // Debug: Log the booking data to see customer profile structure
-      console.log("🔍 BOOKING DATA DEBUG:", {
-        bookingsCount: bookingsData?.length || 0,
-        sampleBooking: bookingsData?.[0],
-        customerProfiles: bookingsData?.[0]?.customer_profiles,
-        hasImageUrl: !!bookingsData?.[0]?.customer_profiles?.image_url,
-        imageUrl: bookingsData?.[0]?.customer_profiles?.image_url
+      // Use optimized dashboard stats API endpoint
+      const headers = await getAuthHeaders();
+      const response = await fetch(`/api/business/dashboard-stats?business_id=${businessId}`, {
+        headers,
       });
+
+      if (!response.ok) {
+        throw new Error(`Failed to load dashboard stats: ${response.status}`);
+      }
+
+      const data = await response.json();
       
-      setBookings(bookingsData || []);
+      // Set dashboard stats from optimized API
+      setDashboardStats({
+        total_bookings: data.total_bookings || 0,
+        pending_bookings: data.pending_bookings || 0,
+        confirmed_bookings: data.confirmed_bookings || 0,
+        completed_bookings: data.completed_bookings || 0,
+        cancelled_bookings: data.cancelled_bookings || 0,
+        in_progress_bookings: data.in_progress_bookings || 0,
+        unassigned_bookings: data.unassigned_bookings || 0,
+        total_revenue: data.total_revenue || 0,
+        total_staff: data.total_staff || 0,
+        active_staff: data.active_staff || 0,
+        total_services: data.total_services || 0,
+        active_services: data.active_services || 0,
+        total_locations: data.total_locations || 0,
+        active_locations: data.active_locations || 0,
+        todays_confirmed_count: data.todays_confirmed_count || 0,
+        recent_bookings: data.recent_bookings || [],
+      });
 
-      // Load staff members
-      const { data: staffData, error: staffError } = await supabase
-        .from('providers')
-        .select('*')
-        .eq('business_id', businessId);
-
-      if (staffError) throw staffError;
-      setStaffMembers(staffData || []);
+      console.log("✅ Dashboard stats loaded via optimized API:", {
+        queryTime: data._meta?.query_time_ms,
+        fallbackMode: data._meta?.fallback_mode,
+      });
 
     } catch (error) {
       console.error('Error loading dashboard data:', error);
+      // Set empty stats on error
+      setDashboardStats({
+        total_bookings: 0,
+        pending_bookings: 0,
+        confirmed_bookings: 0,
+        completed_bookings: 0,
+        cancelled_bookings: 0,
+        in_progress_bookings: 0,
+        unassigned_bookings: 0,
+        total_revenue: 0,
+        total_staff: 0,
+        active_staff: 0,
+        total_services: 0,
+        active_services: 0,
+        total_locations: 0,
+        active_locations: 0,
+        todays_confirmed_count: 0,
+        recent_bookings: [],
+      });
     } finally {
       setLoading(false);
     }
@@ -163,26 +204,24 @@ export default function DashboardTab({
     );
   }
 
-  // Calculate stats
-  const totalBookings = bookings.length;
-  const pendingBookings = bookings.filter(b => b.booking_status === 'pending').length;
-  const confirmedBookings = bookings.filter(b => b.booking_status === 'confirmed').length;
-  const completedBookings = bookings.filter(b => b.booking_status === 'completed').length;
-  const cancelledBookings = bookings.filter(b => b.booking_status === 'cancelled').length;
+  // Use stats from optimized API
+  const totalBookings = dashboardStats?.total_bookings || 0;
+  const pendingBookings = dashboardStats?.pending_bookings || 0;
+  const confirmedBookings = dashboardStats?.confirmed_bookings || 0;
+  const completedBookings = dashboardStats?.completed_bookings || 0;
+  const cancelledBookings = dashboardStats?.cancelled_bookings || 0;
 
   // Get unread conversations count from notification hook
   const unreadConversations = notificationCount.unreadMessages || 0;
   
-  // Calculate unassigned bookings (bookings without a provider assigned)
-  const unassignedBookings = bookings.filter(b => 
-    !b.provider_id && 
-    (b.booking_status === 'pending' || b.booking_status === 'confirmed')
-  ).length;
+  // Unassigned bookings count from optimized API
+  const unassignedBookings = dashboardStats?.unassigned_bookings || 0;
 
-  // Recent bookings (last 5)
-  const recentBookings = bookings
-    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-    .slice(0, 5);
+  // Recent bookings from optimized API (already limited to 5 by the database function)
+  const recentBookings = dashboardStats?.recent_bookings || [];
+  
+  // Today's confirmed bookings count
+  const todaysConfirmedCount = dashboardStats?.todays_confirmed_count || 0;
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -384,13 +423,7 @@ export default function DashboardTab({
               >
                 <h4 className="font-medium text-green-900">Today's Schedule</h4>
                 <p className="text-sm text-green-700 mt-1">
-                  {bookings.filter(b => 
-                    b.booking_status === 'confirmed' && 
-                    new Date(b.booking_date).toDateString() === new Date().toDateString()
-                  ).length} confirmed booking{bookings.filter(b => 
-                    b.booking_status === 'confirmed' && 
-                    new Date(b.booking_date).toDateString() === new Date().toDateString()
-                  ).length !== 1 ? 's' : ''} today
+                  {todaysConfirmedCount} confirmed booking{todaysConfirmedCount !== 1 ? 's' : ''} today
                 </p>
               </div>
 

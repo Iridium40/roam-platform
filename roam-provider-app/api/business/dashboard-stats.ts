@@ -79,10 +79,40 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Call the optimized PostgreSQL function
     const startTime = Date.now();
+    const today = new Date().toISOString().split('T')[0];
     
-    const { data: stats, error: statsError } = await supabase
-      .rpc('get_provider_dashboard_stats', { p_business_id: business_id })
-      .single();
+    // Fetch stats from RPC and additional data in parallel
+    const [statsResult, recentBookingsResult, additionalStatsResult] = await Promise.all([
+      supabase.rpc('get_provider_dashboard_stats', { p_business_id: business_id }).single(),
+      // Fetch recent bookings with relations
+      supabase
+        .from('bookings')
+        .select(`
+          id, booking_reference, booking_date, start_time, end_time, 
+          booking_status, total_amount, created_at, guest_name,
+          services:service_id(id, name),
+          customer_profiles:customer_id(id, user_id, first_name, last_name, email, image_url)
+        `)
+        .eq('business_id', business_id)
+        .order('created_at', { ascending: false })
+        .limit(5),
+      // Fetch additional stats (unassigned count and today's confirmed)
+      supabase
+        .from('bookings')
+        .select('id, booking_status, provider_id, booking_date')
+        .eq('business_id', business_id)
+        .in('booking_status', ['pending', 'confirmed']),
+    ]);
+
+    const { data: stats, error: statsError } = statsResult;
+    const recentBookings = recentBookingsResult.data || [];
+    const activeBookings = additionalStatsResult.data || [];
+    
+    // Calculate unassigned bookings and today's confirmed count
+    const unassignedBookings = activeBookings.filter((b: any) => !b.provider_id).length;
+    const todaysConfirmedCount = activeBookings.filter((b: any) => 
+      b.booking_status === 'confirmed' && b.booking_date === today
+    ).length;
 
     const queryTime = Date.now() - startTime;
 
@@ -108,6 +138,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     
     return res.status(200).json({
       ...statsObject,
+      unassigned_bookings: unassignedBookings,
+      todays_confirmed_count: todaysConfirmedCount,
+      recent_bookings: recentBookings,
       _meta: {
         query_time_ms: queryTime,
         business_id,
@@ -127,36 +160,62 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 // Fallback function for when the database function doesn't exist yet
 async function fallbackStats(supabase: any, businessId: string, res: VercelResponse) {
   const startTime = Date.now();
+  const today = new Date().toISOString().split('T')[0];
 
   // Use Promise.all for parallel queries (still better than sequential)
   const [
     bookingsResult,
+    recentBookingsResult,
     staffResult,
     servicesResult,
     locationsResult,
   ] = await Promise.all([
     supabase
       .from('bookings')
-      .select('booking_status, total_amount, created_at', { count: 'exact' })
+      .select('booking_status, total_amount, created_at, provider_id, booking_date')
       .eq('business_id', businessId),
+    // Fetch recent bookings with relations
+    supabase
+      .from('bookings')
+      .select(`
+        id, booking_reference, booking_date, start_time, end_time, 
+        booking_status, total_amount, created_at, guest_name,
+        services:service_id(id, name),
+        customer_profiles:customer_id(id, user_id, first_name, last_name, email, image_url)
+      `)
+      .eq('business_id', businessId)
+      .order('created_at', { ascending: false })
+      .limit(5),
     supabase
       .from('providers')
-      .select('id, is_active', { count: 'exact' })
+      .select('id, is_active')
       .eq('business_id', businessId),
     supabase
       .from('business_services')
-      .select('id, is_active', { count: 'exact' })
+      .select('id, is_active')
       .eq('business_id', businessId),
     supabase
       .from('business_locations')
-      .select('id, is_active', { count: 'exact' })
+      .select('id, is_active')
       .eq('business_id', businessId),
   ]);
 
   const bookings = bookingsResult.data || [];
+  const recentBookings = recentBookingsResult.data || [];
   const staff = staffResult.data || [];
   const services = servicesResult.data || [];
   const locations = locationsResult.data || [];
+
+  // Calculate unassigned bookings (no provider_id and status is pending or confirmed)
+  const unassignedBookings = bookings.filter((b: any) => 
+    !b.provider_id && 
+    (b.booking_status === 'pending' || b.booking_status === 'confirmed')
+  ).length;
+
+  // Calculate today's confirmed bookings
+  const todaysConfirmedCount = bookings.filter((b: any) => 
+    b.booking_status === 'confirmed' && b.booking_date === today
+  ).length;
 
   // Calculate stats
   const stats = {
@@ -166,6 +225,8 @@ async function fallbackStats(supabase: any, businessId: string, res: VercelRespo
     completed_bookings: bookings.filter((b: any) => b.booking_status === 'completed').length,
     cancelled_bookings: bookings.filter((b: any) => b.booking_status === 'cancelled').length,
     in_progress_bookings: bookings.filter((b: any) => b.booking_status === 'in_progress').length,
+    unassigned_bookings: unassignedBookings,
+    todays_confirmed_count: todaysConfirmedCount,
     
     total_revenue: bookings
       .filter((b: any) => b.booking_status === 'completed')
@@ -179,6 +240,8 @@ async function fallbackStats(supabase: any, businessId: string, res: VercelRespo
     
     total_locations: locations.length,
     active_locations: locations.filter((l: any) => l.is_active).length,
+    
+    recent_bookings: recentBookings,
     
     stats_generated_at: new Date().toISOString(),
   };
