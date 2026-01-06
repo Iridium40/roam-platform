@@ -380,11 +380,11 @@ export default function ProfileTab({
       {/* Profile Content */}
       <Tabs defaultValue="profile" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="profile" className="flex items-center space-x-2">
+          <TabsTrigger value="profile" className="flex items-center space-x-2 data-[state=active]:bg-[#f88221] data-[state=active]:text-white">
             <User className="w-4 h-4" />
             <span>Profile Info</span>
           </TabsTrigger>
-          <TabsTrigger value="notifications" className="flex items-center space-x-2">
+          <TabsTrigger value="notifications" className="flex items-center space-x-2 data-[state=active]:bg-[#f88221] data-[state=active]:text-white">
             <Bell className="w-4 h-4" />
             <span>Notifications</span>
           </TabsTrigger>

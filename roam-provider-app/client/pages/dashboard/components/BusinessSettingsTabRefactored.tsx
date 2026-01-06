@@ -381,10 +381,10 @@ export function BusinessSettingsTab({ providerData, business, onBusinessUpdate }
       {/* Main content in tabs */}
       <Tabs defaultValue="basic-info" className="w-full">
         <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="basic-info">Basic Info</TabsTrigger>
-          <TabsTrigger value="hours">Hours</TabsTrigger>
-          <TabsTrigger value="documents">Documents</TabsTrigger>
-          <TabsTrigger value="locations">Locations</TabsTrigger>
+          <TabsTrigger value="basic-info" className="data-[state=active]:bg-[#f88221] data-[state=active]:text-white">Basic Info</TabsTrigger>
+          <TabsTrigger value="hours" className="data-[state=active]:bg-[#f88221] data-[state=active]:text-white">Hours</TabsTrigger>
+          <TabsTrigger value="documents" className="data-[state=active]:bg-[#f88221] data-[state=active]:text-white">Documents</TabsTrigger>
+          <TabsTrigger value="locations" className="data-[state=active]:bg-[#f88221] data-[state=active]:text-white">Locations</TabsTrigger>
         </TabsList>
 
         <TabsContent value="basic-info" className="space-y-6">

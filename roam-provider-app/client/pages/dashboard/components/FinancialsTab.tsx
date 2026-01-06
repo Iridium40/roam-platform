@@ -1088,11 +1088,11 @@ export default function FinancialsTab({
         
         {/* Desktop: Tab list */}
         <TabsList className={`hidden md:grid w-full ${isOwner ? 'grid-cols-5' : 'grid-cols-4'}`}>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="payouts">Payouts</TabsTrigger>
-          <TabsTrigger value="transactions">Transactions</TabsTrigger>
-          {isOwner && <TabsTrigger value="tips">Tips</TabsTrigger>}
-          <TabsTrigger value="settings">Settings</TabsTrigger>
+          <TabsTrigger value="overview" className="data-[state=active]:bg-[#f88221] data-[state=active]:text-white">Overview</TabsTrigger>
+          <TabsTrigger value="payouts" className="data-[state=active]:bg-[#f88221] data-[state=active]:text-white">Payouts</TabsTrigger>
+          <TabsTrigger value="transactions" className="data-[state=active]:bg-[#f88221] data-[state=active]:text-white">Transactions</TabsTrigger>
+          {isOwner && <TabsTrigger value="tips" className="data-[state=active]:bg-[#f88221] data-[state=active]:text-white">Tips</TabsTrigger>}
+          <TabsTrigger value="settings" className="data-[state=active]:bg-[#f88221] data-[state=active]:text-white">Settings</TabsTrigger>
         </TabsList>
 
         {/* Overview Tab */}

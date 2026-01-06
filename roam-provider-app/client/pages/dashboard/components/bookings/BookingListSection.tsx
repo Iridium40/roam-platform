@@ -114,13 +114,13 @@ export default function BookingListSection({
       <TabsList className="grid w-full grid-cols-2 h-12">
         <TabsTrigger 
           value="active"
-          className="data-[state=active]:bg-gray-800 data-[state=active]:text-white data-[state=active]:shadow-sm transition-all"
+          className="data-[state=active]:bg-[#f88221] data-[state=active]:text-white data-[state=active]:shadow-sm transition-all"
         >
           Active Bookings ({activeBookings.length})
         </TabsTrigger>
         <TabsTrigger 
           value="closed"
-          className="data-[state=active]:bg-gray-800 data-[state=active]:text-white data-[state=active]:shadow-sm transition-all"
+          className="data-[state=active]:bg-[#f88221] data-[state=active]:text-white data-[state=active]:shadow-sm transition-all"
         >
           Closed Bookings ({closedBookings.length})
         </TabsTrigger>

@@ -109,11 +109,11 @@ export default function ServicesTabSimplified({
       {/* Tabs for Services and Add-ons */}
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'services' | 'addons')} className="w-full">
         <TabsList className="grid w-full max-w-md grid-cols-2">
-          <TabsTrigger value="services" className="flex items-center gap-2">
+          <TabsTrigger value="services" className="flex items-center gap-2 data-[state=active]:bg-[#f88221] data-[state=active]:text-white">
             <Package className="h-4 w-4" />
             Services
           </TabsTrigger>
-          <TabsTrigger value="addons" className="flex items-center gap-2">
+          <TabsTrigger value="addons" className="flex items-center gap-2 data-[state=active]:bg-[#f88221] data-[state=active]:text-white">
             <Puzzle className="h-4 w-4" />
             Add-ons
           </TabsTrigger>

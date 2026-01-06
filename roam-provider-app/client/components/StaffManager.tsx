@@ -917,19 +917,19 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
 
         {/* Desktop Tabs */}
         <TabsList className="hidden lg:inline-grid lg:w-auto lg:grid-cols-5">
-          <TabsTrigger value="all">All ({staff.length})</TabsTrigger>
-          <TabsTrigger value="owners">
+          <TabsTrigger value="all" className="data-[state=active]:bg-[#f88221] data-[state=active]:text-white">All ({staff.length})</TabsTrigger>
+          <TabsTrigger value="owners" className="data-[state=active]:bg-[#f88221] data-[state=active]:text-white">
             Owners ({staff.filter((s) => s.provider_role === "owner").length})
           </TabsTrigger>
-          <TabsTrigger value="dispatchers">
+          <TabsTrigger value="dispatchers" className="data-[state=active]:bg-[#f88221] data-[state=active]:text-white">
             Dispatchers (
             {staff.filter((s) => s.provider_role === "dispatcher").length})
           </TabsTrigger>
-          <TabsTrigger value="providers">
+          <TabsTrigger value="providers" className="data-[state=active]:bg-[#f88221] data-[state=active]:text-white">
             Providers (
             {staff.filter((s) => s.provider_role === "provider").length})
           </TabsTrigger>
-          <TabsTrigger value="pending">
+          <TabsTrigger value="pending" className="data-[state=active]:bg-[#f88221] data-[state=active]:text-white">
             Pending (
             {staff.filter((s) => s.verification_status === "pending").length})
           </TabsTrigger>
@@ -1159,9 +1159,9 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
 
             <Tabs value={editDialogTab} onValueChange={setEditDialogTab}>
               <TabsList className={`grid w-full ${(selectedStaff.provider_role === 'provider' || selectedStaff.provider_role === 'owner') ? 'grid-cols-2' : 'grid-cols-1'}`}>
-                <TabsTrigger value="details">Details</TabsTrigger>
+                <TabsTrigger value="details" className="data-[state=active]:bg-[#f88221] data-[state=active]:text-white">Details</TabsTrigger>
                 {(selectedStaff.provider_role === 'provider' || selectedStaff.provider_role === 'owner') && (
-                  <TabsTrigger value="services">Services</TabsTrigger>
+                  <TabsTrigger value="services" className="data-[state=active]:bg-[#f88221] data-[state=active]:text-white">Services</TabsTrigger>
                 )}
               </TabsList>
 
