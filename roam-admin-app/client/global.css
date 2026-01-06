@@ -43,7 +43,7 @@
 
     --sidebar-background: 0 0% 100%; /* #ffffff */
     --sidebar-foreground: 215 25% 27%; /* #475569 */
-    --sidebar-primary: 220 52% 36%; /* #375289 */
+    --sidebar-primary: 27 94% 55%; /* #f88221 */
     --sidebar-primary-foreground: 210 40% 98%;
     --sidebar-accent: 210 40% 96%; /* #f1f5f9 */
     --sidebar-accent-foreground: 216 59% 24%;
@@ -82,7 +82,7 @@
 
     --sidebar-background: 220 52% 10%;
     --sidebar-foreground: 210 40% 96%;
-    --sidebar-primary: 220 89% 78%;
+    --sidebar-primary: 27 94% 55%; /* #f88221 */
     --sidebar-primary-foreground: 220 52% 10%;
     --sidebar-accent: 217 33% 16%;
     --sidebar-accent-foreground: 210 40% 96%;
