@@ -2,14 +2,7 @@ import { ROAMDataTable, type Column } from "@/components/ui/roam-data-table";
 import { BusinessRowActions } from "./BusinessActions";
 import { ROAMBadge } from "@/components/ui/roam-badge";
 import { Building2, Globe, Mail, Phone, CreditCard, Star } from "lucide-react";
-
-type VerificationStatus = "pending" | "approved" | "rejected" | "suspended";
-type BusinessType =
-  | "independent"
-  | "small_business"
-  | "franchise"
-  | "enterprise"
-  | "other";
+import type { VerificationStatus, BusinessType } from "@roam/shared";
 
 interface BusinessProfile {
   id: string;

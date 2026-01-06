@@ -107,251 +107,112 @@ export default function AdminDashboard() {
   );
   const [loading, setLoading] = useState(true);
 
-  // Fetch dashboard statistics
+  // Fetch dashboard statistics using optimized RPC function
   const fetchDashboardStats = async () => {
     try {
-      const today = new Date().toISOString().split("T")[0];
-      const weekStart = new Date();
-      weekStart.setDate(weekStart.getDate() - 7);
-      const weekStartStr = weekStart.toISOString().split("T")[0];
-      const weekStartTimestamp = weekStart.toISOString(); // Full timestamp for updated_at comparisons
+      // Use the optimized RPC function that batches all queries into one database call
+      const { data, error } = await supabase.rpc('get_admin_dashboard_stats');
 
-      // Today's bookings
-      const { data: todayBookingsData } = await supabase
-        .from("bookings")
-        .select("booking_status, total_amount, tip_amount")
-        .gte("booking_date", today)
-        .lt(
-          "booking_date",
-          new Date(Date.now() + 24 * 60 * 60 * 1000)
-            .toISOString()
-            .split("T")[0],
-        );
+      if (error) {
+        console.error("Error calling get_admin_dashboard_stats RPC:", error);
+        // Fall back to basic stats if RPC fails (e.g., function not deployed yet)
+        await fetchDashboardStatsFallback();
+        return;
+      }
 
-      const todayTotal = todayBookingsData?.length || 0;
-      const todayCompleted =
-        todayBookingsData?.filter((b) => b.booking_status === "completed")
-          .length || 0;
-      const todayPending =
-        todayBookingsData?.filter((b) => b.booking_status === "pending")
-          .length || 0;
-
-      // Today's revenue
-      const todayRevenue =
-        todayBookingsData?.reduce(
-          (sum, booking) => sum + (booking.total_amount || 0),
-          0,
-        ) || 0;
-
-      // Yesterday's revenue for comparison
-      const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000)
-        .toISOString()
-        .split("T")[0];
-      const { data: yesterdayBookingsData } = await supabase
-        .from("bookings")
-        .select("total_amount")
-        .gte("booking_date", yesterday)
-        .lt("booking_date", today);
-
-      const yesterdayRevenue =
-        yesterdayBookingsData?.reduce(
-          (sum, booking) => sum + (booking.total_amount || 0),
-          0,
-        ) || 0;
-
-      // Calculate today's revenue change percentage
-      const todayRevenueChange =
-        yesterdayRevenue > 0
-          ? Math.round(
-              ((todayRevenue - yesterdayRevenue) / yesterdayRevenue) * 100,
-            )
-          : 0;
-
-      // Weekly revenue
-      const { data: weeklyRevenueData } = await supabase
-        .from("bookings")
-        .select("total_amount")
-        .gte("booking_date", weekStartStr)
-        .not("total_amount", "is", null);
-
-      const weeklyRevenue =
-        weeklyRevenueData?.reduce(
-          (sum, booking) => sum + (booking.total_amount || 0),
-          0,
-        ) || 0;
-
-      // Previous week's revenue for comparison
-      const twoWeeksAgo = new Date();
-      twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
-      const twoWeeksAgoStr = twoWeeksAgo.toISOString().split("T")[0];
-
-      const { data: lastWeekRevenueData } = await supabase
-        .from("bookings")
-        .select("total_amount")
-        .gte("booking_date", twoWeeksAgoStr)
-        .lt("booking_date", weekStartStr);
-
-      const lastWeekRevenue =
-        lastWeekRevenueData?.reduce(
-          (sum, booking) => sum + (booking.total_amount || 0),
-          0,
-        ) || 0;
-
-      // Calculate weekly revenue change percentage
-      const weeklyRevenueChange =
-        lastWeekRevenue > 0
-          ? Math.round(
-              ((weeklyRevenue - lastWeekRevenue) / lastWeekRevenue) * 100,
-            )
-          : 0;
-
-      // Total stats
-      const { data: allBookingsData } = await supabase
-        .from("bookings")
-        .select("booking_status, total_amount");
-
-      const totalBookings = allBookingsData?.length || 0;
-      const totalRevenue =
-        allBookingsData?.reduce(
-          (sum, booking) => sum + (booking.total_amount || 0),
-          0,
-        ) || 0;
-      const completedBookings =
-        allBookingsData?.filter((b) => b.booking_status === "completed")
-          .length || 0;
-      const completionRate =
-        totalBookings > 0
-          ? Math.round((completedBookings / totalBookings) * 100)
-          : 0;
-
-      // Average rating (from reviews if available)
-      const { data: reviewsData } = await supabase
-        .from("reviews")
-        .select("overall_rating")
-        .not("overall_rating", "is", null);
-
-      const avgRating =
-        reviewsData && reviewsData.length > 0
-          ? reviewsData.reduce((sum, review) => sum + (review.overall_rating || 0), 0) /
-            reviewsData.length
-          : 0;
-
-      // Promotion usage stats
-      const { data: activePromotionsData } = await supabase
-        .from("promotions")
-        .select("id")
-        .eq("is_active", true);
-
-      const { count: totalPromotionUsageCount } = await supabase
-        .from("promotion_usage")
-        .select("*", { count: "exact", head: true });
-
-      const { count: weeklyPromotionUsageCount } = await supabase
-        .from("promotion_usage")
-        .select("*", { count: "exact", head: true })
-        .gte("created_at", weekStartTimestamp);
-
-      const totalActivePromotions = activePromotionsData?.length || 0;
-      const totalUsage = totalPromotionUsageCount || 0;
-      const weeklyUsage = weeklyPromotionUsageCount || 0;
-
-      // Top services by booking count (last 30 days)
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split("T")[0];
-
-      const { data: topServicesData } = await supabase
-        .from("services")
-        .select(
-          `
-          id,
-          name,
-          service_subcategories!inner(service_subcategory_type)
-        `,
-        )
-        .eq("is_active", true)
-        .limit(5);
-
-      // Get booking counts for each service
-      const topServicesWithCounts = await Promise.all(
-        (topServicesData || []).map(async (service) => {
-          const { count } = await supabase
-            .from("bookings")
-            .select("*", { count: "exact", head: true })
-            .eq("service_id", service.id)
-            .gte("created_at", thirtyDaysAgoStr);
-
-          return {
+      if (data) {
+        setStats({
+          todayBookings: {
+            total: data.todayBookings?.total || 0,
+            completed: data.todayBookings?.completed || 0,
+            pending: data.todayBookings?.pending || 0,
+          },
+          todayRevenue: { 
+            total: data.todayRevenue?.total || 0, 
+            change: data.todayRevenue?.change || 0 
+          },
+          weeklyRevenue: { 
+            total: data.weeklyRevenue?.total || 0, 
+            change: data.weeklyRevenue?.change || 0 
+          },
+          promotionUsage: {
+            totalActive: data.promotionUsage?.totalActive || 0,
+            usedThisWeek: data.promotionUsage?.usedThisWeek || 0,
+            totalUsage: data.promotionUsage?.totalUsage || 0,
+          },
+          topServices: (data.topServices || []).map((service: { id: string; name: string; booking_count: number; service_subcategory_type?: string }) => ({
             id: service.id,
             name: service.name,
-            booking_count: count || 0,
-            service_subcategory_type:
-              service.service_subcategories?.[0]?.service_subcategory_type,
-          };
-        }),
-      );
-
-      // Sort by booking count and take top 4
-      const sortedTopServices = topServicesWithCounts
-        .sort((a, b) => b.booking_count - a.booking_count)
-        .slice(0, 4);
-
-      // New Customers This Month
-      const monthStart = new Date();
-      monthStart.setDate(1);
-      monthStart.setHours(0, 0, 0, 0);
-      const monthStartStr = monthStart.toISOString();
-
-      const { count: newCustomersCount } = await supabase
-        .from("customer_profiles")
-        .select("*", { count: "exact", head: true })
-        .gte("created_at", monthStartStr);
-
-      // Active Businesses
-      const { count: activeBusinessesCount } = await supabase
-        .from("business_profiles")
-        .select("*", { count: "exact", head: true })
-        .eq("is_active", true);
-
-      // Pending Verification
-      const { count: pendingVerificationCount } = await supabase
-        .from("business_profiles")
-        .select("*", { count: "exact", head: true })
-        .eq("verification_status", "pending");
-
-      // New/Received Contact Submissions
-      const { count: newContactSubmissionsCount } = await supabase
-        .from("contact_submissions")
-        .select("*", { count: "exact", head: true })
-        .eq("status", "received");
-
-      setStats({
-        todayBookings: {
-          total: todayTotal,
-          completed: todayCompleted,
-          pending: todayPending,
-        },
-        todayRevenue: { total: todayRevenue, change: todayRevenueChange },
-        weeklyRevenue: { total: weeklyRevenue, change: weeklyRevenueChange },
-        promotionUsage: {
-          totalActive: totalActivePromotions,
-          usedThisWeek: weeklyUsage,
-          totalUsage,
-        },
-        topServices: sortedTopServices,
-        totalStats: {
-          totalBookings,
-          totalRevenue,
-          completionRate,
-          avgRating: Math.round(avgRating * 10) / 10,
-        },
-        newCustomersThisMonth: newCustomersCount || 0,
-        activeBusinesses: activeBusinessesCount || 0,
-        pendingVerification: pendingVerificationCount || 0,
-        newContactSubmissions: newContactSubmissionsCount || 0,
-      });
+            booking_count: service.booking_count || 0,
+            service_subcategory_type: service.service_subcategory_type,
+          })),
+          totalStats: {
+            totalBookings: data.totalStats?.totalBookings || 0,
+            totalRevenue: data.totalStats?.totalRevenue || 0,
+            completionRate: data.totalStats?.completionRate || 0,
+            avgRating: data.totalStats?.avgRating || 0,
+          },
+          newCustomersThisMonth: data.newCustomersThisMonth || 0,
+          activeBusinesses: data.activeBusinesses || 0,
+          pendingVerification: data.pendingVerification || 0,
+          newContactSubmissions: data.newContactSubmissions || 0,
+        });
+      }
     } catch (error) {
       console.error("Error fetching dashboard stats:", error);
+      // Fall back to basic stats on any error
+      await fetchDashboardStatsFallback();
+    }
+  };
+
+  // Fallback function using individual queries (in case RPC not deployed)
+  const fetchDashboardStatsFallback = async () => {
+    try {
+      // Fetch basic stats in parallel for better performance
+      const [
+        todayBookingsResult,
+        activeBusinessesResult,
+        pendingVerificationResult,
+        newContactSubmissionsResult,
+      ] = await Promise.all([
+        supabase
+          .from("bookings")
+          .select("booking_status, total_amount")
+          .gte("booking_date", new Date().toISOString().split("T")[0]),
+        supabase
+        .from("business_profiles")
+        .select("*", { count: "exact", head: true })
+          .eq("is_active", true),
+        supabase
+        .from("business_profiles")
+        .select("*", { count: "exact", head: true })
+          .eq("verification_status", "pending"),
+        supabase
+        .from("contact_submissions")
+        .select("*", { count: "exact", head: true })
+          .eq("status", "received"),
+      ]);
+
+      const todayBookingsData = todayBookingsResult.data || [];
+      const todayTotal = todayBookingsData.length;
+      const todayCompleted = todayBookingsData.filter((b) => b.booking_status === "completed").length;
+      const todayPending = todayBookingsData.filter((b) => b.booking_status === "pending").length;
+      const todayRevenue = todayBookingsData.reduce((sum, b) => sum + (b.total_amount || 0), 0);
+
+      setStats({
+        todayBookings: { total: todayTotal, completed: todayCompleted, pending: todayPending },
+        todayRevenue: { total: todayRevenue, change: 0 },
+        weeklyRevenue: { total: 0, change: 0 },
+        promotionUsage: { totalActive: 0, usedThisWeek: 0, totalUsage: 0 },
+        topServices: [],
+        totalStats: { totalBookings: 0, totalRevenue: 0, completionRate: 0, avgRating: 0 },
+        newCustomersThisMonth: 0,
+        activeBusinesses: activeBusinessesResult.count || 0,
+        pendingVerification: pendingVerificationResult.count || 0,
+        newContactSubmissions: newContactSubmissionsResult.count || 0,
+      });
+    } catch (error) {
+      console.error("Error in fallback stats fetch:", error);
     }
   };
 

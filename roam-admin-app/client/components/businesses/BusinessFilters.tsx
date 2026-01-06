@@ -1,13 +1,6 @@
 import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
-type VerificationStatus = "pending" | "approved" | "rejected" | "suspended";
-type BusinessType =
-  | "independent"
-  | "small_business"
-  | "franchise"
-  | "enterprise"
-  | "other";
+import type { VerificationStatus, BusinessType } from "@roam/shared";
 
 interface BusinessFiltersProps {
   statusFilter: "all" | "active" | "inactive";

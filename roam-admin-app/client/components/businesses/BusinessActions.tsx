@@ -1,14 +1,7 @@
 import { Plus, Eye, Edit, Trash2, CheckCircle, XCircle, Star, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ROAMBadge } from "@/components/ui/roam-badge";
-
-type VerificationStatus = "pending" | "approved" | "rejected" | "suspended";
-type BusinessType =
-  | "independent"
-  | "small_business"
-  | "franchise"
-  | "enterprise"
-  | "other";
+import type { VerificationStatus, BusinessType } from "@roam/shared";
 
 interface BusinessProfile {
   id: string;

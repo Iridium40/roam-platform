@@ -26,14 +26,7 @@ import {
   XCircle,
   Clock,
 } from "lucide-react";
-
-type VerificationStatus = "pending" | "approved" | "rejected" | "suspended";
-type BusinessType =
-  | "independent"
-  | "small_business"
-  | "franchise"
-  | "enterprise"
-  | "other";
+import type { VerificationStatus, BusinessType } from "@roam/shared";
 
 interface BusinessProfile {
   id: string;

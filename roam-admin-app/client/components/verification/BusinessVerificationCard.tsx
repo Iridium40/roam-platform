@@ -21,16 +21,7 @@ import {
   ChevronUp,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-
-type VerificationStatus = "pending" | "approved" | "rejected" | "suspended";
-type BusinessDocumentStatus = "pending" | "verified" | "rejected" | "under_review";
-type BusinessDocumentType =
-  | "drivers_license"
-  | "proof_of_address"
-  | "liability_insurance"
-  | "professional_license"
-  | "professional_certificate"
-  | "business_license";
+import type { VerificationStatus, BusinessDocumentStatus, BusinessDocumentType } from "@roam/shared";
 
 interface BusinessDocument {
   id: string;
