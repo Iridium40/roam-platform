@@ -139,28 +139,69 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
     return `${currentUserType}-${currentUserId}`;
   }, [currentUserId, currentUserType]);
 
+  // Fetch customer user_id if missing from booking data
+  useEffect(() => {
+    if (!booking) {
+      setCustomerUserId(null);
+      return;
+    }
+
+    // If user_id is already available, use it
+    if (booking.customer_profiles?.user_id) {
+      setCustomerUserId(booking.customer_profiles.user_id);
+      return;
+    }
+
+    // Otherwise, fetch it from the database
+    const customerProfileId = booking.customer_profiles?.id || booking.customer_id;
+    if (!customerProfileId) {
+      setCustomerUserId(null);
+      return;
+    }
+
+    const fetchCustomerUserId = async () => {
+      try {
+        const { data: customerProfile, error } = await supabase
+          .from('customer_profiles')
+          .select('user_id')
+          .eq('id', customerProfileId)
+          .single();
+        
+        if (!error && customerProfile?.user_id) {
+          setCustomerUserId(customerProfile.user_id);
+          console.log('✅ Fetched customer user_id from database:', customerProfile.user_id);
+        } else {
+          console.error('❌ Failed to fetch customer user_id:', error);
+          setCustomerUserId(null);
+        }
+      } catch (error) {
+        console.error('❌ Error fetching customer user_id:', error);
+        setCustomerUserId(null);
+      }
+    };
+
+    fetchCustomerUserId();
+  }, [booking?.customer_profiles?.id, booking?.customer_id, booking?.customer_profiles?.user_id]);
+
   const buildParticipantPayload = useCallback((): BookingConversationParticipantData[] => {
     if (!booking) return [];
     const payload: BookingConversationParticipantData[] = [];
 
-    // Always add customer using their user_id from customer_profiles
-    if (booking.customer_profiles?.user_id) {
+    // Always add customer using their user_id from customer_profiles or fetched state
+    const effectiveCustomerUserId = booking.customer_profiles?.user_id || customerUserId;
+    
+    if (effectiveCustomerUserId) {
       payload.push({
-        userId: booking.customer_profiles.user_id,
+        userId: effectiveCustomerUserId,
         userType: 'customer',
-        userName: `${booking.customer_profiles.first_name ?? ''} ${booking.customer_profiles.last_name ?? ''}`.trim(),
-        email: booking.customer_profiles.email ?? null,
-      });
-    } else if (booking.customer_profiles?.id) {
-      // Fallback: if user_id is not available, log error
-      console.error('❌ customer_profiles.user_id not found, using id as fallback (will cause FK error)');
-      payload.push({
-        userId: booking.customer_profiles.id,
-        userType: 'customer',
-        userName: `${booking.customer_profiles.first_name ?? ''} ${booking.customer_profiles.last_name ?? ''}`.trim(),
-        email: booking.customer_profiles.email ?? null,
+        userName: booking.customer_profiles
+          ? `${booking.customer_profiles.first_name ?? ''} ${booking.customer_profiles.last_name ?? ''}`.trim()
+          : booking.customer_name || 'Customer',
+        email: booking.customer_profiles?.email ?? null,
       });
     } else if (booking.customer_id) {
+      // Last resort: use customer_id but log warning
+      console.warn('⚠️ Using customer_id as fallback - this may cause FK errors. customer_id:', booking.customer_id);
       payload.push({
         userId: booking.customer_id,
         userType: 'customer',
@@ -216,7 +257,7 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
     }
 
     return payload;
-  }, [booking, currentUserId, currentUserType, provider]);
+  }, [booking, currentUserId, currentUserType, provider, customerUserId]);
   
   const [messages, setMessages] = useState<ConversationMessageWithAuthor[]>([]);
   const [participants, setParticipants] = useState<BookingConversationParticipant[]>([]);
@@ -228,6 +269,7 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [activeConversationSid, setActiveConversationSid] = useState<string | null>(conversationSid || null);
+  const [customerUserId, setCustomerUserId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);

@@ -186,7 +186,60 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     };
 
     const totalCount = results?.[0]?.total_count || 0;
-    const bookings = (results || []).map((r: any) => r.booking);
+    // Transform flattened view fields back into nested objects
+    const bookings = (results || []).map((r: any) => {
+      const booking = r.booking;
+      // Reconstruct customer_profiles object from flattened fields
+      if (booking.customer_user_id || booking.customer_first_name) {
+        booking.customer_profiles = {
+          id: booking.customer_id,
+          user_id: booking.customer_user_id,
+          first_name: booking.customer_first_name,
+          last_name: booking.customer_last_name,
+          email: booking.customer_email,
+          phone: booking.customer_phone,
+          image_url: booking.customer_image_url,
+        };
+        // Remove flattened fields to avoid duplication
+        delete booking.customer_user_id;
+        delete booking.customer_first_name;
+        delete booking.customer_last_name;
+        delete booking.customer_email;
+        delete booking.customer_phone;
+        delete booking.customer_image_url;
+      }
+      // Reconstruct providers object from flattened fields
+      if (booking.provider_user_id || booking.provider_first_name) {
+        booking.providers = {
+          id: booking.provider_id,
+          user_id: booking.provider_user_id,
+          first_name: booking.provider_first_name,
+          last_name: booking.provider_last_name,
+          image_url: booking.provider_image_url,
+        };
+        // Remove flattened fields to avoid duplication
+        delete booking.provider_user_id;
+        delete booking.provider_first_name;
+        delete booking.provider_last_name;
+        delete booking.provider_image_url;
+      }
+      // Reconstruct services object from flattened fields
+      if (booking.service_name) {
+        booking.services = {
+          id: booking.service_id,
+          name: booking.service_name,
+          description: booking.service_description,
+          duration_minutes: booking.service_duration,
+          min_price: booking.service_min_price,
+        };
+        // Remove flattened fields
+        delete booking.service_name;
+        delete booking.service_description;
+        delete booking.service_duration;
+        delete booking.service_min_price;
+      }
+      return booking;
+    });
 
     const queryTime = Date.now() - startTime;
 
@@ -309,9 +362,9 @@ async function fallbackBookings(
     .from('bookings')
     .select(`
       *,
-      customer_profiles (id, first_name, last_name, email, phone, image_url),
+      customer_profiles (id, user_id, first_name, last_name, email, phone, image_url),
       services (id, name, description, duration_minutes, min_price),
-      providers (id, first_name, last_name, image_url)
+      providers (id, user_id, first_name, last_name, image_url)
     `, { count: 'exact' })
     .eq('business_id', businessId);
 
