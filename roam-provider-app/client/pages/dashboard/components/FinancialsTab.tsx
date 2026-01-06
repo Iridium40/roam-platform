@@ -742,17 +742,29 @@ export default function FinancialsTab({
         setProviders(filteredProviders);
       }
 
-      // Load services
-      const { data: servicesData, error: servicesError } = await supabase
-        .from('services')
-        .select('id, name')
+      // Load services through business_services junction table
+      // Services don't have a direct business_id - they're linked via business_services
+      const { data: businessServicesData, error: servicesError } = await supabase
+        .from('business_services')
+        .select(`
+          service_id,
+          services:service_id (
+            id,
+            name
+          )
+        `)
         .eq('business_id', businessId)
-        .order('name');
+        .eq('is_active', true);
 
       if (servicesError) {
         console.error('Error loading services:', servicesError);
       } else {
-        setServices(servicesData || []);
+        // Extract services from the joined data and sort by name
+        const services = (businessServicesData || [])
+          .map((bs: any) => bs.services)
+          .filter(Boolean)
+          .sort((a: any, b: any) => (a.name || '').localeCompare(b.name || ''));
+        setServices(services);
       }
     } catch (error) {
       console.error('Error loading filter data:', error);
