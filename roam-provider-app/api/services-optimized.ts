@@ -176,38 +176,69 @@ async function fallbackServices(
   res: VercelResponse
 ) {
   try {
-    // Use the old endpoint logic as fallback
-    // Fetch eligible services using the business_service_subcategories join
-    const { data: eligibleServices, error: servicesError } = await supabase
+    console.log('Using fallback services query for business:', businessId);
+    
+    // Step 1: Get approved subcategories for this business
+    const { data: approvedSubcategories, error: subcatError } = await supabase
       .from('business_service_subcategories')
+      .select('subcategory_id, category_id')
+      .eq('business_id', businessId)
+      .eq('is_active', true);
+
+    if (subcatError) {
+      console.error('Error fetching approved subcategories:', subcatError);
+      return res.status(500).json({ 
+        error: 'Failed to fetch approved subcategories',
+        details: subcatError.message 
+      });
+    }
+
+    console.log('Approved subcategories:', approvedSubcategories?.length || 0);
+
+    if (!approvedSubcategories || approvedSubcategories.length === 0) {
+      return res.status(200).json({
+        business_id: businessId,
+        eligible_services: [],
+        service_count: 0,
+        stats: {
+          total_services: 0,
+          active_services: 0,
+          configured_services: 0,
+          unconfigured_services: 0,
+          avg_price: 0,
+          total_value: 0,
+          category_count: 0,
+          subcategory_count: 0,
+        },
+        pagination: { limit: 50, offset: 0, total: 0 },
+        _meta: { fallback_mode: true },
+      });
+    }
+
+    const subcategoryIds = approvedSubcategories.map((s: any) => s.subcategory_id).filter(Boolean);
+
+    // Step 2: Get services in approved subcategories
+    const { data: servicesData, error: servicesError } = await supabase
+      .from('services')
       .select(`
+        id,
+        name,
+        description,
+        min_price,
+        duration_minutes,
+        image_url,
         subcategory_id,
-        service_subcategories!inner(
+        service_subcategories (
           id,
           service_subcategory_type,
           category_id,
-          service_categories!inner(
+          service_categories (
             id,
             service_category_type
-          ),
-          services!inner(
-            id,
-            name,
-            description,
-            min_price,
-            duration_minutes,
-            image_url,
-            business_services!left(
-              id,
-              business_price,
-              business_duration_minutes,
-              delivery_type,
-              is_active
-            )
           )
         )
       `)
-      .eq('business_id', businessId)
+      .in('subcategory_id', subcategoryIds)
       .eq('is_active', true);
 
     if (servicesError) {
@@ -218,49 +249,59 @@ async function fallbackServices(
       });
     }
 
-    // Transform the nested data structure
-    const services: any[] = [];
-    const serviceMap = new Map<string, any>();
+    console.log('Services found:', servicesData?.length || 0);
 
-    eligibleServices?.forEach((bss: any) => {
-      const subcategory = bss.service_subcategories;
-      const category = subcategory?.service_categories;
-      const service = subcategory?.services;
+    // Step 3: Get business services (prices/config) for this business
+    const serviceIds = (servicesData || []).map((s: any) => s.id);
+    let businessServicesMap = new Map<string, any>();
+    
+    if (serviceIds.length > 0) {
+      const { data: businessServices, error: bsError } = await supabase
+        .from('business_services')
+        .select('service_id, business_price, business_duration_minutes, delivery_type, is_active')
+        .eq('business_id', businessId)
+        .in('service_id', serviceIds);
 
-      if (!service) return;
-
-      const serviceId = service.id;
-      const businessService = service.business_services?.[0];
-
-      if (!serviceMap.has(serviceId)) {
-        services.push({
-          id: serviceId,
-          name: service.name,
-          description: service.description,
-          min_price: service.min_price,
-          duration_minutes: service.duration_minutes,
-          image_url: service.image_url,
-          subcategory_id: subcategory.id,
-          subcategory_name: subcategory.service_subcategory_type,
-          category_id: category.id,
-          category_name: category.service_category_type,
-          is_configured: !!businessService,
-          business_service_id: businessService?.id || null,
-          business_price: businessService?.business_price || null,
-          business_duration_minutes: businessService?.business_duration_minutes || null,
-          delivery_type: businessService?.delivery_type || null,
-          business_is_active: businessService?.is_active || false,
-          service_subcategories: {
-            id: subcategory.id,
-            service_subcategory_type: subcategory.service_subcategory_type,
-            service_categories: {
-              id: category.id,
-              service_category_type: category.service_category_type,
-            },
-          },
-        });
-        serviceMap.set(serviceId, true);
+      if (bsError) {
+        console.error('Error fetching business services:', bsError);
+      } else {
+        businessServicesMap = new Map((businessServices || []).map((bs: any) => [bs.service_id, bs]));
       }
+      console.log('Business services configured:', businessServicesMap.size);
+    }
+
+    // Transform the data
+    const services = (servicesData || []).map((service: any) => {
+      const subcategory = service.service_subcategories;
+      const category = subcategory?.service_categories;
+      const businessService = businessServicesMap.get(service.id);
+
+      return {
+        id: service.id,
+        name: service.name,
+        description: service.description,
+        min_price: service.min_price,
+        duration_minutes: service.duration_minutes,
+        image_url: service.image_url,
+        subcategory_id: service.subcategory_id,
+        subcategory_name: subcategory?.service_subcategory_type,
+        category_id: category?.id,
+        category_name: category?.service_category_type,
+        is_configured: !!businessService,
+        business_service_id: businessService?.id || null,
+        business_price: businessService?.business_price || null,
+        business_duration_minutes: businessService?.business_duration_minutes || null,
+        delivery_type: businessService?.delivery_type || null,
+        business_is_active: businessService?.is_active || false,
+        service_subcategories: subcategory ? {
+          id: subcategory.id,
+          service_subcategory_type: subcategory.service_subcategory_type,
+          service_categories: category ? {
+            id: category.id,
+            service_category_type: category.service_category_type,
+          } : null,
+        } : null,
+      };
     });
 
     // Calculate stats
