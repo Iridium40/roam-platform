@@ -398,7 +398,8 @@ export default function DashboardTab({
                       <p className="text-sm font-medium mt-1">${(parseFloat(booking.total_amount || '0')).toFixed(2)}</p>
                     </div>
                   </div>
-                )}))
+                );
+                })
               )}
             </div>
           </CardContent>
