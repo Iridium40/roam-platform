@@ -134,6 +134,9 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
   const currentUser = provider || customer;
   const currentUserId = provider?.user_id || provider?.id || customer?.id || '';
 
+  // State for customer user_id when it needs to be fetched from the database
+  const [customerUserId, setCustomerUserId] = useState<string | null>(null);
+
   const getUserIdentity = useCallback(() => {
     if (!currentUserId) return null;
     return `${currentUserType}-${currentUserId}`;
@@ -269,7 +272,6 @@ const ConversationChat = ({ isOpen, onClose, booking, conversationSid }: Convers
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [activeConversationSid, setActiveConversationSid] = useState<string | null>(conversationSid || null);
-  const [customerUserId, setCustomerUserId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
