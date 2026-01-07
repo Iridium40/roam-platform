@@ -341,7 +341,14 @@ export default function DashboardTab({
               {recentBookings.length === 0 ? (
                 <p className="text-gray-500 text-center py-4">No recent bookings</p>
               ) : (
-                recentBookings.map((booking) => (
+                recentBookings.map((booking) => {
+                  // Handle both nested (legacy) and flattened (from view) data structures
+                  const customerFirstName = booking.customer_first_name || booking.customer_profiles?.first_name;
+                  const customerLastName = booking.customer_last_name || booking.customer_profiles?.last_name;
+                  const customerImageUrl = booking.customer_image_url || booking.customer_profiles?.image_url;
+                  const serviceName = booking.service_name || booking.services?.name;
+                  
+                  return (
                   <div 
                     key={booking.id} 
                     className="flex items-center justify-between p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors"
@@ -350,17 +357,17 @@ export default function DashboardTab({
                     <div className="flex items-center space-x-3">
                       {/* Customer Avatar */}
                       <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
-                        {booking.customer_profiles?.image_url ? (
+                        {customerImageUrl ? (
                           <img
-                            src={booking.customer_profiles.image_url}
-                            alt={`${booking.customer_profiles.first_name || ""} ${booking.customer_profiles.last_name || ""}`}
+                            src={customerImageUrl}
+                            alt={`${customerFirstName || ""} ${customerLastName || ""}`}
                             className="w-full h-full object-cover rounded-lg"
                           />
                         ) : (
                           <div className="w-full h-full bg-blue-600 rounded-lg flex items-center justify-center">
-                            {booking.customer_profiles?.first_name?.[0] || booking.customer_profiles?.last_name?.[0] ? (
+                            {customerFirstName?.[0] || customerLastName?.[0] ? (
                               <span className="text-white font-semibold text-sm">
-                                {booking.customer_profiles.first_name[0] || booking.customer_profiles.last_name[0]}
+                                {customerFirstName?.[0] || customerLastName?.[0]}
                               </span>
                             ) : (
                               <User className="w-5 h-5 text-white" />
@@ -370,12 +377,12 @@ export default function DashboardTab({
                       </div>
                       <div>
                         <p className="font-medium text-sm">
-                          {booking.customer_profiles?.first_name && booking.customer_profiles?.last_name
-                            ? `${booking.customer_profiles.first_name} ${booking.customer_profiles.last_name}`
+                          {customerFirstName && customerLastName
+                            ? `${customerFirstName} ${customerLastName}`
                             : booking.guest_name || "Guest"}
                         </p>
                         <p className="text-xs text-gray-600">
-                          {booking.services?.name || "Service"} • {booking.booking_date}
+                          {serviceName || "Service"} • {booking.booking_date}
                         </p>
                         {booking.booking_reference && (
                           <p className="text-xs text-gray-500 mt-0.5">
@@ -391,7 +398,7 @@ export default function DashboardTab({
                       <p className="text-sm font-medium mt-1">${(parseFloat(booking.total_amount || '0')).toFixed(2)}</p>
                     </div>
                   </div>
-                ))
+                )}))
               )}
             </div>
           </CardContent>

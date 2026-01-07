@@ -84,14 +84,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Fetch stats from RPC and additional data in parallel
     const [statsResult, recentBookingsResult, additionalStatsResult] = await Promise.all([
       supabase.rpc('get_provider_dashboard_stats', { p_business_id: business_id }).single(),
-      // Fetch recent bookings with relations
+      // Fetch recent bookings using the enriched view which has pre-joined data
       supabase
-        .from('bookings')
+        .from('provider_bookings_enriched')
         .select(`
-          id, booking_reference, booking_date, start_time, end_time, 
+          id, booking_reference, booking_date, start_time, 
           booking_status, total_amount, created_at, guest_name,
-          services:service_id(id, name),
-          customer_profiles:customer_id(id, user_id, first_name, last_name, email, image_url)
+          service_name, service_id,
+          customer_first_name, customer_last_name, customer_email, customer_image_url, customer_id
         `)
         .eq('business_id', business_id)
         .order('created_at', { ascending: false })
@@ -105,8 +105,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     ]);
 
     const { data: stats, error: statsError } = statsResult;
-    const recentBookings = recentBookingsResult.data || [];
-    const activeBookings = additionalStatsResult.data || [];
+    const { data: recentBookingsData, error: recentBookingsError } = recentBookingsResult;
+    const { data: activeBookingsData, error: activeBookingsError } = additionalStatsResult;
+    
+    // Log any errors fetching recent bookings (these shouldn't block the response)
+    if (recentBookingsError) {
+      console.error('Error fetching recent bookings:', recentBookingsError);
+    }
+    if (activeBookingsError) {
+      console.error('Error fetching active bookings:', activeBookingsError);
+    }
+    
+    const recentBookings = recentBookingsData || [];
+    const activeBookings = activeBookingsData || [];
+    
+    // Debug logging for recent bookings
+    console.log('Dashboard stats debug:', {
+      business_id,
+      recentBookingsCount: recentBookings.length,
+      activeBookingsCount: activeBookings.length,
+      recentBookingsError: recentBookingsError?.message,
+      statsFromRPC: stats,
+    });
     
     // Calculate unassigned bookings and today's confirmed count
     const unassignedBookings = activeBookings.filter((b: any) => !b.provider_id).length;
@@ -174,14 +194,14 @@ async function fallbackStats(supabase: any, businessId: string, res: VercelRespo
       .from('bookings')
       .select('booking_status, total_amount, created_at, provider_id, booking_date')
       .eq('business_id', businessId),
-    // Fetch recent bookings with relations
+    // Fetch recent bookings using the enriched view which has pre-joined data
     supabase
-      .from('bookings')
+      .from('provider_bookings_enriched')
       .select(`
-        id, booking_reference, booking_date, start_time, end_time, 
+        id, booking_reference, booking_date, start_time, 
         booking_status, total_amount, created_at, guest_name,
-        services:service_id(id, name),
-        customer_profiles:customer_id(id, user_id, first_name, last_name, email, image_url)
+        service_name, service_id,
+        customer_first_name, customer_last_name, customer_email, customer_image_url, customer_id
       `)
       .eq('business_id', businessId)
       .order('created_at', { ascending: false })
