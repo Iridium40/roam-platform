@@ -94,15 +94,20 @@ export default function PersonalProfileSetup({
   const [error, setError] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
-  // Load existing data
+  // Load existing data when userId becomes available
   useEffect(() => {
-    loadExistingData();
+    if (userId) {
+      loadExistingData();
+    }
+  }, [userId]);
+
+  // Cleanup preview URLs on unmount
+  useEffect(() => {
     return () => {
-      // Cleanup preview URLs
       if (avatarUpload.preview) ImageStorageService.cleanupPreviewUrl(avatarUpload.preview);
       if (coverUpload.preview) ImageStorageService.cleanupPreviewUrl(coverUpload.preview);
     };
-  }, []);
+  }, [avatarUpload.preview, coverUpload.preview]);
 
   const loadExistingData = async () => {
     try {

@@ -101,17 +101,22 @@ export default function BusinessProfileSetup({
     Record<string, string>
   >({});
 
-  // Load existing data
+  // Load existing data when businessId becomes available
   useEffect(() => {
-    loadExistingData();
+    if (businessId) {
+      loadExistingData();
+    }
+  }, [businessId]);
+
+  // Cleanup preview URLs on unmount
+  useEffect(() => {
     return () => {
-      // Cleanup preview URLs
       if (logoUpload.preview)
         ImageStorageService.cleanupPreviewUrl(logoUpload.preview);
       if (coverUpload.preview)
         ImageStorageService.cleanupPreviewUrl(coverUpload.preview);
     };
-  }, []);
+  }, [logoUpload.preview, coverUpload.preview]);
 
   const loadExistingData = async () => {
     try {

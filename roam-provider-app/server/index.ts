@@ -2161,6 +2161,28 @@ export function createServer() {
       res.status(500).json({ error: "Failed to load Stripe Connect status handler" });
     }
   });
+
+  // Stripe check existing account (for Phase 2 onboarding)
+  app.get("/api/stripe/check-existing-account", async (req, res) => {
+    try {
+      const checkHandler = await import("../api/stripe/check-existing-account");
+      await checkHandler.default(req as any, res as any);
+    } catch (error) {
+      console.error("Error importing Stripe check-existing-account handler:", error);
+      res.status(500).json({ error: "Failed to load Stripe check-existing-account handler" });
+    }
+  });
+
+  // Stripe link existing account (for Phase 2 onboarding)
+  app.post("/api/stripe/link-existing-account", async (req, res) => {
+    try {
+      const linkHandler = await import("../api/stripe/link-existing-account");
+      await linkHandler.default(req as any, res as any);
+    } catch (error) {
+      console.error("Error importing Stripe link-existing-account handler:", error);
+      res.status(500).json({ error: "Failed to load Stripe link-existing-account handler" });
+    }
+  });
   
   // Stripe balance
   app.get("/api/stripe/balance", async (req, res) => {

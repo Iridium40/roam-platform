@@ -86,17 +86,22 @@ export default function BusinessProfileSetupSimplified({
   const [loadingInfo, setLoadingInfo] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Load existing data
+  // Load existing data when businessId becomes available
   useEffect(() => {
-    loadExistingData();
+    if (businessId) {
+      loadExistingData();
+    }
+  }, [businessId]);
+
+  // Cleanup preview URLs on unmount
+  useEffect(() => {
     return () => {
-      // Cleanup preview URLs
       if (logoUpload.preview)
         ImageStorageService.cleanupPreviewUrl(logoUpload.preview);
       if (coverUpload.preview)
         ImageStorageService.cleanupPreviewUrl(coverUpload.preview);
     };
-  }, []);
+  }, [logoUpload.preview, coverUpload.preview]);
 
   const loadExistingData = async () => {
     try {
