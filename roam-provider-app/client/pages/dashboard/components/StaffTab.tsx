@@ -304,6 +304,19 @@ export default function StaffTab({
   };
 
   const handleToggleStaffStatus = async (staffId: string, isActive: boolean) => {
+    // Find the staff member to check their role
+    const staffMember = staffMembers.find(s => s.id === staffId);
+    
+    // Prevent deactivation of owners
+    if (staffMember?.provider_role === 'owner' && !isActive) {
+      toast({
+        title: "Cannot Deactivate Owner",
+        description: "Business owners cannot be deactivated. Transfer ownership first if needed.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     try {
       const { error } = await supabase
         .from('providers')
@@ -513,20 +526,26 @@ export default function StaffTab({
                     </div>
                     
                     <div className="flex items-center space-x-1">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onToggleStaffStatus(staff.id, !staff.is_active)}
-                        className={staff.is_active ? "text-red-600 border-red-300" : "text-green-600 border-green-300"}
-                      >
-                        {staff.is_active ? "Deactivate" : "Activate"}
-                      </Button>
+                      {staff.provider_role === 'owner' ? (
+                        <span className="text-xs text-muted-foreground px-2 py-1 bg-muted rounded">
+                          Owner (Always Active)
+                        </span>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleToggleStaffStatus(staff.id, !staff.is_active)}
+                          className={staff.is_active ? "text-red-600 border-red-300" : "text-green-600 border-green-300"}
+                        >
+                          {staff.is_active ? "Deactivate" : "Activate"}
+                        </Button>
+                      )}
                       
-                      {staff.id !== providerData.id && (
+                      {staff.id !== providerData.id && staff.provider_role !== 'owner' && (
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => onDeleteStaff(staff.id)}
+                          onClick={() => handleDeleteStaff(staff.id)}
                           className="text-red-600 hover:text-red-700 hover:bg-red-50"
                         >
                           <XCircle className="w-4 h-4" />

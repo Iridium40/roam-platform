@@ -681,6 +681,19 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
   };
 
   const handleToggleActive = async (staffId: string, isActive: boolean) => {
+    // Find the staff member to check their role
+    const staffMember = staff.find(s => s.id === staffId);
+    
+    // Prevent deactivation of owners
+    if (staffMember?.provider_role === 'owner' && !isActive) {
+      toast({
+        title: "Cannot Deactivate Owner",
+        description: "Business owners cannot be deactivated. Transfer ownership first if needed.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     try {
       const { error } = await supabase
         .from("providers")
@@ -1069,8 +1082,11 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
                               handleToggleActive(member.id, checked)
                             }
                             className="scale-75"
+                            disabled={member.provider_role === 'owner'}
                           />
-                          <Label className="text-xs">Active</Label>
+                          <Label className="text-xs">
+                            {member.provider_role === 'owner' ? 'Owner (Always Active)' : 'Active'}
+                          </Label>
                         </div>
 
                         <div className="flex items-center gap-1">
