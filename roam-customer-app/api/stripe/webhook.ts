@@ -286,6 +286,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         processed = true;
         break;
 
+      // Stripe Connect Account Events
+      case 'account.updated':
+        try {
+          const account = event.data.object as Stripe.Account;
+          console.log('🏦 Account updated:', account.id, 'Charges enabled:', account.charges_enabled);
+          await handleAccountUpdated(account);
+          processed = true;
+        } catch (err: any) {
+          console.error('Error handling account.updated:', err);
+          // Don't throw - account updates are not critical
+          processed = true;
+        }
+        break;
+
+      case 'account.application.authorized':
+      case 'account.application.deauthorized':
+        // Log but don't process - informational only
+        console.log(`ℹ️ Account application event: ${event.type}`);
+        processed = true;
+        break;
+
       default:
         // Log unhandled events for debugging
         console.log(`⚠️ Unhandled webhook event type: ${event.type}`);
@@ -1895,3 +1916,90 @@ async function handleTransferReversed(transfer: Stripe.Transfer) {
   }
 }
 
+/**
+ * Handle account.updated webhook event
+ * Updates the stripe_connect_accounts table with latest account status
+ * This is triggered when:
+ * - User completes Stripe onboarding
+ * - Account requirements change
+ * - Account capabilities are updated
+ */
+async function handleAccountUpdated(account: Stripe.Account) {
+  console.log('🏦 Processing account.updated:', {
+    accountId: account.id,
+    chargesEnabled: account.charges_enabled,
+    payoutsEnabled: account.payouts_enabled,
+    detailsSubmitted: account.details_submitted,
+    businessType: account.business_type,
+  });
+
+  try {
+    // Find the connect account record by account_id
+    const { data: existingAccount, error: fetchError } = await supabase
+      .from('stripe_connect_accounts')
+      .select('id, business_id, user_id')
+      .eq('account_id', account.id)
+      .maybeSingle();
+
+    if (fetchError) {
+      console.error('❌ Error fetching stripe_connect_accounts:', fetchError);
+      return;
+    }
+
+    if (!existingAccount) {
+      console.log('ℹ️ No existing stripe_connect_accounts record for account:', account.id);
+      console.log('ℹ️ This may be a newly created account - will be updated on next status check');
+      return;
+    }
+
+    // Update the account record with latest status from Stripe
+    const { error: updateError } = await supabase
+      .from('stripe_connect_accounts')
+      .update({
+        charges_enabled: account.charges_enabled,
+        payouts_enabled: account.payouts_enabled,
+        details_submitted: account.details_submitted,
+        business_type: account.business_type,
+        country: account.country,
+        default_currency: account.default_currency,
+        capabilities: account.capabilities || null,
+        requirements: account.requirements || null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', existingAccount.id);
+
+    if (updateError) {
+      console.error('❌ Error updating stripe_connect_accounts:', updateError);
+    } else {
+      console.log('✅ Updated stripe_connect_accounts record:', existingAccount.id);
+    }
+
+    // Also ensure business_profiles has the stripe_account_id
+    if (existingAccount.business_id) {
+      const { error: businessUpdateError } = await supabase
+        .from('business_profiles')
+        .update({
+          stripe_account_id: account.id,
+        })
+        .eq('id', existingAccount.business_id);
+
+      if (businessUpdateError) {
+        console.error('❌ Error updating business_profiles.stripe_account_id:', businessUpdateError);
+      }
+    }
+
+    // Log onboarding completion
+    if (account.charges_enabled && account.payouts_enabled) {
+      console.log('🎉 Stripe Connect onboarding completed for account:', account.id);
+      console.log('✅ Account is now ready to accept payments and receive payouts');
+    } else if (account.details_submitted) {
+      console.log('⏳ Stripe Connect details submitted, pending review for account:', account.id);
+    } else if (account.requirements?.currently_due?.length) {
+      console.log('⚠️ Account has requirements still due:', account.requirements.currently_due);
+    }
+
+  } catch (error: any) {
+    console.error('❌ Error handling account.updated:', error);
+    // Don't throw - account updates are not critical for booking flow
+  }
+}

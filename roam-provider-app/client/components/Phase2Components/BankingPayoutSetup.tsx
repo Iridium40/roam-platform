@@ -1,23 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
   Banknote,
   CreditCard,
-  Shield,
   CheckCircle,
   AlertCircle,
   ArrowRight,
@@ -25,16 +15,12 @@ import {
   Info,
   ExternalLink,
   Lock,
-  FileText
 } from 'lucide-react';
-import StripeTaxInfoCapture from '@/components/StripeTaxInfoCapture';
-import StripeAccountConnector from '@/components/StripeAccountConnector';
 
 interface BankingPayoutData {
   stripeConnected: boolean;
   stripeAccountId?: string;
   stripeAccountStatus?: string;
-  taxInfoCompleted?: boolean;
 }
 
 interface BankingPayoutSetupProps {
@@ -48,8 +34,6 @@ interface BankingPayoutSetupProps {
   initialData?: BankingPayoutData;
   className?: string;
 }
-
-
 
 export default function BankingPayoutSetup({
   businessId,
@@ -65,113 +49,81 @@ export default function BankingPayoutSetup({
   const [bankingData, setBankingData] = useState<BankingPayoutData>(
     initialData || {
       stripeConnected: false,
-      taxInfoCompleted: false,
     }
   );
   const [loading, setLoading] = useState(false);
+  const [checkingStatus, setCheckingStatus] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [connectingStripe, setConnectingStripe] = useState(false);
-  // Start with tax-info step if not completed, otherwise start with stripe-connect
-  const [currentStep, setCurrentStep] = useState<'tax-info' | 'stripe-connect'>(
-    initialData?.taxInfoCompleted ? 'stripe-connect' : 'tax-info'
-  );
-  
-  // State to store business info and tax data from tax form or props
-  const [businessName, setBusinessName] = useState<string>(propBusinessName || '');
-  const [businessType, setBusinessType] = useState<string>(propBusinessType || '');
-  const [userEmail, setUserEmail] = useState<string>(propUserEmail || '');
-  const [taxInfo, setTaxInfo] = useState<any>(null);
 
-  // Check if tax info exists in database on mount
+  // Check URL params for return from Stripe and check existing account status on mount
   useEffect(() => {
-    const checkTaxInfo = async () => {
+    const checkStripeStatus = async () => {
       try {
-        // Use onboarding endpoint during Phase 2 (no auth required)
-        const res = await fetch(`/api/onboarding/tax-info?business_id=${businessId}`);
-        if (res.ok) {
-          const { tax_info } = await res.json();
-          if (tax_info && tax_info.tax_id && tax_info.legal_business_name) {
-            // Update business info from tax data
-            setBusinessName(tax_info.legal_business_name || '');
-            setBusinessType(tax_info.business_entity_type || 'llc');
-            setUserEmail(tax_info.tax_contact_email || '');
-            setTaxInfo(tax_info); // Store full tax info for StripeAccountConnector
-            
-            setBankingData(prev => {
-              // Only update if not already set
-              if (!prev.taxInfoCompleted) {
-                return {
-                  ...prev,
-                  taxInfoCompleted: true
-                };
-              }
-              return prev;
+        setCheckingStatus(true);
+        
+        // Check URL params for return from Stripe
+        const urlParams = new URLSearchParams(window.location.search);
+        const success = urlParams.get('success');
+        const refresh = urlParams.get('refresh');
+        
+        // Clean up URL params
+        if (success || refresh) {
+          window.history.replaceState({}, '', window.location.pathname);
+        }
+        
+        // Check if business already has a Stripe account
+        const response = await fetch(`/api/stripe/check-account-status?businessId=${businessId}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.hasAccount) {
+            setBankingData({
+              stripeConnected: data.chargesEnabled && data.payoutsEnabled,
+              stripeAccountId: data.accountId,
+              stripeAccountStatus: data.chargesEnabled ? 'active' : 'pending',
             });
-            // Switch to stripe-connect if tax info is complete
-            setCurrentStep(prev => prev === 'tax-info' ? 'stripe-connect' : prev);
+            
+            // If account exists but not fully set up, offer to continue onboarding
+            if (data.accountId && (!data.chargesEnabled || !data.payoutsEnabled)) {
+              // Account exists but needs more setup - they may have returned early
+              console.log('Stripe account exists but needs additional setup');
+            }
           }
         }
       } catch (error) {
-        console.error('Error checking tax info:', error);
+        console.error('Error checking Stripe status:', error);
+      } finally {
+        setCheckingStatus(false);
       }
     };
-    checkTaxInfo();
+    
+    checkStripeStatus();
   }, [businessId]);
-
-  const updateBankingData = (field: keyof BankingPayoutData, value: any) => {
-    setBankingData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
 
   const connectStripeAccount = async () => {
     try {
       setConnectingStripe(true);
       setError(null);
 
-      // Get tax info which contains the contact email and business details for Stripe
-      // Use onboarding endpoint during Phase 2 (no auth required)
-      const taxInfoResponse = await fetch(`/api/onboarding/tax-info?business_id=${businessId}`);
-      if (!taxInfoResponse.ok) {
-        throw new Error('Failed to fetch tax information. Please complete the tax information form first.');
-      }
-      const { tax_info } = await taxInfoResponse.json();
-      
-      if (!tax_info || !tax_info.tax_contact_email) {
-        throw new Error('Business contact email is required. Please complete the tax information form first.');
-      }
-
-      // Use tax info as source of truth for Stripe Connect
-      const businessName = tax_info.legal_business_name || 'Business';
-      const email = tax_info.tax_contact_email;
-      const businessType = tax_info.business_entity_type || 'llc';
-
-      const requestPayload = {
-        userId,
-        businessId,
-        businessType: businessType === 'llc' || businessType === 'corporation' || businessType === 'partnership' || businessType === 'non_profit' ? 'company' : 'individual',
-        businessName,
-        email,
-        country: 'US',
-      };
-
-      console.log('=== STRIPE CONNECT REQUEST ===');
-      console.log('Sending to Stripe Connect:', requestPayload);
-
-      // Tax info should already be saved in database from the tax info step
-      // The API endpoint will fetch it automatically
-      const response = await fetch('/api/stripe/create-connect-account', {
+      // Simple request - just send businessId and userId
+      // Stripe will collect email and all other info during their onboarding
+      const response = await fetch('/api/stripe/create-connect-account-simple', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(requestPayload),
+        body: JSON.stringify({
+          userId,
+          businessId,
+          businessName: propBusinessName || 'Business',
+          businessType: propBusinessType === 'independent' ? 'individual' : 'company',
+          email: propUserEmail, // Optional - Stripe will ask if not provided
+        }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create Stripe Connect account');
+        throw new Error(errorData.error || errorData.details || 'Failed to create Stripe Connect account');
       }
 
       const result = await response.json();
@@ -179,15 +131,16 @@ export default function BankingPayoutSetup({
       // Check if this is development mode (mock response)
       if (result.testMode) {
         console.log('Development mode: Stripe Connect account created successfully');
-        setBankingData(prev => ({
-          ...prev,
+        setBankingData({
           stripeConnected: true,
-          stripeAccountId: result.account_id || 'mock-account'
-        }));
+          stripeAccountId: result.account_id || 'mock-account',
+          stripeAccountStatus: 'active',
+        });
         return;
       }
       
-      // Production mode: Redirect to Stripe Connect onboarding
+      // Redirect to Stripe Connect onboarding
+      // Stripe will handle email collection, existing account lookup, and all setup
       if (result.onboarding_url) {
         window.location.href = result.onboarding_url;
       } else {
@@ -201,18 +154,49 @@ export default function BankingPayoutSetup({
     }
   };
 
+  const continueStripeOnboarding = async () => {
+    try {
+      setConnectingStripe(true);
+      setError(null);
+
+      // Get a new onboarding link for existing account
+      const response = await fetch('/api/stripe/create-account-link', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          businessId,
+          accountId: bankingData.stripeAccountId,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create onboarding link');
+      }
+
+      const result = await response.json();
+      
+      if (result.url) {
+        window.location.href = result.url;
+      } else {
+        throw new Error('No onboarding URL received');
+      }
+    } catch (error) {
+      console.error('Error continuing Stripe onboarding:', error);
+      setError(error instanceof Error ? error.message : 'Failed to continue Stripe setup');
+    } finally {
+      setConnectingStripe(false);
+    }
+  };
+
   const completionPercentage = () => {
-    let completed = 0;
-    const total = 2; // tax info and stripe connection
-
-    if (bankingData.taxInfoCompleted) completed++;
-    if (bankingData.stripeConnected) completed++;
-
-    return Math.round((completed / total) * 100);
+    return bankingData.stripeConnected ? 100 : 0;
   };
 
   const canSubmit = () => {
-    return bankingData.taxInfoCompleted && bankingData.stripeConnected;
+    return bankingData.stripeConnected;
   };
 
   const handleSubmit = async () => {
@@ -249,6 +233,22 @@ export default function BankingPayoutSetup({
 
 
 
+  // Show loading state while checking status
+  if (checkingStatus) {
+    return (
+      <div className={`max-w-4xl mx-auto ${className}`}>
+        <Card>
+          <CardContent className="py-12">
+            <div className="flex flex-col items-center justify-center space-y-4">
+              <Loader2 className="h-8 w-8 animate-spin text-roam-blue" />
+              <p className="text-foreground/70">Checking account status...</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className={`max-w-4xl mx-auto ${className}`}>
       <Card>
@@ -262,7 +262,7 @@ export default function BankingPayoutSetup({
                 Banking & Payouts
               </CardTitle>
               <p className="text-foreground/70">
-                Configure how you'll receive payments from customers
+                Connect your Stripe account to receive payments
               </p>
             </div>
           </div>
@@ -287,180 +287,140 @@ export default function BankingPayoutSetup({
             </Alert>
           )}
 
-          {/* Step 1: Tax & Business Information (Always shown first) */}
-          {!bankingData.taxInfoCompleted && (
-            <div className="space-y-4">
-              <Alert className="border-blue-200 bg-blue-50">
-                <Info className="h-4 w-4 text-blue-600" />
-                <AlertDescription className="text-blue-800">
-                  <strong>Step 1 of 2:</strong> Please complete your business and tax information below. After saving, you'll be able to connect your Stripe account.
-                </AlertDescription>
-              </Alert>
-              <StripeTaxInfoCapture
-                businessId={businessId}
-                userId={userId}
-                isOnboarding={true}
-                onComplete={(taxData) => {
-                  // Tax info has been saved successfully
-                  // Update business info from tax data
-                  if (taxData?.legal_business_name) {
-                    setBusinessName(taxData.legal_business_name);
-                  }
-                  if (taxData?.business_entity_type) {
-                    setBusinessType(taxData.business_entity_type);
-                  }
-                  if (taxData?.tax_contact_email) {
-                    setUserEmail(taxData.tax_contact_email);
-                  }
-                  setTaxInfo(taxData); // Store full tax info for StripeAccountConnector
-                  
-                  setBankingData(prev => ({
-                    ...prev,
-                    taxInfoCompleted: true
-                  }));
-                  // Keep on same page to show Stripe Connect button
-                }}
-                onBack={onBack}
-              />
-            </div>
-          )}
-
-          {/* Step 2: Stripe Connect (Only shown after tax info is saved) */}
-          {bankingData.taxInfoCompleted && (
-            <div className="space-y-4">
-              <Alert className="border-green-200 bg-green-50">
-                <CheckCircle className="h-4 w-4 text-green-600" />
-                <AlertDescription className="text-green-800">
-                  <strong>Tax Information Saved!</strong> Now you can connect your Stripe account to start receiving payments.
-                </AlertDescription>
-              </Alert>
-              
+          {/* Stripe Connect Section */}
+          {!bankingData.stripeConnected ? (
+            <div className="space-y-6">
               {/* Payment Processing Information */}
-              <Card className="p-4 border-blue-200 bg-blue-50">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                    <CreditCard className="w-5 h-5 text-blue-600" />
+              <Card className="p-6 border-blue-200 bg-blue-50">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                    <CreditCard className="w-6 h-6 text-blue-600" />
                   </div>
                   <div>
-                    <h4 className="font-semibold text-blue-900">Stripe Connect</h4>
-                    <p className="text-sm text-blue-800">Secure payment processing & payouts</p>
+                    <h4 className="font-semibold text-lg text-blue-900">Stripe Connect</h4>
+                    <p className="text-blue-800">Secure payment processing & payouts</p>
                   </div>
                 </div>
-                <div className="mt-3 space-y-2 text-sm text-blue-700">
+                <div className="space-y-3 text-blue-700">
                   <div className="flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4 text-blue-600" />
-                    <span>Instant payouts every Friday</span>
+                    <CheckCircle className="w-5 h-5 text-blue-600" />
+                    <span>Automatic weekly payouts every Friday</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4 text-blue-600" />
-                    <span>Secure payment processing</span>
+                    <CheckCircle className="w-5 h-5 text-blue-600" />
+                    <span>Secure, PCI-compliant payment processing</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4 text-blue-600" />
+                    <CheckCircle className="w-5 h-5 text-blue-600" />
                     <span>1099 tax form issuance via Stripe</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="w-5 h-5 text-blue-600" />
+                    <span>Use your existing Stripe account or create a new one</span>
                   </div>
                 </div>
               </Card>
-              
-              <div className="flex items-center justify-between">
-                <Label className="text-lg font-semibold">Stripe Connect Setup</Label>
-                <Badge className={bankingData.stripeConnected ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}>
-                  {bankingData.stripeConnected ? 'Connected' : 'Not Connected'}
-                </Badge>
+
+              <Alert className="border-blue-200 bg-blue-50">
+                <Info className="h-4 w-4 text-blue-600" />
+                <AlertDescription className="text-blue-800">
+                  Click the button below to connect your Stripe account. If you already have a Stripe account, 
+                  you can log in with your email. If not, Stripe will guide you through creating one.
+                </AlertDescription>
+              </Alert>
+
+              {/* Connect Button */}
+              <div className="flex flex-col items-center space-y-4">
+                <Button
+                  onClick={bankingData.stripeAccountId ? continueStripeOnboarding : connectStripeAccount}
+                  disabled={connectingStripe}
+                  size="lg"
+                  className="w-full max-w-md bg-[#635bff] hover:bg-[#5851db] text-white py-6 text-lg"
+                >
+                  {connectingStripe ? (
+                    <>
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                      Connecting to Stripe...
+                    </>
+                  ) : bankingData.stripeAccountId ? (
+                    <>
+                      <ExternalLink className="w-5 h-5 mr-2" />
+                      Continue Stripe Setup
+                    </>
+                  ) : (
+                    <>
+                      <ExternalLink className="w-5 h-5 mr-2" />
+                      Connect with Stripe
+                    </>
+                  )}
+                </Button>
+                <p className="text-xs text-center text-foreground/60">
+                  You'll be redirected to Stripe's secure platform to complete setup
+                </p>
               </div>
-              
-              {!bankingData.stripeConnected ? (
-                <StripeAccountConnector
-                  businessId={businessId}
-                  userId={userId}
-                  taxInfo={taxInfo}
-                  onAccountLinked={(accountData) => {
-                    console.log('Stripe account linked:', accountData);
-                    setBankingData(prev => ({
-                      ...prev,
-                      stripeConnected: true,
-                      stripeAccountId: accountData.id,
-                      stripeAccountStatus: accountData.charges_enabled ? 'active' : 'pending'
-                    }));
-                  }}
-                  onAccountCreated={(accountData) => {
-                    console.log('Stripe account created:', accountData);
-                    setBankingData(prev => ({
-                      ...prev,
-                      stripeConnected: true,
-                      stripeAccountId: accountData.id,
-                      stripeAccountStatus: accountData.charges_enabled ? 'active' : 'pending'
-                    }));
-                  }}
-                />
-              ) : (
-                <Card className="p-4 border-green-200 bg-green-50">
-                  <div className="flex items-center gap-3">
-                    <CheckCircle className="w-6 h-6 text-green-600" />
-                    <div>
-                      <h4 className="font-semibold text-green-800">Stripe Account Connected</h4>
-                      <p className="text-green-700">Your account is ready to receive payments</p>
-                    </div>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {/* Connected State */}
+              <Card className="p-6 border-green-200 bg-green-50">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center">
+                    <CheckCircle className="w-8 h-8 text-green-600" />
                   </div>
-                </Card>
-              )}
+                  <div>
+                    <h4 className="font-semibold text-xl text-green-800">Stripe Account Connected!</h4>
+                    <p className="text-green-700">Your account is ready to receive payments</p>
+                    {bankingData.stripeAccountId && (
+                      <p className="text-sm text-green-600 mt-1">
+                        Account ID: {bankingData.stripeAccountId.slice(0, 12)}...
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </Card>
+
+              {/* Payout Info */}
+              <Card className="p-4 border-blue-200 bg-blue-50">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                    <Banknote className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-blue-900">Automatic Weekly Payouts</h4>
+                    <p className="text-sm text-blue-800">
+                      Payments are automatically deposited to your bank account every Friday
+                    </p>
+                  </div>
+                </div>
+              </Card>
             </div>
           )}
-
-
-
-          {/* Automatic Payouts Information */}
-          <div className="space-y-4">
-            <Label className="text-lg font-semibold">Automatic Payouts</Label>
-            <Card className="p-4 border-green-200 bg-green-50">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                  <CheckCircle className="w-4 h-4 text-green-600" />
-                </div>
-                <div>
-                  <h4 className="font-semibold text-green-900">Automated Payouts Enabled</h4>
-                  <p className="text-sm text-green-800">
-                    All providers receive automatic payouts every Friday. No action required.
-                  </p>
-                </div>
-              </div>
-            </Card>
-          </div>
 
           {/* Security Information */}
           <Alert>
             <Lock className="h-4 w-4" />
             <AlertDescription>
               <strong>Security:</strong> All payment information is encrypted and processed securely through Stripe. 
-              We never store your full bank account or credit card details.
-            </AlertDescription>
-          </Alert>
-
-          {/* Information Alert */}
-          <Alert>
-            <Info className="h-4 w-4" />
-            <AlertDescription>
-              <strong>Note:</strong> You can change your payout settings anytime from your dashboard. 
-              The first payout may take 7-14 days to process for new accounts.
+              We never store your bank account or credit card details.
             </AlertDescription>
           </Alert>
 
           {/* Development Mode Skip Button */}
-          {process.env.NODE_ENV === 'development' && (
+          {process.env.NODE_ENV === 'development' && !bankingData.stripeConnected && (
             <div className="pt-4 border-t border-dashed border-orange-300">
               <Alert className="border-orange-200 bg-orange-50">
                 <Info className="h-4 w-4 text-orange-600" />
                 <AlertDescription className="text-orange-800">
-                  <strong>Development Mode:</strong> Click the button below to skip to the next step for testing purposes.
+                  <strong>Development Mode:</strong> Skip Stripe setup for testing.
                 </AlertDescription>
               </Alert>
               <div className="mt-3 flex justify-center">
                 <Button
                   variant="outline"
-                  onClick={() => onComplete({ stripeConnected: true })}
+                  onClick={() => onComplete({ stripeConnected: true, stripeAccountId: 'dev-mock-account' })}
                   className="border-orange-300 text-orange-700 hover:bg-orange-50"
                 >
-                  🚀 Skip to Service Pricing (Dev Mode)
+                  🚀 Skip to Next Step (Dev Mode)
                 </Button>
               </div>
             </div>
@@ -479,13 +439,6 @@ export default function BankingPayoutSetup({
               disabled={loading || !canSubmit()}
               className="bg-roam-blue hover:bg-roam-blue/90 ml-auto"
             >
-              {!canSubmit() && (
-                <span className="text-xs mr-2">
-                  {!bankingData.stripeConnected 
-                    ? "Connect Stripe Account" 
-                    : "Connect Bank Account"}
-                </span>
-              )}
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -493,7 +446,7 @@ export default function BankingPayoutSetup({
                 </>
               ) : (
                 <>
-                  Complete Setup
+                  Continue
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </>
               )}
