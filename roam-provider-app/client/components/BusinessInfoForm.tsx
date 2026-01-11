@@ -847,14 +847,14 @@ export function BusinessInfoForm({
                   onChange={handleInputChange("businessDescription")}
                   rows={4}
                   disabled={loading}
-                  maxLength={50}
+                  minLength={50}
                 />
                 <div className="flex justify-between text-xs">
                   <span className="text-foreground/60">
                     This will be displayed on your public profile
                   </span>
-                  <span className={`${(formData.businessDescription?.length || 0) >= 50 ? 'text-amber-600' : 'text-foreground/60'}`}>
-                    {formData.businessDescription?.length || 0}/50
+                  <span className={`${(formData.businessDescription?.length || 0) < 50 ? 'text-amber-600' : 'text-green-600'}`}>
+                    {formData.businessDescription?.length || 0}/50 min
                   </span>
                 </div>
               </div>
