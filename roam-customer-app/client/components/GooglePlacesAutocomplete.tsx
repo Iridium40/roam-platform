@@ -41,18 +41,24 @@ const GooglePlacesAutocomplete: React.FC<GooglePlacesAutocompleteProps> = ({
     import.meta.env.VITE_GOOGLE_MAPS_API_KEY ||
     "AIzaSyDuTYClctxxl_cq2Hr8gKbuOY-1-t4bqfw";
 
-  // Debug API key source in cloud environment
-  logger.debug("Google Maps API Key Debug:", {
-    fromEnv: !!import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
-    envValue:
-      import.meta.env.VITE_GOOGLE_MAPS_API_KEY?.substring(0, 15) + "...",
-    finalKey: GOOGLE_MAPS_API_KEY?.substring(0, 15) + "...",
-    domain: window.location.hostname,
-    protocol: window.location.protocol,
-    url: window.location.href,
-    isDev: import.meta.env.DEV,
-    mode: import.meta.env.MODE,
-  });
+  // Debug API key source - only log once on mount (not on every render)
+  const hasLoggedDebug = useRef(false);
+  useEffect(() => {
+    if (!hasLoggedDebug.current) {
+      hasLoggedDebug.current = true;
+      logger.debug("Google Maps API Key Debug:", {
+        fromEnv: !!import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
+        envValue:
+          import.meta.env.VITE_GOOGLE_MAPS_API_KEY?.substring(0, 15) + "...",
+        finalKey: GOOGLE_MAPS_API_KEY?.substring(0, 15) + "...",
+        domain: window.location.hostname,
+        protocol: window.location.protocol,
+        url: window.location.href,
+        isDev: import.meta.env.DEV,
+        mode: import.meta.env.MODE,
+      });
+    }
+  }, []);
 
   const loadGoogleMapsScript = () => {
     return new Promise<void>((resolve, reject) => {

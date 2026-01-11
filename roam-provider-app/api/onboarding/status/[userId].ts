@@ -67,9 +67,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .eq("business_id", businessProfile.id)
       .single();
 
+    // Check if there's an identity verification session for Phase 1
+    const { data: identityVerification } = await supabase
+      .from("stripe_identity_verifications")
+      .select("status, session_id")
+      .eq("business_id", businessProfile.id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single();
+
     // Determine current phase and step
     let phase: "phase1" | "phase2" | "complete" = "phase1";
-    let currentStep = "business_info";
+    let currentStep = "application"; // Use client step names
 
     if (businessProfile.verification_status === "approved") {
       phase = "phase2";
@@ -98,37 +107,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     } else {
       // Phase 1 - determine step based on setup progress
+      // Use client-compatible step names: "application", "identity_verification", "business_documents", "submitted"
       if (!businessProfile.business_name) {
-        currentStep = "business_info";
+        currentStep = "application";
       } else if (
         !application ||
         application.application_status !== "submitted"
       ) {
-        // Check if documents are uploaded
-        const { data: documents } = await supabase
-          .from("business_documents")
-          .select("document_type")
-          .eq("business_id", businessProfile.id)
-          .eq("verification_status", "pending");
+        // Check if identity verification was started/completed
+        const hasIdentityVerification = identityVerification && 
+          (identityVerification.status === "verified" || 
+           identityVerification.status === "processing" ||
+           identityVerification.status === "requires_input");
 
-        const requiredTypes = ["professional_license", "professional_headshot"];
-        if (businessProfile.business_type !== "sole_proprietorship") {
-          requiredTypes.push("business_license");
-        }
-
-        const hasAllRequiredDocs = requiredTypes.every((type) =>
-          documents?.some((doc) => doc.document_type === type),
-        );
-
-        if (!hasAllRequiredDocs) {
-          currentStep = "documents";
+        if (!hasIdentityVerification) {
+          // Need to complete identity verification first
+          currentStep = "identity_verification";
         } else {
-          currentStep = "review";
+          // Identity verification done/in progress, now check documents
+          currentStep = "business_documents"; // Use client step name
         }
       } else if (businessProfile.verification_status === "under_review") {
         currentStep = "submitted";
       } else if (businessProfile.verification_status === "pending") {
-        currentStep = "review";
+        currentStep = "business_documents";
       }
     }
 

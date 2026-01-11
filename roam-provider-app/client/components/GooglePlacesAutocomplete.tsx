@@ -38,19 +38,6 @@ const GooglePlacesAutocomplete: React.FC<GooglePlacesAutocompleteProps> = ({
     import.meta.env.VITE_GOOGLE_MAPS_API_KEY ||
     "AIzaSyDuTYClctxxl_cq2Hr8gKbuOY-1-t4bqfw";
 
-  // Debug API key source in cloud environment
-  console.log("Google Maps API Key Debug:", {
-    fromEnv: !!import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
-    envValue:
-      import.meta.env.VITE_GOOGLE_MAPS_API_KEY?.substring(0, 15) + "...",
-    finalKey: GOOGLE_MAPS_API_KEY?.substring(0, 15) + "...",
-    domain: window.location.hostname,
-    protocol: window.location.protocol,
-    url: window.location.href,
-    isDev: import.meta.env.DEV,
-    mode: import.meta.env.MODE,
-  });
-
   const loadGoogleMapsScript = () => {
     return new Promise<void>((resolve, reject) => {
       // Check if API key is available
@@ -86,23 +73,11 @@ const GooglePlacesAutocomplete: React.FC<GooglePlacesAutocompleteProps> = ({
       script.async = true;
       script.defer = true;
 
-      console.log("Loading Google Maps script:", {
-        url: scriptUrl.replace(GOOGLE_MAPS_API_KEY, "API_KEY_HIDDEN"),
-        timestamp: new Date().toISOString(),
-      });
 
       window.initGoogleMaps = () => {
-        console.log("Google Maps script loaded successfully");
-        console.log(
-          "API Key (first 10 chars):",
-          GOOGLE_MAPS_API_KEY?.substring(0, 10),
-        );
-
         // Test if Places API is actually working
         try {
-          if (window.google?.maps?.places) {
-            console.log("Places API is available");
-          } else {
+          if (!window.google?.maps?.places) {
             console.error("Places API not available after script load");
           }
         } catch (e) {
@@ -116,14 +91,7 @@ const GooglePlacesAutocomplete: React.FC<GooglePlacesAutocompleteProps> = ({
 
       // Handle Google Maps authentication/billing failures
       window.gm_authFailure = () => {
-        console.error("Google Maps authentication failure detected");
-        console.error("API Key being used:", GOOGLE_MAPS_API_KEY);
-        console.error("Please check:");
-        console.error("1. API key is valid");
-        console.error("2. Places API is enabled");
-        console.error("3. Maps JavaScript API is enabled");
-        console.error("4. API key restrictions (domain, IP, etc.)");
-        console.error("5. Billing is properly configured");
+        console.error("Google Maps authentication failure - check API key, billing, and domain restrictions");
         setIsGoogleMapsLoaded(false);
         setIsLoading(false);
         setBillingError(true);
@@ -171,12 +139,10 @@ const GooglePlacesAutocomplete: React.FC<GooglePlacesAutocompleteProps> = ({
       !window.google.maps ||
       !window.google.maps.places
     ) {
-      console.log("Google Maps not ready for autocomplete initialization");
       return;
     }
 
     try {
-      console.log("Initializing Google Places Autocomplete...");
 
       // Create autocomplete instance
       autocompleteRef.current = new window.google.maps.places.Autocomplete(
@@ -194,13 +160,9 @@ const GooglePlacesAutocomplete: React.FC<GooglePlacesAutocompleteProps> = ({
         },
       );
 
-      console.log("Google Places Autocomplete initialized successfully");
-
       // Listen for place selection
       autocompleteRef.current.addListener("place_changed", () => {
         const place = autocompleteRef.current?.getPlace();
-        console.log("Place selected:", place);
-
         if (place && place.formatted_address) {
           onChange(place.formatted_address, place);
         }
@@ -245,13 +207,7 @@ const GooglePlacesAutocomplete: React.FC<GooglePlacesAutocompleteProps> = ({
       setBillingError(true);
     };
 
-    loadGoogleMapsScript().catch((error) => {
-      console.warn("Google Maps unavailable, using manual input:", error);
-      console.error("Google Maps error details:", {
-        message: error.message,
-        stack: error.stack,
-        apiKey: GOOGLE_MAPS_API_KEY?.substring(0, 10) + "...",
-      });
+    loadGoogleMapsScript().catch(() => {
       setBillingError(true);
       setIsLoading(false);
     });

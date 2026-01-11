@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -63,11 +63,20 @@ export default function ProviderOnboardingPhase1() {
   const [error, setError] = useState<string | null>(null);
   // Track sub-step within application step (signup -> business_info)
   const [applicationSubStep, setApplicationSubStep] = useState<"signup" | "business_info">("signup");
+  
+  // Ref to track if we've already initialized and should skip server fetch
+  const hasInitialized = useRef(false);
+  // Ref to track if we're in the middle of a step transition (don't let server overwrite)
+  const isTransitioning = useRef(false);
 
-  // Initialize onboarding state based on URL and auth
+  // Initialize onboarding state based on URL and auth - only on mount
   useEffect(() => {
-    initializeOnboardingState();
-  }, [location, isAuthenticated]);
+    // Only initialize once to prevent server responses from overwriting client state
+    if (!hasInitialized.current) {
+      hasInitialized.current = true;
+      initializeOnboardingState();
+    }
+  }, [isAuthenticated]);
 
   const initializeOnboardingState = () => {
     if (isAuthenticated && user && user.id) {
@@ -84,6 +93,12 @@ export default function ProviderOnboardingPhase1() {
 
   const checkOnboardingStatus = async () => {
     if (!user) return;
+    
+    // Don't overwrite state if we're in the middle of a step transition
+    if (isTransitioning.current) {
+      console.log("Skipping server status check - currently transitioning between steps");
+      return;
+    }
 
     try {
       setLoading(true);
@@ -99,14 +114,36 @@ export default function ProviderOnboardingPhase1() {
           // Redirect to Phase 2
           navigate("/provider-onboarding/phase2/quick_setup");
         } else {
-          setOnboardingState((prev) => ({
-            ...prev,
-            phase1Step: status.currentStep || "application",
-            userData: status.userData || undefined,
-            businessData: status.businessData || undefined,
-            businessId: status.businessId || undefined,
-            userId: user.id,
-          }));
+          // Only update state if we don't already have a more advanced step
+          // This prevents server from overwriting client state during transitions
+          const stepOrder: Phase1Step[] = ["application", "identity_verification", "business_documents", "submitted"];
+          const currentStepIndex = stepOrder.indexOf(onboardingState.phase1Step);
+          const serverStepIndex = stepOrder.indexOf(status.currentStep as Phase1Step);
+          
+          // Only use server step if it's more advanced or we're at the beginning
+          if (currentStepIndex === -1 || serverStepIndex >= currentStepIndex || onboardingState.phase1Step === "application") {
+            setOnboardingState((prev) => ({
+              ...prev,
+              phase1Step: (status.currentStep as Phase1Step) || "application",
+              userData: status.userData || prev.userData,
+              businessData: status.businessData || prev.businessData,
+              businessId: status.businessId || prev.businessId,
+              userId: user.id,
+            }));
+            
+            // If we have business info already, move to business_info sub-step
+            if (status.businessData?.businessName && status.currentStep === "application") {
+              setApplicationSubStep("business_info");
+            }
+          } else {
+            console.log("Keeping current client step:", onboardingState.phase1Step, "over server step:", status.currentStep);
+            // Still update userId and businessId if missing
+            setOnboardingState((prev) => ({
+              ...prev,
+              businessId: prev.businessId || status.businessId,
+              userId: prev.userId || user.id,
+            }));
+          }
         }
       } else {
         // If API call fails, just start from the beginning
@@ -297,12 +334,18 @@ export default function ProviderOnboardingPhase1() {
         throw new Error("Invalid response: missing business data");
       }
 
+      // Set transitioning flag to prevent server from overwriting this state change
+      isTransitioning.current = true;
       setOnboardingState((prev) => ({
         ...prev,
         phase1Step: "identity_verification",
         businessData,
         businessId: result.business.id,
       }));
+      // Clear transitioning flag after a short delay
+      setTimeout(() => {
+        isTransitioning.current = false;
+      }, 1000);
     } catch (error) {
       setError(
         error instanceof Error
@@ -316,12 +359,18 @@ export default function ProviderOnboardingPhase1() {
 
   const handleIdentityVerificationComplete = async (verificationData: any) => {
     console.log("Identity verification completed:", verificationData);
+    // Set transitioning flag to prevent server from overwriting this state change
+    isTransitioning.current = true;
     setOnboardingState((prev) => ({
       ...prev,
       phase1Step: "business_documents",
       identityVerified: true,
       identityVerificationSessionId: verificationData.id,
     }));
+    // Clear transitioning flag after a short delay to allow React to settle
+    setTimeout(() => {
+      isTransitioning.current = false;
+    }, 1000);
   };
 
   const handleIdentityVerificationPending = () => {
