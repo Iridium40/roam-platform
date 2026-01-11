@@ -14,7 +14,6 @@ interface SignupData {
   lastName: string;
   phone: string;
   dateOfBirth: string;
-  yearsExperience: string;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -46,7 +45,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       "lastName",
       "phone",
       "dateOfBirth",
-      "yearsExperience",
     ];
     for (const field of requiredFields) {
       if (!signupData[field]) {
@@ -143,18 +141,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Create initial provider record with role 'owner'
-    // Parse years of experience to integer (column is experience_years: integer)
-    const experienceYears = signupData.yearsExperience.includes('+') 
-      ? parseInt(signupData.yearsExperience.replace('+', ''))
-      : parseInt(signupData.yearsExperience.split('-')[0]);
-
     console.log("Creating provider record with data:", {
       user_id: authData.user.id,
       first_name: signupData.firstName,
       last_name: signupData.lastName,
       email: signupData.email,
       phone: signupData.phone,
-      experience_years: experienceYears,
       provider_role: "owner",
     });
 
@@ -166,7 +158,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         last_name: signupData.lastName,
         email: signupData.email,
         phone: signupData.phone,
-        experience_years: experienceYears,
         provider_role: "owner",
         verification_status: "pending",
         is_active: false,

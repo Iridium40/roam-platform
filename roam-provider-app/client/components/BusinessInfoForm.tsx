@@ -847,10 +847,16 @@ export function BusinessInfoForm({
                   onChange={handleInputChange("businessDescription")}
                   rows={4}
                   disabled={loading}
+                  maxLength={50}
                 />
-                <p className="text-xs text-foreground/60">
-                  This will be displayed on your public profile
-                </p>
+                <div className="flex justify-between text-xs">
+                  <span className="text-foreground/60">
+                    This will be displayed on your public profile
+                  </span>
+                  <span className={`${(formData.businessDescription?.length || 0) >= 50 ? 'text-amber-600' : 'text-foreground/60'}`}>
+                    {formData.businessDescription?.length || 0}/50
+                  </span>
+                </div>
               </div>
 
               <div className="space-y-2">
