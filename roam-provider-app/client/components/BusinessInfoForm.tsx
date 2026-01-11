@@ -857,8 +857,8 @@ export function BusinessInfoForm({
                 <Label htmlFor="website">Website</Label>
                 <Input
                   id="website"
-                  type="url"
-                  placeholder="https://yourbusiness.com"
+                  type="text"
+                  placeholder="yourbusiness.com"
                   value={formData.website}
                   onChange={handleInputChange("website")}
                   disabled={loading}

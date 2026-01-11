@@ -35,6 +35,7 @@ export function BusinessSettingsTab({ providerData, business, onBusinessUpdate }
     saveBusinessSettings,
     handleLogoUpload,
     handleCoverUpload,
+    handleCoverPositionChange,
   } = useBusinessSettings(business);
 
   // State for documents and locations
@@ -396,6 +397,8 @@ export function BusinessSettingsTab({ providerData, business, onBusinessUpdate }
             onSave={saveBusinessSettings}
             logoUploading={logoUploading}
             coverUploading={coverUploading}
+            coverImagePosition={businessData.cover_image_position || 50}
+            onCoverPositionChange={handleCoverPositionChange}
             onLogoUpload={handleLogoUpload}
             onCoverUpload={handleCoverUpload}
           />

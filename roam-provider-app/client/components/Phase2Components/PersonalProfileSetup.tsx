@@ -375,7 +375,7 @@ export default function PersonalProfileSetup({
     if (formData.professionalBio.trim()) completed++;
     if (formData.yearsExperience > 0) completed++;
     if (formData.avatarUrl || avatarUpload.uploaded) completed++;
-    if (formData.coverImageUrl || coverUpload.uploaded) completed++;
+    // Cover image is now inherited from business profile
 
     return Math.round((completed / total) * 100);
   };
@@ -417,20 +417,20 @@ export default function PersonalProfileSetup({
             {/* Avatar Upload */}
             <div className="space-y-4">
               <div>
-                <Label className="text-base font-semibold">Professional Avatar</Label>
+                <Label className="text-base font-semibold">Profile Image</Label>
                 <p className="text-sm text-foreground/70">
                   Square photo (400x400px) • Max 1MB • JPG, PNG, WebP
                 </p>
               </div>
 
               <div className="flex items-start gap-4">
-                <div className="w-24 h-24 border-2 border-dashed border-gray-300 rounded-full flex items-center justify-center bg-gray-50 relative overflow-hidden">
+                <div className="w-24 h-24 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50 relative overflow-hidden">
                   {avatarUpload.preview || formData.avatarUrl ? (
                     <>
                       <img
                         src={avatarUpload.preview || formData.avatarUrl}
                         alt="Avatar"
-                        className="w-full h-full object-cover rounded-full"
+                        className="w-full h-full object-cover rounded-lg"
                       />
                       <button
                         onClick={() => removeImage('avatar')}
@@ -494,83 +494,7 @@ export default function PersonalProfileSetup({
               </div>
             </div>
 
-            {/* Cover Upload */}
-            <div className="space-y-4">
-              <div>
-                <Label className="text-base font-semibold">Personal Cover Image</Label>
-                <p className="text-sm text-foreground/70">
-                  Banner (1200x400px) • Max 3MB • JPG, PNG, WebP
-                </p>
-              </div>
-
-              <div className="space-y-3">
-                <div className="w-full h-24 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50 relative overflow-hidden">
-                  {coverUpload.preview || formData.coverImageUrl ? (
-                    <>
-                      <img
-                        src={coverUpload.preview || formData.coverImageUrl}
-                        alt="Cover"
-                        className="w-full h-full object-cover"
-                      />
-                      <button
-                        onClick={() => removeImage('cover')}
-                        className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </>
-                  ) : (
-                    <Camera className="w-6 h-6 text-gray-400" />
-                  )}
-                </div>
-
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => document.getElementById('cover-upload')?.click()}
-                    disabled={coverUpload.uploading}
-                  >
-                    <Upload className="w-4 h-4 mr-2" />
-                    Choose Cover
-                  </Button>
-                  
-                  {coverUpload.file && !coverUpload.uploaded && (
-                    <Button
-                      size="sm"
-                      onClick={() => uploadImage('cover')}
-                      disabled={coverUpload.uploading}
-                      className="bg-roam-blue hover:bg-roam-blue/90"
-                    >
-                      {coverUpload.uploading ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        'Upload'
-                      )}
-                    </Button>
-                  )}
-                </div>
-
-                {coverUpload.uploaded && (
-                  <div className="flex items-center gap-2 text-green-600">
-                    <CheckCircle className="w-4 h-4" />
-                    <span className="text-sm">Cover uploaded</span>
-                  </div>
-                )}
-
-                {coverUpload.error && (
-                  <p className="text-red-500 text-xs">{coverUpload.error}</p>
-                )}
-
-                <input
-                  id="cover-upload"
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => handleImageSelect(e, 'cover')}
-                  className="hidden"
-                />
-              </div>
-            </div>
+            {/* Note: Cover image is inherited from business profile for all staff members */}
           </div>
 
           {/* Basic Information */}

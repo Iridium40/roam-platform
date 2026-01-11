@@ -531,7 +531,7 @@ export default function StripeTaxInfoCapture({
                 id="website"
                 value={taxInfo.website}
                 onChange={(e) => updateTaxInfo('website', e.target.value)}
-                placeholder="https://your-website.com"
+                placeholder="yourbusiness.com"
               />
             </div>
 

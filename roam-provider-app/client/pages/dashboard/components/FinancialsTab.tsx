@@ -2173,6 +2173,7 @@ function TaxInformationSection({ businessId }: { businessId: string }) {
   const [contact, setContact] = useState({ name: '', email: '', phone: '' });
   const [w9Status, setW9Status] = useState<'not_collected'|'requested'|'received'|'invalid'|'expired'>('not_collected');
   const [taxSetupCompleted, setTaxSetupCompleted] = useState(false);
+  const [stripeSynced, setStripeSynced] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -2197,6 +2198,7 @@ function TaxInformationSection({ businessId }: { businessId: string }) {
             setContact({ name: t.tax_contact_name || '', email: t.tax_contact_email || '', phone: t.tax_contact_phone || '' });
             setW9Status(t.w9_status || 'not_collected');
             setTaxSetupCompleted(!!t.tax_setup_completed);
+            setStripeSynced(!!t.stripe_tax_registered);
           }
         }
       } catch (e) {
@@ -2227,14 +2229,24 @@ function TaxInformationSection({ businessId }: { businessId: string }) {
         tax_contact_email: contact.email,
         tax_contact_phone: contact.phone,
         w9_status: w9Status,
-        tax_setup_completed: taxSetupCompleted,
+        // tax_setup_completed is set automatically by the API when Stripe sync succeeds
       };
       const res = await fetch('/api/business/tax-info', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.error || 'Failed to save tax info');
       }
-      toast({ title: 'Saved', description: 'Tax information updated.' });
+      const result = await res.json();
+      // Update local state based on API response
+      if (result.stripe_synced) {
+        setStripeSynced(true);
+        setTaxSetupCompleted(true);
+        toast({ title: 'Saved & Synced', description: 'Tax information updated and synced to Stripe.' });
+      } else if (result.stripe_sync_error) {
+        toast({ title: 'Saved', description: `Tax information saved. Stripe sync warning: ${result.stripe_sync_error}`, variant: 'default' });
+      } else {
+        toast({ title: 'Saved', description: 'Tax information updated.' });
+      }
     } catch (e:any) {
       toast({ title: 'Error', description: e.message || 'Failed to save tax info', variant: 'destructive' });
     } finally {
@@ -2338,9 +2350,27 @@ function TaxInformationSection({ businessId }: { businessId: string }) {
             </SelectContent>
           </Select>
         </div>
-        <div className="flex items-center gap-3">
-          <label className="text-sm font-medium">Tax Setup Completed</label>
-          <Switch checked={taxSetupCompleted} onCheckedChange={setTaxSetupCompleted} />
+        <div className="flex flex-col gap-2">
+          <label className="text-sm font-medium">Tax Setup Status</label>
+          <div className="flex items-center gap-2 mt-1">
+            {taxSetupCompleted ? (
+              <Badge variant="default" className="bg-green-100 text-green-800 border-green-300">
+                ✓ Complete
+              </Badge>
+            ) : (
+              <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 border-yellow-300">
+                Pending
+              </Badge>
+            )}
+            {stripeSynced && (
+              <Badge variant="outline" className="text-xs">
+                Synced to Stripe
+              </Badge>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Status is set automatically when tax info is successfully synced to Stripe.
+          </p>
         </div>
       </div>
 

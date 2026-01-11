@@ -39,6 +39,7 @@ import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import ShareModal from "@/components/ShareModal";
 import BusinessDocumentUploadForm from "@/components/BusinessDocumentUploadForm";
+import CoverImageEditor from "@/components/CoverImageEditor";
 
 interface BusinessSettingsTabProps {
   providerData: any;
@@ -124,6 +125,7 @@ export default function BusinessSettingsTab({
   const [isEditing, setIsEditing] = useState(false);
   const [logoUploading, setLogoUploading] = useState(false);
   const [coverUploading, setCoverUploading] = useState(false);
+  const [coverImagePosition, setCoverImagePosition] = useState(50); // 0-100, 50 is center
   
   // Business Locations State
   const [locations, setLocations] = useState<any[]>([]);
@@ -842,63 +844,31 @@ export default function BusinessSettingsTab({
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Cover Photo */}
-          <div>
-            <Label className="text-sm font-medium">Cover Photo</Label>
-            <div className="mt-2 relative">
-              {businessData.cover_image_url ? (
-                <div className="relative">
-                  <img
-                    src={businessData.cover_image_url}
-                    alt="Business Cover"
-                    className="w-full h-32 object-cover rounded-lg"
-                  />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="absolute top-2 right-2"
-                    disabled={coverUploading}
-                    onClick={() => document.getElementById('business-cover-upload')?.click()}
-                  >
-                    <Camera className="w-4 h-4 mr-1" />
-                    Change
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="absolute top-2 right-20"
-                    onClick={() => setBusinessData({...businessData, cover_image_url: ""})}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              ) : (
-                <div className="w-full h-32 bg-gray-100 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-300">
-                  <Button
-                    variant="outline"
-                    onClick={() => document.getElementById('business-cover-upload')?.click()}
-                    disabled={coverUploading}
-                  >
-                    <Upload className="w-4 h-4 mr-2" />
-                    Upload Cover Photo
-                  </Button>
-                </div>
-              )}
-              <input
-                id="business-cover-upload"
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) handleCoverUpload(file);
-                }}
-              />
-            </div>
-            <p className="text-xs text-gray-500 mt-1">
-              Upload a cover image for your business (max 10MB). Recommended size: 1200x400px
-            </p>
-          </div>
+          {/* Cover Photo with Position Controls */}
+          <CoverImageEditor
+            imageUrl={businessData.cover_image_url}
+            imagePosition={coverImagePosition}
+            onPositionChange={async (pos) => {
+              setCoverImagePosition(pos);
+              // Save to database
+              if (business?.id) {
+                try {
+                  await supabase
+                    .from("business_profiles")
+                    .update({ cover_image_position: pos })
+                    .eq("id", business.id);
+                } catch (err) {
+                  console.error("Error saving cover position:", err);
+                }
+              }
+            }}
+            onFileSelect={(file) => handleCoverUpload(file)}
+            onRemove={() => setBusinessData({...businessData, cover_image_url: ""})}
+            uploading={coverUploading}
+            label="Cover Photo"
+            helpText="Recommended size: 1200x400px • Use arrows to adjust position"
+            height="h-32"
+          />
 
           {/* Logo and Basic Info */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -1006,11 +976,11 @@ export default function BusinessSettingsTab({
                 <Label htmlFor="website_url">Website</Label>
                 <Input
                   id="website_url"
-                  type="url"
+                  type="text"
                   value={businessData.website_url}
                   onChange={(e) => setBusinessData({...businessData, website_url: e.target.value})}
                   disabled={!isEditing}
-                  placeholder="https://yourbusiness.com"
+                  placeholder="yourbusiness.com"
                 />
               </div>
             </div>

@@ -363,7 +363,7 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({
                   <Label htmlFor="website">Website URL</Label>
                   <Input
                     id="website"
-                    type="url"
+                    type="text"
                     value={businessData.website_url}
                     onChange={(e) =>
                       setBusinessData({
@@ -371,7 +371,7 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({
                         website_url: e.target.value,
                       })
                     }
-                    placeholder="https://yourwebsite.com"
+                    placeholder="yourbusiness.com"
                   />
                 </div>
 

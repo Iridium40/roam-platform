@@ -18,6 +18,7 @@ import {
   Save,
   Loader2,
 } from "lucide-react";
+import CoverImageEditor from "@/components/CoverImageEditor";
 
 interface BasicInfoSectionProps {
   businessData: any;
@@ -27,6 +28,8 @@ interface BasicInfoSectionProps {
   onSave: () => void;
   logoUploading: boolean;
   coverUploading: boolean;
+  coverImagePosition?: number;
+  onCoverPositionChange?: (position: number) => void;
   onLogoUpload: (file: File) => void;
   onCoverUpload: (file: File) => void;
 }
@@ -39,6 +42,8 @@ export default function BasicInfoSection({
   onSave,
   logoUploading,
   coverUploading,
+  coverImagePosition = 50,
+  onCoverPositionChange,
   onLogoUpload,
   onCoverUpload,
 }: BasicInfoSectionProps) {
@@ -52,55 +57,29 @@ export default function BasicInfoSection({
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
-          {/* Cover Photo */}
-          <div className="space-y-4">
-            <Label>Cover Photo</Label>
-            <div 
-              className="relative h-48 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
-              onClick={() => document.getElementById('cover-upload')?.click()}
-            >
-              {businessData.cover_image_url ? (
-                <img
-                  src={businessData.cover_image_url}
-                  alt="Business Cover"
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="flex items-center justify-center h-full">
-                  <div className="text-white text-center">
-                    <Camera className="w-8 h-8 mx-auto mb-2" />
-                    <p className="text-sm">Click to add cover photo</p>
-                  </div>
-                </div>
-              )}
-              <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-40 opacity-0 hover:opacity-100 transition-opacity">
-                <Camera className="w-8 h-8 text-white" />
-              </div>
-            </div>
-            <input
-              id="cover-upload"
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) onCoverUpload(file);
-              }}
-              disabled={coverUploading}
-            />
-          </div>
+          {/* Cover Photo with Position Controls */}
+          <CoverImageEditor
+            imageUrl={businessData.cover_image_url}
+            imagePosition={coverImagePosition}
+            onPositionChange={onCoverPositionChange}
+            onFileSelect={onCoverUpload}
+            onRemove={() => setBusinessData({...businessData, cover_image_url: ""})}
+            uploading={coverUploading}
+            label="Cover Photo"
+            helpText="Recommended size: 1200x400px • Use arrows to adjust position"
+          />
 
           {/* Logo and Basic Info */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Logo */}
             <div className="flex flex-col items-center space-y-4">
               <div className="relative">
-                <div className="w-24 h-24 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden">
+                <div className="w-24 h-24 rounded-lg bg-gray-100 flex items-center justify-center overflow-hidden">
                   {businessData.logo_url ? (
                     <img
                       src={businessData.logo_url}
                       alt="Business Logo"
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover rounded-lg"
                     />
                   ) : (
                     <Building className="w-8 h-8 text-gray-400" />
@@ -198,10 +177,10 @@ export default function BasicInfoSection({
                 <Label htmlFor="website_url">Website</Label>
                 <Input
                   id="website_url"
-                  type="url"
+                  type="text"
                   value={businessData.website_url || ""}
                   onChange={(e) => setBusinessData({...businessData, website_url: e.target.value})}
-                  placeholder="https://yourbusiness.com"
+                  placeholder="yourbusiness.com"
                 />
               </div>
             </div>

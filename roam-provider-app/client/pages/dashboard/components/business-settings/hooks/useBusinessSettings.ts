@@ -14,6 +14,7 @@ interface BusinessData {
   business_description: string;
   logo_url: string;
   cover_image_url: string;
+  cover_image_position?: number; // 0-100, 50 is center
   business_hours: {
     monday: { open: string; close: string; closed: boolean };
     tuesday: { open: string; close: string; closed: boolean };
@@ -396,6 +397,29 @@ export function useBusinessSettings(business: any) {
     setHasChanges(false);
   };
 
+  // Handle cover image position change
+  const handleCoverPositionChange = async (position: number) => {
+    // Update local state
+    setBusinessData(prev => ({ ...prev, cover_image_position: position }));
+    setHasChanges(true);
+    
+    // Also save to database immediately for better UX
+    if (business?.id) {
+      try {
+        const { error } = await (supabase as any)
+          .from("business_profiles")
+          .update({ cover_image_position: position })
+          .eq("id", business.id);
+          
+        if (error) {
+          console.error("Error saving cover position:", error);
+        }
+      } catch (err) {
+        console.error("Error saving cover position:", err);
+      }
+    }
+  };
+
   return {
     // Business data
     businessData,
@@ -421,5 +445,6 @@ export function useBusinessSettings(business: any) {
     resetChanges,
     handleLogoUpload,
     handleCoverUpload,
+    handleCoverPositionChange,
   };
 }

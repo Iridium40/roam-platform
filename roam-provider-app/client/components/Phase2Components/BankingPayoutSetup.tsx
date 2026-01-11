@@ -357,7 +357,7 @@ export default function BankingPayoutSetup({
                   </div>
                   <div className="flex items-center gap-2">
                     <CheckCircle className="w-4 h-4 text-blue-600" />
-                    <span>Automatic tax handling</span>
+                    <span>1099 tax form issuance via Stripe</span>
                   </div>
                 </div>
               </Card>

@@ -31,6 +31,7 @@ interface Business {
   image_url?: string;
   logo_url?: string;
   cover_image_url?: string;
+  cover_image_position?: number;
   rating: number;
   review_count: number;
   business_hours?: BusinessHours;
@@ -133,6 +134,7 @@ export default function BusinessProfile() {
             image_url,
             logo_url,
             cover_image_url,
+            cover_image_position,
             verification_status,
             business_hours
           `)
@@ -197,6 +199,7 @@ export default function BusinessProfile() {
           image_url: businessData.image_url,
           logo_url: businessData.logo_url,
           cover_image_url: businessData.cover_image_url,
+          cover_image_position: businessData.cover_image_position,
           rating: calculatedRating,
           review_count: reviewCount,
           business_hours: businessData.business_hours || undefined,
@@ -406,6 +409,7 @@ export default function BusinessProfile() {
                   src={business.cover_image_url} 
                   alt={`${business.business_name} cover`} 
                   className="w-full h-full object-cover"
+                  style={{ objectPosition: `center ${business.cover_image_position ?? 50}%` }}
                 />
               </div>
             </div>
@@ -416,9 +420,9 @@ export default function BusinessProfile() {
             <div className="flex items-start gap-6">
               <div className="w-24 h-24 bg-gray-200 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
                 {business.logo_url ? (
-                  <img src={business.logo_url} alt={business.business_name} className="w-full h-full object-cover" />
+                  <img src={business.logo_url} alt={business.business_name} className="w-full h-full object-cover rounded-lg" />
                 ) : business.image_url ? (
-                  <img src={business.image_url} alt={business.business_name} className="w-full h-full object-cover" />
+                  <img src={business.image_url} alt={business.business_name} className="w-full h-full object-cover rounded-lg" />
                 ) : (
                   <Building className="w-12 h-12 text-gray-400" />
                 )}
@@ -761,12 +765,12 @@ export default function BusinessProfile() {
                         >
                           <CardContent className="p-6">
                             <div className="flex gap-4">
-                              <div className="w-20 h-20 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+                              <div className="w-20 h-20 bg-gray-200 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
                                 {provider.image_url ? (
                                   <img 
                                     src={provider.image_url} 
                                     alt={`${provider.first_name} ${provider.last_name}`} 
-                                    className="w-full h-full object-cover" 
+                                    className="w-full h-full object-cover rounded-lg" 
                                   />
                                 ) : (
                                   <User className="w-10 h-10 text-gray-400" />

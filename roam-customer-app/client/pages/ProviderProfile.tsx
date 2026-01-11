@@ -22,12 +22,13 @@ interface Provider {
   last_name: string;
   bio?: string;
   image_url?: string;
-  cover_image_url?: string;
   provider_role?: 'owner' | 'provider' | 'dispatcher';
   business_id: string;
   business?: {
     business_name: string;
     id: string;
+    cover_image_url?: string;
+    cover_image_position?: number;
   };
 }
 
@@ -81,6 +82,7 @@ export default function ProviderProfile() {
       
       try {
         // Load provider/owner details by provider id
+        // Note: Staff members use business cover image, not personal cover image
         const { data: providerData, error: providerError } = await supabase
           .from('providers')
           .select(`
@@ -90,12 +92,13 @@ export default function ProviderProfile() {
             last_name,
             bio,
             image_url,
-            cover_image_url,
             provider_role,
             business_id,
             business_profiles (
               business_name,
-              id
+              id,
+              cover_image_url,
+              cover_image_position
             )
           `)
           .eq('id', providerId)
@@ -280,14 +283,15 @@ export default function ProviderProfile() {
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="max-w-5xl mx-auto">
-          {/* Cover Image */}
-          {provider.cover_image_url && (
+          {/* Cover Image - Uses business cover image for all staff members */}
+          {provider.business?.cover_image_url && (
             <div className="mb-8">
               <div className="w-full h-64 bg-gradient-to-br from-roam-blue/20 to-roam-light-blue/10 rounded-lg overflow-hidden">
                 <img 
-                  src={provider.cover_image_url} 
-                  alt={`${provider.first_name} ${provider.last_name} cover`} 
+                  src={provider.business.cover_image_url} 
+                  alt={`${provider.business.business_name} cover`} 
                   className="w-full h-full object-cover"
+                  style={{ objectPosition: `center ${provider.business.cover_image_position ?? 50}%` }}
                 />
               </div>
             </div>
@@ -296,12 +300,12 @@ export default function ProviderProfile() {
           {/* Provider Header */}
           <div className="bg-white rounded-lg shadow-lg p-8 mb-8">
             <div className="flex items-start gap-6">
-              <div className="w-32 h-32 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden border-4 border-white shadow-lg">
+              <div className="w-32 h-32 bg-gray-200 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden border-4 border-white shadow-lg">
                 {provider.image_url ? (
                   <img 
                     src={provider.image_url} 
                     alt={`${provider.first_name} ${provider.last_name}`} 
-                    className="w-full h-full object-cover" 
+                    className="w-full h-full object-cover rounded-lg" 
                   />
                 ) : (
                   <User className="w-16 h-16 text-gray-400" />

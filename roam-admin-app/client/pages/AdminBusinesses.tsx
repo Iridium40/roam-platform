@@ -3713,7 +3713,7 @@ export default function AdminBusinesses() {
               <Label htmlFor="website_url">Website URL</Label>
               <Input
                 id="website_url"
-                type="url"
+                type="text"
                 value={newBusiness.website_url}
                 onChange={(e) =>
                   setNewBusiness({
@@ -3721,7 +3721,7 @@ export default function AdminBusinesses() {
                     website_url: e.target.value,
                   })
                 }
-                placeholder="https://www.business.com"
+                placeholder="yourbusiness.com"
               />
             </div>
 

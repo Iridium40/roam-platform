@@ -1,5 +1,11 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
+import Stripe from 'stripe';
+
+// Initialize Stripe (optional - only if key is available)
+const stripe = process.env.STRIPE_SECRET_KEY
+  ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-12-18.acacia' as any })
+  : null;
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -213,7 +219,100 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
       }
 
-      return res.status(200).json({ message: 'Saved', tax_info: data });
+      // Sync tax info to Stripe Connect account if one exists
+      let stripeSynced = false;
+      let stripeSyncError: string | null = null;
+      
+      if (stripe) {
+        try {
+          // Check if business has a Stripe Connect account
+          const { data: businessProfile, error: bpError } = await supabase
+            .from('business_profiles')
+            .select('stripe_account_id')
+            .eq('id', business_id)
+            .single();
+
+          if (!bpError && businessProfile?.stripe_account_id) {
+            const stripeAccountId = businessProfile.stripe_account_id;
+            console.log('Syncing tax info to Stripe Connect account:', stripeAccountId);
+
+            // Determine if this is a company or individual account
+            const isCompanyType = ['llc', 'corporation', 'partnership', 'non_profit'].includes(businessEntityType);
+
+            // Build Stripe update params
+            const stripeUpdateParams: Stripe.AccountUpdateParams = {
+              business_profile: {
+                name: legal_business_name || undefined,
+              },
+            };
+
+            if (isCompanyType) {
+              stripeUpdateParams.company = {
+                name: legal_business_name || undefined,
+                tax_id: tax_id || undefined,
+                phone: tax_contact_phone || undefined,
+                address: {
+                  line1: tax_address_line1 || undefined,
+                  line2: tax_address_line2 || undefined,
+                  city: tax_city || undefined,
+                  state: tax_state || undefined,
+                  postal_code: tax_postal_code || undefined,
+                  country: tax_country || 'US',
+                },
+              };
+            } else {
+              // For individual/sole proprietorship accounts
+              stripeUpdateParams.individual = {
+                address: {
+                  line1: tax_address_line1 || undefined,
+                  line2: tax_address_line2 || undefined,
+                  city: tax_city || undefined,
+                  state: tax_state || undefined,
+                  postal_code: tax_postal_code || undefined,
+                  country: tax_country || 'US',
+                },
+              };
+            }
+
+            // Update the Stripe Connect account
+            await stripe.accounts.update(stripeAccountId, stripeUpdateParams);
+            console.log('✅ Tax info synced to Stripe Connect account:', stripeAccountId);
+            stripeSynced = true;
+
+            // Update the stripe_tax_registered field and mark tax setup as complete
+            await supabase
+              .from('business_stripe_tax_info')
+              .update({
+                stripe_tax_registered: true,
+                stripe_tax_registration_date: new Date().toISOString(),
+                stripe_tax_registration_error: null,
+                tax_setup_completed: true,
+                tax_setup_completed_date: new Date().toISOString(),
+              })
+              .eq('business_id', business_id);
+          } else {
+            console.log('No Stripe Connect account found for business - skipping Stripe sync');
+          }
+        } catch (stripeErr: any) {
+          console.error('Error syncing tax info to Stripe:', stripeErr);
+          stripeSyncError = stripeErr.message || 'Failed to sync to Stripe';
+          
+          // Log the error to database but don't fail the request
+          await supabase
+            .from('business_stripe_tax_info')
+            .update({
+              stripe_tax_registration_error: stripeSyncError,
+            })
+            .eq('business_id', business_id);
+        }
+      }
+
+      return res.status(200).json({ 
+        message: 'Saved', 
+        tax_info: data,
+        stripe_synced: stripeSynced,
+        stripe_sync_error: stripeSyncError
+      });
     } catch (err) {
       console.error('Tax info PUT error:', err);
       console.error('Error details:', {
