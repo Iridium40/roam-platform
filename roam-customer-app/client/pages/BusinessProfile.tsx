@@ -399,12 +399,12 @@ export default function BusinessProfile() {
         </div>
       </nav>
 
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 lg:py-12">
         <div className="max-w-6xl mx-auto">
           {/* Cover Image */}
           {business.cover_image_url && (
             <div className="mb-8">
-              <div className="w-full h-64 bg-gray-200 rounded-lg overflow-hidden">
+              <div className="w-full h-44 sm:h-56 lg:h-64 bg-gray-200 rounded-lg overflow-hidden">
                 <img 
                   src={business.cover_image_url} 
                   alt={`${business.business_name} cover`} 
@@ -416,9 +416,9 @@ export default function BusinessProfile() {
           )}
           
           {/* Business Header */}
-          <div className="bg-white rounded-lg shadow-lg p-8 mb-8">
-            <div className="flex items-start gap-6">
-              <div className="w-24 h-24 bg-gray-200 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
+          <div className="bg-white rounded-lg shadow-lg p-4 sm:p-6 lg:p-8 mb-6 sm:mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-start gap-4 sm:gap-6">
+              <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gray-200 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
                 {business.logo_url ? (
                   <img src={business.logo_url} alt={business.business_name} className="w-full h-full object-cover rounded-lg" />
                 ) : business.image_url ? (
@@ -427,12 +427,12 @@ export default function BusinessProfile() {
                   <Building className="w-12 h-12 text-gray-400" />
                 )}
               </div>
-              <div className="flex-1">
-                <div className="flex items-center justify-between mb-2">
-                  <h1 className="text-3xl font-bold text-foreground">
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-2">
+                  <h1 className="text-2xl sm:text-3xl font-bold text-foreground break-words">
                     {business.business_name}
                   </h1>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <FavoriteButton
                       type="business"
                       itemId={business.id}
@@ -451,10 +451,10 @@ export default function BusinessProfile() {
                     </Button>
                   </div>
                 </div>
-                <p className="text-foreground/60 mb-4">
+                <p className="text-foreground/60 mb-4 break-words">
                   {business.description}
                 </p>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4 flex-wrap">
                   <div className="flex items-center">
                     <span className="text-yellow-500">★</span>
                     {business.review_count > 0 ? (
@@ -477,10 +477,10 @@ export default function BusinessProfile() {
           {/* Tabs */}
           <div className="bg-white rounded-lg shadow-lg mb-8">
             <div className="border-b">
-              <div className="flex">
+              <div className="flex overflow-x-auto whitespace-nowrap [-webkit-overflow-scrolling:touch]">
                 <button
                   onClick={() => setActiveTab('overview')}
-                  className={`px-6 py-4 font-medium ${
+                  className={`px-4 sm:px-6 py-3 sm:py-4 font-medium shrink-0 ${
                     activeTab === 'overview'
                       ? 'border-b-2 border-roam-blue text-roam-blue'
                       : 'text-gray-500 hover:text-gray-700'
@@ -490,7 +490,7 @@ export default function BusinessProfile() {
                 </button>
                 <button
                   onClick={() => setActiveTab('services')}
-                  className={`px-6 py-4 font-medium ${
+                  className={`px-4 sm:px-6 py-3 sm:py-4 font-medium shrink-0 ${
                     activeTab === 'services'
                       ? 'border-b-2 border-roam-blue text-roam-blue'
                       : 'text-gray-500 hover:text-gray-700'
@@ -500,7 +500,7 @@ export default function BusinessProfile() {
                 </button>
                 <button
                   onClick={() => setActiveTab('staff')}
-                  className={`px-6 py-4 font-medium ${
+                  className={`px-4 sm:px-6 py-3 sm:py-4 font-medium shrink-0 ${
                     activeTab === 'staff'
                       ? 'border-b-2 border-roam-blue text-roam-blue'
                       : 'text-gray-500 hover:text-gray-700'
@@ -510,7 +510,7 @@ export default function BusinessProfile() {
                 </button>
                 <button
                   onClick={() => setActiveTab('reviews')}
-                  className={`px-6 py-4 font-medium ${
+                  className={`px-4 sm:px-6 py-3 sm:py-4 font-medium shrink-0 ${
                     activeTab === 'reviews'
                       ? 'border-b-2 border-roam-blue text-roam-blue'
                       : 'text-gray-500 hover:text-gray-700'
@@ -521,7 +521,7 @@ export default function BusinessProfile() {
               </div>
             </div>
 
-            <div className="p-8">
+            <div className="p-4 sm:p-6 lg:p-8">
               {activeTab === 'overview' && (
                 <div>
                   <h2 className="text-2xl font-semibold mb-4">About {business.business_name}</h2>

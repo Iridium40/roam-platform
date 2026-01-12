@@ -281,12 +281,12 @@ export default function ProviderProfile() {
         </div>
       </nav>
 
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 lg:py-12">
         <div className="max-w-5xl mx-auto">
           {/* Cover Image - Uses business cover image for all staff members */}
           {provider.business?.cover_image_url && (
             <div className="mb-8">
-              <div className="w-full h-64 bg-gradient-to-br from-roam-blue/20 to-roam-light-blue/10 rounded-lg overflow-hidden">
+              <div className="w-full h-44 sm:h-56 lg:h-64 bg-gradient-to-br from-roam-blue/20 to-roam-light-blue/10 rounded-lg overflow-hidden">
                 <img 
                   src={provider.business.cover_image_url} 
                   alt={`${provider.business.business_name} cover`} 
@@ -298,9 +298,9 @@ export default function ProviderProfile() {
           )}
           
           {/* Provider Header */}
-          <div className="bg-white rounded-lg shadow-lg p-8 mb-8">
-            <div className="flex items-start gap-6">
-              <div className="w-32 h-32 bg-gray-200 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden border-4 border-white shadow-lg">
+          <div className="bg-white rounded-lg shadow-lg p-4 sm:p-6 lg:p-8 mb-6 sm:mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-start gap-4 sm:gap-6">
+              <div className="w-24 h-24 sm:w-32 sm:h-32 bg-gray-200 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden border-4 border-white shadow-lg">
                 {provider.image_url ? (
                   <img 
                     src={provider.image_url} 
@@ -311,10 +311,10 @@ export default function ProviderProfile() {
                   <User className="w-16 h-16 text-gray-400" />
                 )}
               </div>
-              <div className="flex-1">
-                <div className="flex items-center justify-between mb-2">
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-2">
                   <div className="flex items-center gap-3 flex-wrap">
-                    <h1 className="text-3xl font-bold text-foreground">
+                    <h1 className="text-2xl sm:text-3xl font-bold text-foreground break-words">
                       {provider.first_name} {provider.last_name}
                     </h1>
                     {provider.provider_role === 'owner' && (
@@ -323,7 +323,7 @@ export default function ProviderProfile() {
                       </Badge>
                     )}
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <FavoriteButton
                       type="provider"
                       itemId={provider.id}
@@ -356,7 +356,7 @@ export default function ProviderProfile() {
                   )}
                 </div>
                 {provider.bio && (
-                  <p className="text-foreground/70 leading-relaxed">
+                  <p className="text-foreground/70 leading-relaxed break-words">
                     {provider.bio}
                   </p>
                 )}
@@ -365,9 +365,9 @@ export default function ProviderProfile() {
           </div>
 
           {/* Tabs for Services and Reviews */}
-          <div className="bg-white rounded-lg shadow-lg p-8">
+          <div className="bg-white rounded-lg shadow-lg p-4 sm:p-6 lg:p-8">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full max-w-md grid-cols-2 mb-6">
+              <TabsList className="grid w-full grid-cols-2 mb-6">
                 <TabsTrigger value="services">Services</TabsTrigger>
                 <TabsTrigger value="reviews">
                   Reviews {reviews.length > 0 && `(${reviews.length})`}
