@@ -3,6 +3,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { useSearchParams } from "react-router-dom";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 // Import our modular components
 import BasicInfoSection from "./business-settings/BasicInfoSection";
@@ -414,8 +421,34 @@ export function BusinessSettingsTab({ providerData, business, onBusinessUpdate }
         }}
         className="w-full"
       >
+        {/* Mobile: dropdown */}
+        <div className="lg:hidden">
+          <Select
+            value={activeSubtab}
+            onValueChange={(value) => {
+              setSearchParams((prev) => {
+                const next = new URLSearchParams(prev);
+                next.set("tab", value);
+                return next;
+              }, { replace: true });
+            }}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {visibleTabs.map((tab) => (
+                <SelectItem key={tab.value} value={tab.value}>
+                  {tab.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Desktop: tab buttons */}
         <TabsList
-          className="grid w-full"
+          className="hidden lg:grid w-full"
           style={{ gridTemplateColumns: `repeat(${visibleTabs.length}, minmax(0, 1fr))` }}
         >
           {visibleTabs.map((tab) => (
