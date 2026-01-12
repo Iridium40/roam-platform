@@ -498,7 +498,7 @@ export default function DashboardTab({
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => navigate(`${basePath}/staff`)}
+                      onClick={() => navigate(`${basePath}/business-settings?tab=staff`)}
                     >
                       Fix
                     </Button>
@@ -525,7 +525,7 @@ export default function DashboardTab({
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => navigate(`${basePath}/staff`)}
+                      onClick={() => navigate(`${basePath}/business-settings?tab=staff`)}
                     >
                       Fix
                     </Button>
@@ -552,7 +552,7 @@ export default function DashboardTab({
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => navigate(`${basePath}/staff`)}
+                      onClick={() => navigate(`${basePath}/business-settings?tab=staff`)}
                     >
                       Review
                     </Button>

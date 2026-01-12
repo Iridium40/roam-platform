@@ -30,13 +30,6 @@ const navigationItems = [
     badge: "12",
   },
   {
-    id: "staff",
-    label: "Staff Management",
-    icon: Users,
-    description: "Manage team members and roles",
-    badge: "5",
-  },
-  {
     id: "revenue",
     label: "Revenue",
     icon: DollarSign,

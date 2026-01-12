@@ -259,6 +259,13 @@ export default function ProviderDashboard() {
     }
   }, [activeTab, basePath, isDispatcher, isOwner, isProvider, navigate]);
 
+  // Legacy: Staff used to be a top-level page. Redirect owners/dispatchers to Business Settings -> Staff.
+  useEffect(() => {
+    if (!isProvider && (isOwner || isDispatcher) && activeTab === "staff") {
+      navigate(`${basePath}/business-settings?tab=staff`, { replace: true });
+    }
+  }, [activeTab, basePath, isDispatcher, isOwner, isProvider, navigate]);
+
   // Navigation helper
   const navigateToTab = (tab: string) => {
     navigate(`${basePath}/${tab}`);
@@ -763,14 +770,6 @@ export default function ProviderDashboard() {
                   Bookings
                 </button>
               )}
-              {hasAccess('staff') && business?.business_type !== 'independent' && (
-                <button
-                  onClick={() => navigateToTab("staff")}
-                  className={`text-sm font-medium px-3 py-2 rounded-lg ${activeTab === "staff" ? "bg-gray-100 text-gray-900" : "text-gray-600 hover:text-gray-900"}`}
-                >
-                  Staff
-                </button>
-              )}
               {hasAccess('financials') && (
                 <button
                   onClick={() => navigateToTab("financials")}
@@ -888,20 +887,6 @@ export default function ProviderDashboard() {
                 >
                   <Calendar className="w-4 h-4 mr-2" />
                   Bookings
-                </Button>
-              )}
-              
-              {hasAccess('staff') && business?.business_type !== 'independent' && (
-                <Button
-                  variant={activeTab === "staff" ? "default" : "ghost"}
-                  className="w-full justify-start"
-                  onClick={() => {
-                    navigateToTab("staff");
-                    setShowMobileMenu(false);
-                  }}
-                >
-                  <Users className="w-4 h-4 mr-2" />
-                  Staff
                 </Button>
               )}
               

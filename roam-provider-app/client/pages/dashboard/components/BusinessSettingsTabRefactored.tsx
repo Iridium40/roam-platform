@@ -10,6 +10,7 @@ import BusinessHoursSection from "./business-settings/BusinessHoursSection";
 import { DocumentsSection } from "./business-settings/DocumentsSection";
 import { LocationsSection } from "./business-settings/LocationsSection";
 import ServicesTab from "./ServicesTabSimplified";
+import { StaffManager } from "@/components/StaffManager";
 
 // Import the custom hook
 import { useBusinessSettings } from "./business-settings/hooks/useBusinessSettings";
@@ -42,11 +43,13 @@ export function BusinessSettingsTab({ providerData, business, onBusinessUpdate }
   } = useBusinessSettings(business);
 
   const providerRole = providerData?.provider_role;
-  const canEditBusinessSettings = providerRole !== "dispatcher"; // dispatchers: services only
+  const canEditBusinessSettings = providerRole === "owner"; // keep business profile edits owner-only
+  const canManageStaff = (providerRole === "owner" || providerRole === "dispatcher") && business?.business_type !== "independent";
 
   const visibleTabs = [
     ...(canEditBusinessSettings ? [{ value: "basic-info", label: "Basic Info" }] : []),
     { value: "services", label: "Services" },
+    ...(canManageStaff ? [{ value: "staff", label: "Staff" }] : []),
     ...(canEditBusinessSettings ? [{ value: "hours", label: "Hours" }] : []),
     ...(canEditBusinessSettings ? [{ value: "documents", label: "Documents" }] : []),
     ...(canEditBusinessSettings ? [{ value: "locations", label: "Locations" }] : []),
@@ -447,6 +450,15 @@ export function BusinessSettingsTab({ providerData, business, onBusinessUpdate }
         <TabsContent value="services" className="space-y-6 mt-6">
           <ServicesTab providerData={providerData} business={business} />
         </TabsContent>
+
+        {canManageStaff && (
+          <TabsContent value="staff" className="space-y-6 mt-6">
+            <StaffManager
+              businessId={business?.id}
+              locations={locations as any}
+            />
+          </TabsContent>
+        )}
 
         {canEditBusinessSettings && (
         <TabsContent value="hours" className="space-y-6">

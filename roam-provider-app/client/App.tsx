@@ -149,7 +149,7 @@ const App = () => (
               path="/owner/staff"
               element={
                 <ProtectedRoute allowedRoles={["owner"]}>
-                  <ProviderDashboard />
+                  <Navigate to="/owner/business-settings?tab=staff" replace />
                 </ProtectedRoute>
               }
             />
@@ -215,7 +215,7 @@ const App = () => (
               path="/dispatcher/staff"
               element={
                 <ProtectedRoute allowedRoles={["owner", "dispatcher"]}>
-                  <ProviderDashboard />
+                  <Navigate to="/dispatcher/business-settings?tab=staff" replace />
                 </ProtectedRoute>
               }
             />
@@ -290,9 +290,9 @@ const App = () => (
               path="/provider/staff"
               element={
                 <ProtectedRoute
-                  allowedRoles={["owner", "dispatcher", "provider"]}
+                  allowedRoles={["owner", "dispatcher"]}
                 >
-                  <ProviderDashboard />
+                  <Navigate to="/provider/business-settings?tab=staff" replace />
                 </ProtectedRoute>
               }
             />
