@@ -218,14 +218,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .eq('id', business_id)
         .single();
 
+      const { assign_to_owner_provider, owner_user_id } = req.body || {};
+
       if (businessProfile?.business_type === 'independent') {
-        // Find the owner provider
+        // Find the owner provider (during onboarding, is_active may still be false)
         const { data: ownerProvider } = await supabase
           .from('providers')
           .select('id')
           .eq('business_id', business_id)
           .eq('provider_role', 'owner')
-          .eq('is_active', true)
           .maybeSingle();
 
         if (ownerProvider) {
@@ -259,6 +260,37 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             console.error('Error updating owner active_for_bookings:', updateError);
           } else {
             console.log(`Ensured owner ${ownerProvider.id} is bookable for independent business`);
+          }
+        }
+      }
+
+      // For non-independent businesses, optionally auto-assign business services to the owner if they will also be a provider
+      if (assign_to_owner_provider && owner_user_id && businessProfile?.business_type !== 'independent') {
+        // Find owner provider for this user + business (during onboarding, is_active may still be false)
+        const { data: ownerProviderByUser } = await supabase
+          .from('providers')
+          .select('id')
+          .eq('business_id', business_id)
+          .eq('user_id', owner_user_id)
+          .eq('provider_role', 'owner')
+          .maybeSingle();
+
+        if (ownerProviderByUser) {
+          const { error: assignError } = await supabase
+            .from('provider_services')
+            .upsert({
+              provider_id: ownerProviderByUser.id,
+              service_id: service_id,
+              is_active: true
+            }, {
+              onConflict: 'provider_id,service_id',
+              ignoreDuplicates: false
+            });
+
+          if (assignError) {
+            console.error('Error auto-assigning service to owner (owner-as-provider):', assignError);
+          } else {
+            console.log(`Auto-assigned service ${service_id} to owner ${ownerProviderByUser.id} (owner-as-provider)`);
           }
         }
       }

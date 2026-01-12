@@ -152,6 +152,8 @@ export default function ServicePricingSetup({
   const [error, setError] = useState<string | null>(null);
   const [showPriceModal, setShowPriceModal] = useState(false);
   const [selectedServiceForPricing, setSelectedServiceForPricing] = useState<EligibleService | null>(null);
+  const [businessType, setBusinessType] = useState<string | null>(null);
+  const [ownerAlsoProvider, setOwnerAlsoProvider] = useState<boolean>(false);
 
   const updatePricingData = (field: keyof ServicePricingData, value: any) => {
     setPricingData(prev => ({
@@ -229,6 +231,27 @@ export default function ServicePricingSetup({
     fetchEligibleServices();
   }, [businessId]);
 
+  // Load business type (used for auto-assign logic + messaging)
+  useEffect(() => {
+    const loadBusinessType = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("business_profiles")
+          .select("business_type")
+          .eq("id", businessId)
+          .single();
+
+        if (!error) {
+          setBusinessType(data?.business_type || null);
+        }
+      } catch {
+        // non-fatal
+      }
+    };
+
+    loadBusinessType();
+  }, [businessId]);
+
   // Open price modal for a service
   const openPriceModal = (eligibleService: EligibleService) => {
     setSelectedServiceForPricing(eligibleService);
@@ -254,7 +277,10 @@ export default function ServicePricingSetup({
           service_id: selectedServiceForPricing.id,
           business_price: businessPrice,
           delivery_type: deliveryType,
-          is_active: true
+          is_active: true,
+          // Non-independent: if owner chooses they also provide services, auto-assign services to them
+          assign_to_owner_provider: businessType !== 'independent' && ownerAlsoProvider,
+          owner_user_id: userId,
         }),
       });
 
@@ -614,6 +640,45 @@ export default function ServicePricingSetup({
               to add it after completing onboarding, and it will become available for you to choose.
             </AlertDescription>
           </Alert>
+
+          {/* Owner service assignment */}
+          {businessType === "independent" && (
+            <Alert className="border-emerald-200 bg-emerald-50">
+              <CheckCircle className="h-4 w-4 text-emerald-700" />
+              <AlertDescription className="text-emerald-800">
+                <strong>Independent business:</strong> Every service you add here will automatically be assigned to you (since you’re the only provider).
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {businessType && businessType !== "independent" && (
+            <div className="rounded-lg border p-4 bg-white">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">
+                    Will you also provide services (not just be the owner)?
+                  </p>
+                  <p className="text-xs text-gray-600 mt-1">
+                    If yes, we’ll auto-assign the services you add here to your staff profile. You can adjust later in <span className="font-medium">Business Settings → Staff</span>.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Label className="text-sm text-gray-600">No</Label>
+                  <Switch checked={ownerAlsoProvider} onCheckedChange={setOwnerAlsoProvider} />
+                  <Label className="text-sm text-gray-600">Yes</Label>
+                </div>
+              </div>
+
+              {ownerAlsoProvider && (
+                <Alert className="border-blue-200 bg-blue-50 mt-3">
+                  <Info className="h-4 w-4 text-blue-600" />
+                  <AlertDescription className="text-blue-800">
+                    We’ll assign your selected business services to you now. You can refine your personal service list later in <strong>Business Settings → Staff</strong>.
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
+          )}
 
           {/* Progress Bar */}
           <div className="space-y-2">

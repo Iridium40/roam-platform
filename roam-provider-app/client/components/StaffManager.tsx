@@ -963,22 +963,21 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
             </Card>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredStaff.map((member) => (
-                (() => {
-                  const isServiceRole =
-                    member.provider_role === "provider" || member.provider_role === "owner";
-                  const servicesCount = member.assigned_services_count ?? 0;
-                  const needsServices = isServiceRole && servicesCount === 0;
-                  const hasLocation = !!member.location_id && !!member.location_name;
-                  const needsLocation = isServiceRole && !hasLocation;
+              {filteredStaff.map((member) => {
+                const isServiceRole =
+                  member.provider_role === "provider" || member.provider_role === "owner";
+                const servicesCount = member.assigned_services_count ?? 0;
+                const needsServices = isServiceRole && servicesCount === 0;
+                const hasLocation = !!member.location_id && !!member.location_name;
+                const needsLocation = isServiceRole && !hasLocation;
 
-                  return (
-                <Card
-                  key={member.id}
-                  className={`hover:shadow-md transition-shadow ${
-                    needsServices || needsLocation ? "border-red-300 bg-red-50/30" : ""
-                  }`}
-                >
+                return (
+                  <Card
+                    key={member.id}
+                    className={`hover:shadow-md transition-shadow ${
+                      needsServices || needsLocation ? "border-red-300 bg-red-50/30" : ""
+                    }`}
+                  >
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center gap-3">
@@ -1204,9 +1203,8 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
                     )}
                   </CardContent>
                 </Card>
-                  );
-                })()}
-              ))}
+                );
+              })}
             </div>
           )}
         </TabsContent>
