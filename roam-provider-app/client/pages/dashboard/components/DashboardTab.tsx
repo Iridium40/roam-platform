@@ -348,6 +348,87 @@ export default function DashboardTab({
     return configs[status] || { label: status, className: "bg-gray-100 text-gray-800 border-gray-300" };
   };
 
+  // Booking readiness (only show actionable blockers)
+  const basePath = getBasePath();
+  const stripeOk = setupHealth?.stripeConnected === true;
+  const stripeUnknown = setupHealth?.stripeConnected === null;
+  const servicesOk = setupHealth?.businessHasActiveServices === true;
+  const missingServices = setupHealth?.staffMissingServicesCount ?? 0;
+  const missingLocations = setupHealth?.staffMissingLocationCount ?? 0;
+  const blockedBookable = setupHealth?.staffBookableBlockedCount ?? 0;
+
+  const readinessIssues: Array<{
+    key: string;
+    title: string;
+    description: string;
+    actionLabel: string;
+    onClick: () => void;
+    icon: React.ReactNode;
+  }> = [];
+
+  if (setupHealth) {
+    if (!stripeOk) {
+      readinessIssues.push({
+        key: "stripe",
+        title: "Stripe payouts",
+        description: stripeUnknown
+          ? "Unable to verify Stripe status. Open Bank Settings to confirm payouts are enabled."
+          : `Connect Stripe to receive payments.${(setupHealth.stripeRequirementsDue ?? 0) > 0 ? ` (${setupHealth.stripeRequirementsDue} requirement${setupHealth.stripeRequirementsDue === 1 ? "" : "s"} due)` : ""}`,
+        actionLabel: "Fix",
+        // Bank Settings lives under Financials tab in the current UI
+        onClick: () => navigate(`${basePath}/financials?tab=settings`),
+        icon: <CreditCard className="w-4 h-4 text-red-700" />,
+      });
+    }
+
+    if (!servicesOk) {
+      readinessIssues.push({
+        key: "business-services",
+        title: "Business services",
+        description: "No active services yet — add/activate services to allow bookings.",
+        actionLabel: "Fix",
+        onClick: () => navigate(`${basePath}/business-settings?tab=services`),
+        icon: <Package className="w-4 h-4 text-red-700" />,
+      });
+    }
+
+    if (missingServices > 0) {
+      readinessIssues.push({
+        key: "staff-services",
+        title: "Staff services assigned",
+        description: `${missingServices} staff member${missingServices === 1 ? "" : "s"} missing assigned services.`,
+        actionLabel: "Fix",
+        onClick: () => navigate(`${basePath}/business-settings?tab=staff`),
+        icon: <Users className="w-4 h-4 text-red-700" />,
+      });
+    }
+
+    if (missingLocations > 0) {
+      readinessIssues.push({
+        key: "staff-locations",
+        title: "Staff locations assigned",
+        description: `${missingLocations} staff member${missingLocations === 1 ? "" : "s"} missing a location.`,
+        actionLabel: "Fix",
+        onClick: () => navigate(`${basePath}/business-settings?tab=staff`),
+        icon: <MapPin className="w-4 h-4 text-red-700" />,
+      });
+    }
+
+    if (blockedBookable > 0) {
+      readinessIssues.push({
+        key: "bookable-blocked",
+        title: "Bookable staff with blockers",
+        description: `${blockedBookable} staff member${blockedBookable === 1 ? "" : "s"} marked bookable but missing required setup (services/location).`,
+        actionLabel: "Fix",
+        onClick: () => navigate(`${basePath}/business-settings?tab=staff`),
+        icon: <AlertCircle className="w-4 h-4 text-red-700" />,
+      });
+    }
+  }
+
+  const showBookingReadinessCard =
+    isOwnerOrDispatcher && !setupLoading && setupHealth && readinessIssues.length > 0;
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -357,209 +438,48 @@ export default function DashboardTab({
       </div>
 
       {/* Setup / Action Required (owners + dispatchers) */}
-      {isOwnerOrDispatcher && (
-        <Card className="border-2 border-gray-100">
+      {showBookingReadinessCard && (
+        <Card className="border-2 border-red-200 bg-red-50/30">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <AlertCircle className="w-5 h-5 text-[#f88221]" />
-                <span>Booking Readiness</span>
+                <AlertCircle className="w-5 h-5 text-red-700" />
+                <span>Action Required to Receive Bookings</span>
               </div>
-              {setupLoading && (
-                <div className="flex items-center gap-2 text-sm text-gray-500">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Checking…
-                </div>
-              )}
+              <Badge className="bg-red-100 text-red-800 border-red-300" variant="outline">
+                {readinessIssues.length} Pending
+              </Badge>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {(() => {
-              const stripeOk = setupHealth?.stripeConnected === true;
-              const stripeUnknown = setupHealth?.stripeConnected === null;
-              const servicesOk = setupHealth?.businessHasActiveServices === true;
-              const missingServices = setupHealth?.staffMissingServicesCount ?? 0;
-              const missingLocations = setupHealth?.staffMissingLocationCount ?? 0;
-              const blockedBookable = setupHealth?.staffBookableBlockedCount ?? 0;
+            <p className="text-sm text-red-800">
+              Fix the item{readinessIssues.length === 1 ? "" : "s"} below to start receiving bookings.
+            </p>
 
-              const blockers =
-                (stripeOk ? 0 : 1) +
-                (servicesOk ? 0 : 1) +
-                (missingServices > 0 ? 1 : 0) +
-                (missingLocations > 0 ? 1 : 0) +
-                (blockedBookable > 0 ? 1 : 0);
-
-              const basePath = getBasePath();
-
-              return (
-                <>
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm text-gray-600">
-                      {blockers === 0 ? (
-                        <span className="text-emerald-700 font-medium flex items-center gap-2">
-                          <CheckCircle className="w-4 h-4" />
-                          You’re set up to receive bookings.
-                        </span>
-                      ) : (
-                        <span className="text-red-700 font-medium">
-                          Action required: {blockers} setup item{blockers === 1 ? "" : "s"} may block bookings
-                        </span>
-                      )}
+            <div className="space-y-2">
+              {readinessIssues.map((issue) => (
+                <div
+                  key={issue.key}
+                  className="flex items-start justify-between gap-3 rounded-md border border-red-200 bg-white p-3"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5">
+                      <XCircle className="w-4 h-4 text-red-600" />
                     </div>
-                    {blockers > 0 && (
-                      <Badge className="bg-red-100 text-red-800 border-red-300" variant="outline">
-                        {blockers} Pending
-                      </Badge>
-                    )}
-                  </div>
-
-                  {/* Stripe */}
-                  <div className="flex items-start justify-between gap-3 rounded-md border p-3">
-                    <div className="flex items-start gap-3">
-                      <div className={`mt-0.5 ${stripeOk ? "text-emerald-600" : "text-red-600"}`}>
-                        {stripeOk ? <CheckCircle className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
+                    <div>
+                      <div className="text-sm font-semibold flex items-center gap-2">
+                        {issue.icon}
+                        {issue.title}
                       </div>
-                      <div>
-                        <div className="text-sm font-medium flex items-center gap-2">
-                          <CreditCard className="w-4 h-4 text-gray-600" />
-                          Stripe payouts
-                          {stripeUnknown && (
-                            <Badge variant="outline" className="text-xs bg-gray-50 text-gray-700 border-gray-300">
-                              Unknown
-                            </Badge>
-                          )}
-                        </div>
-                        <div className="text-xs text-gray-600">
-                          {stripeOk
-                            ? "Connected (charges + payouts enabled)."
-                            : "Connect Stripe to receive payments."}
-                          {!stripeOk && (setupHealth?.stripeRequirementsDue ?? 0) > 0 && (
-                            <span className="ml-1 text-gray-500">
-                              ({setupHealth?.stripeRequirementsDue} requirement{setupHealth?.stripeRequirementsDue === 1 ? "" : "s"} due)
-                            </span>
-                          )}
-                        </div>
-                      </div>
+                      <div className="text-xs text-gray-700">{issue.description}</div>
                     </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => navigate(`${basePath}/financials`)}
-                    >
-                      Manage
-                    </Button>
                   </div>
-
-                  {/* Business services */}
-                  <div className="flex items-start justify-between gap-3 rounded-md border p-3">
-                    <div className="flex items-start gap-3">
-                      <div className={`mt-0.5 ${servicesOk ? "text-emerald-600" : "text-red-600"}`}>
-                        {servicesOk ? <CheckCircle className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
-                      </div>
-                      <div>
-                        <div className="text-sm font-medium flex items-center gap-2">
-                          <Package className="w-4 h-4 text-gray-600" />
-                          Business services
-                        </div>
-                        <div className="text-xs text-gray-600">
-                          {servicesOk
-                            ? "At least one active service is available."
-                            : "No active services yet — add/activate services to allow bookings."}
-                        </div>
-                      </div>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => navigate(`${basePath}/business-settings?tab=services`)}
-                    >
-                      Configure
-                    </Button>
-                  </div>
-
-                  {/* Staff services */}
-                  <div className="flex items-start justify-between gap-3 rounded-md border p-3">
-                    <div className="flex items-start gap-3">
-                      <div className={`mt-0.5 ${missingServices === 0 ? "text-emerald-600" : "text-red-600"}`}>
-                        {missingServices === 0 ? <CheckCircle className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
-                      </div>
-                      <div>
-                        <div className="text-sm font-medium flex items-center gap-2">
-                          <Users className="w-4 h-4 text-gray-600" />
-                          Staff services assigned
-                        </div>
-                        <div className="text-xs text-gray-600">
-                          {missingServices === 0
-                            ? "All owners/providers have at least one service assigned."
-                            : `${missingServices} staff member${missingServices === 1 ? "" : "s"} missing assigned services.`}
-                        </div>
-                      </div>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => navigate(`${basePath}/business-settings?tab=staff`)}
-                    >
-                      Fix
-                    </Button>
-                  </div>
-
-                  {/* Staff location */}
-                  <div className="flex items-start justify-between gap-3 rounded-md border p-3">
-                    <div className="flex items-start gap-3">
-                      <div className={`mt-0.5 ${missingLocations === 0 ? "text-emerald-600" : "text-red-600"}`}>
-                        {missingLocations === 0 ? <CheckCircle className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
-                      </div>
-                      <div>
-                        <div className="text-sm font-medium flex items-center gap-2">
-                          <MapPin className="w-4 h-4 text-gray-600" />
-                          Staff locations assigned
-                        </div>
-                        <div className="text-xs text-gray-600">
-                          {missingLocations === 0
-                            ? "All owners/providers have a location assigned."
-                            : `${missingLocations} staff member${missingLocations === 1 ? "" : "s"} missing a location.`}
-                        </div>
-                      </div>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => navigate(`${basePath}/business-settings?tab=staff`)}
-                    >
-                      Fix
-                    </Button>
-                  </div>
-
-                  {/* Bookable but blocked */}
-                  <div className="flex items-start justify-between gap-3 rounded-md border p-3">
-                    <div className="flex items-start gap-3">
-                      <div className={`mt-0.5 ${blockedBookable === 0 ? "text-emerald-600" : "text-red-600"}`}>
-                        {blockedBookable === 0 ? <CheckCircle className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
-                      </div>
-                      <div>
-                        <div className="text-sm font-medium flex items-center gap-2">
-                          <AlertCircle className="w-4 h-4 text-gray-600" />
-                          Bookable staff with blockers
-                        </div>
-                        <div className="text-xs text-gray-600">
-                          {blockedBookable === 0
-                            ? "No staff are marked bookable while missing required setup."
-                            : `${blockedBookable} staff member${blockedBookable === 1 ? "" : "s"} marked bookable but missing services/location.`}
-                        </div>
-                      </div>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => navigate(`${basePath}/business-settings?tab=staff`)}
-                    >
-                      Review
-                    </Button>
-                  </div>
-                </>
-              );
-            })()}
+                  <Button size="sm" variant="outline" onClick={issue.onClick}>
+                    {issue.actionLabel}
+                  </Button>
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
       )}

@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { useSearchParams } from "react-router-dom";
 import {
   Select,
   SelectContent,
@@ -71,6 +72,7 @@ export default function FinancialsTab({
   business,
 }: FinancialsTabProps) {
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState("30");
@@ -124,6 +126,16 @@ export default function FinancialsTab({
 
   const businessId = business?.id || providerData?.business_id;
   const isOwner = providerData?.provider_role === 'owner';
+
+  // Deep-link support: /financials?tab=settings to open Bank Settings directly
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (tab && ["overview", "payouts", "transactions", "tips", "settings"].includes(tab)) {
+      // Guard tips tab for non-owners
+      if (tab === "tips" && !isOwner) return;
+      setActiveTab(tab);
+    }
+  }, [isOwner, searchParams]);
 
   // Helper function to get filtered transactions
   const getFilteredTransactions = useMemo(() => {
