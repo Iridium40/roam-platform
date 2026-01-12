@@ -103,8 +103,37 @@ export default function BusinessHoursSetup({
       setLoading(true);
       setError(null);
 
-      // Save business hours to database
-      const response = await fetch('/api/onboarding/save-phase2-progress', {
+      // Transform component format to API format
+      // Component: { monday: { isOpen: true, openTime: '09:00', closeTime: '17:00' } }
+      // API: { monday: { open: '09:00', close: '17:00', closed: false } }
+      const apiFormattedHours: Record<string, any> = {};
+      Object.entries(businessHours).forEach(([day, hours]) => {
+        apiFormattedHours[day] = {
+          open: hours.openTime,
+          close: hours.closeTime,
+          closed: !hours.isOpen
+        };
+      });
+
+      // Save business hours to business_profiles table using dedicated API
+      const hoursResponse = await fetch('/api/business/hours', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          business_id: businessId,
+          business_hours: apiFormattedHours
+        }),
+      });
+
+      if (!hoursResponse.ok) {
+        const errorData = await hoursResponse.json();
+        throw new Error(errorData.error || 'Failed to save business hours');
+      }
+
+      // Also save to progress tracker
+      const progressResponse = await fetch('/api/onboarding/save-phase2-progress', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -116,8 +145,8 @@ export default function BusinessHoursSetup({
         }),
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to save business hours');
+      if (!progressResponse.ok) {
+        console.warn('Failed to save progress tracker, but business hours were saved');
       }
 
       // Call the onComplete callback

@@ -40,7 +40,6 @@ export default function ProfileTab({
     phone: "",
     bio: "",
     profile_image_url: "",
-    cover_image_url: "",
   });
   const [originalProfileData, setOriginalProfileData] = useState({
     first_name: "",
@@ -49,19 +48,14 @@ export default function ProfileTab({
     phone: "",
     bio: "",
     profile_image_url: "",
-    cover_image_url: "",
   });
   const [hasChanges, setHasChanges] = useState(false);
   const [profilePhotoUploading, setProfilePhotoUploading] = useState(false);
-  const [coverPhotoUploading, setCoverPhotoUploading] = useState(false);
   const [profilePhotoPreview, setProfilePhotoPreview] = useState<string | null>(null);
-  const [coverPhotoPreview, setCoverPhotoPreview] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState<{
     profile: { uploading: boolean; uploaded: boolean; error?: string };
-    cover: { uploading: boolean; uploaded: boolean; error?: string };
   }>({
     profile: { uploading: false, uploaded: false },
-    cover: { uploading: false, uploaded: false },
   });
 
   // Load profile data
@@ -77,7 +71,6 @@ export default function ProfileTab({
         phone: providerData.phone || "",
         bio: providerData.bio || "",
         profile_image_url: providerData.image_url || "",
-        cover_image_url: providerData.cover_image_url || "",
       };
       setProfileData(loadedData);
       setOriginalProfileData(loadedData);
@@ -109,7 +102,6 @@ export default function ProfileTab({
           phone: profileData.phone,
           bio: profileData.bio,
           image_url: profileData.profile_image_url,
-          cover_image_url: profileData.cover_image_url,
         })
         .eq('id', providerData.id);
 
@@ -221,87 +213,6 @@ export default function ProfileTab({
     }
   };
 
-  // Handle cover photo upload
-  const handleCoverPhotoUpload = async (file: File) => {
-    if (!providerData?.id || !providerData?.user_id) return;
-
-    try {
-      setCoverPhotoUploading(true);
-      setUploadProgress(prev => ({
-        ...prev,
-        cover: { uploading: true, uploaded: false, error: undefined }
-      }));
-
-      // Validate file
-      const validation = await ImageStorageService.validateImage(file, 'provider_cover');
-      if (!validation.isValid) {
-        throw new Error(validation.errors.join(', '));
-      }
-
-      // Create preview
-      const preview = ImageStorageService.generatePreviewUrl(file);
-      setCoverPhotoPreview(preview);
-
-      // Upload to storage
-      const result = await ImageStorageService.uploadImageWithFallback(
-        file,
-        'provider_cover',
-        providerData.business_id || providerData.id,
-        providerData.user_id
-      );
-
-      if (!result.success || !result.publicUrl) {
-        throw new Error(result.error || 'Upload failed');
-      }
-
-      // Update profile data in state
-      setProfileData(prev => ({
-        ...prev,
-        cover_image_url: result.publicUrl!
-      }));
-
-      // Update database
-      const { error } = await supabase
-        .from('providers')
-        .update({ cover_image_url: result.publicUrl })
-        .eq('id', providerData.id);
-
-      if (error) throw error;
-
-      setUploadProgress(prev => ({
-        ...prev,
-        cover: { uploading: false, uploaded: true }
-      }));
-
-      toast({
-        title: "Cover Photo Updated",
-        description: "Your cover photo has been uploaded successfully.",
-      });
-      
-      // Reload the page to reflect changes
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
-    } catch (error) {
-      console.error('Error uploading cover photo:', error);
-      setUploadProgress(prev => ({
-        ...prev,
-        cover: { 
-          uploading: false, 
-          uploaded: false, 
-          error: error instanceof Error ? error.message : 'Upload failed'
-        }
-      }));
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to upload cover photo. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setCoverPhotoUploading(false);
-    }
-  };
-
   // Handle removing profile photo
   const handleRemoveProfilePhoto = () => {
     if (profilePhotoPreview) {
@@ -312,19 +223,6 @@ export default function ProfileTab({
     setUploadProgress(prev => ({
       ...prev,
       profile: { uploading: false, uploaded: false }
-    }));
-  };
-
-  // Handle removing cover photo
-  const handleRemoveCoverPhoto = () => {
-    if (coverPhotoPreview) {
-      ImageStorageService.cleanupPreviewUrl(coverPhotoPreview);
-      setCoverPhotoPreview(null);
-    }
-    setProfileData(prev => ({ ...prev, cover_image_url: "" }));
-    setUploadProgress(prev => ({
-      ...prev,
-      cover: { uploading: false, uploaded: false }
     }));
   };
 
@@ -340,8 +238,7 @@ export default function ProfileTab({
       profileData.email !== originalProfileData.email ||
       profileData.phone !== originalProfileData.phone ||
       profileData.bio !== originalProfileData.bio ||
-      profileData.profile_image_url !== originalProfileData.profile_image_url ||
-      profileData.cover_image_url !== originalProfileData.cover_image_url;
+      profileData.profile_image_url !== originalProfileData.profile_image_url;
     
     setHasChanges(hasChangesDetected);
   }, [profileData, originalProfileData]);
@@ -399,66 +296,6 @@ export default function ProfileTab({
                 <CardTitle>Profile Information</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-          {/* Cover Photo */}
-          <div>
-            <Label className="text-sm font-medium">Cover Photo</Label>
-            <div className="mt-2 relative">
-                  {profileData.cover_image_url ? (
-                <div className="relative">
-                  <img
-                    src={profileData.cover_image_url}
-                    alt="Cover"
-                    className="w-full h-32 object-cover rounded-lg"
-                  />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="absolute top-2 right-2"
-                    disabled={coverPhotoUploading}
-                    onClick={() => document.getElementById('cover-upload')?.click()}
-                  >
-                    <Camera className="w-4 h-4 mr-1" />
-                    Change
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="absolute top-2 right-20"
-                    onClick={() => {
-                      setProfileData({...profileData, cover_image_url: ""});
-                    }}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              ) : (
-                <div className="w-full h-32 bg-gray-100 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-300">
-                  <Button
-                    variant="outline"
-                    onClick={() => document.getElementById('cover-upload')?.click()}
-                    disabled={coverPhotoUploading}
-                  >
-                    <Upload className="w-4 h-4 mr-2" />
-                    Upload Cover Photo
-                  </Button>
-                </div>
-              )}
-              <input
-                id="cover-upload"
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) handleCoverPhotoUpload(file);
-                }}
-              />
-            </div>
-            <p className="text-xs text-gray-500 mt-1">
-              Upload a cover image for your profile (max 50MB). Recommended size: 1200x400px
-            </p>
-          </div>
-
           {/* Profile Photo and Basic Info */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Profile Photo */}

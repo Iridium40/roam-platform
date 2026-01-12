@@ -375,8 +375,33 @@ export default function BusinessSettingsTab({
   const loadBusinessData = async () => {
     if (!business) return;
 
+    const defaultHours = {
+      monday: { open: "09:00", close: "17:00", closed: false },
+      tuesday: { open: "09:00", close: "17:00", closed: false },
+      wednesday: { open: "09:00", close: "17:00", closed: false },
+      thursday: { open: "09:00", close: "17:00", closed: false },
+      friday: { open: "09:00", close: "17:00", closed: false },
+      saturday: { open: "10:00", close: "15:00", closed: false },
+      sunday: { open: "10:00", close: "15:00", closed: true },
+    };
+
     try {
       setLoading(true);
+      
+      // Fetch business hours from API for proper format transformation
+      let businessHours = defaultHours;
+      try {
+        const hoursResponse = await fetch(`/api/business/hours?business_id=${business.id}`);
+        if (hoursResponse.ok) {
+          const hoursData = await hoursResponse.json();
+          if (hoursData.business_hours) {
+            businessHours = hoursData.business_hours;
+          }
+        }
+      } catch (hoursError) {
+        console.warn('Failed to fetch business hours from API, using defaults:', hoursError);
+      }
+      
       setBusinessData({
         business_name: business.business_name || "",
         business_type: business.business_type || "independent",
@@ -386,15 +411,7 @@ export default function BusinessSettingsTab({
         business_description: business.business_description || "",
         logo_url: business.logo_url || "",
         cover_image_url: business.cover_image_url || "",
-        business_hours: business.business_hours || {
-          monday: { open: "09:00", close: "17:00", closed: false },
-          tuesday: { open: "09:00", close: "17:00", closed: false },
-          wednesday: { open: "09:00", close: "17:00", closed: false },
-          thursday: { open: "09:00", close: "17:00", closed: false },
-          friday: { open: "09:00", close: "17:00", closed: false },
-          saturday: { open: "10:00", close: "15:00", closed: false },
-          sunday: { open: "10:00", close: "15:00", closed: true },
-        },
+        business_hours: businessHours,
       });
     } catch (error) {
       console.error('Error loading business data:', error);
@@ -414,6 +431,8 @@ export default function BusinessSettingsTab({
 
     try {
       setLoading(true);
+      
+      // Update business profile (excluding business_hours)
       const { error } = await supabase
         .from('business_profiles')
         .update({
@@ -425,11 +444,33 @@ export default function BusinessSettingsTab({
           business_description: businessData.business_description,
           logo_url: businessData.logo_url,
           cover_image_url: businessData.cover_image_url,
-          business_hours: businessData.business_hours,
         })
         .eq('id', business.id);
 
       if (error) throw error;
+
+      // Save business hours using dedicated API endpoint for proper format transformation
+      const hoursResponse = await fetch('/api/business/hours', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          business_id: business.id,
+          business_hours: businessData.business_hours,
+        }),
+      });
+
+      if (!hoursResponse.ok) {
+        const errorData = await hoursResponse.json();
+        console.error("Error updating business hours:", errorData);
+        toast({
+          title: "Warning",
+          description: "Business settings updated, but failed to update hours. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
 
       toast({
         title: "Business Updated",
