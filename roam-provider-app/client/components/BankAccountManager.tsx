@@ -141,6 +141,12 @@ export default function BankAccountManager({ userId, businessId }: BankAccountMa
     checkStripeConnectStatus();
   }, [userId, businessId]);
 
+  const formatRequirementKey = (key: string) =>
+    key
+      .replaceAll("_", " ")
+      .replaceAll(".", " · ")
+      .replace(/\b\w/g, (c) => c.toUpperCase());
+
   return (
     <div className="space-y-6">
       {/* Stripe Connect Account Status */}
@@ -159,11 +165,101 @@ export default function BankAccountManager({ userId, businessId }: BankAccountMa
             </div>
           ) : stripeAccount ? (
             <div className="space-y-4">
+              {(() => {
+                const fullyActive = !!stripeAccount.charges_enabled && !!stripeAccount.payouts_enabled;
+                const requirementsDue: string[] = stripeAccount.requirements?.currently_due || [];
+                const hasRequirementsDue = requirementsDue.length > 0;
+                const isReview = stripeAccount.status === "review";
+
+                if (fullyActive) return null;
+
+                // If Stripe is reviewing submitted details, give the user clear guidance.
+                if (isReview && !hasRequirementsDue) {
+                  return (
+                    <Alert className="border-blue-200 bg-blue-50">
+                      <AlertDescription className="text-blue-900">
+                        <div className="flex items-start gap-3">
+                          <Clock className="w-5 h-5 text-blue-700 mt-0.5" />
+                          <div className="space-y-1">
+                            <div className="font-semibold">Stripe review in progress</div>
+                            <div className="text-sm">
+                              Your Stripe account details have been submitted and are pending review. There’s nothing to fix right now.
+                              If Stripe needs anything else, they’ll request it in the Stripe dashboard (and typically email you).
+                            </div>
+                            <div className="flex flex-wrap gap-2 pt-2">
+                              <Button onClick={openStripeDashboard} variant="outline" size="sm">
+                                <ExternalLink className="w-4 h-4 mr-2" />
+                                Open Stripe Dashboard
+                              </Button>
+                              <Button onClick={checkStripeConnectStatus} variant="outline" size="sm">
+                                <RefreshCw className="w-4 h-4 mr-2" />
+                                Refresh Status
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </AlertDescription>
+                    </Alert>
+                  );
+                }
+
+                // Otherwise, setup is incomplete / requirements are due — guide the user to Stripe.
+                const missing: string[] = [];
+                if (!stripeAccount.charges_enabled) missing.push("Charges");
+                if (!stripeAccount.payouts_enabled) missing.push("Payouts");
+
+                return (
+                  <Alert className="border-amber-200 bg-amber-50">
+                    <AlertDescription className="text-amber-900">
+                      <div className="flex items-start gap-3">
+                        <AlertCircle className="w-5 h-5 text-amber-700 mt-0.5" />
+                        <div className="space-y-1">
+                          <div className="font-semibold">Action needed in Stripe</div>
+                          <div className="text-sm">
+                            Your Stripe account is connected, but {missing.join(" & ")} are still <span className="font-medium">Pending</span>.
+                            To start receiving bookings and payouts, open Stripe and complete the requested steps, then come back and refresh.
+                          </div>
+                          {hasRequirementsDue && (
+                            <div className="pt-2">
+                              <div className="text-sm font-medium">Stripe says these items are required:</div>
+                              <ul className="list-disc pl-5 text-sm mt-1 space-y-0.5">
+                                {requirementsDue.slice(0, 8).map((req) => (
+                                  <li key={req}>{formatRequirementKey(req)}</li>
+                                ))}
+                                {requirementsDue.length > 8 && (
+                                  <li>And {requirementsDue.length - 8} more…</li>
+                                )}
+                              </ul>
+                            </div>
+                          )}
+                          <div className="flex flex-wrap gap-2 pt-2">
+                            <Button onClick={openStripeDashboard} variant="outline" size="sm">
+                              <ExternalLink className="w-4 h-4 mr-2" />
+                              Open Stripe Dashboard
+                            </Button>
+                            <Button onClick={checkStripeConnectStatus} variant="outline" size="sm">
+                              <RefreshCw className="w-4 h-4 mr-2" />
+                              Refresh Status
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </AlertDescription>
+                  </Alert>
+                );
+              })()}
+
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                    <CheckCircle className="w-5 h-5 text-green-600" />
-                  </div>
+                  {stripeAccount.charges_enabled && stripeAccount.payouts_enabled ? (
+                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                      <CheckCircle className="w-5 h-5 text-green-600" />
+                    </div>
+                  ) : (
+                    <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center">
+                      <AlertCircle className="w-5 h-5 text-amber-700" />
+                    </div>
+                  )}
                   <div>
                     <h3 className="font-semibold text-gray-900">Account Connected</h3>
                     <p className="text-sm text-gray-600">
@@ -172,10 +268,10 @@ export default function BankAccountManager({ userId, businessId }: BankAccountMa
                   </div>
                 </div>
                 <Badge 
-                  variant={stripeAccount.charges_enabled ? "default" : "secondary"}
-                  className={stripeAccount.charges_enabled ? "bg-green-100 text-green-800" : ""}
+                  variant={stripeAccount.charges_enabled && stripeAccount.payouts_enabled ? "default" : "secondary"}
+                  className={stripeAccount.charges_enabled && stripeAccount.payouts_enabled ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-900"}
                 >
-                  {stripeAccount.charges_enabled ? "Active" : "Pending"}
+                  {stripeAccount.charges_enabled && stripeAccount.payouts_enabled ? "Ready" : "Action Needed"}
                 </Badge>
               </div>
 

@@ -446,9 +446,29 @@ export default function DashboardTab({
                 <AlertCircle className="w-5 h-5 text-red-700" />
                 <span>Action Required to Receive Bookings</span>
               </div>
-              <Badge className="bg-red-100 text-red-800 border-red-300" variant="outline">
-                {readinessIssues.length} Pending
-              </Badge>
+              <div className="flex items-center gap-3">
+                <Button
+                  asChild
+                  size="sm"
+                  variant="ghost"
+                  className="h-auto px-2 py-1 text-sm text-gray-700 hover:text-gray-900"
+                >
+                  <a
+                    href={`mailto:providersupport@roamyourbestlife.com?subject=${encodeURIComponent(
+                      "ROAM Provider Support - Booking Readiness Help"
+                    )}&body=${encodeURIComponent(
+                      `Hi ROAM Support,%0D%0A%0D%0AI need help getting my business set up to receive bookings.%0D%0A%0D%0ABusiness: ${business?.business_name ?? ""}%0D%0AUser: ${providerData?.first_name ?? ""} ${providerData?.last_name ?? ""}%0D%0AEmail: ${providerData?.email ?? ""}%0D%0A%0D%0AThanks!`
+                    )}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Need Help?
+                  </a>
+                </Button>
+                <Badge className="bg-red-100 text-red-800 border-red-300" variant="outline">
+                  {readinessIssues.length} Pending
+                </Badge>
+              </div>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
