@@ -252,6 +252,13 @@ export default function ProviderDashboard() {
     }
   }, [isProvider, isOwner, isDispatcher, activeTab, basePath, navigate]);
 
+  // Legacy: Services used to be a top-level page. Redirect owners/dispatchers to Business Settings -> Services.
+  useEffect(() => {
+    if (!isProvider && (isOwner || isDispatcher) && activeTab === "services") {
+      navigate(`${basePath}/business-settings?tab=services`, { replace: true });
+    }
+  }, [activeTab, basePath, isDispatcher, isOwner, isProvider, navigate]);
+
   // Navigation helper
   const navigateToTab = (tab: string) => {
     navigate(`${basePath}/${tab}`);
@@ -756,14 +763,6 @@ export default function ProviderDashboard() {
                   Bookings
                 </button>
               )}
-              {hasAccess('services') && (
-                <button
-                  onClick={() => navigateToTab("services")}
-                  className={`text-sm font-medium px-3 py-2 rounded-lg ${activeTab === "services" ? "bg-gray-100 text-gray-900" : "text-gray-600 hover:text-gray-900"}`}
-                >
-                  Services
-                </button>
-              )}
               {hasAccess('staff') && business?.business_type !== 'independent' && (
                 <button
                   onClick={() => navigateToTab("staff")}
@@ -903,20 +902,6 @@ export default function ProviderDashboard() {
                 >
                   <Users className="w-4 h-4 mr-2" />
                   Staff
-                </Button>
-              )}
-              
-              {hasAccess('services') && (
-                <Button
-                  variant={activeTab === "services" ? "default" : "ghost"}
-                  className="w-full justify-start"
-                  onClick={() => {
-                    navigateToTab("services");
-                    setShowMobileMenu(false);
-                  }}
-                >
-                  <Briefcase className="w-4 h-4 mr-2" />
-                  Services
                 </Button>
               )}
               

@@ -56,12 +56,6 @@ const navigationItems = [
     badge: "2",
   },
   {
-    id: "services",
-    label: "Services",
-    icon: FileText,
-    description: "Manage service offerings",
-  },
-  {
     id: "notifications",
     label: "Notifications",
     icon: Bell,

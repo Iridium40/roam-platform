@@ -2,12 +2,14 @@ import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
+import { useSearchParams } from "react-router-dom";
 
 // Import our modular components
 import BasicInfoSection from "./business-settings/BasicInfoSection";
 import BusinessHoursSection from "./business-settings/BusinessHoursSection";
 import { DocumentsSection } from "./business-settings/DocumentsSection";
 import { LocationsSection } from "./business-settings/LocationsSection";
+import ServicesTab from "./ServicesTabSimplified";
 
 // Import the custom hook
 import { useBusinessSettings } from "./business-settings/hooks/useBusinessSettings";
@@ -20,6 +22,7 @@ interface BusinessSettingsTabProps {
 
 export function BusinessSettingsTab({ providerData, business, onBusinessUpdate }: BusinessSettingsTabProps) {
   const { toast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
   const {
     // Business data
     businessData,
@@ -37,6 +40,23 @@ export function BusinessSettingsTab({ providerData, business, onBusinessUpdate }
     handleCoverUpload,
     handleCoverPositionChange,
   } = useBusinessSettings(business);
+
+  const providerRole = providerData?.provider_role;
+  const canEditBusinessSettings = providerRole !== "dispatcher"; // dispatchers: services only
+
+  const visibleTabs = [
+    ...(canEditBusinessSettings ? [{ value: "basic-info", label: "Basic Info" }] : []),
+    { value: "services", label: "Services" },
+    ...(canEditBusinessSettings ? [{ value: "hours", label: "Hours" }] : []),
+    ...(canEditBusinessSettings ? [{ value: "documents", label: "Documents" }] : []),
+    ...(canEditBusinessSettings ? [{ value: "locations", label: "Locations" }] : []),
+  ] as const;
+
+  const requestedTab = searchParams.get("tab") || "";
+  const defaultTab = visibleTabs[0]?.value || "services";
+  const activeSubtab = (visibleTabs as readonly { value: string; label: string }[]).some(t => t.value === requestedTab)
+    ? requestedTab
+    : defaultTab;
 
   // State for documents and locations
   const [documents, setDocuments] = React.useState([]);
@@ -380,14 +400,33 @@ export function BusinessSettingsTab({ providerData, business, onBusinessUpdate }
     <div className="space-y-6">
 
       {/* Main content in tabs */}
-      <Tabs defaultValue="basic-info" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="basic-info" className="data-[state=active]:bg-[#f88221] data-[state=active]:text-white">Basic Info</TabsTrigger>
-          <TabsTrigger value="hours" className="data-[state=active]:bg-[#f88221] data-[state=active]:text-white">Hours</TabsTrigger>
-          <TabsTrigger value="documents" className="data-[state=active]:bg-[#f88221] data-[state=active]:text-white">Documents</TabsTrigger>
-          <TabsTrigger value="locations" className="data-[state=active]:bg-[#f88221] data-[state=active]:text-white">Locations</TabsTrigger>
+      <Tabs
+        value={activeSubtab}
+        onValueChange={(value) => {
+          setSearchParams((prev) => {
+            const next = new URLSearchParams(prev);
+            next.set("tab", value);
+            return next;
+          }, { replace: true });
+        }}
+        className="w-full"
+      >
+        <TabsList
+          className="grid w-full"
+          style={{ gridTemplateColumns: `repeat(${visibleTabs.length}, minmax(0, 1fr))` }}
+        >
+          {visibleTabs.map((tab) => (
+            <TabsTrigger
+              key={tab.value}
+              value={tab.value}
+              className="data-[state=active]:bg-[#f88221] data-[state=active]:text-white"
+            >
+              {tab.label}
+            </TabsTrigger>
+          ))}
         </TabsList>
 
+        {canEditBusinessSettings && (
         <TabsContent value="basic-info" className="space-y-6">
           <BasicInfoSection
             businessData={businessData}
@@ -403,7 +442,13 @@ export function BusinessSettingsTab({ providerData, business, onBusinessUpdate }
             onCoverUpload={handleCoverUpload}
           />
         </TabsContent>
+        )}
 
+        <TabsContent value="services" className="space-y-6 mt-6">
+          <ServicesTab providerData={providerData} business={business} />
+        </TabsContent>
+
+        {canEditBusinessSettings && (
         <TabsContent value="hours" className="space-y-6">
           <BusinessHoursSection
             businessData={businessData}
@@ -413,7 +458,9 @@ export function BusinessSettingsTab({ providerData, business, onBusinessUpdate }
             onSave={saveBusinessSettings}
           />
         </TabsContent>
+        )}
 
+        {canEditBusinessSettings && (
         <TabsContent value="documents" className="space-y-6">
           <DocumentsSection
             businessId={business?.id}
@@ -423,7 +470,9 @@ export function BusinessSettingsTab({ providerData, business, onBusinessUpdate }
             onDocumentDelete={handleDocumentDelete}
           />
         </TabsContent>
+        )}
 
+        {canEditBusinessSettings && (
         <TabsContent value="locations" className="space-y-6">
           <LocationsSection
             businessId={business?.id}
@@ -435,6 +484,7 @@ export function BusinessSettingsTab({ providerData, business, onBusinessUpdate }
             onLocationSetPrimary={handleLocationSetPrimary}
           />
         </TabsContent>
+        )}
       </Tabs>
     </div>
   );
