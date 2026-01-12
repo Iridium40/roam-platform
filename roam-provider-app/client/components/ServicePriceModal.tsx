@@ -42,13 +42,14 @@ export default function ServicePriceModal({
   currency = 'USD'
 }: ServicePriceModalProps) {
   const [price, setPrice] = useState<string>(currentPrice?.toString() || '');
-  const [deliveryType, setDeliveryType] = useState<string>(currentDeliveryType || 'business_location');
+  const [deliveryType, setDeliveryType] = useState<string>(currentDeliveryType || '');
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
       setPrice(currentPrice?.toString() || '');
-      setDeliveryType(currentDeliveryType || 'business_location');
+      // Only use currentDeliveryType if editing, otherwise require user to select
+      setDeliveryType(currentDeliveryType || '');
       setError(null);
     }
   }, [isOpen, currentPrice, currentDeliveryType]);
@@ -96,7 +97,7 @@ export default function ServicePriceModal({
     }
     
     if (!deliveryType) {
-      setError('Please select a delivery type');
+      setError('Please select a service location');
       return;
     }
     
@@ -261,7 +262,7 @@ export default function ServicePriceModal({
           <Button
             onClick={handleConfirm}
             className="flex-1 sm:flex-none bg-roam-blue hover:bg-roam-blue/90"
-            disabled={!price || !!error}
+            disabled={!price || !deliveryType || !!error}
           >
             Confirm Price
           </Button>
