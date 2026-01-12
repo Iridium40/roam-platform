@@ -964,9 +964,20 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredStaff.map((member) => (
+                (() => {
+                  const isServiceRole =
+                    member.provider_role === "provider" || member.provider_role === "owner";
+                  const servicesCount = member.assigned_services_count ?? 0;
+                  const needsServices = isServiceRole && servicesCount === 0;
+                  const hasLocation = !!member.location_id && !!member.location_name;
+                  const needsLocation = isServiceRole && !hasLocation;
+
+                  return (
                 <Card
                   key={member.id}
-                  className="hover:shadow-md transition-shadow"
+                  className={`hover:shadow-md transition-shadow ${
+                    needsServices || needsLocation ? "border-red-300 bg-red-50/30" : ""
+                  }`}
                 >
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between mb-3">
@@ -994,23 +1005,41 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
                       </div>
                       <div className="flex flex-col items-end gap-1">
                         {getStatusBadge(member)}
-                        {(member.provider_role === "provider" || member.provider_role === "owner") && (
-                          member.assigned_services_count === 0 ? (
+                        {isServiceRole && (
+                          <>
                             <Badge
                               variant="outline"
-                              className="text-xs bg-amber-50 text-amber-700 border-amber-300"
+                              className={`text-xs ${
+                                needsServices
+                                  ? "bg-red-50 text-red-700 border-red-300"
+                                  : "bg-emerald-50 text-emerald-700 border-emerald-300"
+                              }`}
                             >
-                              <AlertCircle className="w-3 h-3 mr-1" />
-                              No Services
+                              <Package className="w-3 h-3 mr-1" />
+                              {needsServices
+                                ? "Setup Required: 0 Services"
+                                : `${servicesCount} Service${servicesCount === 1 ? "" : "s"}`}
                             </Badge>
-                          ) : (
+                            <Badge
+                              variant="outline"
+                              className={`text-xs ${
+                                needsLocation
+                                  ? "bg-red-50 text-red-700 border-red-300"
+                                  : "bg-slate-50 text-slate-700 border-slate-300"
+                              }`}
+                            >
+                              <MapPin className="w-3 h-3 mr-1" />
+                              {needsLocation ? "No Location" : "Location Set"}
+                            </Badge>
+
+                            {/* Booking readiness */}
                             <Badge
                               variant={member.active_for_bookings ? "default" : "secondary"}
                               className="text-xs"
                             >
                               {member.active_for_bookings ? "Bookable" : "Not Bookable"}
                             </Badge>
-                          )
+                          </>
                         )}
                       </div>
                     </div>
@@ -1025,22 +1054,48 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
                         <span>{member.phone}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <MapPin className="w-4 h-4 text-foreground/60" />
-                        <span>{member.location_name}</span>
+                        <MapPin className={`w-4 h-4 ${needsLocation ? "text-red-600" : "text-foreground/60"}`} />
+                        <span className={needsLocation ? "text-red-700 font-medium" : ""}>
+                          {member.location_name || "No location assigned"}
+                        </span>
                       </div>
+                      {(member.provider_role === "provider" || member.provider_role === "owner") && (
+                        <div className="flex items-center gap-2">
+                          <Package
+                            className={`w-4 h-4 ${needsServices ? "text-red-600" : "text-foreground/60"}`}
+                          />
+                          <span className={needsServices ? "text-red-700 font-medium" : ""}>
+                            {needsServices
+                              ? "No services assigned"
+                              : `Services assigned: ${servicesCount}`}
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     {(member.provider_role === "provider" || member.provider_role === "owner") && 
                       member.assigned_services_count === 0 && (
-                      <div className="mt-3 p-2 bg-amber-50 border border-amber-200 rounded-md">
-                        <div className="flex items-center gap-2 text-amber-700">
+                      <div className="mt-3 p-2 bg-red-50 border border-red-200 rounded-md">
+                        <div className="flex items-center gap-2 text-red-700">
                           <AlertCircle className="w-4 h-4 flex-shrink-0" />
                           <p className="text-xs">
-                            <span className="font-medium">Setup incomplete:</span> Assign services to enable bookings.
+                            <span className="font-medium">Setup incomplete:</span> Assign at least 1 service to enable bookings.
                           </p>
                         </div>
                       </div>
                     )}
+
+                    {(member.provider_role === "provider" || member.provider_role === "owner") &&
+                      !hasLocation && (
+                        <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-md">
+                          <div className="flex items-center gap-2 text-red-700">
+                            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                            <p className="text-xs">
+                              <span className="font-medium">Setup incomplete:</span> Assign a location for scheduling and routing.
+                            </p>
+                          </div>
+                        </div>
+                      )}
 
                     {member.provider_role === "provider" && (
                       <div className="mt-3 pt-3 border-t">
@@ -1149,6 +1204,8 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
                     )}
                   </CardContent>
                 </Card>
+                  );
+                })()}
               ))}
             </div>
           )}

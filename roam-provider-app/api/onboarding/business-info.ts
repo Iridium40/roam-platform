@@ -638,6 +638,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     let addressError = null;
+    let primaryLocationId: string | null = existingLocation?.id ?? null;
 
     if (existingLocation) {
       // Update existing location
@@ -648,14 +649,36 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       addressError = error;
     } else {
       // Create new location
-      const { error } = await supabase
+      const { data: createdLocation, error } = await supabase
         .from("business_locations")
-        .insert(addressData);
+        .insert(addressData)
+        .select("id")
+        .single();
       addressError = error;
+      primaryLocationId = createdLocation?.id ?? null;
     }
 
     if (addressError) {
       console.error("Error updating business address:", addressError);
+    }
+
+    // Ensure the owner/provider completing onboarding has their location set to the primary business location
+    if (primaryLocationId) {
+      const { error: providerLocationError } = await supabase
+        .from("providers")
+        .update({ location_id: primaryLocationId })
+        .eq("user_id", userId)
+        .eq("provider_role", "owner");
+
+      if (providerLocationError) {
+        console.error("Error setting owner provider location_id:", providerLocationError);
+        // Non-fatal: business was created/updated successfully; can be corrected later in staff settings
+      }
+    } else {
+      console.warn("No primary business location id available; skipping providers.location_id update", {
+        businessId: businessProfileData.id,
+        userId,
+      });
     }
 
     // Validate businessProfileData before returning

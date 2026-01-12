@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Calendar,
   Users,
@@ -15,9 +16,14 @@ import {
   User,
   UserX,
   Bell,
+  CreditCard,
+  MapPin,
+  Package,
+  Loader2,
 } from "lucide-react";
 import { useNotificationCount } from "@/hooks/useNotificationCount";
 import { getAuthHeaders } from "@/lib/api/authUtils";
+import { supabase } from "@/lib/supabase";
 
 interface DashboardTabProps {
   providerData: any;
@@ -45,6 +51,15 @@ interface DashboardStats {
   recent_bookings: any[];
 }
 
+type SetupHealth = {
+  stripeConnected: boolean | null; // null = unknown/error
+  stripeRequirementsDue: number;
+  businessHasActiveServices: boolean;
+  staffMissingServicesCount: number;
+  staffMissingLocationCount: number;
+  staffBookableBlockedCount: number;
+};
+
 export default function DashboardTab({
   providerData,
   business,
@@ -53,6 +68,8 @@ export default function DashboardTab({
   const navigate = useNavigate();
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(false);
+  const [setupLoading, setSetupLoading] = useState(false);
+  const [setupHealth, setSetupHealth] = useState<SetupHealth | null>(null);
   
   // Get unread conversations count
   const businessId = business?.id || providerData?.business_id;
@@ -106,6 +123,7 @@ export default function DashboardTab({
   // Determine if user is owner (show full stats) or dispatcher/provider (hide stats)
   const role = providerRole || providerData?.provider_role;
   const isOwner = role === 'owner';
+  const isOwnerOrDispatcher = role === "owner" || role === "dispatcher";
 
   // Load dashboard data using optimized API endpoint
   const loadDashboardData = async () => {
@@ -182,6 +200,90 @@ export default function DashboardTab({
     loadDashboardData();
   }, [providerData, business]);
 
+  // Load setup health to warn about blockers that prevent receiving bookings
+  useEffect(() => {
+    const loadSetupHealth = async () => {
+      if (!businessId || !isOwnerOrDispatcher) return;
+
+      try {
+        setSetupLoading(true);
+
+        // 1) Stripe connection status (server-side endpoint checks Stripe + DB)
+        let stripeConnected: boolean | null = null;
+        let stripeRequirementsDue = 0;
+        try {
+          const stripeRes = await fetch(`/api/stripe/check-account-status?businessId=${businessId}`);
+          if (stripeRes.ok) {
+            const stripeData = await stripeRes.json();
+            stripeConnected = !!(stripeData?.hasAccount && stripeData?.chargesEnabled && stripeData?.payoutsEnabled);
+            stripeRequirementsDue = Array.isArray(stripeData?.requirements) ? stripeData.requirements.length : 0;
+          }
+        } catch {
+          stripeConnected = null;
+        }
+
+        // 2) Business services configured (from dashboard stats)
+        const businessHasActiveServices = (dashboardStats?.active_services ?? 0) > 0;
+
+        // 3) Staff readiness (owners + providers): location + assigned services
+        const { data: staffProviders, error: staffError } = await supabase
+          .from("providers")
+          .select("id, provider_role, location_id, active_for_bookings, first_name, last_name")
+          .eq("business_id", businessId)
+          .in("provider_role", ["owner", "provider"]);
+
+        if (staffError) {
+          console.error("Error loading staff readiness:", staffError);
+        }
+
+        const staff = staffProviders || [];
+        const providerIds = staff.map((p: any) => p.id).filter(Boolean);
+
+        // Pull all active provider_services for these staff and count in-memory (staff sizes are small)
+        let servicesByProvider: Record<string, number> = {};
+        if (providerIds.length > 0) {
+          const { data: providerServices, error: psError } = await supabase
+            .from("provider_services")
+            .select("provider_id, service_id")
+            .in("provider_id", providerIds)
+            .eq("is_active", true);
+
+          if (psError) {
+            console.error("Error loading provider_services:", psError);
+          } else {
+            servicesByProvider = (providerServices || []).reduce((acc: any, row: any) => {
+              const pid = row.provider_id;
+              acc[pid] = (acc[pid] || 0) + 1;
+              return acc;
+            }, {} as Record<string, number>);
+          }
+        }
+
+        const staffMissingServicesCount = staff.filter((p: any) => (servicesByProvider[p.id] || 0) === 0).length;
+        const staffMissingLocationCount = staff.filter((p: any) => !p.location_id).length;
+        const staffBookableBlockedCount = staff.filter((p: any) => {
+          const missingServices = (servicesByProvider[p.id] || 0) === 0;
+          const missingLocation = !p.location_id;
+          return !!p.active_for_bookings && (missingServices || missingLocation);
+        }).length;
+
+        setSetupHealth({
+          stripeConnected,
+          stripeRequirementsDue,
+          businessHasActiveServices,
+          staffMissingServicesCount,
+          staffMissingLocationCount,
+          staffBookableBlockedCount,
+        });
+      } finally {
+        setSetupLoading(false);
+      }
+    };
+
+    loadSetupHealth();
+    // Intentionally include dashboardStats.active_services so the card updates when services are added/removed
+  }, [businessId, isOwnerOrDispatcher, dashboardStats?.active_services]);
+
   // Show loading state
   if (loading) {
     return (
@@ -253,6 +355,214 @@ export default function DashboardTab({
         <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
         <p className="text-sm text-gray-600">Welcome back, {providerData?.first_name || 'Provider'}!</p>
       </div>
+
+      {/* Setup / Action Required (owners + dispatchers) */}
+      {isOwnerOrDispatcher && (
+        <Card className="border-2 border-gray-100">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-[#f88221]" />
+                <span>Booking Readiness</span>
+              </div>
+              {setupLoading && (
+                <div className="flex items-center gap-2 text-sm text-gray-500">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Checking…
+                </div>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {(() => {
+              const stripeOk = setupHealth?.stripeConnected === true;
+              const stripeUnknown = setupHealth?.stripeConnected === null;
+              const servicesOk = setupHealth?.businessHasActiveServices === true;
+              const missingServices = setupHealth?.staffMissingServicesCount ?? 0;
+              const missingLocations = setupHealth?.staffMissingLocationCount ?? 0;
+              const blockedBookable = setupHealth?.staffBookableBlockedCount ?? 0;
+
+              const blockers =
+                (stripeOk ? 0 : 1) +
+                (servicesOk ? 0 : 1) +
+                (missingServices > 0 ? 1 : 0) +
+                (missingLocations > 0 ? 1 : 0) +
+                (blockedBookable > 0 ? 1 : 0);
+
+              const basePath = getBasePath();
+
+              return (
+                <>
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm text-gray-600">
+                      {blockers === 0 ? (
+                        <span className="text-emerald-700 font-medium flex items-center gap-2">
+                          <CheckCircle className="w-4 h-4" />
+                          You’re set up to receive bookings.
+                        </span>
+                      ) : (
+                        <span className="text-red-700 font-medium">
+                          Action required: {blockers} setup item{blockers === 1 ? "" : "s"} may block bookings
+                        </span>
+                      )}
+                    </div>
+                    {blockers > 0 && (
+                      <Badge className="bg-red-100 text-red-800 border-red-300" variant="outline">
+                        {blockers} Pending
+                      </Badge>
+                    )}
+                  </div>
+
+                  {/* Stripe */}
+                  <div className="flex items-start justify-between gap-3 rounded-md border p-3">
+                    <div className="flex items-start gap-3">
+                      <div className={`mt-0.5 ${stripeOk ? "text-emerald-600" : "text-red-600"}`}>
+                        {stripeOk ? <CheckCircle className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium flex items-center gap-2">
+                          <CreditCard className="w-4 h-4 text-gray-600" />
+                          Stripe payouts
+                          {stripeUnknown && (
+                            <Badge variant="outline" className="text-xs bg-gray-50 text-gray-700 border-gray-300">
+                              Unknown
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="text-xs text-gray-600">
+                          {stripeOk
+                            ? "Connected (charges + payouts enabled)."
+                            : "Connect Stripe to receive payments."}
+                          {!stripeOk && (setupHealth?.stripeRequirementsDue ?? 0) > 0 && (
+                            <span className="ml-1 text-gray-500">
+                              ({setupHealth?.stripeRequirementsDue} requirement{setupHealth?.stripeRequirementsDue === 1 ? "" : "s"} due)
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => navigate(`${basePath}/financials`)}
+                    >
+                      Manage
+                    </Button>
+                  </div>
+
+                  {/* Business services */}
+                  <div className="flex items-start justify-between gap-3 rounded-md border p-3">
+                    <div className="flex items-start gap-3">
+                      <div className={`mt-0.5 ${servicesOk ? "text-emerald-600" : "text-red-600"}`}>
+                        {servicesOk ? <CheckCircle className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium flex items-center gap-2">
+                          <Package className="w-4 h-4 text-gray-600" />
+                          Business services
+                        </div>
+                        <div className="text-xs text-gray-600">
+                          {servicesOk
+                            ? "At least one active service is available."
+                            : "No active services yet — add/activate services to allow bookings."}
+                        </div>
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => navigate(`${basePath}/business-settings?tab=services`)}
+                    >
+                      Configure
+                    </Button>
+                  </div>
+
+                  {/* Staff services */}
+                  <div className="flex items-start justify-between gap-3 rounded-md border p-3">
+                    <div className="flex items-start gap-3">
+                      <div className={`mt-0.5 ${missingServices === 0 ? "text-emerald-600" : "text-red-600"}`}>
+                        {missingServices === 0 ? <CheckCircle className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium flex items-center gap-2">
+                          <Users className="w-4 h-4 text-gray-600" />
+                          Staff services assigned
+                        </div>
+                        <div className="text-xs text-gray-600">
+                          {missingServices === 0
+                            ? "All owners/providers have at least one service assigned."
+                            : `${missingServices} staff member${missingServices === 1 ? "" : "s"} missing assigned services.`}
+                        </div>
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => navigate(`${basePath}/staff`)}
+                    >
+                      Fix
+                    </Button>
+                  </div>
+
+                  {/* Staff location */}
+                  <div className="flex items-start justify-between gap-3 rounded-md border p-3">
+                    <div className="flex items-start gap-3">
+                      <div className={`mt-0.5 ${missingLocations === 0 ? "text-emerald-600" : "text-red-600"}`}>
+                        {missingLocations === 0 ? <CheckCircle className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium flex items-center gap-2">
+                          <MapPin className="w-4 h-4 text-gray-600" />
+                          Staff locations assigned
+                        </div>
+                        <div className="text-xs text-gray-600">
+                          {missingLocations === 0
+                            ? "All owners/providers have a location assigned."
+                            : `${missingLocations} staff member${missingLocations === 1 ? "" : "s"} missing a location.`}
+                        </div>
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => navigate(`${basePath}/staff`)}
+                    >
+                      Fix
+                    </Button>
+                  </div>
+
+                  {/* Bookable but blocked */}
+                  <div className="flex items-start justify-between gap-3 rounded-md border p-3">
+                    <div className="flex items-start gap-3">
+                      <div className={`mt-0.5 ${blockedBookable === 0 ? "text-emerald-600" : "text-red-600"}`}>
+                        {blockedBookable === 0 ? <CheckCircle className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium flex items-center gap-2">
+                          <AlertCircle className="w-4 h-4 text-gray-600" />
+                          Bookable staff with blockers
+                        </div>
+                        <div className="text-xs text-gray-600">
+                          {blockedBookable === 0
+                            ? "No staff are marked bookable while missing required setup."
+                            : `${blockedBookable} staff member${blockedBookable === 1 ? "" : "s"} marked bookable but missing services/location.`}
+                        </div>
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => navigate(`${basePath}/staff`)}
+                    >
+                      Review
+                    </Button>
+                  </div>
+                </>
+              );
+            })()}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Stats Cards - Only visible to owners */}
       {isOwner && (
