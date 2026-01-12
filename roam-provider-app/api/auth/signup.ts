@@ -147,6 +147,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       last_name: signupData.lastName,
       email: signupData.email,
       phone: signupData.phone,
+      date_of_birth: signupData.dateOfBirth,
       provider_role: "owner",
     });
 
@@ -158,6 +159,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         last_name: signupData.lastName,
         email: signupData.email,
         phone: signupData.phone,
+        date_of_birth: signupData.dateOfBirth,
         provider_role: "owner",
         verification_status: "pending",
         is_active: false,

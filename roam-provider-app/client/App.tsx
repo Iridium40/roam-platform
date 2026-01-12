@@ -28,6 +28,7 @@ import ProviderLogin from "./pages/ProviderLogin";
 import ProviderSignup from "./pages/ProviderSignup";
 import ProviderDashboard from "./pages/ProviderDashboard";
 import ChangePassword from "./pages/ChangePassword";
+import AccountPendingPage from "./pages/AccountPendingPage";
 import ProviderOnboardingFlow from "./pages/onboarding/ProviderOnboardingFlow";
 import ProviderOnboardingPhase1 from "./pages/onboarding/ProviderOnboardingPhase1";
 import LandingPage from "./pages/LandingPage";
@@ -81,6 +82,7 @@ const App = () => (
             <Route path="/provider-login" element={<ProviderLogin />} />
             <Route path="/provider-signup" element={<ProviderSignup />} />
             <Route path="/change-password" element={<ChangePassword />} />
+            <Route path="/account-pending" element={<AccountPendingPage />} />
             {/* Legacy /login route - redirect to provider-login */}
             <Route path="/login" element={<Navigate to="/provider-login" replace />} />
 

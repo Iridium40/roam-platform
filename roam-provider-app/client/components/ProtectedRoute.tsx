@@ -41,6 +41,11 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to={redirectTo} replace />;
   }
 
+  // Check if provider account is active
+  if (provider?.provider && !provider.provider.is_active) {
+    return <Navigate to="/account-pending" replace />;
+  }
+
   // Check role-based access if allowedRoles is specified
   if (allowedRoles && provider?.provider) {
     const userRole = provider.provider.provider_role;

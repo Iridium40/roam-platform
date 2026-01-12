@@ -41,6 +41,62 @@ import ShareModal from "@/components/ShareModal";
 import BusinessDocumentUploadForm from "@/components/BusinessDocumentUploadForm";
 import CoverImageEditor from "@/components/CoverImageEditor";
 
+// Geocoding helper function
+async function geocodeAddress(address: {
+  address_line1: string;
+  address_line2?: string;
+  city: string;
+  state: string;
+  postal_code: string;
+  country: string;
+}): Promise<{ latitude: number; longitude: number } | null> {
+  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+  
+  if (!apiKey) {
+    console.warn("Google Maps API key not configured, skipping geocoding");
+    return null;
+  }
+
+  try {
+    const addressParts = [
+      address.address_line1,
+      address.address_line2,
+      address.city,
+      address.state,
+      address.postal_code,
+      address.country,
+    ].filter(Boolean);
+    
+    const fullAddress = addressParts.join(", ");
+    const encodedAddress = encodeURIComponent(fullAddress);
+    
+    console.log("Geocoding address:", fullAddress);
+    
+    const response = await fetch(
+      `https://maps.googleapis.com/maps/api/geocode/json?address=${encodedAddress}&key=${apiKey}`
+    );
+    
+    if (!response.ok) {
+      console.error("Geocoding API request failed:", response.status);
+      return null;
+    }
+    
+    const data = await response.json();
+    
+    if (data.status === "OK" && data.results?.length > 0) {
+      const location = data.results[0].geometry.location;
+      console.log("Geocoding successful:", { lat: location.lat, lng: location.lng });
+      return { latitude: location.lat, longitude: location.lng };
+    } else {
+      console.warn("Geocoding returned no results:", data.status);
+      return null;
+    }
+  } catch (error) {
+    console.error("Geocoding error:", error);
+    return null;
+  }
+}
+
 interface BusinessSettingsTabProps {
   providerData: any;
   business: any;
@@ -535,6 +591,27 @@ export default function BusinessSettingsTab({
     if (!business?.id) return;
 
     try {
+      // Geocode the address to get lat/long
+      let latitude: number | null = locationForm.latitude ? parseFloat(locationForm.latitude) : null;
+      let longitude: number | null = locationForm.longitude ? parseFloat(locationForm.longitude) : null;
+      
+      // If no coordinates provided, try to geocode
+      if (!latitude || !longitude) {
+        const coordinates = await geocodeAddress({
+          address_line1: locationForm.address_line1,
+          address_line2: locationForm.address_line2,
+          city: locationForm.city,
+          state: locationForm.state,
+          postal_code: locationForm.postal_code,
+          country: locationForm.country,
+        });
+        
+        if (coordinates) {
+          latitude = coordinates.latitude;
+          longitude = coordinates.longitude;
+        }
+      }
+
       const { data, error } = await supabase
         .from('business_locations')
         .insert({
@@ -546,8 +623,8 @@ export default function BusinessSettingsTab({
           state: locationForm.state,
           postal_code: locationForm.postal_code,
           country: locationForm.country,
-          latitude: locationForm.latitude ? parseFloat(locationForm.latitude) : null,
-          longitude: locationForm.longitude ? parseFloat(locationForm.longitude) : null,
+          latitude,
+          longitude,
           is_primary: locationForm.is_primary,
           offers_mobile_services: locationForm.offers_mobile_services,
           mobile_service_radius: locationForm.mobile_service_radius,
@@ -580,6 +657,27 @@ export default function BusinessSettingsTab({
     if (!editingLocation?.id) return;
 
     try {
+      // Geocode the address to get lat/long
+      let latitude: number | null = locationForm.latitude ? parseFloat(locationForm.latitude) : null;
+      let longitude: number | null = locationForm.longitude ? parseFloat(locationForm.longitude) : null;
+      
+      // If no coordinates provided, try to geocode
+      if (!latitude || !longitude) {
+        const coordinates = await geocodeAddress({
+          address_line1: locationForm.address_line1,
+          address_line2: locationForm.address_line2,
+          city: locationForm.city,
+          state: locationForm.state,
+          postal_code: locationForm.postal_code,
+          country: locationForm.country,
+        });
+        
+        if (coordinates) {
+          latitude = coordinates.latitude;
+          longitude = coordinates.longitude;
+        }
+      }
+
       const { error } = await supabase
         .from('business_locations')
         .update({
@@ -590,8 +688,8 @@ export default function BusinessSettingsTab({
           state: locationForm.state,
           postal_code: locationForm.postal_code,
           country: locationForm.country,
-          latitude: locationForm.latitude ? parseFloat(locationForm.latitude) : null,
-          longitude: locationForm.longitude ? parseFloat(locationForm.longitude) : null,
+          latitude,
+          longitude,
           is_primary: locationForm.is_primary,
           offers_mobile_services: locationForm.offers_mobile_services,
           mobile_service_radius: locationForm.mobile_service_radius,

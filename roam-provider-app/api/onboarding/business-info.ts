@@ -6,6 +6,66 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
 
+// Geocoding function to convert address to lat/long using Google Geocoding API
+async function geocodeAddress(address: {
+  addressLine1: string;
+  addressLine2?: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
+}): Promise<{ latitude: number; longitude: number } | null> {
+  const apiKey = process.env.VITE_GOOGLE_MAPS_API_KEY;
+  
+  if (!apiKey) {
+    console.warn("Google Maps API key not configured, skipping geocoding");
+    return null;
+  }
+
+  try {
+    // Build the full address string
+    const addressParts = [
+      address.addressLine1,
+      address.addressLine2,
+      address.city,
+      address.state,
+      address.postalCode,
+      address.country,
+    ].filter(Boolean);
+    
+    const fullAddress = addressParts.join(", ");
+    const encodedAddress = encodeURIComponent(fullAddress);
+    
+    console.log("Geocoding address:", fullAddress);
+    
+    const response = await fetch(
+      `https://maps.googleapis.com/maps/api/geocode/json?address=${encodedAddress}&key=${apiKey}`
+    );
+    
+    if (!response.ok) {
+      console.error("Geocoding API request failed:", response.status, response.statusText);
+      return null;
+    }
+    
+    const data = await response.json();
+    
+    if (data.status === "OK" && data.results && data.results.length > 0) {
+      const location = data.results[0].geometry.location;
+      console.log("Geocoding successful:", { lat: location.lat, lng: location.lng });
+      return {
+        latitude: location.lat,
+        longitude: location.lng,
+      };
+    } else {
+      console.warn("Geocoding returned no results:", data.status, data.error_message);
+      return null;
+    }
+  } catch (error) {
+    console.error("Geocoding error:", error);
+    return null;
+  }
+}
+
 interface BusinessInfoData {
   businessName: string;
   businessType:
@@ -433,21 +493,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         console.log("⚠️ No service subcategories to create or array is empty");
       }
 
-      // Create default business location
+      // Create default business location with geocoding
+      const initialCoordinates = await geocodeAddress(businessData.businessAddress);
+      
+      const initialLocationData: Record<string, any> = {
+        business_id: businessProfileData.id,
+        location_name: "Main Location",
+        address_line1: businessData.businessAddress.addressLine1,
+        address_line2: businessData.businessAddress.addressLine2,
+        city: businessData.businessAddress.city,
+        state: businessData.businessAddress.state,
+        postal_code: businessData.businessAddress.postalCode,
+        country: businessData.businessAddress.country,
+        is_primary: true,
+        is_active: true,
+      };
+
+      if (initialCoordinates) {
+        initialLocationData.latitude = initialCoordinates.latitude;
+        initialLocationData.longitude = initialCoordinates.longitude;
+        console.log("Adding initial coordinates to location:", initialCoordinates);
+      }
+
       const { error: locationError } = await supabase
         .from("business_locations")
-        .insert({
-          business_id: businessProfileData.id,
-          location_name: "Main Location",
-          address_line1: businessData.businessAddress.addressLine1,
-          address_line2: businessData.businessAddress.addressLine2,
-          city: businessData.businessAddress.city,
-          state: businessData.businessAddress.state,
-          postal_code: businessData.businessAddress.postalCode,
-          country: businessData.businessAddress.country,
-          is_primary: true,
-          is_active: true,
-        });
+        .insert(initialLocationData);
 
       if (locationError) {
         console.error("Error creating business location:", locationError);
@@ -544,7 +614,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .eq("is_primary", true)
       .single();
 
-    const addressData = {
+    // Geocode the address to get lat/long
+    const coordinates = await geocodeAddress(businessData.businessAddress);
+
+    const addressData: Record<string, any> = {
       business_id: businessProfileData.id,
       location_name: "Main Location",
       address_line1: businessData.businessAddress.addressLine1,
@@ -556,6 +629,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       is_primary: true,
       is_active: true,
     };
+
+    // Add coordinates if geocoding was successful
+    if (coordinates) {
+      addressData.latitude = coordinates.latitude;
+      addressData.longitude = coordinates.longitude;
+      console.log("Adding coordinates to location:", coordinates);
+    }
 
     let addressError = null;
 

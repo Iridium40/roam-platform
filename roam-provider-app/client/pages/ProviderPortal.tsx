@@ -87,6 +87,13 @@ export default function ProviderPortal() {
         throw new Error("No provider account found for this email. Please sign up as a provider.");
       }
 
+      // Check if provider account is active
+      if (!providerData.is_active) {
+        // Redirect to account pending page
+        navigate("/account-pending");
+        return;
+      }
+
       // Success - redirect to provider dashboard
       navigate("/provider-dashboard");
     } catch (error) {
