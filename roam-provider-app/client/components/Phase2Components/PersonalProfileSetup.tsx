@@ -182,12 +182,12 @@ export default function PersonalProfileSetup({
     });
   };
 
-  const uploadImage = async (imageType: 'avatar' | 'cover') => {
+  const uploadImage = async (imageType: 'avatar' | 'cover'): Promise<string | null> => {
     const uploadState = imageType === 'avatar' ? avatarUpload : coverUpload;
     const setUploadState = imageType === 'avatar' ? setAvatarUpload : setCoverUpload;
     const uploadType: ImageType = imageType === 'avatar' ? 'provider_avatar' : 'provider_cover';
 
-    if (!uploadState.file) return;
+    if (!uploadState.file) return null;
 
     setUploadState(prev => ({ ...prev, uploading: true, error: undefined }));
 
@@ -213,12 +213,15 @@ export default function PersonalProfileSetup({
           ...prev,
           [field]: result.publicUrl
         }));
+        
+        return result.publicUrl;
       } else {
         setUploadState(prev => ({
           ...prev,
           uploading: false,
           error: result.error || 'Upload failed'
         }));
+        return null;
       }
     } catch (error) {
       setUploadState(prev => ({
@@ -226,6 +229,7 @@ export default function PersonalProfileSetup({
         uploading: false,
         error: error instanceof Error ? error.message : 'Upload failed'
       }));
+      return null;
     }
   };
 
@@ -319,23 +323,31 @@ export default function PersonalProfileSetup({
     setError(null);
 
     try {
-      // Upload any pending images
+      // Upload any pending images and capture the URLs directly
+      let uploadedAvatarUrl = formData.avatarUrl;
+      let uploadedCoverUrl = formData.coverImageUrl;
+      
       if (avatarUpload.file && !avatarUpload.uploaded) {
-        await uploadImage('avatar');
+        const url = await uploadImage('avatar');
+        if (url) uploadedAvatarUrl = url;
       }
       if (coverUpload.file && !coverUpload.uploaded) {
-        await uploadImage('cover');
+        const url = await uploadImage('cover');
+        if (url) uploadedCoverUrl = url;
       }
 
       // Save personal profile data
       // Use business_id to find and update provider (Phase 2 onboarding)
+      // Use the directly captured URLs to avoid React state race condition
       const profileResponse = await fetch(`/api/provider/profile/${userId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId,
           businessId, // Required for Phase 2: lookup provider by business_id
-          ...formData
+          ...formData,
+          avatarUrl: uploadedAvatarUrl,
+          coverImageUrl: uploadedCoverUrl
         })
       });
 

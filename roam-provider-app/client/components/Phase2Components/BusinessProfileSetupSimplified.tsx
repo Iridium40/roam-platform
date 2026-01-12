@@ -183,14 +183,14 @@ export default function BusinessProfileSetupSimplified({
     });
   };
 
-  const uploadImage = async (imageType: "logo" | "cover") => {
+  const uploadImage = async (imageType: "logo" | "cover"): Promise<string | null> => {
     const uploadState = imageType === "logo" ? logoUpload : coverUpload;
     const setUploadState =
       imageType === "logo" ? setLogoUpload : setCoverUpload;
     const uploadType: ImageType =
       imageType === "logo" ? "business_logo" : "business_cover";
 
-    if (!uploadState.file) return;
+    if (!uploadState.file) return null;
 
     setUploadState((prev) => ({ ...prev, uploading: true, error: undefined }));
 
@@ -216,12 +216,15 @@ export default function BusinessProfileSetupSimplified({
           ...prev,
           [field]: result.publicUrl,
         }));
+        
+        return result.publicUrl;
       } else {
         setUploadState((prev) => ({
           ...prev,
           uploading: false,
           error: result.error || "Upload failed",
         }));
+        return null;
       }
     } catch (error) {
       setUploadState((prev) => ({
@@ -229,6 +232,7 @@ export default function BusinessProfileSetupSimplified({
         uploading: false,
         error: error instanceof Error ? error.message : "Upload failed",
       }));
+      return null;
     }
   };
 
@@ -261,15 +265,21 @@ export default function BusinessProfileSetupSimplified({
     setError(null);
 
     try {
-      // Upload any pending images
+      // Upload any pending images and capture the URLs directly
+      let uploadedLogoUrl = formData.logoUrl;
+      let uploadedCoverUrl = formData.coverImageUrl;
+      
       if (logoUpload.file && !logoUpload.uploaded) {
-        await uploadImage("logo");
+        const url = await uploadImage("logo");
+        if (url) uploadedLogoUrl = url;
       }
       if (coverUpload.file && !coverUpload.uploaded) {
-        await uploadImage("cover");
+        const url = await uploadImage("cover");
+        if (url) uploadedCoverUrl = url;
       }
 
       // Save business profile data using onboarding endpoint (no auth required during Phase 2)
+      // Use the directly captured URLs to avoid React state race condition
       const profileResponse = await fetch(`/api/onboarding/business-profile/${businessId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -278,8 +288,8 @@ export default function BusinessProfileSetupSimplified({
           detailedDescription: businessInfo.businessDescription || "",
           websiteUrl: businessInfo.website || "",
           socialMediaLinks: businessInfo.socialMedia || {},
-          logoUrl: formData.logoUrl || undefined,
-          coverImageUrl: formData.coverImageUrl || undefined,
+          logoUrl: uploadedLogoUrl || undefined,
+          coverImageUrl: uploadedCoverUrl || undefined,
         }),
       });
 

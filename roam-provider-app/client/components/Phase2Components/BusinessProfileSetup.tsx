@@ -305,14 +305,14 @@ export default function BusinessProfileSetup({
     });
   };
 
-  const uploadImage = async (imageType: "logo" | "cover") => {
+  const uploadImage = async (imageType: "logo" | "cover"): Promise<string | null> => {
     const uploadState = imageType === "logo" ? logoUpload : coverUpload;
     const setUploadState =
       imageType === "logo" ? setLogoUpload : setCoverUpload;
     const uploadType: ImageType =
       imageType === "logo" ? "business_logo" : "business_cover";
 
-    if (!uploadState.file) return;
+    if (!uploadState.file) return null;
 
     setUploadState((prev) => ({ ...prev, uploading: true, error: undefined }));
 
@@ -338,12 +338,15 @@ export default function BusinessProfileSetup({
           ...prev,
           [field]: result.publicUrl,
         }));
+        
+        return result.publicUrl;
       } else {
         setUploadState((prev) => ({
           ...prev,
           uploading: false,
           error: result.error || "Upload failed",
         }));
+        return null;
       }
     } catch (error) {
       setUploadState((prev) => ({
@@ -351,6 +354,7 @@ export default function BusinessProfileSetup({
         uploading: false,
         error: error instanceof Error ? error.message : "Upload failed",
       }));
+      return null;
     }
   };
 
@@ -426,16 +430,22 @@ export default function BusinessProfileSetup({
     setError(null);
 
     try {
-      // Upload any pending images
+      // Upload any pending images and capture the URLs directly
+      let uploadedLogoUrl = formData.logoUrl;
+      let uploadedCoverUrl = formData.coverImageUrl;
+      
       if (logoUpload.file && !logoUpload.uploaded) {
-        await uploadImage("logo");
+        const url = await uploadImage("logo");
+        if (url) uploadedLogoUrl = url;
       }
       if (coverUpload.file && !coverUpload.uploaded) {
-        await uploadImage("cover");
+        const url = await uploadImage("cover");
+        if (url) uploadedCoverUrl = url;
       }
 
       // Prepare update payload - only include fields that have values
       // Business name and description should already exist from Phase 1, but we'll include them if available
+      // Use the directly captured URLs to avoid React state race condition
       const updatePayload: any = {};
       
       if (formData.businessName && formData.businessName.trim()) {
@@ -454,12 +464,12 @@ export default function BusinessProfileSetup({
         updatePayload.socialMediaLinks = formData.socialMediaLinks;
       }
       
-      if (formData.logoUrl) {
-        updatePayload.logoUrl = formData.logoUrl;
+      if (uploadedLogoUrl) {
+        updatePayload.logoUrl = uploadedLogoUrl;
       }
       
-      if (formData.coverImageUrl) {
-        updatePayload.coverImageUrl = formData.coverImageUrl;
+      if (uploadedCoverUrl) {
+        updatePayload.coverImageUrl = uploadedCoverUrl;
       }
 
       // Save business profile data using onboarding endpoint (no auth required during Phase 2)
