@@ -743,7 +743,7 @@ export default function ProviderDashboard() {
           <div className="flex items-center space-x-6">
             <div className="flex flex-col items-start">
               <img
-                src="/default-placeholder.png"
+                src="/default-placeholder_2.png"
                 alt="ROAM"
                 className="h-8 w-auto"
               />
