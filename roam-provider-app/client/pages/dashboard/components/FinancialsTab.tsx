@@ -2171,7 +2171,6 @@ function TaxInformationSection({ businessId }: { businessId: string }) {
   const [taxId, setTaxId] = useState('');
   const [address, setAddress] = useState({ line1: '', line2: '', city: '', state: '', postal_code: '', country: 'US' });
   const [contact, setContact] = useState({ name: '', email: '', phone: '' });
-  const [w9Status, setW9Status] = useState<'not_collected'|'requested'|'received'|'invalid'|'expired'>('not_collected');
   const [taxSetupCompleted, setTaxSetupCompleted] = useState(false);
   const [stripeSynced, setStripeSynced] = useState(false);
 
@@ -2196,7 +2195,6 @@ function TaxInformationSection({ businessId }: { businessId: string }) {
               country: t.tax_country || 'US',
             });
             setContact({ name: t.tax_contact_name || '', email: t.tax_contact_email || '', phone: t.tax_contact_phone || '' });
-            setW9Status(t.w9_status || 'not_collected');
             setTaxSetupCompleted(!!t.tax_setup_completed);
             setStripeSynced(!!t.stripe_tax_registered);
           }
@@ -2228,7 +2226,6 @@ function TaxInformationSection({ businessId }: { businessId: string }) {
         tax_contact_name: contact.name,
         tax_contact_email: contact.email,
         tax_contact_phone: contact.phone,
-        w9_status: w9Status,
         // tax_setup_completed is set automatically by the API when Stripe sync succeeds
       };
       const res = await fetch('/api/business/tax-info', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
@@ -2336,42 +2333,27 @@ function TaxInformationSection({ businessId }: { businessId: string }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="text-sm font-medium">W-9 Status</label>
-          <Select value={w9Status} onValueChange={(v:any)=>setW9Status(v)}>
-            <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="not_collected">Not Collected</SelectItem>
-              <SelectItem value="requested">Requested</SelectItem>
-              <SelectItem value="received">Received</SelectItem>
-              <SelectItem value="invalid">Invalid</SelectItem>
-              <SelectItem value="expired">Expired</SelectItem>
-            </SelectContent>
-          </Select>
+      <div className="flex flex-col gap-2">
+        <label className="text-sm font-medium">Tax Setup Status</label>
+        <div className="flex items-center gap-2 mt-1">
+          {taxSetupCompleted ? (
+            <Badge variant="default" className="bg-green-100 text-green-800 border-green-300">
+              ✓ Complete
+            </Badge>
+          ) : (
+            <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 border-yellow-300">
+              Pending
+            </Badge>
+          )}
+          {stripeSynced && (
+            <Badge variant="outline" className="text-xs">
+              Synced to Stripe
+            </Badge>
+          )}
         </div>
-        <div className="flex flex-col gap-2">
-          <label className="text-sm font-medium">Tax Setup Status</label>
-          <div className="flex items-center gap-2 mt-1">
-            {taxSetupCompleted ? (
-              <Badge variant="default" className="bg-green-100 text-green-800 border-green-300">
-                ✓ Complete
-              </Badge>
-            ) : (
-              <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 border-yellow-300">
-                Pending
-              </Badge>
-            )}
-            {stripeSynced && (
-              <Badge variant="outline" className="text-xs">
-                Synced to Stripe
-              </Badge>
-            )}
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Status is set automatically when tax info is successfully synced to Stripe.
-          </p>
-        </div>
+        <p className="text-xs text-muted-foreground">
+          Status is set automatically when tax info is successfully synced to Stripe.
+        </p>
       </div>
 
       <div className="flex justify-end">
