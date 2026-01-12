@@ -752,12 +752,19 @@ export default function ProviderDashboard() {
               </span>
             </div>
             
-            {/* Desktop Navigation */}
-            <div className="hidden lg:flex items-center space-x-8">
+          </div>
+
+          {/* Desktop Navigation (centered) */}
+          <div className="hidden lg:flex flex-1 items-center justify-center">
+            <div className="flex items-center gap-2 rounded-full bg-gray-50 p-1 border border-gray-200">
               {hasAccess('dashboard') && (
                 <button
                   onClick={() => navigateToTab("dashboard")}
-                  className={`text-sm font-medium px-3 py-2 rounded-lg ${activeTab === "dashboard" ? "bg-gray-100 text-gray-900" : "text-gray-600 hover:text-gray-900"}`}
+                  className={`text-sm font-semibold px-4 py-2 rounded-full transition-colors ${
+                    activeTab === "dashboard"
+                      ? "bg-[#f88221] text-white shadow-sm"
+                      : "text-gray-700 hover:bg-gray-100"
+                  }`}
                 >
                   Dashboard
                 </button>
@@ -765,7 +772,11 @@ export default function ProviderDashboard() {
               {hasAccess('bookings') && (
                 <button
                   onClick={() => navigateToTab("bookings")}
-                  className={`text-sm font-medium px-3 py-2 rounded-lg ${activeTab === "bookings" ? "bg-gray-100 text-gray-900" : "text-gray-600 hover:text-gray-900"}`}
+                  className={`text-sm font-semibold px-4 py-2 rounded-full transition-colors ${
+                    activeTab === "bookings"
+                      ? "bg-[#f88221] text-white shadow-sm"
+                      : "text-gray-700 hover:bg-gray-100"
+                  }`}
                 >
                   Bookings
                 </button>
@@ -773,14 +784,16 @@ export default function ProviderDashboard() {
               {hasAccess('financials') && (
                 <button
                   onClick={() => navigateToTab("financials")}
-                  className={`text-sm font-medium px-3 py-2 rounded-lg ${activeTab === "financials" ? "bg-gray-100 text-gray-900" : "text-gray-600 hover:text-gray-900"}`}
+                  className={`text-sm font-semibold px-4 py-2 rounded-full transition-colors ${
+                    activeTab === "financials"
+                      ? "bg-[#f88221] text-white shadow-sm"
+                      : "text-gray-700 hover:bg-gray-100"
+                  }`}
                 >
                   Financials
                 </button>
               )}
             </div>
-          </div>
-
           <div className="flex items-center space-x-4">
             <Button 
               variant="ghost" 
