@@ -275,6 +275,9 @@ export default function BookingDetailModal({
 
   // Format location
   const getFormattedLocation = () => {
+    if (selectedBooking.delivery_type === 'virtual') {
+      return 'Virtual';
+    }
     if (selectedBooking.customer_locations) {
       const loc = selectedBooking.customer_locations;
       const parts = [

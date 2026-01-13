@@ -706,11 +706,17 @@ export default function BookingsTab({
                             <div className="flex items-center space-x-2 text-xs text-gray-600">
                               <MapPin className="w-3 h-3" />
                               <span className="truncate">
-                                {booking.customer_location_id ? "Customer Location" : "Business Location"}
+                                {booking.delivery_type === 'virtual'
+                                  ? 'Virtual'
+                                  : booking.customer_location_id
+                                  ? 'Customer Location'
+                                  : 'Business Location'}
                               </span>
                             </div>
                             <div className="text-xs text-gray-500 truncate">
-                              {booking.customer_locations
+                              {booking.delivery_type === 'virtual'
+                                ? 'Virtual'
+                                : booking.customer_locations
                                 ? `${booking.customer_locations.address_line1 || ""}${booking.customer_locations.address_line2 ? ` ${booking.customer_locations.address_line2}` : ""}, ${booking.customer_locations.city || ""}, ${booking.customer_locations.state || ""} ${booking.customer_locations.postal_code || ""}`.trim()
                                 : booking.business_locations
                                 ? `${booking.business_locations.address_line1 || ""}, ${booking.business_locations.city || ""}, ${booking.business_locations.state || ""}`

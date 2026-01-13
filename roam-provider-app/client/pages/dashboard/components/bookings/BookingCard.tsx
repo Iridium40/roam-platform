@@ -485,7 +485,9 @@ export default function BookingCard({
             <div>
               <div className="text-xs text-gray-500 uppercase tracking-wide">Service Location</div>
               <div className="text-sm">
-                {booking.customer_locations ? (
+                {booking.delivery_type === 'virtual' ? (
+                  <span className="text-gray-700">Virtual</span>
+                ) : booking.customer_locations ? (
                   <a
                     href={`https://maps.google.com/maps?q=${encodeURIComponent(
                       `${booking.customer_locations.address_line1 || ""}, ${booking.customer_locations.city || ""}, ${booking.customer_locations.state || ""}`
@@ -796,7 +798,9 @@ export default function BookingCard({
           <div className="flex items-start gap-2">
             <MapPin className="w-4 h-4 text-gray-500 mt-0.5 flex-shrink-0" />
             <div className="flex-1 min-w-0">
-              {booking.customer_locations ? (
+              {booking.delivery_type === 'virtual' ? (
+                <span className="text-sm text-gray-700">Virtual</span>
+              ) : booking.customer_locations ? (
                 <a
                   href={`https://maps.google.com/maps?q=${encodeURIComponent(
                     `${booking.customer_locations.address_line1 || ""}, ${booking.customer_locations.city || ""}, ${booking.customer_locations.state || ""}`
