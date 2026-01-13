@@ -204,7 +204,14 @@ export default function DashboardTab({
     const loadSetupHealth = async () => {
       if (!businessId || !isOwnerOrDispatcher) return;
 
+      // IMPORTANT: Don't compute "action required" until dashboard stats have loaded.
+      // Otherwise we briefly assume "no active services" (and show blockers) before stats arrive,
+      // causing the UI to flash issues even when everything is configured correctly.
+      if (!dashboardStats) return;
+
       try {
+        // Hide any previous/stale issues while we re-check
+        setSetupHealth(null);
         setSetupLoading(true);
 
         // 1) Stripe connection status (server-side endpoint checks Stripe + DB)
