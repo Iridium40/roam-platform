@@ -542,16 +542,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const lastName = userInfo.data.user?.user_metadata?.last_name || "";
 
         // Update existing provider record with business_id
-        // For independent businesses, also set active_for_bookings to true
         const updateData: any = {
           business_id: businessProfileData.id,
           email: businessData.contactEmail,
           phone: businessData.phone,
         };
-
-        if (businessData.businessType === 'independent') {
-          updateData.active_for_bookings = true;
-        }
 
         const { error: updateProviderError } = await supabase
           .from("providers")
@@ -568,7 +563,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const lastName = userInfo.data.user?.user_metadata?.last_name || "";
 
         // Create new provider record
-        // For independent businesses, set active_for_bookings to true
         const providerData: any = {
           user_id: userId,
           business_id: businessProfileData.id,
@@ -582,10 +576,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           is_active: false,
           business_managed: true,
         };
-
-        if (businessData.businessType === 'independent') {
-          providerData.active_for_bookings = true;
-        }
 
         const { error: createProviderError } = await supabase
           .from("providers")

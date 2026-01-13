@@ -57,7 +57,6 @@ type SetupHealth = {
   businessHasActiveServices: boolean;
   staffMissingServicesCount: number;
   staffMissingLocationCount: number;
-  staffBookableBlockedCount: number;
 };
 
 export default function DashboardTab({
@@ -228,7 +227,7 @@ export default function DashboardTab({
         // 3) Staff readiness (owners + providers): location + assigned services
         const { data: staffProviders, error: staffError } = await supabase
           .from("providers")
-          .select("id, provider_role, location_id, active_for_bookings, first_name, last_name")
+          .select("id, provider_role, location_id, first_name, last_name")
           .eq("business_id", businessId)
           .in("provider_role", ["owner", "provider"]);
 
@@ -261,11 +260,6 @@ export default function DashboardTab({
 
         const staffMissingServicesCount = staff.filter((p: any) => (servicesByProvider[p.id] || 0) === 0).length;
         const staffMissingLocationCount = staff.filter((p: any) => !p.location_id).length;
-        const staffBookableBlockedCount = staff.filter((p: any) => {
-          const missingServices = (servicesByProvider[p.id] || 0) === 0;
-          const missingLocation = !p.location_id;
-          return !!p.active_for_bookings && (missingServices || missingLocation);
-        }).length;
 
         setSetupHealth({
           stripeConnected,
@@ -273,7 +267,6 @@ export default function DashboardTab({
           businessHasActiveServices,
           staffMissingServicesCount,
           staffMissingLocationCount,
-          staffBookableBlockedCount,
         });
       } finally {
         setSetupLoading(false);
@@ -355,7 +348,7 @@ export default function DashboardTab({
   const servicesOk = setupHealth?.businessHasActiveServices === true;
   const missingServices = setupHealth?.staffMissingServicesCount ?? 0;
   const missingLocations = setupHealth?.staffMissingLocationCount ?? 0;
-  const blockedBookable = setupHealth?.staffBookableBlockedCount ?? 0;
+  // Bookability is derived from assigned services (no manual "bookable" flag)
 
   const readinessIssues: Array<{
     key: string;
@@ -414,16 +407,7 @@ export default function DashboardTab({
       });
     }
 
-    if (blockedBookable > 0) {
-      readinessIssues.push({
-        key: "bookable-blocked",
-        title: "Bookable staff with blockers",
-        description: `${blockedBookable} staff member${blockedBookable === 1 ? "" : "s"} marked bookable but missing required setup (services/location).`,
-        actionLabel: "Fix",
-        onClick: () => navigate(`${basePath}/business-settings?tab=staff`),
-        icon: <AlertCircle className="w-4 h-4 text-red-700" />,
-      });
-    }
+    // Removed: "bookable staff with blockers" — active status is no longer a manual setting.
   }
 
   const showBookingReadinessCard =

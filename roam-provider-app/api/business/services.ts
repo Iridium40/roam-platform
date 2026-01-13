@@ -249,18 +249,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             console.log(`Auto-assigned service ${service_id} to owner ${ownerProvider.id} for independent business`);
           }
 
-          // Ensure owner is bookable (active_for_bookings = true)
-          const { error: updateError } = await supabase
-            .from('providers')
-            .update({ active_for_bookings: true })
-            .eq('id', ownerProvider.id)
-            .eq('active_for_bookings', false); // Only update if currently false
-
-          if (updateError) {
-            console.error('Error updating owner active_for_bookings:', updateError);
-          } else {
-            console.log(`Ensured owner ${ownerProvider.id} is bookable for independent business`);
-          }
+          // Bookability is derived from assigned services; no need to set a manual flag.
         }
       }
 

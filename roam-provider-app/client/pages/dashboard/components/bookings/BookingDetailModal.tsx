@@ -110,7 +110,7 @@ export default function BookingDetailModal({
       if (businessIsIndependent) {
         const { data, error } = await supabase
           .from('providers')
-          .select('id, first_name, last_name, provider_role, active_for_bookings')
+          .select('id, first_name, last_name, provider_role')
           .eq('business_id', selectedBooking.business_id)
           .eq('provider_role', 'owner')
           .eq('is_active', true)
@@ -127,18 +127,38 @@ export default function BookingDetailModal({
           }, 100);
         }
       } else {
-        // Load providers who are active for bookings and are staff (not owners/dispatchers)
-        const { data, error } = await supabase
+        // Load providers who can perform this booking's service (bookability is derived from assigned services)
+        const bookingServiceId = selectedBooking?.service_id || selectedBooking?.services?.id;
+
+        const { data: providers, error } = await supabase
           .from('providers')
-          .select('id, first_name, last_name, provider_role, active_for_bookings')
+          .select('id, first_name, last_name, provider_role')
           .eq('business_id', selectedBooking.business_id)
-          .eq('active_for_bookings', true)
           .eq('is_active', true)
-          .in('provider_role', ['provider']) // Only actual service providers, not owners/dispatchers
+          .in('provider_role', ['owner', 'provider'])
           .order('first_name');
 
         if (error) throw error;
-        setAvailableProviders(data || []);
+
+        const allProviders = providers || [];
+        if (!bookingServiceId || allProviders.length === 0) {
+          // Fallback: if service id isn't available, show all providers (owners/providers)
+          setAvailableProviders(allProviders);
+          return;
+        }
+
+        const providerIds = allProviders.map((p: any) => p.id).filter(Boolean);
+        const { data: providerServices, error: psError } = await supabase
+          .from('provider_services')
+          .select('provider_id')
+          .in('provider_id', providerIds)
+          .eq('service_id', bookingServiceId)
+          .eq('is_active', true);
+
+        if (psError) throw psError;
+
+        const eligibleProviderIds = new Set((providerServices || []).map((r: any) => r.provider_id));
+        setAvailableProviders(allProviders.filter((p: any) => eligibleProviderIds.has(p.id)));
       }
     } catch (error) {
       console.error('Error loading available providers:', error);

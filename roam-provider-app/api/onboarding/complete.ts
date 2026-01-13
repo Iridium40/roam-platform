@@ -70,16 +70,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .single();
 
     // Update provider to active status
-    // For independent businesses, also set active_for_bookings to true
     const updateData: any = {
       is_active: true,
       onboarding_completed_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
-
-    if (businessProfile?.business_type === 'independent') {
-      updateData.active_for_bookings = true;
-    }
 
     const { error: updateProviderError } = await supabase
       .from("providers")

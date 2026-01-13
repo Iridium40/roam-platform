@@ -309,28 +309,7 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
         }
       }
 
-      // Step 3: If all services removed and active_for_bookings is true, disable it
-      if (selectedServices.length === 0 && selectedStaff.active_for_bookings) {
-        const { error: bookingsError } = await supabase
-          .from('providers')
-          .update({ active_for_bookings: false })
-          .eq('id', selectedStaff.id);
-
-        if (bookingsError) {
-          console.error("Error disabling active_for_bookings:", bookingsError);
-        } else {
-          // Update local state
-          setSelectedStaff({
-            ...selectedStaff,
-            active_for_bookings: false,
-          });
-          toast({
-            title: "Bookings Disabled",
-            description: "Staff member is no longer bookable as all services have been removed.",
-            variant: "default",
-          });
-        }
-      }
+      // Bookability is derived from assigned services (no manual toggle).
 
       // Auto-assign eligible addons based on selected services
       await handleAutoAssignAddons();
@@ -497,15 +476,7 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
     const handleUpdateStaff = async () => {
     if (!selectedStaff) return;
 
-    // Validation: If active_for_bookings is true, must have at least 1 service
-    if (selectedStaff.active_for_bookings && selectedServices.length === 0) {
-      toast({
-        title: "Validation Error",
-        description: "Cannot enable bookings without at least 1 active service assigned.",
-        variant: "destructive",
-      });
-      return;
-    }
+    // Bookability is derived from assigned services (no manual toggle).
 
     console.log('💾 Updating staff member:', {
       staff_id: selectedStaff.id,
@@ -521,7 +492,7 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
         bio: selectedStaff.bio,
         experience_years: selectedStaff.experience_years,
         verification_status: selectedStaff.verification_status,
-        active_for_bookings: selectedStaff.active_for_bookings,
+        // active_for_bookings is no longer set manually
       }
     });
 
@@ -538,7 +509,7 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
           bio: selectedStaff.bio,
           experience_years: selectedStaff.experience_years,
           verification_status: selectedStaff.verification_status,
-          active_for_bookings: selectedStaff.active_for_bookings,
+          // active_for_bookings is no longer set manually
         })
         .eq("id", selectedStaff.id);
 
@@ -1031,13 +1002,7 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
                               {needsLocation ? "No Location" : "Location Set"}
                             </Badge>
 
-                            {/* Booking readiness */}
-                            <Badge
-                              variant={member.active_for_bookings ? "default" : "secondary"}
-                              className="text-xs"
-                            >
-                              {member.active_for_bookings ? "Bookable" : "Not Bookable"}
-                            </Badge>
+                            {/* Bookability is derived from assigned services (see Services badge) */}
                           </>
                         )}
                       </div>
@@ -1362,38 +1327,10 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
                   </p>
                 </div>
 
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label htmlFor="editBookable">Active for Bookings</Label>
-                      <p className="text-xs text-muted-foreground">
-                        Allow customers to book this staff member for services
-                        {selectedServices.length === 0 && (
-                          <span className="text-destructive font-medium"> (Requires at least 1 active service)</span>
-                        )}
-                      </p>
-                    </div>
-                    <Switch
-                      id="editBookable"
-                      checked={selectedStaff.active_for_bookings || false}
-                      disabled={selectedServices.length === 0}
-                      onCheckedChange={(checked) => {
-                        // If trying to enable bookings, check if at least 1 service is assigned
-                        if (checked && selectedServices.length === 0) {
-                          toast({
-                            title: "Cannot Enable Bookings",
-                            description: "Staff member must have at least 1 active service assigned before they can be bookable.",
-                            variant: "destructive",
-                          });
-                          return;
-                        }
-                        
-                        setSelectedStaff({
-                          ...selectedStaff,
-                          active_for_bookings: checked,
-                        });
-                      }}
-                    />
+                <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                  <div className="text-sm font-medium text-gray-900">Active for Bookings</div>
+                  <div className="text-xs text-gray-600">
+                    This is automatic. If this staff member has at least 1 assigned service, they’re active for bookings.
                   </div>
                 </div>
 
