@@ -270,7 +270,7 @@ export function FAQ() {
     },
     {
       q: "When do I get paid?",
-      a: "Weekly direct deposits every Friday for completed bookings from the previous week.",
+      a: "Weekly direct deposits every Thursday for completed bookings from the previous week.",
     },
     {
       q: "Do I have to give customers my phone number?",

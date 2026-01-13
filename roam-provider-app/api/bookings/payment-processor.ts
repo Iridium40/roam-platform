@@ -1233,7 +1233,7 @@ export async function handleBookingCancellation(
               reversalError.message?.includes('insufficient') ||
               reversalError.message?.includes('payout')) {
             console.warn('⚠️ Transfer cannot be reversed - funds may have been paid out to business');
-            console.warn('⚠️ Weekly payouts occur on Friday - if payout already processed, no refund available');
+              console.warn('⚠️ Weekly payouts occur on Thursday - if payout already processed, no refund available');
             // In this case, we cannot refund the customer because the business already has the money
             return {
               success: false,

@@ -4,10 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
   SelectContent,
@@ -42,7 +42,8 @@ import {
   Car,
   Building,
   Video,
-  RefreshCw
+  RefreshCw,
+  AlertTriangle
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import ServicePriceModal from '@/components/ServicePriceModal';
@@ -153,7 +154,8 @@ export default function ServicePricingSetup({
   const [showPriceModal, setShowPriceModal] = useState(false);
   const [selectedServiceForPricing, setSelectedServiceForPricing] = useState<EligibleService | null>(null);
   const [businessType, setBusinessType] = useState<string | null>(null);
-  const [ownerAlsoProvider, setOwnerAlsoProvider] = useState<boolean>(false);
+  // Explicit required choice for non-independent businesses (no default, to avoid being overlooked)
+  const [ownerAlsoProviderChoice, setOwnerAlsoProviderChoice] = useState<"yes" | "no" | null>(null);
 
   const updatePricingData = (field: keyof ServicePricingData, value: any) => {
     setPricingData(prev => ({
@@ -161,6 +163,9 @@ export default function ServicePricingSetup({
       [field]: value
     }));
   };
+
+  const requiresOwnerChoice = !!businessType && businessType !== "independent";
+  const ownerAlsoProvider = ownerAlsoProviderChoice === "yes";
 
   // Helper function to get delivery type icon and label
   const getDeliveryTypeInfo = (deliveryType: string) => {
@@ -254,6 +259,10 @@ export default function ServicePricingSetup({
 
   // Open price modal for a service
   const openPriceModal = (eligibleService: EligibleService) => {
+    if (requiresOwnerChoice && ownerAlsoProviderChoice === null) {
+      setError("Please answer “Will you also provide services?” before adding services.");
+      return;
+    }
     setSelectedServiceForPricing(eligibleService);
     setShowPriceModal(true);
   };
@@ -279,7 +288,7 @@ export default function ServicePricingSetup({
           delivery_type: deliveryType,
           is_active: true,
           // Non-independent: if owner chooses they also provide services, auto-assign services to them
-          assign_to_owner_provider: businessType !== 'independent' && ownerAlsoProvider,
+          assign_to_owner_provider: businessType !== 'independent' && ownerAlsoProviderChoice === "yes",
           owner_user_id: userId,
         }),
       });
@@ -562,10 +571,11 @@ export default function ServicePricingSetup({
 
   const completionPercentage = () => {
     let completed = 0;
-    const total = 2; // tax rate, at least one service (pricing model and currency are fixed)
+    const total = requiresOwnerChoice ? 3 : 2; // tax rate, at least one service (+ required owner choice for non-independent)
 
     if (pricingData.taxRate >= 0) completed++;
     if (pricingData.business_services.length > 0) completed++;
+    if (requiresOwnerChoice && ownerAlsoProviderChoice !== null) completed++;
 
     return Math.round((completed / total) * 100);
   };
@@ -652,20 +662,52 @@ export default function ServicePricingSetup({
           )}
 
           {businessType && businessType !== "independent" && (
-            <div className="rounded-lg border p-4 bg-white">
+            <div className="rounded-lg border border-rose-200 bg-rose-50/60 p-4">
               <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-sm font-semibold text-gray-900">
-                    Will you also provide services (not just be the owner)?
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-rose-700 flex-shrink-0" />
+                    <p className="text-sm font-semibold text-gray-900">
+                      Will you also provide services (not just be the owner)?
+                      <span className="ml-2 inline-flex items-center rounded-full bg-rose-100 px-2 py-0.5 text-[11px] font-semibold text-rose-800 border border-rose-200">
+                        Required
+                      </span>
+                    </p>
+                  </div>
+                  <p className="text-xs text-gray-700 mt-1">
+                    If yes, we’ll auto-assign the services you add here to your staff profile. You can adjust later in{" "}
+                    <span className="font-medium">Business Settings → Staff</span>.
                   </p>
-                  <p className="text-xs text-gray-600 mt-1">
-                    If yes, we’ll auto-assign the services you add here to your staff profile. You can adjust later in <span className="font-medium">Business Settings → Staff</span>.
-                  </p>
+
+                  {ownerAlsoProviderChoice === null && (
+                    <p className="text-xs text-rose-800 mt-2 font-medium">
+                      Please select <span className="font-semibold">Yes</span> or <span className="font-semibold">No</span> to continue.
+                    </p>
+                  )}
                 </div>
-                <div className="flex items-center gap-2">
-                  <Label className="text-sm text-gray-600">No</Label>
-                  <Switch checked={ownerAlsoProvider} onCheckedChange={setOwnerAlsoProvider} />
-                  <Label className="text-sm text-gray-600">Yes</Label>
+
+                <div className="flex-shrink-0">
+                  <RadioGroup
+                    value={ownerAlsoProviderChoice ?? ""}
+                    onValueChange={(v) => {
+                      setOwnerAlsoProviderChoice(v === "yes" ? "yes" : "no");
+                      setError(null);
+                    }}
+                    className="flex items-center gap-4"
+                  >
+                    <div className="flex items-center gap-2">
+                      <RadioGroupItem value="no" id="owner-provides-no" />
+                      <Label htmlFor="owner-provides-no" className="text-sm text-gray-800">
+                        No
+                      </Label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <RadioGroupItem value="yes" id="owner-provides-yes" />
+                      <Label htmlFor="owner-provides-yes" className="text-sm text-gray-800">
+                        Yes
+                      </Label>
+                    </div>
+                  </RadioGroup>
                 </div>
               </div>
 
@@ -810,6 +852,8 @@ export default function ServicePricingSetup({
                           size="sm"
                           onClick={() => openPriceModal(eligibleService)}
                           className="bg-roam-blue hover:bg-roam-blue/90 flex-shrink-0 h-9"
+                          disabled={requiresOwnerChoice && ownerAlsoProviderChoice === null}
+                          title={requiresOwnerChoice && ownerAlsoProviderChoice === null ? "Please answer the required question above first." : undefined}
                         >
                           <Plus className="w-4 h-4 mr-2" />
                           Add
