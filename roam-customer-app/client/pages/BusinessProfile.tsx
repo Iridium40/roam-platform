@@ -1,7 +1,7 @@
 import { useParams, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Calendar, Clock, Building, User, CreditCard, Tag, Share2, Search, Star, MessageSquare, MapPin, Home, Video } from "lucide-react";
+import { ArrowLeft, Calendar, Clock, Building, User, CreditCard, Tag, Share2, Search, Star, MessageSquare, MapPin, Home, Video, BadgeCheck } from "lucide-react";
 import { getDeliveryTypeLabel, getDeliveryTypeIcon } from "@/utils/deliveryTypeHelpers";
 import { format } from "date-fns";
 import { Link } from "react-router-dom";
@@ -34,6 +34,7 @@ interface Business {
   logo_url?: string;
   cover_image_url?: string;
   cover_image_position?: number;
+  verification_status?: string;
   rating: number;
   review_count: number;
   business_hours?: BusinessHours;
@@ -222,6 +223,7 @@ export default function BusinessProfile() {
           logo_url: businessData.logo_url,
           cover_image_url: businessData.cover_image_url,
           cover_image_position: businessData.cover_image_position,
+          verification_status: businessData.verification_status,
           rating: calculatedRating,
           review_count: reviewCount,
           business_hours: businessData.business_hours || undefined,
@@ -488,9 +490,12 @@ export default function BusinessProfile() {
                       <span className="text-gray-500 ml-1">No reviews yet</span>
                     )}
                   </div>
-                  <Badge variant="outline" className="text-sm">
-                    Verified Business
-                  </Badge>
+                  {business.verification_status === "verified" && (
+                    <Badge variant="outline" className="text-sm inline-flex items-center gap-1">
+                      <BadgeCheck className="w-4 h-4 text-green-600" />
+                      Verified Business
+                    </Badge>
+                  )}
                 </div>
               </div>
             </div>
