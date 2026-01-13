@@ -50,11 +50,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Get Supabase configuration
     const supabaseUrl = process.env.VITE_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_PUBLIC_SUPABASE_ANON_KEY;
+    // Server-side API routes MUST use the service role key (RLS bypass) for conversation metadata writes.
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
     if (!supabaseUrl || !supabaseKey) {
-      console.error('Missing Supabase credentials');
-      return res.status(500).json({ error: 'Supabase credentials not configured' });
+      const missing: string[] = [];
+      if (!supabaseUrl) missing.push('VITE_PUBLIC_SUPABASE_URL (or SUPABASE_URL)');
+      if (!supabaseKey) missing.push('SUPABASE_SERVICE_ROLE_KEY');
+      console.error('Missing Supabase credentials:', missing.join(', '));
+      return res.status(500).json({ error: 'Supabase credentials not configured', details: `Missing: ${missing.join(', ')}` });
     }
 
     // Initialize the unified service

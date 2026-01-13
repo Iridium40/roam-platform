@@ -65,11 +65,34 @@ async function postJson<TResponse>(baseUrl: string, payload: ApiPayload, extraHe
     credentials: 'include',
   });
 
-  const data = (await response.json()) as ApiResponseBase & TResponse;
-  if (!response.ok || data.error) {
-    throw new Error(data.error || `Twilio conversations API request failed: ${response.status}`);
+  // Some deployments may return non-JSON bodies for 500s; handle gracefully and preserve details.
+  const rawText = await response.text();
+  let data: (ApiResponseBase & TResponse & { details?: unknown }) | null = null;
+  try {
+    data = rawText ? (JSON.parse(rawText) as any) : ({} as any);
+  } catch {
+    data = null;
   }
-  return data;
+
+  const errorFromBody =
+    (data && (data as any).error && String((data as any).error)) ||
+    undefined;
+  const detailsFromBody =
+    (data && (data as any).details && String((data as any).details)) ||
+    undefined;
+
+  if (!response.ok || errorFromBody) {
+    const baseMsg = errorFromBody || `Twilio conversations API request failed: ${response.status}`;
+    const fullMsg = detailsFromBody ? `${baseMsg} (${detailsFromBody})` : baseMsg;
+    throw new Error(fullMsg);
+  }
+
+  // If we couldn't parse JSON but the response was OK, this is unexpected.
+  if (!data) {
+    throw new Error('Twilio conversations API returned a non-JSON response');
+  }
+
+  return data as any;
 }
 
 export class BookingConversationsClient {
