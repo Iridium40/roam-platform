@@ -3,6 +3,8 @@ import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 
 export function Footer() {
+  const currentYear = new Date().getFullYear();
+
   return (
     <footer className="border-t bg-background/80">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-14">
@@ -46,7 +48,7 @@ export function Footer() {
         <div className="border-t pt-8 mt-12 flex flex-col gap-4 text-sm text-foreground/60 text-center md:text-left">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <p>
-              &copy; 2024 ROAM. All rights reserved. Proudly serving Florida with
+              &copy; {currentYear} ROAM. All rights reserved. Proudly serving Florida with
               premium on-demand services.
             </p>
             <div className="flex items-center justify-center gap-4 text-foreground/70">
