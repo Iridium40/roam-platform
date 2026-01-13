@@ -19,8 +19,10 @@ const ShareModal = lazy(() => import("@/components/ShareModal"));
 
 interface BusinessHours {
   [day: string]: {
-    open: string;
-    close: string;
+    open?: string;
+    close?: string;
+    closed?: boolean;
+    isOpen?: boolean;
   };
 }
 
@@ -86,6 +88,25 @@ const formatTime = (time: string): string => {
   return `${displayHour}:${minutes} ${ampm}`;
 };
 
+const normalizeBusinessHours = (raw: any): Record<string, { open?: string; close?: string; closed?: boolean }> => {
+  if (!raw || typeof raw !== "object") return {};
+  const out: Record<string, { open?: string; close?: string; closed?: boolean }> = {};
+
+  for (const [key, value] of Object.entries(raw)) {
+    const dayKey = String(key).toLowerCase();
+    if (!value || typeof value !== "object") continue;
+
+    const v: any = value;
+    const open = v.open ?? v.open_time ?? v.start ?? v.start_time;
+    const close = v.close ?? v.close_time ?? v.end ?? v.end_time;
+    const closed = v.closed ?? v.isClosed ?? (typeof v.isOpen === "boolean" ? !v.isOpen : undefined);
+
+    out[dayKey] = { open, close, closed };
+  }
+
+  return out;
+};
+
 export default function BusinessProfile() {
   const { businessId } = useParams();
   const [searchParams] = useSearchParams();
@@ -117,6 +138,7 @@ export default function BusinessProfile() {
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [expandedServices, setExpandedServices] = useState<Set<string>>(new Set());
   const [serviceSearchQuery, setServiceSearchQuery] = useState('');
+  const normalizedHours = normalizeBusinessHours(business?.business_hours);
 
   // Load business details and services
   useEffect(() => {
@@ -559,12 +581,13 @@ export default function BusinessProfile() {
                       <div className="bg-gray-50 rounded-lg p-6">
                         <div className="space-y-2">
                           {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((day) => {
-                            const hours = business.business_hours?.[day];
+                            const hours = normalizedHours[day.toLowerCase()];
+                            const isClosed = !hours || hours.closed === true;
                             return (
                               <div key={day} className="flex justify-between items-center py-2 border-b border-gray-200 last:border-b-0">
                                 <span className="font-medium text-gray-700">{day}</span>
                                 <span className="text-gray-600">
-                                  {hours ? (
+                                  {!isClosed && hours?.open && hours?.close ? (
                                     <span>
                                       {formatTime(hours.open)} - {formatTime(hours.close)}
                                     </span>
