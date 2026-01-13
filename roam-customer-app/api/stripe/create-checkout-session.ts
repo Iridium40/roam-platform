@@ -102,10 +102,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!stripeCustomerId) {
       console.log('Creating new Stripe customer for user:', customer.user_id);
       
+      // IMPORTANT: Stripe customer represents the *logged-in payer*, not the guest/attendee.
       const stripeCustomer = await stripe.customers.create({
-        email: guest_email || customer.email,
-        name: guest_name || `${customer.first_name} ${customer.last_name}`,
-        phone: guest_phone || customer.phone,
+        email: customer.email,
+        name: `${customer.first_name || ''} ${customer.last_name || ''}`.trim() || customer.email,
+        phone: customer.phone || undefined,
         metadata: {
           user_id: customer.user_id,
           customer_profile_id: customer_id,
@@ -122,7 +123,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .upsert({
           user_id: customer.user_id,
           stripe_customer_id: stripeCustomerId,
-          stripe_email: guest_email || customer.email
+          stripe_email: customer.email
         }, {
           onConflict: 'user_id'
         });

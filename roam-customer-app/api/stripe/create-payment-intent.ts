@@ -334,10 +334,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       stripeCustomerId = existingProfile.stripe_customer_id;
     } else {
       // Create new Stripe customer
+      // IMPORTANT: Stripe customer represents the *logged-in payer*, not the guest/attendee.
       const stripeCustomer = await stripe.customers.create({
-        email: guestEmail,
-        name: guestName,
-        phone: guestPhone,
+        email: customer.email,
+        name: `${customer.first_name || ''} ${customer.last_name || ''}`.trim() || customer.email,
+        phone: customer.phone || undefined,
         metadata: {
           user_id: customer.user_id, // Use customer.user_id, not customerId
           source: 'roam_booking'
@@ -352,7 +353,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .insert({
           user_id: customer.user_id, // Use customer.user_id, not customerId
           stripe_customer_id: stripeCustomerId,
-          stripe_email: guestEmail
+          stripe_email: customer.email
         });
     }
 

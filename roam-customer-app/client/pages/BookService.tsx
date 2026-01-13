@@ -1513,6 +1513,20 @@ export default function BookService() {
       }
     }
 
+    // Guest booking validation
+    if (isBookingForGuest) {
+      const trimmedGuestName = guestName.trim();
+      const trimmedGuestPhone = guestPhone.trim();
+      if (!trimmedGuestName || !trimmedGuestPhone) {
+        toast({
+          title: "Guest Information Required",
+          description: "Please enter the guest's name and phone number.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     // Use selected delivery type or get the primary one for the business
     const businessDeliveryTypes = getDeliveryTypes(selectedBusiness);
     const deliveryType = selectedDeliveryType || businessDeliveryTypes[0] || 'business_location';
@@ -1563,9 +1577,11 @@ export default function BookService() {
       provider_id: selectedProvider?.id || null,
       booking_date: selectedDate.toISOString().split('T')[0],
       start_time: formattedStartTime,
-      guest_name: isBookingForGuest && guestName ? guestName : `${customer.first_name} ${customer.last_name}`,
-      guest_email: isBookingForGuest && guestEmail ? guestEmail : customer.email,
-      guest_phone: isBookingForGuest && guestPhone ? guestPhone : (customer.phone || ''),
+      // Store attendee/recipient info on the booking row.
+      // Stripe customer/payer remains the logged-in customer (handled server-side).
+      guest_name: isBookingForGuest ? guestName.trim() : `${customer.first_name} ${customer.last_name}`.trim(),
+      guest_email: isBookingForGuest ? (guestEmail.trim() || null) : customer.email,
+      guest_phone: isBookingForGuest ? guestPhone.trim() : (customer.phone || null),
       delivery_type: deliveryType,
       business_location_id,
       customer_location_id,
