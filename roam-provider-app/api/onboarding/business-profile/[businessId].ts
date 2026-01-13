@@ -108,6 +108,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         socialMediaLinks: business.social_media || {},
         logoUrl: business.logo_url,
         coverImageUrl: business.cover_image_url,
+        coverImagePosition: business.cover_image_position,
         businessCategoryRefined: business.business_category_refined
       });
     } catch (error) {
@@ -134,7 +135,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         websiteUrl,
         socialMediaLinks,
         logoUrl,
-        coverImageUrl
+        coverImageUrl,
+        coverImagePosition
       } = body;
 
       // Check if business exists
@@ -168,6 +170,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
       if (coverImageUrl !== undefined) {
         updateData.cover_image_url = coverImageUrl || null;
+      }
+      if (coverImagePosition !== undefined) {
+        const pos = Number(coverImagePosition);
+        if (Number.isFinite(pos)) {
+          updateData.cover_image_position = Math.max(0, Math.min(100, pos));
+        }
       }
 
       const { error: updateError } = await supabase

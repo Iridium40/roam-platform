@@ -18,10 +18,12 @@ import {
 } from "lucide-react";
 import { ImageStorageService } from "@/utils/image/imageStorage";
 import { IMAGE_REQUIREMENTS, ImageType } from "@/utils/image/imageTypes";
+import CoverImageEditor from "@/components/CoverImageEditor";
 
 interface BusinessProfileData {
   logoUrl?: string;
   coverImageUrl?: string;
+  coverImagePosition?: number;
 }
 
 interface BusinessProfileSetupProps {
@@ -53,7 +55,12 @@ export default function BusinessProfileSetupSimplified({
   const [formData, setFormData] = useState<BusinessProfileData>({
     logoUrl: initialData?.logoUrl,
     coverImageUrl: initialData?.coverImageUrl,
+    coverImagePosition: initialData?.coverImagePosition,
   });
+
+  const [coverImagePosition, setCoverImagePosition] = useState<number>(
+    typeof initialData?.coverImagePosition === "number" ? initialData.coverImagePosition : 50,
+  );
 
   // Load existing business info from Phase 1 (read-only display)
   const [businessInfo, setBusinessInfo] = useState<{
@@ -127,6 +134,11 @@ export default function BusinessProfileSetupSimplified({
         }
         if (data.coverImageUrl || data.cover_image_url) {
           setFormData((prev) => ({ ...prev, coverImageUrl: data.coverImageUrl || data.cover_image_url }));
+        }
+        if (typeof data.coverImagePosition === "number" || typeof data.cover_image_position === "number") {
+          const pos = typeof data.coverImagePosition === "number" ? data.coverImagePosition : data.cover_image_position;
+          setCoverImagePosition(pos);
+          setFormData((prev) => ({ ...prev, coverImagePosition: pos }));
         }
       }
     } catch (error) {
@@ -236,6 +248,23 @@ export default function BusinessProfileSetupSimplified({
     }
   };
 
+  const saveCoverImagePosition = async (pos: number) => {
+    // Save position immediately to match Business Settings behavior
+    try {
+      await fetch(`/api/onboarding/business-profile/${businessId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          coverImagePosition: pos,
+          // Keep the URL in sync too (safe no-op if undefined)
+          coverImageUrl: formData.coverImageUrl || undefined,
+        }),
+      });
+    } catch {
+      // Non-blocking: user can still continue; position will be saved on submit as well
+    }
+  };
+
   const removeImage = (imageType: "logo" | "cover") => {
     const uploadState = imageType === "logo" ? logoUpload : coverUpload;
     const setUploadState =
@@ -290,6 +319,7 @@ export default function BusinessProfileSetupSimplified({
           socialMediaLinks: businessInfo.socialMedia || {},
           logoUrl: uploadedLogoUrl || undefined,
           coverImageUrl: uploadedCoverUrl || undefined,
+          coverImagePosition,
         }),
       });
 
@@ -305,7 +335,12 @@ export default function BusinessProfileSetupSimplified({
         body: JSON.stringify({
           business_id: businessId,
           step: "business_profile",
-          data: formData,
+          data: {
+            ...formData,
+            logoUrl: uploadedLogoUrl || undefined,
+            coverImageUrl: uploadedCoverUrl || undefined,
+            coverImagePosition,
+          },
         }),
       });
 
@@ -314,7 +349,14 @@ export default function BusinessProfileSetupSimplified({
         // Don't throw here - profile was saved successfully
       }
 
-      onComplete(formData);
+      const finalData: BusinessProfileData = {
+        ...formData,
+        logoUrl: uploadedLogoUrl || undefined,
+        coverImageUrl: uploadedCoverUrl || undefined,
+        coverImagePosition,
+      };
+
+      onComplete(finalData);
     } catch (error) {
       setError(
         error instanceof Error
@@ -508,101 +550,96 @@ export default function BusinessProfileSetupSimplified({
 
           {/* Business Cover Image */}
           <div className="space-y-4">
-            <div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-base font-semibold">Business Cover Image</p>
-                  <p className="text-sm text-foreground/70">
-                    Banner image (1200x400px recommended) • Max 5MB • JPG, PNG, WebP
-                  </p>
-                </div>
-                <Badge variant="secondary">Optional</Badge>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-base font-semibold">Business Cover Image</p>
+                <p className="text-sm text-foreground/70">
+                  Banner image (1200x400px recommended) • Max 5MB • JPG, PNG, WebP
+                </p>
               </div>
+              <Badge variant="secondary">Optional</Badge>
             </div>
 
-            <div className="space-y-4">
-              <div className="w-full h-48 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50 relative overflow-hidden">
-                {coverUpload.preview || formData.coverImageUrl ? (
-                  <>
-                    <img
-                      src={coverUpload.preview || formData.coverImageUrl}
-                      alt="Business Cover"
-                      className="w-full h-full object-cover"
-                    />
-                    <button
-                      onClick={() => removeImage("cover")}
-                      className="absolute top-2 right-2 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600"
-                    >
-                      <X className="w-5 h-5" />
-                    </button>
-                  </>
-                ) : (
-                  <div className="text-center">
-                    <Camera className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                    <p className="text-gray-500">Upload cover image</p>
-                    <p className="text-xs text-gray-400">
-                      1200x400px recommended
-                    </p>
-                  </div>
-                )}
-              </div>
+            <CoverImageEditor
+              imageUrl={formData.coverImageUrl}
+              imagePosition={coverImagePosition}
+              onPositionChange={(pos) => {
+                setCoverImagePosition(pos);
+                setFormData((prev) => ({ ...prev, coverImagePosition: pos }));
+                saveCoverImagePosition(pos);
+              }}
+              onFileSelect={async (file) => {
+                // Clean up previous preview
+                if (coverUpload.preview) {
+                  ImageStorageService.cleanupPreviewUrl(coverUpload.preview);
+                }
 
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() =>
-                    document.getElementById("cover-upload")?.click()
+                // Validate image
+                const validation = await ImageStorageService.validateImage(file, "business_cover");
+                if (!validation.isValid) {
+                  setCoverUpload({
+                    file: null,
+                    preview: null,
+                    uploading: false,
+                    uploaded: false,
+                    error: validation.errors.join(", "),
+                  });
+                  return;
+                }
+
+                // Create preview
+                const preview = ImageStorageService.generatePreviewUrl(file);
+                setCoverUpload({
+                  file,
+                  preview,
+                  uploading: true,
+                  uploaded: false,
+                  error:
+                    validation.warnings.length > 0 ? validation.warnings.join(", ") : undefined,
+                });
+
+                // Upload immediately (CoverImageEditor does not have a separate "Upload" button)
+                try {
+                  const result = await ImageStorageService.uploadImageWithFallback(
+                    file,
+                    "business_cover",
+                    businessId,
+                    userId,
+                  );
+
+                  if (result.success && result.publicUrl) {
+                    setCoverUpload((prev) => ({
+                      ...prev,
+                      uploading: false,
+                      uploaded: true,
+                      url: result.publicUrl,
+                    }));
+                    setFormData((prev) => ({
+                      ...prev,
+                      coverImageUrl: result.publicUrl,
+                    }));
+                  } else {
+                    setCoverUpload((prev) => ({
+                      ...prev,
+                      uploading: false,
+                      error: result.error || "Upload failed",
+                    }));
                   }
-                  disabled={coverUpload.uploading}
-                >
-                  <Upload className="w-4 h-4 mr-2" />
-                  Choose Cover Image
-                </Button>
-
-                {coverUpload.file && !coverUpload.uploaded && (
-                  <Button
-                    onClick={() => uploadImage("cover")}
-                    disabled={coverUpload.uploading}
-                    className="bg-roam-blue hover:bg-roam-blue/90"
-                  >
-                    {coverUpload.uploading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Uploading...
-                      </>
-                    ) : (
-                      "Upload"
-                    )}
-                  </Button>
-                )}
-              </div>
-
-              {coverUpload.uploaded && (
-                <div className="flex items-center gap-2 text-green-600">
-                  <CheckCircle className="w-4 h-4" />
-                  <span className="text-sm">
-                    Cover image uploaded successfully
-                  </span>
-                </div>
-              )}
-
-              {coverUpload.error && (
-                <Alert className="border-amber-200 bg-amber-50">
-                  <AlertCircle className="h-4 w-4 text-amber-600" />
-                  <AlertDescription className="text-amber-800">
-                    {coverUpload.error}
-                  </AlertDescription>
-                </Alert>
-              )}
-
-              <input
-                id="cover-upload"
-                type="file"
-                accept="image/*"
-                onChange={(e) => handleImageSelect(e, "cover")}
-                className="hidden"
-              />
-            </div>
+                } catch (err) {
+                  setCoverUpload((prev) => ({
+                    ...prev,
+                    uploading: false,
+                    error: err instanceof Error ? err.message : "Upload failed",
+                  }));
+                }
+              }}
+              onRemove={() => removeImage("cover")}
+              uploading={coverUpload.uploading}
+              uploaded={coverUpload.uploaded}
+              error={coverUpload.error}
+              preview={coverUpload.preview}
+              label=""
+            />
           </div>
 
           {/* Action Buttons */}
