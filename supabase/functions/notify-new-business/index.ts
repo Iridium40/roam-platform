@@ -3,6 +3,7 @@
 // Sends notification email to admin when a new business is created
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 // Types
 interface BusinessRecord {
@@ -15,6 +16,40 @@ interface BusinessRecord {
   business_description: string | null;
   website_url: string | null;
   created_at: string;
+}
+
+interface NotificationTemplate {
+  template_key: string;
+  email_subject: string | null;
+  email_body_html: string | null;
+  email_body_text: string | null;
+  sms_body: string | null;
+}
+
+interface AdminUser {
+  user_id: string;
+  email: string;
+  first_name: string | null;
+  last_name: string | null;
+  is_active: boolean;
+}
+
+interface UserSettings {
+  user_id: string;
+  email_notifications?: boolean | null;
+  sms_notifications?: boolean | null;
+  admin_business_verification_email?: boolean | null;
+  admin_business_verification_sms?: boolean | null;
+  notification_email?: string | null;
+  notification_phone?: string | null;
+}
+
+function replaceVariables(template: string, variables: Record<string, string>): string {
+  let result = template;
+  for (const [key, value] of Object.entries(variables)) {
+    result = result.replace(new RegExp(`{{${key}}}`, 'g'), value ?? '');
+  }
+  return result;
 }
 
 // Send email via Resend
@@ -61,6 +96,42 @@ async function sendEmailViaResend(
   }
 }
 
+async function sendSmsViaTwilio(to: string, body: string): Promise<{ ok: boolean; sid?: string; error?: string }> {
+  const accountSid = Deno.env.get('TWILIO_ACCOUNT_SID');
+  const authToken = Deno.env.get('TWILIO_AUTH_TOKEN');
+  const fromNumber = Deno.env.get('TWILIO_PHONE_NUMBER');
+
+  if (!accountSid || !authToken || !fromNumber) {
+    return { ok: false, error: 'Twilio credentials not configured' };
+  }
+
+  try {
+    const response = await fetch(
+      `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Basic ' + btoa(`${accountSid}:${authToken}`),
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          To: to,
+          From: fromNumber,
+          Body: body,
+        }),
+      }
+    );
+
+    const json = await response.json().catch(() => ({} as any));
+    if (!response.ok) {
+      return { ok: false, error: json?.message || 'Twilio API error' };
+    }
+    return { ok: true, sid: json?.sid };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
 // Format date for display
 function formatDate(dateStr: string): string {
   try {
@@ -91,6 +162,15 @@ function formatBusinessType(type: string): string {
   return typeMap[type] || type;
 }
 
+function formatPhoneNumber(phone: string): string {
+  if (!phone) return phone;
+  const cleaned = phone.replace(/\D/g, '');
+  if (cleaned.length === 10) return `+1${cleaned}`;
+  if (cleaned.length === 11 && cleaned.startsWith('1')) return `+${cleaned}`;
+  if (phone.startsWith('+')) return phone;
+  return `+${cleaned}`;
+}
+
 Deno.serve(async (req) => {
   try {
     // Parse the request body
@@ -107,121 +187,141 @@ Deno.serve(async (req) => {
     const business: BusinessRecord = record;
     console.log(`📧 Processing new business notification for: ${business.business_name} (${business.id})`);
 
-    // Admin email to notify
-    const adminEmail = 'alan@roamyourbestlife.com';
+    // Initialize Supabase client (service role for server-side notifications)
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Build the email content
-    const emailSubject = `🎉 New Business Created: ${business.business_name}`;
-    
-    const emailHtml = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <div style="background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
-    <h1 style="color: white; margin: 0; font-size: 24px;">🎉 New Business Created</h1>
-  </div>
-  
-  <div style="background: #f8f9fa; padding: 30px; border-radius: 0 0 12px 12px; border: 1px solid #e9ecef; border-top: none;">
-    <h2 style="color: #4F46E5; margin-top: 0;">${business.business_name}</h2>
-    
-    <table style="width: 100%; border-collapse: collapse;">
-      <tr>
-        <td style="padding: 12px 0; border-bottom: 1px solid #e9ecef; font-weight: 600; width: 140px;">Business ID:</td>
-        <td style="padding: 12px 0; border-bottom: 1px solid #e9ecef; font-family: monospace; font-size: 12px;">${business.id}</td>
-      </tr>
-      <tr>
-        <td style="padding: 12px 0; border-bottom: 1px solid #e9ecef; font-weight: 600;">Type:</td>
-        <td style="padding: 12px 0; border-bottom: 1px solid #e9ecef;">${formatBusinessType(business.business_type)}</td>
-      </tr>
-      <tr>
-        <td style="padding: 12px 0; border-bottom: 1px solid #e9ecef; font-weight: 600;">Contact Email:</td>
-        <td style="padding: 12px 0; border-bottom: 1px solid #e9ecef;">
-          ${business.contact_email ? `<a href="mailto:${business.contact_email}" style="color: #4F46E5;">${business.contact_email}</a>` : '<span style="color: #999;">Not provided</span>'}
-        </td>
-      </tr>
-      <tr>
-        <td style="padding: 12px 0; border-bottom: 1px solid #e9ecef; font-weight: 600;">Phone:</td>
-        <td style="padding: 12px 0; border-bottom: 1px solid #e9ecef;">${business.phone || '<span style="color: #999;">Not provided</span>'}</td>
-      </tr>
-      <tr>
-        <td style="padding: 12px 0; border-bottom: 1px solid #e9ecef; font-weight: 600;">Website:</td>
-        <td style="padding: 12px 0; border-bottom: 1px solid #e9ecef;">
-          ${business.website_url ? `<a href="${business.website_url}" style="color: #4F46E5;">${business.website_url}</a>` : '<span style="color: #999;">Not provided</span>'}
-        </td>
-      </tr>
-      <tr>
-        <td style="padding: 12px 0; border-bottom: 1px solid #e9ecef; font-weight: 600;">Status:</td>
-        <td style="padding: 12px 0; border-bottom: 1px solid #e9ecef;">
-          <span style="background: #fef3c7; color: #92400e; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;">${business.verification_status.toUpperCase()}</span>
-        </td>
-      </tr>
-      <tr>
-        <td style="padding: 12px 0; font-weight: 600;">Created At:</td>
-        <td style="padding: 12px 0;">${formatDate(business.created_at)}</td>
-      </tr>
-    </table>
-    
-    ${business.business_description ? `
-    <div style="margin-top: 20px; padding: 15px; background: white; border-radius: 8px; border: 1px solid #e9ecef;">
-      <h4 style="margin: 0 0 10px 0; color: #4F46E5;">Description</h4>
-      <p style="margin: 0; color: #666;">${business.business_description}</p>
-    </div>
-    ` : ''}
-    
-    <div style="margin-top: 30px; text-align: center;">
-      <a href="https://admin.roamyourbestlife.com/businesses" 
-         style="display: inline-block; background: #4F46E5; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600;">
-        View in Admin Dashboard
-      </a>
-    </div>
-  </div>
-  
-  <div style="text-align: center; margin-top: 20px; color: #999; font-size: 12px;">
-    <p>This is an automated notification from ROAM Platform.</p>
-  </div>
-</body>
-</html>
-    `;
+    // Fetch notification template (admin_business_verification)
+    const { data: template, error: templateError } = await supabase
+      .from('notification_templates')
+      .select('*')
+      .eq('template_key', 'admin_business_verification')
+      .eq('is_active', true)
+      .single<NotificationTemplate>();
 
-    const emailText = `
-New Business Created: ${business.business_name}
+    if (templateError || !template) {
+      console.error('❌ admin_business_verification template missing/inactive:', templateError);
+      return new Response(
+        JSON.stringify({ error: 'admin_business_verification template missing/inactive' }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
 
-Business ID: ${business.id}
-Type: ${formatBusinessType(business.business_type)}
-Contact Email: ${business.contact_email || 'Not provided'}
-Phone: ${business.phone || 'Not provided'}
-Website: ${business.website_url || 'Not provided'}
-Status: ${business.verification_status}
-Created At: ${formatDate(business.created_at)}
+    // Get active admin users
+    const { data: admins, error: adminsError } = await supabase
+      .from('admin_users')
+      .select('user_id, email, first_name, last_name, is_active')
+      .eq('is_active', true)
+      .returns<AdminUser[]>();
 
-${business.business_description ? `Description:\n${business.business_description}` : ''}
+    if (adminsError || !admins || admins.length === 0) {
+      console.error('❌ No active admin users found:', adminsError);
+      return new Response(
+        JSON.stringify({ error: 'No active admin users found' }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
 
-View in Admin Dashboard: https://admin.roamyourbestlife.com/businesses
+    // Load settings for all admins
+    const { data: adminSettings } = await supabase
+      .from('user_settings')
+      .select('user_id, email_notifications, sms_notifications, admin_business_verification_email, admin_business_verification_sms, notification_email, notification_phone')
+      .in('user_id', admins.map(a => a.user_id))
+      .returns<UserSettings[]>();
 
----
-This is an automated notification from ROAM Platform.
-    `;
-
-    // Send the email
-    const emailSent = await sendEmailViaResend(
-      adminEmail,
-      emailSubject,
-      emailHtml,
-      emailText
+    const settingsMap = new Map<string, UserSettings>(
+      (adminSettings || []).map(s => [s.user_id, s])
     );
 
-    console.log(`✅ New business notification complete for ${business.business_name}`);
+    const submissionDate = formatDate(business.created_at);
+    const variables: Record<string, string> = {
+      business_name: business.business_name ?? '',
+      owner_name: business.contact_email ? business.contact_email.split('@')[0] : 'N/A',
+      contact_email: business.contact_email ?? 'Not provided',
+      contact_phone: business.phone ?? 'Not provided',
+      business_category: formatBusinessType(business.business_type ?? ''),
+      business_location: 'N/A',
+      submission_date: submissionDate,
+      business_id: business.id,
+    };
+
+    const emailSubject = replaceVariables(template.email_subject || '🔔 New Business Awaiting Verification', variables);
+    const emailHtml = template.email_body_html ? replaceVariables(template.email_body_html, variables) : '';
+    const emailText = template.email_body_text ? replaceVariables(template.email_body_text, variables) : '';
+    const smsBody = template.sms_body ? replaceVariables(template.sms_body, variables) : '';
+
+    const sendResults: Array<{ userId: string; email?: { ok: boolean }; sms?: { ok: boolean } }> = [];
+
+    for (const admin of admins) {
+      const settings = settingsMap.get(admin.user_id);
+
+      const emailEnabled = settings?.email_notifications ?? true;
+      const smsEnabled = settings?.sms_notifications ?? false;
+
+      const emailAllowed = emailEnabled && (settings?.admin_business_verification_email ?? true);
+      const smsAllowed = smsEnabled && (settings?.admin_business_verification_sms ?? false);
+
+      const recipientEmail = (settings?.notification_email || admin.email || '').trim();
+      const recipientPhone = (settings?.notification_phone || '').trim();
+
+      const result: { userId: string; email?: { ok: boolean }; sms?: { ok: boolean } } = { userId: admin.user_id };
+
+      // Email
+      if (emailAllowed && recipientEmail && emailHtml) {
+        const ok = await sendEmailViaResend(recipientEmail, emailSubject, emailHtml, emailText);
+        result.email = { ok };
+
+        await supabase.from('notification_logs').insert({
+          user_id: admin.user_id,
+          recipient_email: recipientEmail,
+          notification_type: 'admin_business_verification',
+          channel: 'email',
+          status: ok ? 'sent' : 'failed',
+          subject: emailSubject,
+          body: emailText,
+          sent_at: ok ? new Date().toISOString() : null,
+          metadata: { source: 'edge_function_notify_new_business', business_id: business.id },
+        });
+      } else {
+        result.email = { ok: false };
+      }
+
+      // SMS
+      if (smsAllowed && recipientPhone && smsBody) {
+        const formattedTo = formatPhoneNumber(recipientPhone);
+        const sms = await sendSmsViaTwilio(formattedTo, smsBody);
+        result.sms = { ok: sms.ok };
+
+        await supabase.from('notification_logs').insert({
+          user_id: admin.user_id,
+          recipient_phone: formattedTo,
+          notification_type: 'admin_business_verification',
+          channel: 'sms',
+          status: sms.ok ? 'sent' : 'failed',
+          twilio_sid: sms.sid,
+          body: smsBody,
+          sent_at: sms.ok ? new Date().toISOString() : null,
+          error_message: sms.ok ? null : sms.error,
+          metadata: { source: 'edge_function_notify_new_business', business_id: business.id },
+        });
+      } else {
+        result.sms = { ok: false };
+      }
+
+      sendResults.push(result);
+    }
+
+    console.log(`✅ New business notification complete for ${business.business_name}`, {
+      adminsNotified: sendResults.length,
+    });
 
     return new Response(
       JSON.stringify({
         success: true,
         businessId: business.id,
         businessName: business.business_name,
-        emailSent,
+        results: sendResults,
       }),
       { headers: { 'Content-Type': 'application/json' } }
     );

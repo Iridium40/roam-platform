@@ -144,6 +144,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const customerName = `${customer.first_name} ${customer.last_name}`.trim() || 'Customer';
         const cancellationReason = booking.cancellation_reason || 'No reason provided';
 
+        // bookings.provider_id references providers.id (not auth user_id). Resolve assigned provider user_id for comparisons.
+        let assignedProviderUserId: string | null = null;
+        if (booking.provider_id) {
+          const { data: assignedProvider } = await supabase
+            .from('providers')
+            .select('user_id, is_active')
+            .eq('id', booking.provider_id)
+            .eq('is_active', true)
+            .maybeSingle();
+
+          assignedProviderUserId = assignedProvider?.user_id || null;
+        }
+
         // Query provider profiles to find who should be notified
         const { data: providers } = await supabase
           .from('provider_profiles')
@@ -159,7 +172,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             const shouldNotify =
               provider.provider_role === 'owner' ||
               provider.provider_role === 'dispatcher' ||
-              (provider.provider_role === 'assigned_provider' && booking.provider_id === provider.user_id);
+              (provider.provider_role === 'assigned_provider' && !!assignedProviderUserId && provider.user_id === assignedProviderUserId);
 
             if (shouldNotify) {
               await sendNotification({

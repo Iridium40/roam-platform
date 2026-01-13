@@ -39,6 +39,33 @@ function replaceVariables(template: string, variables: Record<string, string>): 
   return result;
 }
 
+function formatPhoneNumber(phone: string): string {
+  if (!phone) return phone;
+  const cleaned = phone.replace(/\D/g, '');
+  if (cleaned.length === 10) return `+1${cleaned}`;
+  if (cleaned.length === 11 && cleaned.startsWith('1')) return `+${cleaned}`;
+  if (phone.startsWith('+')) return phone;
+  return `+${cleaned}`;
+}
+
+function isQuietHours(settings: any): boolean {
+  if (!settings?.quiet_hours_enabled || !settings?.quiet_hours_start || !settings?.quiet_hours_end) {
+    return false;
+  }
+
+  const now = new Date();
+  const currentTime = now.toTimeString().slice(0, 5); // HH:MM
+  const start = settings.quiet_hours_start;
+  const end = settings.quiet_hours_end;
+
+  // Handle overnight quiet hours
+  if (start > end) {
+    return currentTime >= start || currentTime < end;
+  }
+
+  return currentTime >= start && currentTime < end;
+}
+
 // Format date for display
 function formatDate(dateStr: string): string {
   try {
@@ -282,6 +309,21 @@ Deno.serve(async (req) => {
       notificationResults.push('Business email: no contact_email configured');
     }
 
+    // 1b. Send SMS to business phone (if configured + template has sms_body)
+    // Note: businesses do not currently have per-notification preferences; this is "best effort".
+    if (business.phone) {
+      const smsBody = template?.sms_body
+        ? replaceVariables(template.sms_body, variables)
+        : `ROAM: New booking for ${service.name} with ${customerName} on ${variables.booking_date} at ${variables.booking_time}.`;
+
+      const smsSent = await sendSmsViaTwilio(formatPhoneNumber(business.phone), smsBody);
+      notificationResults.push(
+        `Business SMS (${business.phone}): ${smsSent ? 'sent' : 'failed'}`
+      );
+    } else {
+      notificationResults.push('Business SMS: no phone configured');
+    }
+
     // 2. Send notification to assigned provider (if any)
     if (booking.provider_id) {
       console.log(`📧 Fetching assigned provider: ${booking.provider_id}`);
@@ -299,12 +341,15 @@ Deno.serve(async (req) => {
         // Check provider's notification preferences
         const { data: userSettings } = await supabase
           .from('user_settings')
-          .select('email_notifications, sms_notifications, notification_email, notification_phone')
+          .select('email_notifications, sms_notifications, provider_new_booking_email, provider_new_booking_sms, notification_email, notification_phone, quiet_hours_enabled, quiet_hours_start, quiet_hours_end')
           .eq('user_id', provider.user_id)
           .maybeSingle();
 
+        // Defaults: email ON, SMS OFF (opt-in)
         const emailEnabled = userSettings?.email_notifications ?? true;
-        const smsEnabled = userSettings?.sms_notifications ?? true;
+        const smsEnabled = userSettings?.sms_notifications ?? false;
+        const emailAllowed = emailEnabled && (userSettings?.provider_new_booking_email ?? true);
+        const smsAllowed = smsEnabled && (userSettings?.provider_new_booking_sms ?? false);
         const providerEmail = userSettings?.notification_email || provider.email;
         const providerPhone = userSettings?.notification_phone || provider.phone;
 
@@ -319,8 +364,12 @@ Deno.serve(async (req) => {
           .eq('is_active', true)
           .single();
 
+        // Respect quiet hours for provider notifications (both channels)
+        if (isQuietHours(userSettings)) {
+          notificationResults.push('Provider notifications: skipped (quiet hours enabled)');
+        } else {
         // Send email if enabled
-        if (emailEnabled && providerEmail) {
+        if (emailAllowed && providerEmail) {
           const emailSubject = providerTemplate?.email_subject
             ? replaceVariables(providerTemplate.email_subject, variables)
             : `New Booking Assigned: ${service.name}`;
@@ -345,25 +394,26 @@ Deno.serve(async (req) => {
           );
         } else {
           notificationResults.push(
-            `Provider email: ${!emailEnabled ? 'disabled by preference' : 'no email configured'}`
+            `Provider email: ${!emailAllowed ? 'disabled by preference' : 'no email configured'}`
           );
         }
 
         // Send SMS if enabled
-        if (smsEnabled && providerPhone) {
+        if (smsAllowed && providerPhone) {
           const smsBody = providerTemplate?.sms_body
             ? replaceVariables(providerTemplate.sms_body, variables)
             : `ROAM: New booking for ${service.name} with ${customerName} on ${variables.booking_date} at ${variables.booking_time}.`;
 
-          const smsSent = await sendSmsViaTwilio(providerPhone, smsBody);
+          const smsSent = await sendSmsViaTwilio(formatPhoneNumber(providerPhone), smsBody);
 
           notificationResults.push(
             `Provider SMS (${providerPhone}): ${smsSent ? 'sent' : 'failed'}`
           );
         } else {
           notificationResults.push(
-            `Provider SMS: ${!smsEnabled ? 'disabled by preference' : 'no phone configured'}`
+            `Provider SMS: ${!smsAllowed ? 'disabled by preference' : 'no phone configured'}`
           );
+        }
         }
       }
     } else {
