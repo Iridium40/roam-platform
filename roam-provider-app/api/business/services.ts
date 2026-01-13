@@ -249,7 +249,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             console.log(`Auto-assigned service ${service_id} to owner ${ownerProvider.id} for independent business`);
           }
 
-          // Bookability is derived from assigned services; no need to set a manual flag.
+          // For independent businesses during onboarding, ensure the owner/provider is bookable by default.
+          // (Some parts of the app/admin still rely on this flag.)
+          try {
+            await supabase
+              .from('providers')
+              .update({ active_for_bookings: true })
+              .eq('id', ownerProvider.id);
+          } catch (err) {
+            console.error('Error setting active_for_bookings for independent owner:', err);
+          }
         }
       }
 
