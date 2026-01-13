@@ -137,6 +137,17 @@ export async function sendEmail(params: SendEmailParams): Promise<SendResult> {
 
         if (providerProfile?.email) {
           recipientEmail = providerProfile.email;
+        } else {
+          // Try admin user record (admins are not necessarily customers/providers)
+          const { data: adminUser } = await supabase
+            .from('admin_users')
+            .select('email')
+            .eq('user_id', userId)
+            .maybeSingle();
+
+          if (adminUser?.email) {
+            recipientEmail = adminUser.email;
+          }
         }
       }
     }

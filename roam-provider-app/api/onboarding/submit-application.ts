@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { createClient } from "@supabase/supabase-js";
 import { Resend } from "resend";
+import { sendNotification } from "../../shared/notifications/index.js";
 
 const supabase = createClient(
   process.env.VITE_PUBLIC_SUPABASE_URL!,
@@ -163,60 +164,41 @@ async function notifyAdminsOfNewApplication(businessProfile: any, application: a
 
     console.log(`Found ${adminUsers.length} active admin users to notify`);
 
-    // Get user settings for each admin
-    const { data: adminSettings, error: settingsError } = await supabase
-      .from('user_settings')
-      .select('user_id, email_notifications, sms_notifications, admin_business_verification_email, admin_business_verification_sms, notification_email, notification_phone')
-      .in('user_id', adminUsers.map(a => a.user_id));
-
-    if (settingsError) {
-      console.error('Error fetching admin settings:', settingsError);
-      // Continue with default settings
-    }
-
-    // Create a map of user settings
-    const settingsMap = new Map<string, UserSettings>(
-      (adminSettings || []).map(s => [s.user_id, s as UserSettings])
-    );
-
     // Notify each admin based on their preferences
     for (const admin of adminUsers) {
-      const settings: UserSettings = settingsMap.get(admin.user_id) || {} as UserSettings;
-      const emailEnabled = settings.admin_business_verification_email ?? settings.email_notifications ?? true;
-      const smsEnabled = settings.admin_business_verification_sms ?? settings.sms_notifications ?? false;
+      try {
+        // Use DB template + shared notification system so we respect:
+        // - master toggles (email_notifications / sms_notifications)
+        // - granular toggles (admin_business_verification_email / _sms)
+        // - custom recipient overrides (notification_email / notification_phone), including email-to-text
+        await sendNotification({
+          userId: admin.user_id,
+          notificationType: 'admin_business_verification',
+          variables: {
+            business_name: businessProfile?.business_name || 'New Business',
+            owner_name: businessProfile?.contact_name || businessProfile?.owner_name || 'Provider',
+            contact_email: businessProfile?.contact_email || businessProfile?.email || 'Not provided',
+            contact_phone: businessProfile?.phone || 'Not provided',
+            business_category: businessProfile?.business_type || 'N/A',
+            business_location: businessProfile?.business_address || 'N/A',
+            submission_date: new Date(application?.submitted_at || application?.created_at || new Date().toISOString()).toLocaleDateString('en-US', {
+              weekday: 'long',
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+            }),
+            business_id: businessProfile?.id || application?.business_id || '',
+          },
+          metadata: {
+            application_id: application?.id,
+            business_id: businessProfile?.id || application?.business_id,
+            event_type: 'provider_application_submitted',
+          },
+        });
 
-      // Send email notification if enabled
-      if (emailEnabled && process.env.RESEND_API_KEY) {
-        try {
-          const adminEmail = settings.notification_email || admin.email;
-          const adminViewUrl = `${process.env.FRONTEND_URL || 'https://www.roamadmin.app'}/verification`;
-
-          const emailHtml = getAdminNotificationEmailTemplate(
-            admin.first_name || 'Admin',
-            businessProfile.business_name,
-            businessProfile.business_type,
-            application.id,
-            adminViewUrl
-          );
-
-          await resend.emails.send({
-            from: `${ROAM_EMAIL_CONFIG.fromName} <${ROAM_EMAIL_CONFIG.fromEmail}>`,
-            to: [adminEmail],
-            subject: `🔔 New Provider Application: ${businessProfile.business_name}`,
-            html: emailHtml,
-          });
-
-          console.log(`✅ Admin notification email sent to: ${adminEmail}`);
-        } catch (emailError) {
-          console.error(`Failed to send email to admin ${admin.email}:`, emailError);
-        }
-      }
-
-      // Send SMS notification if enabled
-      if (smsEnabled && settings.notification_phone) {
-        // TODO: Implement SMS notification via Twilio or similar service
-        console.log(`📱 SMS notification would be sent to: ${settings.notification_phone}`);
-        console.log(`Message: New provider application from ${businessProfile.business_name} requires review.`);
+        console.log(`✅ Admin notification processed for admin ${admin.user_id}`);
+      } catch (notifyError) {
+        console.error(`❌ Failed to notify admin ${admin.user_id}:`, notifyError);
       }
     }
   } catch (error) {
