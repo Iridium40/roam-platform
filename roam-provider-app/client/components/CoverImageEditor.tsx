@@ -42,7 +42,8 @@ export default function CoverImageEditor({
   preview,
   label = "Cover Image",
   helpText = "Recommended size: 1200x400px • Max 3MB • JPG, PNG, WebP",
-  height = "h-48",
+  // Match customer app BusinessProfile cover frame sizing
+  height = "h-44 sm:h-56 lg:h-64",
   disabled = false,
   className = "",
 }: CoverImageEditorProps) {

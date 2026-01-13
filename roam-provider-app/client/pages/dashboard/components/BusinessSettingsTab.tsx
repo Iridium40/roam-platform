@@ -1006,7 +1006,7 @@ export default function BusinessSettingsTab({
             uploading={coverUploading}
             label="Cover Photo"
             helpText="Recommended size: 1200x400px • Use arrows to adjust position"
-            height="h-32"
+            height="h-44 sm:h-56 lg:h-64"
           />
 
           {/* Logo and Basic Info */}
