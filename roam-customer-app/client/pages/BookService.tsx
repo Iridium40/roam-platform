@@ -248,6 +248,22 @@ export default function BookService() {
   const [allBusinesses, setAllBusinesses] = useState<Business[]>([]); // Store all businesses
   const [filteredAndSortedBusinesses, setFilteredAndSortedBusinesses] = useState<Business[]>([]); // Display these
 
+  // Per-business description expansion (used in the business match list)
+  const BUSINESS_DESCRIPTION_PREVIEW_LEN = 100;
+  const [expandedBusinessDescriptions, setExpandedBusinessDescriptions] = useState<Set<string>>(new Set());
+
+  const toggleBusinessDescription = (businessId: string) => {
+    setExpandedBusinessDescriptions((prev) => {
+      const next = new Set(prev);
+      if (next.has(businessId)) {
+        next.delete(businessId);
+      } else {
+        next.add(businessId);
+      }
+      return next;
+    });
+  };
+
   // Platform fee configuration
   const [platformFeePercentage, setPlatformFeePercentage] = useState<number>(0);
 
@@ -2230,9 +2246,39 @@ export default function BookService() {
                             </div>
 
                             {/* Business Description */}
-                            <p className="text-sm text-gray-600 mb-3 leading-relaxed">
-                              {business.description || "Professional service provider dedicated to delivering excellent results."}
-                            </p>
+                            {(() => {
+                              const fullDescription =
+                                business.description ||
+                                "Professional service provider dedicated to delivering excellent results.";
+                              const isExpanded = expandedBusinessDescriptions.has(business.id);
+                              const shouldTruncate = fullDescription.length > BUSINESS_DESCRIPTION_PREVIEW_LEN;
+                              const displayDescription =
+                                isExpanded || !shouldTruncate
+                                  ? fullDescription
+                                  : fullDescription.slice(0, BUSINESS_DESCRIPTION_PREVIEW_LEN) + "...";
+
+                              return (
+                                <div className="mb-3">
+                                  <p className="text-sm text-gray-600 leading-relaxed">
+                                    {displayDescription}
+                                  </p>
+                                  {shouldTruncate && (
+                                    <button
+                                      type="button"
+                                      aria-expanded={isExpanded}
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        toggleBusinessDescription(business.id);
+                                      }}
+                                      className="text-roam-blue hover:text-roam-blue/80 text-sm font-medium mt-1"
+                                    >
+                                      {isExpanded ? "Read less" : "Read more..."}
+                                    </button>
+                                  )}
+                                </div>
+                              );
+                            })()}
 
                             {/* Delivery Types */}
                             <div className="mb-3">

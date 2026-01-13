@@ -31,7 +31,8 @@ import {
   handleUserReports,
   handleBookingReports,
   handleBusinessReports,
-  handleServiceReports
+  handleServiceReports,
+  handleBusinessBookabilityReports
 } from "./routes/reports.js";
 import { 
   handleReviews, 
@@ -184,6 +185,7 @@ export function createServer() {
   app.get("/api/reports/bookings", handleBookingReports);
   app.get("/api/reports/businesses", handleBusinessReports);
   app.get("/api/reports/services", handleServiceReports);
+  app.get("/api/reports/bookability", handleBusinessBookabilityReports);
 
   // Reviews management routes
   app.get("/api/reviews", handleReviews);

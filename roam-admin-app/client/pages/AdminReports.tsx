@@ -148,6 +148,30 @@ interface ServiceReport {
   is_popular: boolean;
 }
 
+interface BookabilityIssue {
+  code: string;
+  label: string;
+}
+
+interface BusinessBookabilityReport {
+  id: string;
+  business_name: string;
+  business_type: string;
+  verification_status: string;
+  is_active?: boolean;
+  contact_email?: string | null;
+  phone?: string | null;
+  created_at?: string;
+  active_services: number;
+  total_staff: number;
+  staff_missing_services: number;
+  staff_missing_location: number;
+  stripe_status: "ready" | "not_connected" | "action_needed";
+  stripe_requirements_due: number;
+  issues: BookabilityIssue[];
+  issue_count: number;
+}
+
 export default function AdminReports() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -161,6 +185,7 @@ export default function AdminReports() {
   const [bookingReports, setBookingReports] = useState<BookingReport[]>([]);
   const [businessReports, setBusinessReports] = useState<BusinessReport[]>([]);
   const [serviceReports, setServiceReports] = useState<ServiceReport[]>([]);
+  const [bookabilityReports, setBookabilityReports] = useState<BusinessBookabilityReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState("30");
   const [reportType, setReportType] = useState("users");
@@ -196,6 +221,10 @@ export default function AdminReports() {
         case 'services':
           const serviceData = await fetchServiceReports();
           setServiceReports(serviceData);
+          break;
+        case 'bookability':
+          const bookabilityData = await fetchBusinessBookabilityReports();
+          setBookabilityReports(bookabilityData);
           break;
       }
       
@@ -405,6 +434,18 @@ export default function AdminReports() {
           is_popular: true,
         },
       ];
+    }
+  };
+
+  const fetchBusinessBookabilityReports = async (): Promise<BusinessBookabilityReport[]> => {
+    try {
+      const response = await fetch(`/api/reports/bookability?search=${encodeURIComponent(searchTerm)}`);
+      const result = await response.json();
+      if (result.success) return result.data;
+      throw new Error(result.error || "Failed to fetch business bookability reports");
+    } catch (error) {
+      console.error("Error fetching business bookability reports:", error);
+      return [];
     }
   };
 
@@ -965,6 +1006,95 @@ export default function AdminReports() {
     },
   ];
 
+  const bookabilityColumns = [
+    {
+      key: "business_name",
+      accessorKey: "business_name",
+      header: "Business",
+      cell: ({ row }: any) => (
+        <div className="flex flex-col">
+          <span className="font-semibold">{row.original.business_name}</span>
+          <span className="text-xs text-muted-foreground">{row.original.business_type}</span>
+        </div>
+      ),
+    },
+    {
+      key: "verification_status",
+      accessorKey: "verification_status",
+      header: "Status",
+      cell: ({ row }: any) => (
+        <div className="flex flex-wrap gap-1">
+          <ROAMBadge variant={row.original.is_active ? "success" : "destructive"} className="text-xs">
+            {row.original.is_active ? "Active" : "Inactive"}
+          </ROAMBadge>
+          <ROAMBadge variant="secondary" className="text-xs">
+            {row.original.verification_status}
+          </ROAMBadge>
+        </div>
+      ),
+    },
+    {
+      key: "stripe_status",
+      accessorKey: "stripe_status",
+      header: "Stripe",
+      cell: ({ row }: any) => {
+        const status = row.original.stripe_status;
+        if (status === "ready") return <ROAMBadge variant="success" className="text-xs">Ready</ROAMBadge>;
+        if (status === "not_connected") return <ROAMBadge variant="destructive" className="text-xs">Not Connected</ROAMBadge>;
+        return (
+          <ROAMBadge variant="warning" className="text-xs">
+            Action Needed{row.original.stripe_requirements_due > 0 ? ` (${row.original.stripe_requirements_due})` : ""}
+          </ROAMBadge>
+        );
+      },
+    },
+    {
+      key: "active_services",
+      accessorKey: "active_services",
+      header: "Services",
+      cell: ({ row }: any) => (
+        <span className={`font-semibold ${row.original.active_services > 0 ? "" : "text-red-600"}`}>
+          {row.original.active_services || 0}
+        </span>
+      ),
+    },
+    {
+      key: "staff",
+      header: "Staff Setup",
+      cell: ({ row }: any) => (
+        <div className="flex flex-col">
+          <span className="text-sm">
+            Total: <span className="font-semibold">{row.original.total_staff || 0}</span>
+          </span>
+          <span className={`text-xs ${row.original.staff_missing_services > 0 ? "text-red-600" : "text-muted-foreground"}`}>
+            Missing services: {row.original.staff_missing_services || 0}
+          </span>
+          <span className={`text-xs ${row.original.staff_missing_location > 0 ? "text-red-600" : "text-muted-foreground"}`}>
+            Missing location: {row.original.staff_missing_location || 0}
+          </span>
+        </div>
+      ),
+    },
+    {
+      key: "issues",
+      header: "Blockers",
+      cell: ({ row }: any) => (
+        <div className="flex flex-wrap gap-1">
+          {(row.original.issues || []).slice(0, 4).map((issue: any) => (
+            <ROAMBadge key={issue.code + issue.label} variant="destructive" className="text-xs">
+              {issue.label}
+            </ROAMBadge>
+          ))}
+          {(row.original.issues || []).length > 4 && (
+            <ROAMBadge variant="secondary" className="text-xs">
+              +{(row.original.issues || []).length - 4} more
+            </ROAMBadge>
+          )}
+        </div>
+      ),
+    },
+  ];
+
   const getCurrentReportData = () => {
     switch (reportType) {
       case 'users':
@@ -975,6 +1105,8 @@ export default function AdminReports() {
         return businessReports;
       case 'services':
         return serviceReports;
+      case 'bookability':
+        return bookabilityReports;
       default:
         return [];
     }
@@ -990,6 +1122,8 @@ export default function AdminReports() {
         return businessColumns;
       case 'services':
         return serviceColumns;
+      case 'bookability':
+        return bookabilityColumns;
       default:
         return [];
     }
@@ -1064,11 +1198,12 @@ export default function AdminReports() {
 
         {/* Report Tabs */}
         <Tabs value={reportType} onValueChange={setReportType} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="users">User Reports</TabsTrigger>
             <TabsTrigger value="bookings">Booking Reports</TabsTrigger>
             <TabsTrigger value="businesses">Business Reports</TabsTrigger>
             <TabsTrigger value="services">Service Reports</TabsTrigger>
+            <TabsTrigger value="bookability">Bookability Issues</TabsTrigger>
           </TabsList>
 
           <TabsContent value="users" className="space-y-4">
@@ -1139,6 +1274,25 @@ export default function AdminReports() {
               <ROAMCardContent>
                 <ROAMDataTable
                   columns={serviceColumns}
+                  data={filteredData}
+                  filterable={false}
+                  addable={false}
+                />
+              </ROAMCardContent>
+            </ROAMCard>
+          </TabsContent>
+
+          <TabsContent value="bookability" className="space-y-4">
+            <ROAMCard>
+              <ROAMCardHeader>
+                <ROAMCardTitle>Business Bookability Blockers</ROAMCardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Businesses with setup issues that prevent receiving bookings (Stripe, services, staff setup)
+                </p>
+              </ROAMCardHeader>
+              <ROAMCardContent>
+                <ROAMDataTable
+                  columns={bookabilityColumns}
                   data={filteredData}
                   filterable={false}
                   addable={false}
