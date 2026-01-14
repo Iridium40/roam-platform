@@ -83,10 +83,7 @@ type VerificationStatus = "pending" | "approved" | "rejected" | "suspended";
 type DeliveryType = "business" | "customer" | "mobile";
 type BusinessType =
   | "independent"
-  | "small_business"
-  | "franchise"
-  | "enterprise"
-  | "other";
+  | "business";
 
 type ServiceCategoryType = "beauty" | "fitness" | "therapy" | "healthcare";
 type ServiceSubcategoryType =
@@ -294,7 +291,7 @@ const sampleBusinesses: BusinessProfile[] = [
       instagram: "@miamispa",
       facebook: "MiamiSpaWellness",
     },
-    business_type: "small_business",
+    business_type: "business",
   },
   {
     id: "2",
@@ -316,7 +313,7 @@ const sampleBusinesses: BusinessProfile[] = [
       friday: "5:00-22:00",
       saturday: "6:00-20:00",
     },
-    business_type: "franchise",
+    business_type: "business",
   },
   {
     id: "3",
@@ -340,7 +337,7 @@ const sampleBusinesses: BusinessProfile[] = [
     is_active: false,
     created_at: "2023-10-20T00:00:00Z",
     verification_notes: "Failed to provide required insurance documentation",
-    business_type: "enterprise",
+    business_type: "business",
   },
   {
     id: "5",
@@ -353,7 +350,7 @@ const sampleBusinesses: BusinessProfile[] = [
     is_active: true,
     created_at: "2024-01-05T00:00:00Z",
     website_url: "https://platinumnails.com",
-    business_type: "small_business",
+    business_type: "business",
   },
 ];
 
@@ -872,11 +869,7 @@ const parseBusinessHours = (
 
 const getBusinessTypeBadgeVariant = (type: BusinessType) => {
   switch (type) {
-    case "enterprise":
-      return "success" as const;
-    case "franchise":
-      return "warning" as const;
-    case "small_business":
+    case "business":
       return "secondary" as const;
     case "independent":
       return "outline" as const;
@@ -967,7 +960,7 @@ export default function AdminBusinesses() {
     contact_email: "",
     phone: "",
     website_url: "",
-    business_type: "small_business" as BusinessType,
+    business_type: "business" as BusinessType,
     is_active: true,
     verification_status: "pending" as VerificationStatus,
   });
@@ -1492,7 +1485,7 @@ export default function AdminBusinesses() {
         contact_email: "",
         phone: "",
         website_url: "",
-        business_type: "small_business",
+        business_type: "business",
         is_active: true,
         verification_status: "pending",
       });
@@ -2456,10 +2449,7 @@ export default function AdminBusinesses() {
               >
                 <option value="all">All</option>
                 <option value="independent">Independent</option>
-                <option value="small_business">Small Business</option>
-                <option value="franchise">Franchise</option>
-                <option value="enterprise">Enterprise</option>
-                <option value="other">Other</option>
+                <option value="business">Business</option>
               </select>
             </div>
 
@@ -3738,10 +3728,7 @@ export default function AdminBusinesses() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="independent">Independent</SelectItem>
-                  <SelectItem value="small_business">Small Business</SelectItem>
-                  <SelectItem value="franchise">Franchise</SelectItem>
-                  <SelectItem value="enterprise">Enterprise</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
+                  <SelectItem value="business">Business</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -3779,7 +3766,8 @@ export default function AdminBusinesses() {
                     contact_email: "",
                     phone: "",
                     website_url: "",
-                    business_type: "small_business",
+        business_type: "business",
+                    business_type: "business",
                     is_active: true,
                     verification_status: "pending",
                   });
@@ -3839,10 +3827,7 @@ export default function AdminBusinesses() {
                     className="mt-1 w-full px-3 py-2 border border-border rounded-md text-sm bg-gray-50 cursor-not-allowed"
                   >
                     <option value="independent">Independent</option>
-                    <option value="small_business">Small Business</option>
-                    <option value="franchise">Franchise</option>
-                    <option value="enterprise">Enterprise</option>
-                    <option value="other">Other</option>
+                    <option value="business">Business</option>
                   </select>
                 </div>
 

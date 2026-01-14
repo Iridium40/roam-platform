@@ -630,11 +630,7 @@ export const getVerificationBadgeVariant = (status: VerificationStatus) => {
 
 export const getBusinessTypeBadgeVariant = (type: BusinessType) => {
   switch (type) {
-    case "enterprise":
-      return "success" as const;
-    case "franchise":
-      return "warning" as const;
-    case "small_business":
+    case "business":
       return "secondary" as const;
     case "independent":
       return "outline" as const;

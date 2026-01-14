@@ -57,10 +57,7 @@ export function BusinessList({
   const formatBusinessType = (type: BusinessType): string => {
     const typeMap: Record<BusinessType, string> = {
       independent: "Independent",
-      small_business: "Small Business",
-      franchise: "Franchise",
-      enterprise: "Enterprise",
-      other: "Other",
+      business: "Business",
     };
     return typeMap[type] || formatEnumDisplay(type);
   };

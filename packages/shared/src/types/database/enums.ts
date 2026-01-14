@@ -8,7 +8,8 @@ export type Json =
   | Json[];
 
 // Business Types
-export type BusinessType = 'independent' | 'small_business' | 'franchise' | 'enterprise' | 'other';
+// NOTE: Provider onboarding only supports these two values. Other legacy values are intentionally not used.
+export type BusinessType = 'independent' | 'business';
 export type VerificationStatus = 'pending' | 'approved' | 'rejected' | 'suspended';
 export type SubscriptionStatus = 'active' | 'inactive' | 'cancelled' | 'past_due';
 

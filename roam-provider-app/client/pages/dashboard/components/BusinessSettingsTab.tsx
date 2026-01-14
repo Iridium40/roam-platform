@@ -1082,10 +1082,7 @@ export default function BusinessSettingsTab({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="independent">Independent</SelectItem>
-                      <SelectItem value="small_business">Small Business</SelectItem>
-                      <SelectItem value="franchise">Franchise</SelectItem>
-                      <SelectItem value="enterprise">Enterprise</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
+                      <SelectItem value="business">Business</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

@@ -174,6 +174,16 @@ export function formatPaymentStatus(status: string): string {
 
 export function formatBusinessType(type: string): string {
   const typeMap: Record<string, string> = {
+    // Provider onboarding business types
+    independent: 'Independent',
+    business: 'Business',
+    // Backwards-compat display (should not be selectable in onboarding anymore)
+    small_business: 'Business',
+    franchise: 'Franchise',
+    enterprise: 'Enterprise',
+    other: 'Other',
+
+    // Legal/organization types (used in some Stripe/account contexts)
     sole_proprietorship: 'Sole Proprietorship',
     llc: 'LLC',
     corporation: 'Corporation',

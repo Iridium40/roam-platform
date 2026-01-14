@@ -8,7 +8,9 @@ export const uuidSchema = z.string().uuid('Invalid UUID format');
 
 // Business validation schemas
 export const businessNameSchema = z.string().min(2, 'Business name must be at least 2 characters').max(100);
-export const businessTypeSchema = z.enum(['independent', 'small_business', 'franchise', 'enterprise', 'other'] as const);
+// Provider onboarding only supports these values.
+// Keep a backwards-compat alias for old clients that may still send "small_business" (we normalize server-side).
+export const businessTypeSchema = z.enum(['independent', 'business', 'small_business'] as const);
 export const businessDescriptionSchema = z.string().max(500, 'Description must be less than 500 characters').optional();
 
 export const createBusinessSchema = z.object({

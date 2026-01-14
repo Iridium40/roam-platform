@@ -382,7 +382,7 @@ export default function AdminReports() {
         {
           id: "business_2",
           business_name: "Elite Fitness Center",
-          business_type: "small_business",
+          business_type: "business",
           verification_status: "approved",
           total_providers: 12,
           total_services: 25,

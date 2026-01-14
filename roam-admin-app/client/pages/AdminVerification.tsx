@@ -60,14 +60,8 @@ type BusinessDocumentStatus =
   | "under_review";
 type VerificationStatus = "pending" | "approved" | "rejected" | "suspended";
 type BusinessType =
-  | "individual"
-  | "llc"
-  | "corporation"
-  | "partnership"
-  | "small_business"
-  | "franchise"
-  | "enterprise"
-  | "other";
+  | "independent"
+  | "business";
 // Matches database enum: business_document_type
 type BusinessDocumentType =
   | "drivers_license"

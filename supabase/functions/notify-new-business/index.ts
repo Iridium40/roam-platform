@@ -154,7 +154,8 @@ function formatDate(dateStr: string): string {
 function formatBusinessType(type: string): string {
   const typeMap: Record<string, string> = {
     'independent': 'Independent',
-    'small_business': 'Small Business',
+    'business': 'Business',
+    'small_business': 'Business',
     'franchise': 'Franchise',
     'enterprise': 'Enterprise',
     'other': 'Other',

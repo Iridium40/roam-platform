@@ -60,10 +60,8 @@ interface ServiceSubcategoryDB {
 
 type BusinessType =
   | "independent"
-  | "small_business"
-  | "franchise"
-  | "enterprise"
-  | "other";
+  | "business"
+  | "small_business"; // backwards-compat for existing/old clients; normalized on submit
 type ServiceCategory = string;
 
 interface SocialMediaLink {
@@ -172,9 +170,14 @@ export function BusinessInfoForm({
   error,
   initialData,
 }: BusinessInfoFormProps) {
+  const normalizeBusinessType = (type: BusinessType | "" | undefined): BusinessType | "" => {
+    if (type === "small_business") return "business";
+    return type || "";
+  };
+
   const [formData, setFormData] = useState<BusinessInfoFormData>({
     businessName: initialData?.businessName || "",
-    businessType: initialData?.businessType || "",
+    businessType: normalizeBusinessType(initialData?.businessType),
     contactEmail: initialData?.contactEmail || "",
     phone: initialData?.phone || "",
     serviceCategories: initialData?.serviceCategories || [],
@@ -603,12 +606,7 @@ export function BusinessInfoForm({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="independent">Independent</SelectItem>
-                    <SelectItem value="small_business">
-                      Small Business
-                    </SelectItem>
-                    <SelectItem value="franchise">Franchise</SelectItem>
-                    <SelectItem value="enterprise">Enterprise</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
+                  <SelectItem value="business">Business</SelectItem>
                   </SelectContent>
                 </Select>
                 {fieldErrors.businessType && (

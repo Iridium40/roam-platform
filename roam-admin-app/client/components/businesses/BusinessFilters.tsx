@@ -81,10 +81,7 @@ export function BusinessFilters({
           >
             <option value="all">All</option>
             <option value="independent">Independent</option>
-            <option value="small_business">Small Business</option>
-            <option value="franchise">Franchise</option>
-            <option value="enterprise">Enterprise</option>
-            <option value="other">Other</option>
+            <option value="business">Business</option>
           </select>
         </div>
 

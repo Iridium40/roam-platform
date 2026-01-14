@@ -159,26 +159,9 @@ export const BusinessRegistrationForm: React.FC<
       description: "Solo practitioner offering services directly to customers",
     },
     {
-      value: "small_business",
-      label: "Small Business",
-      description: "Business with 2-25 providers across multiple locations",
-    },
-    {
-      value: "franchise",
-      label: "Franchise",
-      description:
-        "Part of a larger franchise network with standardized operations",
-    },
-    {
-      value: "enterprise",
-      label: "Enterprise",
-      description:
-        "Large organization with 100+ providers and multiple locations",
-    },
-    {
-      value: "other",
-      label: "Other",
-      description: "Other business structure not listed above",
+      value: "business",
+      label: "Business",
+      description: "Business with one or more providers and bookable services",
     },
   ];
 

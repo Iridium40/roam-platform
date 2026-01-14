@@ -70,10 +70,8 @@ interface BusinessInfoData {
   businessName: string;
   businessType:
     | "independent"
-    | "small_business"
-    | "franchise"
-    | "enterprise"
-    | "other";
+    | "business"
+    | "small_business"; // backwards-compat; normalized server-side
   contactEmail: string;
   phone: string;
   serviceCategories: string[];
@@ -89,6 +87,11 @@ interface BusinessInfoData {
   website?: string;
   socialMedia?: any;
   businessDescription?: string;
+}
+
+function normalizeBusinessType(type: BusinessInfoData["businessType"]): "independent" | "business" {
+  if (type === "small_business") return "business";
+  return type;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -188,7 +191,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .from("business_profiles")
         .update({
           business_name: businessData.businessName,
-          business_type: businessData.businessType,
+          business_type: normalizeBusinessType(businessData.businessType),
           contact_email: businessData.contactEmail,
           phone: businessData.phone,
           // business_hours collected in Phase 2 step 4, not Phase 1
@@ -363,7 +366,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .from("business_profiles")
         .insert({
           business_name: businessData.businessName,
-          business_type: businessData.businessType,
+          business_type: normalizeBusinessType(businessData.businessType),
           contact_email: businessData.contactEmail,
           phone: businessData.phone,
           // business_hours collected in Phase 2 step 4, not Phase 1

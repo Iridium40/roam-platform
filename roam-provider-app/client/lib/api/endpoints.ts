@@ -3,7 +3,7 @@ import { apiClient } from "./client";
 // Types for API requests and responses
 export interface BusinessInfoData {
   businessName: string;
-  businessType: "independent" | "small_business" | "franchise" | "enterprise" | "other";
+  businessType: "independent" | "business" | "small_business";
   contactEmail: string;
   phone: string;
   serviceCategories: string[];
