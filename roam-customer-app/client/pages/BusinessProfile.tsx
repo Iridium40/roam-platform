@@ -313,12 +313,16 @@ export default function BusinessProfile() {
             bio,
             image_url,
             cover_image_url,
-            provider_role
+            provider_role,
+            provider_services!inner (
+              id,
+              is_active
+            )
           `)
           .eq('business_id', businessId)
           .in('provider_role', ['owner', 'provider'])
           .eq('is_active', true)
-          .eq('active_for_bookings', true);
+          .eq('provider_services.is_active', true);
 
         console.log('📊 Staff query result:', { staffData, staffError });
 

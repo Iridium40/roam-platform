@@ -214,7 +214,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           id,
           provider_role,
           is_active,
-          active_for_bookings
+          provider_services!inner (
+            id,
+            is_active
+          )
         ),
         business_service_subcategories (
           id,

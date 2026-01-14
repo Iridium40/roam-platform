@@ -98,13 +98,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // Must have at least one active provider who is active_for_bookings
+    // Must have at least one active provider who has at least one active provider_services row
     const { data: eligibleProvider, error: eligibleProviderError } = await supabase
       .from('providers')
-      .select('id, provider_role')
+      .select(`
+        id,
+        provider_role,
+        provider_services!inner (
+          id,
+          is_active
+        )
+      `)
       .eq('business_id', businessId)
       .eq('is_active', true)
-      .eq('active_for_bookings', true)
+      .eq('provider_services.is_active', true)
       .in('provider_role', ['owner', 'provider'])
       .limit(1)
       .maybeSingle();
@@ -123,11 +130,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       
       const { data: ownerProvider, error: ownerError } = await supabase
         .from('providers')
-        .select('id')
+        .select(`
+          id,
+          provider_services!inner (
+            id,
+            is_active
+          )
+        `)
         .eq('business_id', service.business_id)
         .eq('provider_role', 'owner')
         .eq('is_active', true)
-        .eq('active_for_bookings', true)
+        .eq('provider_services.is_active', true)
         .single();
 
       if (ownerProvider && !ownerError) {
