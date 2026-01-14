@@ -126,7 +126,7 @@ export const useBusinessFavorites = () => {
 
   useEffect(() => {
     loadFavorites();
-  }, [customer]);
+  }, [customer?.id]);
 
   return {
     favorites,

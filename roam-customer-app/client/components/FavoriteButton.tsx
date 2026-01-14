@@ -25,42 +25,84 @@ export function FavoriteButton({
   variant = "ghost",
   showText = false,
 }: FavoriteButtonProps) {
+  // Important perf fix:
+  // Avoid mounting *all* favorites hooks for every FavoriteButton (each hook fetches on mount),
+  // which causes an explosion of /api/favorites/* calls on pages with many buttons.
+  if (type === "provider") {
+    return (
+      <ProviderFavoriteButton
+        itemId={itemId}
+        className={className}
+        size={size}
+        variant={variant}
+        showText={showText}
+      />
+    );
+  }
+  if (type === "service") {
+    return (
+      <ServiceFavoriteButton
+        itemId={itemId}
+        className={className}
+        size={size}
+        variant={variant}
+        showText={showText}
+      />
+    );
+  }
+  return (
+    <BusinessFavoriteButton
+      itemId={itemId}
+      className={className}
+      size={size}
+      variant={variant}
+      showText={showText}
+    />
+  );
+}
+
+type FavoriteButtonBaseProps = Omit<FavoriteButtonProps, "type">;
+
+function FavoriteButtonBase({
+  itemId,
+  className,
+  size = "md",
+  variant = "ghost",
+  showText = false,
+  // Hook-provided:
+  typeLabel,
+  isLoading,
+  isFavorite,
+  addFavorite,
+  removeFavorite,
+  customer,
+}: FavoriteButtonBaseProps & {
+  typeLabel: string;
+  isLoading: boolean;
+  isFavorite: (id: string) => boolean;
+  addFavorite: (id: string) => Promise<void>;
+  removeFavorite: (id: string) => Promise<void>;
+  customer: any;
+}) {
   const { toast } = useToast();
   const [isFavorited, setIsFavorited] = useState(false);
   const [isCheckingStatus, setIsCheckingStatus] = useState(true);
   const [isToggling, setIsToggling] = useState(false);
 
-  // Call all hooks (React rules require hooks to be called unconditionally)
-  // But we'll optimize by using useMemo to prevent unnecessary re-renders
-  const providerHook = useFavorites();
-  const serviceHook = useServiceFavorites();
-  const businessHook = useBusinessFavorites();
-
-  // Select the correct hook based on type
-  const currentHook = type === "provider" ? providerHook : type === "service" ? serviceHook : businessHook;
-  const { loading: isLoading, addFavorite, removeFavorite, isFavorite, customer } = currentHook;
-
-  // Check if item is favorited on mount
   useEffect(() => {
-    const checkFavoriteStatus = async () => {
-      if (!customer) {
-        setIsFavorited(false);
-        setIsCheckingStatus(false);
-        return;
-      }
-
-      setIsCheckingStatus(true);
-      try {
-        const favorited = isFavorite(itemId);
-        setIsFavorited(favorited);
-      } catch (error) {
-        logger.error("Error checking favorite status:", error);
-      } finally {
-        setIsCheckingStatus(false);
-      }
-    };
-
-    checkFavoriteStatus();
+    if (!customer) {
+      setIsFavorited(false);
+      setIsCheckingStatus(false);
+      return;
+    }
+    setIsCheckingStatus(true);
+    try {
+      setIsFavorited(isFavorite(itemId));
+    } catch (error) {
+      logger.error("Error checking favorite status:", error);
+    } finally {
+      setIsCheckingStatus(false);
+    }
   }, [customer, itemId, isFavorite]);
 
   const handleToggleFavorite = async (e: React.MouseEvent) => {
@@ -75,25 +117,23 @@ export function FavoriteButton({
       });
       return;
     }
-
     if (isToggling) return;
 
     try {
       setIsToggling(true);
-      
       if (isFavorited) {
         await removeFavorite(itemId);
         setIsFavorited(false);
         toast({
           title: "Removed from favorites",
-          description: `${type.charAt(0).toUpperCase() + type.slice(1)} removed from your favorites`,
+          description: `${typeLabel} removed from your favorites`,
         });
       } else {
         await addFavorite(itemId);
         setIsFavorited(true);
         toast({
           title: "Added to favorites",
-          description: `${type.charAt(0).toUpperCase() + type.slice(1)} added to your favorites`,
+          description: `${typeLabel} added to your favorites`,
         });
       }
     } catch (error) {
@@ -145,16 +185,16 @@ export function FavoriteButton({
         !isAuthenticated
           ? "text-gray-300 cursor-not-allowed"
           : isFavorited
-          ? "text-red-500 hover:text-red-600"
-          : "text-gray-400 hover:text-red-500",
+            ? "text-red-500 hover:text-red-600"
+            : "text-gray-400 hover:text-red-500",
         className,
       )}
       title={
         !isAuthenticated
           ? "Sign in to add favorites"
           : isFavorited
-          ? `Remove ${type} from favorites`
-          : `Add ${type} to favorites`
+            ? `Remove ${typeLabel} from favorites`
+            : `Add ${typeLabel} to favorites`
       }
     >
       <Heart
@@ -164,9 +204,52 @@ export function FavoriteButton({
           showText ? "mr-2" : "",
         )}
       />
-      {showText && (
-        <span>{isFavorited ? "Favorited" : "Add to Favorites"}</span>
-      )}
+      {showText && <span>{isFavorited ? "Favorited" : "Add to Favorites"}</span>}
     </Button>
+  );
+}
+
+function ProviderFavoriteButton(props: FavoriteButtonBaseProps) {
+  const hook = useFavorites();
+  return (
+    <FavoriteButtonBase
+      {...props}
+      typeLabel="Provider"
+      isLoading={hook.loading}
+      isFavorite={hook.isFavorite}
+      addFavorite={hook.addFavorite}
+      removeFavorite={hook.removeFavorite}
+      customer={hook.customer}
+    />
+  );
+}
+
+function ServiceFavoriteButton(props: FavoriteButtonBaseProps) {
+  const hook = useServiceFavorites();
+  return (
+    <FavoriteButtonBase
+      {...props}
+      typeLabel="Service"
+      isLoading={hook.loading}
+      isFavorite={hook.isFavorite}
+      addFavorite={hook.addFavorite}
+      removeFavorite={hook.removeFavorite}
+      customer={hook.customer}
+    />
+  );
+}
+
+function BusinessFavoriteButton(props: FavoriteButtonBaseProps) {
+  const hook = useBusinessFavorites();
+  return (
+    <FavoriteButtonBase
+      {...props}
+      typeLabel="Business"
+      isLoading={hook.loading}
+      isFavorite={hook.isFavorite}
+      addFavorite={hook.addFavorite}
+      removeFavorite={hook.removeFavorite}
+      customer={hook.customer}
+    />
   );
 }

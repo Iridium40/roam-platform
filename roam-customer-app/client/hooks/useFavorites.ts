@@ -19,6 +19,11 @@ export interface Favorite {
   };
 }
 
+// Shared module-level cache to dedupe requests across many component instances.
+// Keyed by customerId.
+const providerFavoritesCache = new Map<string, Favorite[]>();
+const providerFavoritesInFlight = new Map<string, Promise<Favorite[]>>();
+
 export const useFavorites = () => {
   const { customer } = useAuth();
   const [favorites, setFavorites] = useState<Favorite[]>([]);
@@ -43,21 +48,40 @@ export const useFavorites = () => {
       setLoading(true);
       setError(null);
 
-      // Use API endpoint to bypass RLS
-      const response = await fetch(`/api/favorites/provider?customerId=${customer.id}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to load favorites');
+      // Fast path: shared cache
+      const cached = providerFavoritesCache.get(customer.id);
+      if (!force && cached) {
+        setFavorites(cached);
+        setLastCustomerId(customer.id);
+        return;
       }
 
-      setFavorites(result.data || []);
+      // Dedupe concurrent requests (e.g. many FavoriteButtons mounting at once)
+      let promise = providerFavoritesInFlight.get(customer.id);
+      if (!promise) {
+        promise = (async () => {
+          const response = await fetch(`/api/favorites/provider?customerId=${customer.id}`, {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' },
+          });
+
+          const result = await response.json();
+          if (!response.ok) {
+            throw new Error(result.error || 'Failed to load favorites');
+          }
+
+          const data: Favorite[] = result.data || [];
+          providerFavoritesCache.set(customer.id, data);
+          return data;
+        })().finally(() => {
+          providerFavoritesInFlight.delete(customer.id);
+        });
+
+        providerFavoritesInFlight.set(customer.id, promise);
+      }
+
+      const data = await promise;
+      setFavorites(data);
       setLastCustomerId(customer.id);
     } catch (err) {
       logger.error("Error loading favorites:", err);
@@ -91,6 +115,7 @@ export const useFavorites = () => {
         throw new Error(result.error || 'Failed to add favorite');
       }
 
+      providerFavoritesCache.delete(customer.id);
       await loadFavorites(true); // Force reload after add
     } catch (err) {
       logger.error("Error adding favorite:", err);
@@ -121,6 +146,7 @@ export const useFavorites = () => {
         throw new Error(result.error || 'Failed to remove favorite');
       }
 
+      providerFavoritesCache.delete(customer.id);
       await loadFavorites(true); // Force reload after remove
     } catch (err) {
       logger.error("Error removing favorite:", err);

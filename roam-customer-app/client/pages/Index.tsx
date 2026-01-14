@@ -422,10 +422,7 @@ export default function Index() {
               id,
               provider_role,
               is_active,
-              provider_services!inner (
-                id,
-                is_active
-              )
+              active_for_bookings
             ),
             business_locations (
               location_name,
@@ -451,7 +448,7 @@ export default function Index() {
           .eq("bank_connected", true)
           .not("stripe_account_id", "is", null)
           .eq("providers.is_active", true)
-          .eq("providers.provider_services.is_active", true)
+          .eq("providers.active_for_bookings", true)
           .in("providers.provider_role", ["owner", "provider"])
           .limit(12);
 
