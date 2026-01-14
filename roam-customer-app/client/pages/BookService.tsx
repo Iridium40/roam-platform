@@ -215,6 +215,7 @@ export default function BookService() {
   const [service, setService] = useState<Service | null>(null);
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [providers, setProviders] = useState<Provider[]>([]);
+  const [providersLoading, setProvidersLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [promotion, setPromotion] = useState<Promotion | null>(null);
   
@@ -694,97 +695,14 @@ export default function BookService() {
       if (businessServiceError) throw businessServiceError;
 
       if (!businessServiceData || businessServiceData.length === 0) {
-        console.log('⚠️ No business services found, trying fallback approach...');
-
-        // Fallback: try to get businesses directly and assume they offer the service
-        try {
-          const { data: fallbackBusinesses, error: fallbackError } = await supabase
-            .from('business_profiles')
-            .select(`
-              id, 
-              business_name, 
-              business_description, 
-              image_url, 
-              logo_url, 
-              business_type, 
-              business_hours, 
-              is_active,
-              business_locations!inner (
-                city,
-                state,
-                postal_code,
-                is_primary
-              )
-            `)
-            .eq('is_active', true)
-            .limit(10);
-
-          console.log('🔄 Fallback business query:', { fallbackBusinesses, fallbackError });
-
-          if (fallbackError) throw fallbackError;
-
-          if (fallbackBusinesses && fallbackBusinesses.length > 0) {
-            // Fetch ratings for fallback businesses
-            const fallbackBusinessIds = fallbackBusinesses.map(b => b.id);
-            const { data: fallbackReviewsData } = await supabase
-              .from('reviews')
-              .select('business_id, overall_rating')
-              .in('business_id', fallbackBusinessIds)
-              .eq('is_approved', true);
-            
-            const fallbackBusinessRatings: Record<string, { total: number; count: number }> = {};
-            if (fallbackReviewsData) {
-              fallbackReviewsData.forEach(review => {
-                if (review.business_id) {
-                  if (!fallbackBusinessRatings[review.business_id]) {
-                    fallbackBusinessRatings[review.business_id] = { total: 0, count: 0 };
-                  }
-                  fallbackBusinessRatings[review.business_id].total += review.overall_rating || 0;
-                  fallbackBusinessRatings[review.business_id].count += 1;
-                }
-              });
-            }
-
-            // Transform fallback data with actual ratings
-            const transformedFallback = fallbackBusinesses.map(business => {
-              const locations = business.business_locations || [];
-              const primaryLocation = locations.find(loc => loc.is_primary) || locations[0];
-              
-              const ratingData = fallbackBusinessRatings[business.id];
-              const rating = ratingData && ratingData.count > 0 
-                ? ratingData.total / ratingData.count 
-                : 0;
-              const reviewCount = ratingData?.count || 0;
-              
-              return {
-                id: business.id,
-                business_name: business.business_name,
-                description: business.business_description || '',
-                image_url: business.image_url,
-                logo_url: business.logo_url,
-                business_type: business.business_type,
-                service_price: service?.min_price || 100, // Use service default price
-                business_hours: business.business_hours,
-                rating: rating,
-                review_count: reviewCount,
-                city: primaryLocation?.city,
-                state: primaryLocation?.state,
-                postal_code: primaryLocation?.postal_code,
-              };
-            });
-
-            console.log('🔄 Using fallback businesses:', transformedFallback.length);
-            setAllBusinesses(transformedFallback);
-            const sorted = sortAndFilterBusinesses(transformedFallback, sortBy, sortOrder);
-            setFilteredAndSortedBusinesses(sorted);
-            return;
-          }
-        } catch (fallbackError) {
-          console.error('❌ Fallback query also failed:', fallbackError);
-        }
-
+        console.log('⚠️ No businesses offer this service (business_services is empty).');
         setAllBusinesses([]);
         setFilteredAndSortedBusinesses([]);
+        toast({
+          title: "No businesses available",
+          description: "No businesses currently offer this service. Please choose a different service.",
+          variant: "destructive",
+        });
         return;
       }
 
@@ -907,117 +825,63 @@ export default function BookService() {
 
       console.error('Parsed error message:', errorMessage);
 
-      // If this is a database schema issue, log it
-      if (errorMessage.includes('business_services') || errorMessage.includes('relation') || errorMessage.includes('does not exist')) {
-        console.warn('Database schema issue detected - using simplified business loading');
-
-        // Try one more simplified approach
-        try {
-          console.log('🔄 Attempting simplified business loading...');
-          const { data: simpleBusinesses, error: simpleError } = await supabase
-            .from('business_profiles')
-            .select(`
-              id, 
-              business_name, 
-              business_description, 
-              image_url, 
-              logo_url, 
-              business_type, 
-              is_active,
-              business_locations (
-                city,
-                state,
-                postal_code,
-                is_primary
-              )
-            `)
-            .eq('is_active', true)
-            .limit(5);
-
-          if (!simpleError && simpleBusinesses) {
-            // Fetch ratings for simplified businesses
-            const simpleBusinessIds = simpleBusinesses.map(b => b.id);
-            const { data: simpleReviewsData } = await supabase
-              .from('reviews')
-              .select('business_id, overall_rating')
-              .in('business_id', simpleBusinessIds)
-              .eq('is_approved', true);
-            
-            const simpleBusinessRatings: Record<string, { total: number; count: number }> = {};
-            if (simpleReviewsData) {
-              simpleReviewsData.forEach(review => {
-                if (review.business_id) {
-                  if (!simpleBusinessRatings[review.business_id]) {
-                    simpleBusinessRatings[review.business_id] = { total: 0, count: 0 };
-                  }
-                  simpleBusinessRatings[review.business_id].total += review.overall_rating || 0;
-                  simpleBusinessRatings[review.business_id].count += 1;
-                }
-              });
-            }
-
-            const transformedSimple = simpleBusinesses.map(business => {
-              const locations = business.business_locations || [];
-              const primaryLocation = locations.find(loc => loc.is_primary) || locations[0];
-              
-              const ratingData = simpleBusinessRatings[business.id];
-              const rating = ratingData && ratingData.count > 0 
-                ? ratingData.total / ratingData.count 
-                : 0;
-              const reviewCount = ratingData?.count || 0;
-              
-              return {
-                id: business.id,
-                business_name: business.business_name,
-                description: business.business_description || '',
-                image_url: business.image_url,
-                logo_url: business.logo_url,
-                business_type: business.business_type,
-                service_price: service?.min_price || 100,
-                rating: rating,
-                review_count: reviewCount,
-                city: primaryLocation?.city,
-                state: primaryLocation?.state,
-                postal_code: primaryLocation?.postal_code,
-              };
-            });
-
-            setAllBusinesses(transformedSimple);
-            const sorted = sortAndFilterBusinesses(transformedSimple, sortBy, sortOrder);
-            setFilteredAndSortedBusinesses(sorted);
-
-            return;
-          }
-        } catch (fallbackError) {
-          console.error('❌ Even simplified query failed:', fallbackError);
-        }
-      }
-
       console.error('Error loading businesses:', errorMessage);
+      setAllBusinesses([]);
+      setFilteredAndSortedBusinesses([]);
+      toast({
+        title: "Error loading businesses",
+        description: "We couldn't load businesses for this service. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setCheckoutLoading(false);
     }
   };
 
   // Load providers from selected business with role-based filtering
   const loadProviders = async (businessId: string) => {
+    if (!serviceId) {
+      setProviders([]);
+      return;
+    }
+
+    setProvidersLoading(true);
     try {
-      // Get all providers for this business first
+      // Only load providers that explicitly offer this service
       const { data, error } = await supabase
-        .from('providers')
-        .select('id, user_id, first_name, last_name, image_url, provider_role')
-        .eq('business_id', businessId)
+        .from('provider_services')
+        .select(`
+          provider_id,
+          providers:provider_id!inner (
+            id,
+            user_id,
+            first_name,
+            last_name,
+            image_url,
+            provider_role,
+            business_id,
+            is_active,
+            active_for_bookings
+          )
+        `)
+        .eq('service_id', serviceId)
         .eq('is_active', true)
-        .eq('active_for_bookings', true);
+        .eq('providers.business_id', businessId)
+        .eq('providers.is_active', true)
+        .eq('providers.active_for_bookings', true);
 
       if (error) throw error;
 
       // Apply filtering logic based on business type and provider role
-      let filteredProviders = data || [];
+      let filteredProviders = (data || [])
+        .map((row: any) => row.providers)
+        .filter(Boolean);
 
       console.log('Provider filtering debug:', {
         businessType: selectedBusiness?.business_type,
         businessName: selectedBusiness?.business_name,
-        allProviders: data?.map(p => ({ name: `${p.first_name} ${p.last_name}`, role: p.provider_role })),
-        totalCount: data?.length
+        allProviders: filteredProviders?.map((p: any) => ({ name: `${p.first_name} ${p.last_name}`, role: p.provider_role })),
+        totalCount: filteredProviders?.length
       });
 
       if (selectedBusiness?.business_type) {
@@ -1041,6 +905,10 @@ export default function BookService() {
 
       // Fetch ratings for each provider from reviews table
       const providerIds = filteredProviders.map(p => p.id);
+      if (providerIds.length === 0) {
+        setProviders([]);
+        return;
+      }
       
       // Get all reviews for these providers
       const { data: reviewsData } = await supabase
@@ -1095,6 +963,10 @@ export default function BookService() {
       }
     } catch (error) {
       console.error('Error loading providers:', error);
+      setProviders([]);
+    }
+    finally {
+      setProvidersLoading(false);
     }
   };
 
@@ -1383,7 +1255,16 @@ export default function BookService() {
         }
         break;
       case 'provider':
-        if (selectedProvider || noProviderPreference) {
+        if (noProviderPreference && providers.length === 0) {
+          toast({
+            title: "No providers available",
+            description: "This business doesn't have any providers offering this service. Please choose a different business.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        if (selectedProvider || (noProviderPreference && providers.length > 0)) {
           setCurrentStep('summary');
         }
         break;
@@ -2619,82 +2500,103 @@ export default function BookService() {
                   <User className="w-6 h-6 mr-2" />
                   Select Provider
                 </h2>
-                <div className="grid gap-4">
-                  {/* No Preference Option */}
-                  <Card
-                    className={`cursor-pointer transition-all ${
-                      noProviderPreference
-                        ? 'ring-2 ring-roam-blue border-roam-blue bg-roam-blue/5'
-                        : 'hover:shadow-md'
-                    }`}
-                    onClick={() => {
-                      setNoProviderPreference(true);
-                      setSelectedProvider(null);
-                    }}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-center space-x-4">
-                        <div className={`w-16 h-16 rounded-full flex items-center justify-center ${
-                          noProviderPreference ? 'bg-roam-blue text-white' : 'bg-gray-100'
-                        }`}>
-                          <User className="w-8 h-8" />
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-lg">No Preference</h3>
-                          <p className="text-sm text-gray-600 mt-1">
-                            Business will assign a provider for you
-                          </p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  
-                  {providers.map((provider) => (
+                {providersLoading ? (
+                  <div className="text-center py-10">
+                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-roam-blue mx-auto mb-4"></div>
+                    <p className="text-gray-600">Loading providers...</p>
+                  </div>
+                ) : providers.length === 0 ? (
+                  <div className="text-center py-12">
+                    <User className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-gray-600 mb-2">No providers available</h3>
+                    <p className="text-gray-500 mb-4">
+                      This business doesn't have any providers offering this service.
+                    </p>
+                    <Button
+                      variant="outline"
+                      onClick={() => setCurrentStep('business')}
+                    >
+                      Choose a different business
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="grid gap-4">
+                    {/* No Preference Option */}
                     <Card
-                      key={provider.id}
                       className={`cursor-pointer transition-all ${
-                        selectedProvider?.id === provider.id && !noProviderPreference
-                          ? 'ring-2 ring-roam-blue border-roam-blue'
+                        noProviderPreference
+                          ? 'ring-2 ring-roam-blue border-roam-blue bg-roam-blue/5'
                           : 'hover:shadow-md'
                       }`}
                       onClick={() => {
-                        setSelectedProvider(provider);
-                        setNoProviderPreference(false);
+                        setNoProviderPreference(true);
+                        setSelectedProvider(null);
                       }}
                     >
                       <CardContent className="p-4">
                         <div className="flex items-center space-x-4">
-                          <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center">
-                            {provider.image_url ? (
-                              <img src={provider.image_url} alt={`${provider.first_name} ${provider.last_name}`} className="w-full h-full object-cover rounded-full" />
-                            ) : (
-                              <User className="w-8 h-8 text-gray-400" />
-                            )}
+                          <div className={`w-16 h-16 rounded-full flex items-center justify-center ${
+                            noProviderPreference ? 'bg-roam-blue text-white' : 'bg-gray-100'
+                          }`}>
+                            <User className="w-8 h-8" />
                           </div>
                           <div className="flex-1">
-                            <h3 className="font-semibold">{provider.first_name} {provider.last_name}</h3>
-                            {provider.provider_role && (
-                              <p className="text-sm text-gray-600 capitalize">
-                                {provider.provider_role}
-                              </p>
-                            )}
-                            <div className="flex items-center mt-2">
-                              <span className="text-yellow-500">★</span>
-                              {provider.review_count > 0 ? (
-                                <>
-                                  <span className="text-sm ml-1">{provider.rating.toFixed(1)}</span>
-                                  <span className="text-sm text-gray-500 ml-1">({provider.review_count} {provider.review_count === 1 ? 'review' : 'reviews'})</span>
-                                </>
-                              ) : (
-                                <span className="text-sm text-gray-500 ml-1">No reviews yet</span>
-                              )}
-                            </div>
+                            <h3 className="font-semibold text-lg">No Preference</h3>
+                            <p className="text-sm text-gray-600 mt-1">
+                              Business will assign a provider for you
+                            </p>
                           </div>
                         </div>
                       </CardContent>
                     </Card>
-                  ))}
-                </div>
+                    
+                    {providers.map((provider) => (
+                      <Card
+                        key={provider.id}
+                        className={`cursor-pointer transition-all ${
+                          selectedProvider?.id === provider.id && !noProviderPreference
+                            ? 'ring-2 ring-roam-blue border-roam-blue'
+                            : 'hover:shadow-md'
+                        }`}
+                        onClick={() => {
+                          setSelectedProvider(provider);
+                          setNoProviderPreference(false);
+                        }}
+                      >
+                        <CardContent className="p-4">
+                          <div className="flex items-center space-x-4">
+                            <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center">
+                              {provider.image_url ? (
+                                <img src={provider.image_url} alt={`${provider.first_name} ${provider.last_name}`} className="w-full h-full object-cover rounded-full" />
+                              ) : (
+                                <User className="w-8 h-8 text-gray-400" />
+                              )}
+                            </div>
+                            <div className="flex-1">
+                              <h3 className="font-semibold">{provider.first_name} {provider.last_name}</h3>
+                              {provider.provider_role && (
+                                <p className="text-sm text-gray-600 capitalize">
+                                  {provider.provider_role}
+                                </p>
+                              )}
+                              <div className="flex items-center mt-2">
+                                <span className="text-yellow-500">★</span>
+                                {provider.review_count > 0 ? (
+                                  <>
+                                    <span className="text-sm ml-1">{provider.rating.toFixed(1)}</span>
+                                    <span className="text-sm text-gray-500 ml-1">({provider.review_count} {provider.review_count === 1 ? 'review' : 'reviews'})</span>
+                                  </>
+                                ) : (
+                                  <span className="text-sm text-gray-500 ml-1">No reviews yet</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
