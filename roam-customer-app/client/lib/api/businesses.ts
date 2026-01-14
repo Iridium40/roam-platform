@@ -26,7 +26,7 @@ class BusinessesAPI extends BaseAPI {
 
   async getFeaturedBusinesses(accessToken?: string): Promise<BusinessRecord[]> {
     const response = await fetch(
-      `${this.baseURL}/rest/v1/business_profiles?is_featured=eq.true&select=*,business_locations(location_name,city,state)&limit=12`,
+      `${this.baseURL}/rest/v1/business_profiles?is_featured=eq.true&is_active=eq.true&verification_status=eq.approved&bank_connected=eq.true&stripe_account_id=is.not.null&providers.is_active=eq.true&providers.active_for_bookings=eq.true&providers.provider_role=in.(owner,provider)&select=*,business_locations(location_name,city,state),providers!inner(id,provider_role,is_active,active_for_bookings)&limit=12`,
       {
         method: "GET",
         headers: this.getHeaders(true, accessToken),
@@ -42,7 +42,7 @@ class BusinessesAPI extends BaseAPI {
 
   async getBusinessById(businessId: string, accessToken?: string): Promise<BusinessRecord> {
     const response = await fetch(
-      `${this.baseURL}/rest/v1/business_profiles?id=eq.${businessId}&select=*,business_locations(*),services(*),providers(*)`,
+      `${this.baseURL}/rest/v1/business_profiles?id=eq.${businessId}&is_active=eq.true&verification_status=eq.approved&bank_connected=eq.true&stripe_account_id=is.not.null&providers.is_active=eq.true&providers.active_for_bookings=eq.true&providers.provider_role=in.(owner,provider)&select=*,business_locations(*),services(*),providers!inner(*)`,
       {
         method: "GET",
         headers: this.getHeaders(true, accessToken),
@@ -59,7 +59,7 @@ class BusinessesAPI extends BaseAPI {
 
   async searchBusinesses(query: string, accessToken?: string): Promise<BusinessRecord[]> {
     const response = await fetch(
-      `${this.baseURL}/rest/v1/business_profiles?or=(business_name.ilike.%${query}%,business_description.ilike.%${query}%,business_type.ilike.%${query}%)&select=*,business_locations(location_name,city,state)`,
+      `${this.baseURL}/rest/v1/business_profiles?is_active=eq.true&verification_status=eq.approved&bank_connected=eq.true&stripe_account_id=is.not.null&providers.is_active=eq.true&providers.active_for_bookings=eq.true&providers.provider_role=in.(owner,provider)&or=(business_name.ilike.%${query}%,business_description.ilike.%${query}%,business_type.ilike.%${query}%)&select=*,business_locations(location_name,city,state),providers!inner(id,provider_role,is_active,active_for_bookings)`,
       {
         method: "GET",
         headers: this.getHeaders(true, accessToken),
@@ -75,7 +75,7 @@ class BusinessesAPI extends BaseAPI {
 
   async getBusinessesByType(businessType: string, accessToken?: string): Promise<BusinessRecord[]> {
     const response = await fetch(
-      `${this.baseURL}/rest/v1/business_profiles?business_type=eq.${businessType}&select=*,business_locations(location_name,city,state)`,
+      `${this.baseURL}/rest/v1/business_profiles?business_type=eq.${businessType}&is_active=eq.true&verification_status=eq.approved&bank_connected=eq.true&stripe_account_id=is.not.null&providers.is_active=eq.true&providers.active_for_bookings=eq.true&providers.provider_role=in.(owner,provider)&select=*,business_locations(location_name,city,state),providers!inner(id,provider_role,is_active,active_for_bookings)`,
       {
         method: "GET",
         headers: this.getHeaders(true, accessToken),
@@ -91,7 +91,7 @@ class BusinessesAPI extends BaseAPI {
 
   async getVerifiedBusinesses(accessToken?: string): Promise<BusinessRecord[]> {
     const response = await fetch(
-      `${this.baseURL}/rest/v1/business_profiles?verification_status=eq.verified&select=*,business_locations(location_name,city,state)`,
+      `${this.baseURL}/rest/v1/business_profiles?verification_status=eq.approved&is_active=eq.true&bank_connected=eq.true&stripe_account_id=is.not.null&providers.is_active=eq.true&providers.active_for_bookings=eq.true&providers.provider_role=in.(owner,provider)&select=*,business_locations(location_name,city,state),providers!inner(id,provider_role,is_active,active_for_bookings)`,
       {
         method: "GET",
         headers: this.getHeaders(true, accessToken),

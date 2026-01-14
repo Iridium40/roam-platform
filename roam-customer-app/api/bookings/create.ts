@@ -62,7 +62,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           id,
           business_name,
           contact_email,
-          business_type
+          business_type,
+          is_active,
+          verification_status,
+          bank_connected,
+          stripe_account_id
         )
       `)
       .eq('id', serviceId)
@@ -70,6 +74,46 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (serviceError || !service) {
       return res.status(404).json({ error: 'Service not found' });
+    }
+
+    // Eligibility gate: do not allow bookings for businesses that can't receive payouts
+    // or have no staff configured to receive bookings.
+    const business = service.business_profiles;
+    const businessId = service.business_id;
+
+    if (!business || !businessId) {
+      return res.status(400).json({ error: 'Service is not associated with a business' });
+    }
+
+    const businessEligible =
+      business.is_active === true &&
+      business.verification_status === 'approved' &&
+      business.bank_connected === true &&
+      !!business.stripe_account_id;
+
+    if (!businessEligible) {
+      return res.status(403).json({
+        error: 'Business is not currently accepting bookings',
+        code: 'BUSINESS_NOT_ELIGIBLE',
+      });
+    }
+
+    // Must have at least one active provider who is active_for_bookings
+    const { data: eligibleProvider, error: eligibleProviderError } = await supabase
+      .from('providers')
+      .select('id, provider_role')
+      .eq('business_id', businessId)
+      .eq('is_active', true)
+      .eq('active_for_bookings', true)
+      .in('provider_role', ['owner', 'provider'])
+      .limit(1)
+      .maybeSingle();
+
+    if (eligibleProviderError || !eligibleProvider) {
+      return res.status(403).json({
+        error: 'Business is not currently accepting bookings',
+        code: 'NO_BOOKABLE_PROVIDERS',
+      });
     }
 
     // For independent businesses, automatically assign to owner
@@ -82,13 +126,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .select('id')
         .eq('business_id', service.business_id)
         .eq('provider_role', 'owner')
+        .eq('is_active', true)
+        .eq('active_for_bookings', true)
         .single();
 
       if (ownerProvider && !ownerError) {
         assignedProviderId = ownerProvider.id;
         console.log('Auto-assigning booking to owner provider:', assignedProviderId);
       } else {
-        console.log('Owner provider not found for independent business');
+        return res.status(403).json({
+          error: 'Business is not currently accepting bookings',
+          code: 'OWNER_NOT_BOOKABLE',
+        });
       }
     }
 

@@ -161,12 +161,29 @@ export default function BusinessProfile() {
             cover_image_url,
             cover_image_position,
             verification_status,
-            business_hours
+            business_hours,
+            is_active,
+            bank_connected,
+            stripe_account_id,
+            providers!inner (
+              id,
+              provider_role,
+              is_active,
+              active_for_bookings
+            )
           `)
           .eq('id', businessId)
+          .eq('is_active', true)
+          .eq('verification_status', 'approved')
+          .eq('bank_connected', true)
+          .not('stripe_account_id', 'is', null)
+          .eq('providers.is_active', true)
+          .eq('providers.active_for_bookings', true)
+          .in('providers.provider_role', ['owner', 'provider'])
           .single();
 
         if (businessError) throw businessError;
+        if (!businessData) throw new Error('Business not available');
         
         // Fetch actual reviews for this business (with customer and service info)
         const { data: reviewsData, error: reviewsError } = await supabase

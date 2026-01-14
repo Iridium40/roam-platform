@@ -675,6 +675,15 @@ export default function BookService() {
             business_type,
             business_hours,
             is_active,
+            verification_status,
+            bank_connected,
+            stripe_account_id,
+            providers!inner (
+              id,
+              provider_role,
+              is_active,
+              active_for_bookings
+            ),
             business_locations!inner (
               city,
               state,
@@ -684,7 +693,14 @@ export default function BookService() {
           )
         `)
         .eq('service_id', serviceId)
-        .eq('is_active', true);
+        .eq('is_active', true)
+        .eq('business_profiles.is_active', true)
+        .eq('business_profiles.verification_status', 'approved')
+        .eq('business_profiles.bank_connected', true)
+        .not('business_profiles.stripe_account_id', 'is', null)
+        .eq('business_profiles.providers.is_active', true)
+        .eq('business_profiles.providers.active_for_bookings', true)
+        .in('business_profiles.providers.provider_role', ['owner', 'provider']);
 
       console.log('🏪 Business services query result:', {
         businessServiceData,
@@ -710,6 +726,9 @@ export default function BookService() {
       const availableBusinesses = businessServiceData.filter(item => {
         const business = item.business_profiles;
         if (!business || !business.is_active) return false;
+        if (business.verification_status !== 'approved') return false;
+        if (!business.bank_connected) return false;
+        if (!business.stripe_account_id) return false;
 
         // TODO: Add proper business hours validation here
         // For now, assume all businesses are available at selected time
