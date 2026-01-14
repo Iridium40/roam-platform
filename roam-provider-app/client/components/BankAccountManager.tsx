@@ -114,6 +114,9 @@ export default function BankAccountManager({ userId, businessId }: BankAccountMa
 
   // Open Stripe Dashboard
   const openStripeDashboard = async () => {
+    // Safari (and some browsers) will block popups if window.open happens after an await.
+    // Open a blank tab synchronously from the click event, then redirect it once we have the URL.
+    const popup = window.open("about:blank", "_blank", "noopener,noreferrer");
     try {
       const response = await fetch('/api/stripe/dashboard-link', {
         method: 'POST',
@@ -123,12 +126,25 @@ export default function BankAccountManager({ userId, businessId }: BankAccountMa
 
       if (response.ok) {
         const data = await response.json();
-        window.open(data.url, '_blank');
+        if (!popup) {
+          throw new Error("Popup was blocked. Please allow popups for this site and try again.");
+        }
+        popup.location.href = data.url;
+        try {
+          popup.opener = null;
+        } catch {
+          // ignore
+        }
       } else {
         throw new Error('Failed to create dashboard link');
       }
     } catch (error) {
       console.error('Error opening Stripe dashboard:', error);
+      try {
+        popup?.close();
+      } catch {
+        // ignore
+      }
       toast({
         title: "Error",
         description: "Failed to open Stripe dashboard",

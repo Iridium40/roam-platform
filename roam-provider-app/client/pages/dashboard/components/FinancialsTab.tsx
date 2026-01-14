@@ -787,6 +787,9 @@ export default function FinancialsTab({
 
   // Open Stripe Dashboard
   const openStripeDashboard = async () => {
+    // Safari (and some browsers) will block popups if window.open happens after an await.
+    // Open a blank tab synchronously from the click event, then redirect it once we have the URL.
+    const popup = window.open("about:blank", "_blank", "noopener,noreferrer");
     try {
       setStripeLoading(true);
       const res = await fetch('/api/stripe/dashboard-link', {
@@ -802,10 +805,18 @@ export default function FinancialsTab({
 
       const data = await res.json();
       
-      // Open the login link in a new tab
-      // This link will automatically log them into their Stripe Express Dashboard
-      // The link expires in 1 hour
-      window.open(data.url, '_blank');
+      if (!popup) {
+        throw new Error("Popup was blocked. Please allow popups for this site and try again.");
+      }
+
+      // Redirect the already-opened tab to Stripe
+      popup.location.href = data.url;
+      // Extra safety: ensure opener is null to prevent reverse-tabnabbing
+      try {
+        popup.opener = null;
+      } catch {
+        // ignore
+      }
 
       toast({
         title: "Opening Stripe Dashboard",
@@ -814,6 +825,12 @@ export default function FinancialsTab({
 
     } catch (error: any) {
       console.error('Error opening Stripe dashboard:', error);
+      // If we opened a blank tab, close it on failure so we don't leave junk tabs around.
+      try {
+        popup?.close();
+      } catch {
+        // ignore
+      }
       toast({
         title: "Error",
         description: error.message || "Failed to open Stripe dashboard. Please try again or contact support.",
