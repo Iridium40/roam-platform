@@ -941,6 +941,11 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
                 const needsServices = isServiceRole && servicesCount === 0;
                 const hasLocation = !!member.location_id && !!member.location_name;
                 const needsLocation = isServiceRole && !hasLocation;
+                // Treat an owner like a provider for UI "states" if they're actually bookable.
+                // Bookability here is derived from having at least 1 service + a location (same as the warnings/badges).
+                const showPerformanceStats =
+                  member.provider_role === "provider" ||
+                  (member.provider_role === "owner" && !needsServices && !needsLocation);
 
                 return (
                   <Card
@@ -1061,12 +1066,12 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
                         </div>
                       )}
 
-                    {member.provider_role === "provider" && (
+                    {showPerformanceStats && (
                       <div className="mt-3 pt-3 border-t">
                         <div className="grid grid-cols-3 gap-2 text-center">
                           <div>
                             <div className="text-lg font-semibold text-roam-blue">
-                              {member.customer_rating.toFixed(1)}
+                              {(member.customer_rating ?? 0).toFixed(1)}
                             </div>
                             <div className="text-xs text-foreground/60">
                               Rating
@@ -1074,7 +1079,7 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
                           </div>
                           <div>
                             <div className="text-lg font-semibold text-roam-blue">
-                              {member.recent_bookings}
+                              {member.recent_bookings ?? 0}
                             </div>
                             <div className="text-xs text-foreground/60">
                               Recent
