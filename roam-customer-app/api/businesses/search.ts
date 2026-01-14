@@ -231,7 +231,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .eq('bank_connected', true)
       .not('stripe_account_id', 'is', null)
       .eq('providers.is_active', true)
-      .eq('providers.active_for_bookings', true)
+      .eq('providers.provider_services.is_active', true)
       .in('providers.provider_role', ['owner', 'provider']);
 
     if (businessesError) {

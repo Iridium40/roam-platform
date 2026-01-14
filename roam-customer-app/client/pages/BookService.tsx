@@ -682,7 +682,10 @@ export default function BookService() {
               id,
               provider_role,
               is_active,
-              active_for_bookings
+              provider_services!inner (
+                id,
+                is_active
+              )
             ),
             business_locations!inner (
               city,
@@ -699,7 +702,7 @@ export default function BookService() {
         .eq('business_profiles.bank_connected', true)
         .not('business_profiles.stripe_account_id', 'is', null)
         .eq('business_profiles.providers.is_active', true)
-        .eq('business_profiles.providers.active_for_bookings', true)
+        .eq('business_profiles.providers.provider_services.is_active', true)
         .in('business_profiles.providers.provider_role', ['owner', 'provider']);
 
       console.log('🏪 Business services query result:', {
@@ -879,15 +882,14 @@ export default function BookService() {
             image_url,
             provider_role,
             business_id,
-            is_active,
-            active_for_bookings
+            is_active
           )
         `)
         .eq('service_id', serviceId)
         .eq('is_active', true)
         .eq('providers.business_id', businessId)
         .eq('providers.is_active', true)
-        .eq('providers.active_for_bookings', true);
+        .in('providers.provider_role', ['owner', 'provider']);
 
       if (error) throw error;
 
@@ -903,23 +905,16 @@ export default function BookService() {
         totalCount: filteredProviders?.length
       });
 
-      if (selectedBusiness?.business_type) {
-        if (selectedBusiness.business_type === 'individual') {
-          // For individual businesses, only show owners
-          filteredProviders = filteredProviders.filter(provider =>
-            provider.provider_role === 'owner'
-          );
-          console.log('Filtered for individual business (owners only):', filteredProviders.length);
-        } else {
-          // For non-individual businesses (agency), show both owners and providers
-          // All are already filtered by active_for_bookings = true
-          filteredProviders = filteredProviders.filter(provider =>
-            provider.provider_role === 'owner' || provider.provider_role === 'provider'
-          );
-          console.log('Filtered for non-individual business (owners and providers):', filteredProviders.length);
-        }
+      // Business types are now: 'independent' and 'business'
+      if (selectedBusiness?.business_type === 'independent') {
+        // Independent businesses only book the owner (and we skip provider selection elsewhere).
+        filteredProviders = filteredProviders.filter(
+          (provider) => provider.provider_role === 'owner',
+        );
+        console.log('Filtered for independent business (owners only):', filteredProviders.length);
       } else {
-        console.log('No business type available, showing all providers');
+        // Business: show both owners and providers (already filtered to those roles by query)
+        console.log('Filtered for business (owners and providers):', filteredProviders.length);
       }
 
       // Fetch ratings for each provider from reviews table
