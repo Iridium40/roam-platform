@@ -416,6 +416,14 @@ export default function Index() {
             service_categories,
             is_active,
             is_featured,
+            bank_connected,
+            stripe_account_id,
+            providers!inner (
+              id,
+              provider_role,
+              is_active,
+              active_for_bookings
+            ),
             business_locations (
               location_name,
               city,
@@ -435,6 +443,13 @@ export default function Index() {
           `,
           )
           .eq("is_featured", true)
+          .eq("is_active", true)
+          .eq("verification_status", "approved")
+          .eq("bank_connected", true)
+          .not("stripe_account_id", "is", null)
+          .eq("providers.is_active", true)
+          .eq("providers.active_for_bookings", true)
+          .in("providers.provider_role", ["owner", "provider"])
           .limit(12);
 
         const { data: businessesData, error: businessesError } =

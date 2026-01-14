@@ -73,6 +73,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .select('id')
         .ilike('business_name', `%${searchTerm}%`)
         .eq('is_active', true)
+        .eq('verification_status', 'approved')
+        .eq('bank_connected', true)
+        .not('stripe_account_id', 'is', null)
         .limit(100);
 
       if (businessNameError) {
@@ -192,6 +195,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         logo_url,
         image_url,
         is_active,
+        verification_status,
+        bank_connected,
+        stripe_account_id,
         business_locations (
           id,
           location_name,
@@ -204,6 +210,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           offers_mobile_services,
           mobile_service_radius
         ),
+        providers!inner (
+          id,
+          provider_role,
+          is_active,
+          active_for_bookings
+        ),
         business_service_subcategories (
           id,
           subcategory_id,
@@ -214,7 +226,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         )
       `)
       .in('id', businessIds)
-      .eq('is_active', true);
+      .eq('is_active', true)
+      .eq('verification_status', 'approved')
+      .eq('bank_connected', true)
+      .not('stripe_account_id', 'is', null)
+      .eq('providers.is_active', true)
+      .eq('providers.active_for_bookings', true)
+      .in('providers.provider_role', ['owner', 'provider']);
 
     if (businessesError) {
       console.error('Error fetching businesses:', businessesError);
