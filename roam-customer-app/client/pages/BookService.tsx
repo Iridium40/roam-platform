@@ -551,7 +551,7 @@ export default function BookService() {
           .from('system_config')
           .select('config_value')
           .eq('config_key', 'platform_fee_percentage')
-          .single();
+          .maybeSingle();
 
         if (error) {
           console.error('Error fetching platform fee:', error);
@@ -560,7 +560,7 @@ export default function BookService() {
           return;
         }
 
-        const feePercentage = parseFloat(data.config_value) || 0;
+        const feePercentage = parseFloat(data?.config_value ?? '') || 0;
         console.log('💰 Platform fee percentage loaded:', feePercentage + '%');
         setPlatformFeePercentage(feePercentage);
       } catch (error) {
