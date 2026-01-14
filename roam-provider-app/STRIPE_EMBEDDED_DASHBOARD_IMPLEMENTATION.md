@@ -17,7 +17,7 @@ You now have a **complete, production-ready** embedded Stripe Dashboard in your 
 
 ### **2. Instant Payout Requests** ✅
 - **Standard Payouts**: Free, arrives in 2 business days
-- **Instant Payouts**: 1.5% fee, arrives in ~30 minutes
+- **Instant Payouts**: Fee is shown in Stripe, funds can arrive in minutes
 - Smart fee calculator showing exact costs
 - Full balance quick-select option
 - Input validation and balance checking
@@ -215,7 +215,7 @@ You now have a **complete, production-ready** embedded Stripe Dashboard in your 
    - Monitor year-to-date earnings
 
 2. **Request Payouts**
-   - Choose instant (30 min, 1.5% fee) or standard (2 days, free)
+   - Choose instant (fee shown in Stripe) or standard (no fee shown in-app)
    - See exact fees before confirming
    - Get arrival time estimates
 
@@ -304,14 +304,14 @@ Refresh Balance & Payout History
 ### **Q: When will I receive my payout?**
 **A:** 
 - Standard: 2 business days (free)
-- Instant: ~30 minutes (1.5% fee)
+- Instant: Minutes (fee shown in Stripe)
 - Automatic: Based on your schedule setting
 
 ### **Q: What fees do you charge?**
 **A:**
 - Platform fee: 12% per booking
 - Stripe processing: 2.9% + $0.30 per transaction
-- Instant payout: 1.5% (optional, only if requested)
+- Instant payout: Fee shown in Stripe (optional, only if requested)
 - No monthly fees
 
 ### **Q: How do I update my bank account?**

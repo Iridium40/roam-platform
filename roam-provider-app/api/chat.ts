@@ -43,7 +43,7 @@ PROVIDER BENEFITS:
 - Technology platform handles booking, payments, and customer communication
 - Marketing and customer acquisition support
 - Professional development programs and ongoing training
-- Fair, transparent payment structure with weekly payouts
+- Fair, transparent payment structure with flexible payouts via Stripe Express
 - Business growth tools and performance analytics
 - Real-time notifications and customer communication
 - Insurance protection for both you and your customers
@@ -54,7 +54,7 @@ ROAM BY THE NUMBERS:
 - 400+ Wellness Professionals (150+ beauty providers, 80+ fitness trainers, 120+ therapists, 90+ healthcare specialists)
 - 50,000+ Appointments Facilitated
 - 4.8⭐ Average Platform Rating
-- Weekly payouts to providers
+- Flexible payouts via Stripe Express
 - 24/7 customer support
 
 === PROVIDER ACCOUNT MANAGEMENT ===
@@ -116,7 +116,7 @@ VIRTUAL SERVICES:
 === FINANCIAL MANAGEMENT ===
 
 PAYMENT PROCESSING:
-- Weekly payouts to connected bank accounts
+- Set your payout schedule in Stripe Express (and choose instant payouts when needed)
 - Track earnings and payment history
 - View detailed transaction reports
 - Manage tax information and documentation

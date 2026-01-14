@@ -304,7 +304,11 @@ export default function BankingPayoutSetup({
                 <div className="space-y-3 text-blue-700">
                   <div className="flex items-center gap-2">
                     <CheckCircle className="w-5 h-5 text-blue-600" />
-                    <span>Automatic weekly payouts every Thursday</span>
+                    <span>Set your own payout schedule in Stripe Express</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="w-5 h-5 text-blue-600" />
+                    <span>Optional instant payouts (minutes) to your bank account</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <CheckCircle className="w-5 h-5 text-blue-600" />
@@ -386,9 +390,9 @@ export default function BankingPayoutSetup({
                     <Banknote className="w-5 h-5 text-blue-600" />
                   </div>
                   <div>
-                    <h4 className="font-semibold text-blue-900">Automatic Weekly Payouts</h4>
+                    <h4 className="font-semibold text-blue-900">Payout Schedule & Instant Payouts</h4>
                     <p className="text-sm text-blue-800">
-                      Payments are automatically deposited to your bank account every Thursday
+                      You can set your payout schedule directly in Stripe Express. Need funds faster? Choose an instant payout to your bank account in minutes.
                     </p>
                   </div>
                 </div>

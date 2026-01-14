@@ -270,7 +270,7 @@ export function FAQ() {
     },
     {
       q: "When do I get paid?",
-      a: "Weekly direct deposits every Thursday for completed bookings from the previous week.",
+      a: "You set your payout schedule in Stripe Express. You can also choose an instant payout (minutes).",
     },
     {
       q: "Do I have to give customers my phone number?",

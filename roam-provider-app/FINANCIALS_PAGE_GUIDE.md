@@ -186,7 +186,7 @@ Tax info, bank accounts, and help
 2. Modal opens showing your available balance
 3. Select payout method:
    - **Standard** (Free, 2 days) ✓ Recommended
-   - **Instant** (1.5% fee, 30 minutes)
+   - **Instant** (fee shown in Stripe, typically minutes)
 4. Enter amount or click "Use full balance"
 5. See fee calculation (for instant)
 6. Click **"Request Payout"**
@@ -281,7 +281,7 @@ You'll receive:       $  985.00
 ### **Optimize Fees**
 - **Platform fee**: 12% (goes to ROAM)
 - **Stripe processing**: 2.9% + $0.30 (per transaction)
-- **Instant payout**: 1.5% (only if you choose instant)
+- **Instant payout**: Fee is shown in Stripe (only if you choose instant)
 - **Standard payout**: FREE (always use unless urgent)
 
 ---

@@ -1289,7 +1289,7 @@ export default function FinancialsTab({
                     <span>Stripe Payouts</span>
                   </CardTitle>
                   <CardDescription>
-                    Payouts are controlled by ROAM Platform and are automatically scheduled to be paid out once a week on Thursday to your connected bank account.
+                    Payouts are managed through Stripe Express. You can set your own payout schedule, and you can also choose an instant payout (funds delivered in minutes).
                   </CardDescription>
                 </div>
                 <Button
