@@ -92,27 +92,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const applicationId = application?.id || businessId;
     console.log("Application record:", application ? `Found (${application.id})` : "None found");
 
-    console.log("Updating business profile...");
-    // Update business profile to approved
-    // Note: business_profiles table does not have updated_at column
-    const { error: updateBusinessError } = await supabase
-      .from("business_profiles")
-      .update({
-        verification_status: "approved",
-        approved_at: new Date().toISOString(),
-        approved_by: adminUserId,
-        approval_notes: approvalNotes,
-      })
-      .eq("id", businessId);
+    console.log("Approving + activating business via RPC...");
+    const { data: activationResult, error: activationError } = await supabase
+      .rpc("approve_and_activate_business", {
+        p_business_id: businessId,
+        p_admin_user_id: adminUserId,
+        p_approval_notes: approvalNotes ?? null,
+      });
 
-    if (updateBusinessError) {
-      console.error("Error updating business profile:", updateBusinessError);
-      return res.status(500).json({
-        error: "Failed to update business profile",
-        details: updateBusinessError.message,
+    if (activationError) {
+      console.error("Error approving/activating business (RPC):", activationError);
+      const status = activationError.message === "Business profile not found" ? 404 : 400;
+      return res.status(status).json({
+        error: activationError.message || "Failed to approve and activate business",
+        details: activationError.details || activationError.hint || undefined,
       });
     }
-    console.log("Business profile updated successfully");
+    console.log("Business approved/activated successfully (RPC):", activationResult);
 
     console.log("Updating application status...");
     // Update application status (if application exists)
@@ -139,28 +135,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       console.log("No application record to update - skipping");
     }
 
-    console.log("Updating owner provider status...");
-    // IMPORTANT: Only approve providers with provider_role = 'owner' when business is approved.
-    // - Owners are automatically approved when their business is approved by admin
-    // - Dispatchers (provider_role = 'dispatcher') are approved within the provider app by owners
-    // - Regular providers (provider_role = 'provider') are approved within the provider app by owners or dispatchers
-    // This ensures proper separation: admin approves businesses/owners, business owners approve their staff
-    // Note: providers table does not have updated_at column
-    const { error: updateProviderError } = await supabase
-      .from("providers")
-      .update({
-        verification_status: "approved",
-        background_check_status: "approved",
-      })
-      .eq("business_id", businessId)
-      .eq("provider_role", "owner");
-
-    if (updateProviderError) {
-      console.error("Error updating owner provider:", updateProviderError);
-      // Continue anyway - don't block business approval
-    } else {
-      console.log("Owner provider status updated successfully");
-    }
+    // Owner provider approval/activation is handled by approve_and_activate_business RPC.
 
     console.log("Generating Phase 2 token...");
     // Get owner user_id from providers table: business_profiles.id -> providers.business_id -> providers.user_id
@@ -245,6 +220,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
     // Send approval email with Phase 2 onboarding link (if enabled)
+    const emailStatus: { sent: boolean; error?: string; warning?: string } = { sent: false };
     if (sendEmail) {
       console.log("Sending approval email with Phase 2 onboarding link...");
       console.log("Approval URL to include in email:", approvalUrl);
@@ -268,6 +244,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           const resendApiKey = process.env.RESEND_API_KEY || process.env.VITE_RESEND_API_KEY;
           if (!resendApiKey) {
             console.warn("Resend API key not found, skipping email");
+            emailStatus.sent = false;
+            emailStatus.warning = "Resend API key not configured; approval email was not sent.";
           } else {
             const emailPayload = {
               from: "ROAM Provider Support <providersupport@roamyourbestlife.com>",
@@ -375,19 +353,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
 
             if (resendResponse.ok) {
-              const emailResult = await resendResponse.json();
+              await resendResponse.json().catch(() => null);
               console.log("Approval email sent successfully to:", userEmail);
+              emailStatus.sent = true;
             } else {
               const errorText = await resendResponse.text();
               console.error("Error sending approval email:", errorText);
+              emailStatus.sent = false;
+              emailStatus.error = errorText || "Unknown Resend error";
               // Continue anyway - don't block approval on email failure
             }
           }
         } else {
           console.warn("No email address found for user:", userId);
+          emailStatus.sent = false;
+          emailStatus.warning = "No email address found for the owner user; approval email was not sent.";
         }
       } catch (emailError) {
         console.error("Error sending approval email:", emailError);
+        emailStatus.sent = false;
+        emailStatus.error = emailError instanceof Error ? emailError.message : "Unknown error sending email";
         // Continue anyway - don't block approval on email failure
       }
     }
@@ -397,6 +382,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       message: "Application approved successfully",
       approvalToken,
       approvalUrl,
+      activation: activationResult,
+      emailStatus,
       approvedAt: new Date().toISOString(),
       approvedBy: adminUserId,
     });

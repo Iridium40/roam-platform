@@ -761,7 +761,7 @@ export default function AdminVerification() {
 
       console.log("Status to set:", newStatus);
 
-      // VALIDATION: Check if all documents are verified before approving
+      // NOTE: Documents are optional. Approval should not be blocked by document status.
       if (action === "approve") {
         console.log("Checking if all documents are verified before approval...");
         
@@ -788,19 +788,17 @@ export default function AdminVerification() {
           (doc: any) => doc.verification_status !== "verified"
         );
         
-        // Documents are optional - businesses can be approved without documents
-        // But if documents exist, they must all be verified before approval
+        // If documents exist and some are unverified, warn but continue.
         if (documents.length > 0 && unverifiedDocs.length > 0) {
           const unverifiedList = unverifiedDocs
             .map((doc: any) => `${doc.document_type} (${doc.verification_status})`)
             .join(", ");
           
           toast({
-            title: "Cannot Approve Business",
-            description: `All uploaded documents must be verified before approval. Unverified documents: ${unverifiedList}`,
-            variant: "destructive",
+            title: "Unverified documents",
+            description: `Proceeding with approval. Unverified documents: ${unverifiedList}`,
+            variant: "default",
           });
-          return; // Stop the approval process
         }
         
         console.log("Proceeding with approval (documents verified or none uploaded)...");
@@ -851,8 +849,8 @@ export default function AdminVerification() {
         
         // Show success toast for approval
         toast({
-          title: "Business Approved",
-          description: "Business has been approved successfully.",
+          title: "Business Approved & Activated",
+          description: "Business is now active and the owner can log in.",
           variant: "default",
         });
 
@@ -1042,11 +1040,7 @@ export default function AdminVerification() {
           description: `Business verification ${actionText}`,
         });
       } else if (action === "approve") {
-        // For approval, show success message (email status handled above)
-        toast({
-          title: "Success",
-          description: `Business verification approved successfully`,
-        });
+        // Approval already shows a dedicated toast above (plus email status toast).
       } else if (action === "reject") {
         // For rejection, show success message (email status handled above)
         toast({
@@ -1700,20 +1694,20 @@ export default function AdminVerification() {
                                         (doc) => doc.verification_status !== "verified"
                                       );
                                       
-                                      // Documents are optional - only check if docs exist and are unverified
+                                      // Documents are optional - warn if docs exist and are unverified, but allow approval.
                                       if (docs.length > 0 && hasUnverifiedDocs) {
                                         toast({
-                                          title: "Cannot Approve",
-                                          description: "All uploaded documents must be verified before approval",
-                                          variant: "destructive",
+                                          title: "Unverified documents",
+                                          description: "Proceeding with approval even though some documents are not verified.",
+                                          variant: "default",
                                         });
-                                      } else {
-                                        handleVerificationAction(
-                                          business.id,
-                                          "approve",
-                                          "Business approved by admin",
-                                        );
                                       }
+                                      
+                                      handleVerificationAction(
+                                        business.id,
+                                        "approve",
+                                        "Business approved by admin",
+                                      );
                                     }}
                                     className="bg-green-600 hover:bg-green-700 flex-1"
                                   >
