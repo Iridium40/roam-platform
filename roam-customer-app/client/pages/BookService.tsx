@@ -443,10 +443,12 @@ export default function BookService() {
       setShowAuthModal(false);
       // Small delay to ensure modal closes before checkout
       setTimeout(() => {
-        handleCheckout();
+        handleCheckout().catch((err) => {
+          console.error('❌ Failed to resume checkout after login:', err);
+        });
       }, 300);
     }
-  }, [customer, pendingCheckout]);
+  }, [customer, pendingCheckout, handleCheckout]);
 
   // Load service details and promotion if applicable
   useEffect(() => {
@@ -3099,7 +3101,11 @@ export default function BookService() {
         isOpen={showAuthModal}
         onClose={() => {
           setShowAuthModal(false);
-          setPendingCheckout(false);
+          // If the user closes the modal before authenticating, cancel resume.
+          // If they *did* authenticate, keep pendingCheckout so the resume effect can fire.
+          if (!customer) {
+            setPendingCheckout(false);
+          }
         }}
         defaultTab="signin"
       />

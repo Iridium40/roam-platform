@@ -139,6 +139,8 @@ export default function BusinessProfile() {
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [expandedServices, setExpandedServices] = useState<Set<string>>(new Set());
   const [serviceSearchQuery, setServiceSearchQuery] = useState('');
+  const BUSINESS_DESCRIPTION_PREVIEW_LEN = 500;
+  const [isBusinessDescriptionExpanded, setIsBusinessDescriptionExpanded] = useState(false);
   const normalizedHours = normalizeBusinessHours(business?.business_hours);
 
   // Load business details and services
@@ -475,9 +477,32 @@ export default function BusinessProfile() {
                     </Button>
                   </div>
                 </div>
-                <p className="text-foreground/60 mb-4 break-words">
-                  {business.description}
-                </p>
+                {(() => {
+                  const fullDescription = business.description || '';
+                  const shouldTruncate = fullDescription.length > BUSINESS_DESCRIPTION_PREVIEW_LEN;
+                  const displayDescription =
+                    isBusinessDescriptionExpanded || !shouldTruncate
+                      ? fullDescription
+                      : fullDescription.slice(0, BUSINESS_DESCRIPTION_PREVIEW_LEN) + '...';
+
+                  return (
+                    <div className="mb-4">
+                      <p className="text-foreground/60 break-words">
+                        {displayDescription}
+                      </p>
+                      {shouldTruncate && (
+                        <button
+                          type="button"
+                          aria-expanded={isBusinessDescriptionExpanded}
+                          onClick={() => setIsBusinessDescriptionExpanded((v) => !v)}
+                          className="text-roam-blue hover:text-roam-blue/80 text-sm font-medium mt-2"
+                        >
+                          {isBusinessDescriptionExpanded ? 'Read less' : 'Read more...'}
+                        </button>
+                      )}
+                    </div>
+                  );
+                })()}
                 <div className="flex items-center gap-4 flex-wrap">
                   <div className="flex items-center">
                     <span className="text-yellow-500">★</span>
@@ -552,9 +577,32 @@ export default function BusinessProfile() {
               {activeTab === 'overview' && (
                 <div>
                   <h2 className="text-2xl font-semibold mb-4">About {business.business_name}</h2>
-                  <p className="text-gray-600 mb-6">
-                    {business.description}
-                  </p>
+                  {(() => {
+                    const fullDescription = business.description || '';
+                    const shouldTruncate = fullDescription.length > BUSINESS_DESCRIPTION_PREVIEW_LEN;
+                    const displayDescription =
+                      isBusinessDescriptionExpanded || !shouldTruncate
+                        ? fullDescription
+                        : fullDescription.slice(0, BUSINESS_DESCRIPTION_PREVIEW_LEN) + '...';
+
+                    return (
+                      <div className="mb-6">
+                        <p className="text-gray-600">
+                          {displayDescription}
+                        </p>
+                        {shouldTruncate && (
+                          <button
+                            type="button"
+                            aria-expanded={isBusinessDescriptionExpanded}
+                            onClick={() => setIsBusinessDescriptionExpanded((v) => !v)}
+                            className="text-roam-blue hover:text-roam-blue/80 text-sm font-medium mt-2"
+                          >
+                            {isBusinessDescriptionExpanded ? 'Read less' : 'Read more...'}
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })()}
                   <div className="grid md:grid-cols-2 gap-6">
                     <div>
                       <h3 className="font-semibold mb-2">Business Information</h3>
