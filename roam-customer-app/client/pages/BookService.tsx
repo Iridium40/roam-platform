@@ -1379,7 +1379,7 @@ export default function BookService() {
     return basePrice + addonsTotal + serviceFee;
   };
 
-  const handleCheckout = async () => {
+  async function handleCheckout() {
     // Check if user is authenticated first
     if (!customer) {
       setShowAuthModal(true);
@@ -1660,7 +1660,7 @@ export default function BookService() {
       
       console.error('Checkout error:', errorMessage);
     }
-  };
+  }
 
   if (loading) {
     return (
