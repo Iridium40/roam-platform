@@ -1,8 +1,13 @@
 import { Resend } from "resend";
 import { ROAM_EMAIL_TEMPLATES, ROAM_EMAIL_CONFIG } from "./emailTemplates";
 
-// Initialize Resend with API key
-const resend = new Resend(process.env.RESEND_API_KEY);
+function getResendApiKey(): string | undefined {
+  // In some deployments we store the secret as VITE_RESEND_API_KEY; accept both.
+  return process.env.RESEND_API_KEY || process.env.VITE_RESEND_API_KEY;
+}
+
+// Initialize Resend with API key (key is validated at send-time)
+const resend = new Resend(getResendApiKey() || "");
 
 interface EmailOptions {
   to: string;
@@ -23,13 +28,14 @@ export class EmailService {
   static async sendEmail(options: EmailOptions): Promise<boolean> {
     try {
       // Check if Resend API key is configured
-      if (!process.env.RESEND_API_KEY) {
-        console.error('❌ RESEND_API_KEY environment variable is not set');
+      const apiKey = getResendApiKey();
+      if (!apiKey) {
+        console.error('❌ Resend API key is not set (RESEND_API_KEY / VITE_RESEND_API_KEY)');
         return false;
       }
 
-      if (!process.env.RESEND_API_KEY.startsWith('re_')) {
-        console.error('❌ RESEND_API_KEY appears to be invalid (should start with "re_")');
+      if (!apiKey.startsWith('re_')) {
+        console.error('❌ Resend API key appears to be invalid (should start with "re_")');
         return false;
       }
 

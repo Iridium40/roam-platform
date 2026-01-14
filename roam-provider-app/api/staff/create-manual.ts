@@ -174,9 +174,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       console.log('✅ Staff member added to business (existing user)');
       
       // Send welcome email (without password since user already has account)
+      let emailSent = false;
       try {
         console.log('📧 Sending welcome email to existing user...');
-        const emailSent = await EmailService.sendEmail({
+        emailSent = await EmailService.sendEmail({
           to: email,
           subject: `Welcome to ${business.business_name} on ROAM! 🎉`,
           html: `
@@ -207,7 +208,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         provider: newProvider,
         temporaryPassword: null, // No password needed - user already has account
         existingUser: true,
-        emailSent: true
+        emailSent,
+        ...(emailSent ? {} : { warning: 'Staff member was added, but the welcome email could not be delivered.' }),
       });
     }
 
