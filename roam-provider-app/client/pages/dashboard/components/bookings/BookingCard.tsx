@@ -366,15 +366,23 @@ export default function BookingCard({
                         : booking.business_payment_transactions);
                     
                     const hasPayment = !!paymentTransaction;
-                    const paymentStatus = paymentTransaction?.payment_status || '';
+                    const paymentStatus = paymentTransaction?.payment_status || booking.payment_status || '';
                     const isAuthorized = paymentStatus === 'requires_capture' || paymentStatus === 'authorized';
                     const isCaptured = paymentStatus === 'succeeded' || paymentStatus === 'captured' || paymentStatus === 'completed';
+                    const isRefunded = paymentStatus === 'refunded' || 
+                      paymentTransaction?.transfer_reversed === true ||
+                      booking.booking_status === 'cancelled';
                     
                     let badgeClass = 'bg-yellow-50 text-yellow-700 border-yellow-200';
                     let badgeText = 'Payment Pending';
                     let BadgeIcon = AlertCircle;
                     
-                    if (hasPayment && isCaptured) {
+                    // Check for refund/cancellation first
+                    if (isRefunded && booking.booking_status === 'cancelled') {
+                      badgeClass = 'bg-gray-50 text-gray-600 border-gray-200';
+                      badgeText = 'Refunded';
+                      BadgeIcon = RotateCcw;
+                    } else if (hasPayment && isCaptured) {
                       badgeClass = 'bg-green-50 text-green-700 border-green-200';
                       badgeText = 'Paid';
                       BadgeIcon = CreditCard;
