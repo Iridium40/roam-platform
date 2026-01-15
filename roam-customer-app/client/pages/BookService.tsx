@@ -649,7 +649,12 @@ export default function BookService() {
       console.log('🏪 Business services API result:', {
         ok: resp.ok,
         count: businessServiceData?.length,
+        debug: json?.debug,
         error: json?.error,
+        businesses: businessServiceData?.map((b: any) => ({
+          name: b.business_profiles?.business_name,
+          id: b.business_id,
+        })),
       });
 
       if (!resp.ok) {

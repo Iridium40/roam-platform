@@ -84,17 +84,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Continue anyway - we still return the Stripe data
     }
 
-    // Also ensure business_profiles has the stripe_account_id
+    // Also ensure business_profiles has the stripe_account_id and bank_connected status
+    // Determine if bank is connected (can accept payments and receive payouts)
+    const isBankConnected = stripeAccount.charges_enabled && stripeAccount.payouts_enabled;
+    
+    const businessUpdate: Record<string, any> = {
+      stripe_account_id: connectAccount.account_id, // Correct column name per schema
+    };
+    
+    // If account is fully onboarded, mark bank as connected
+    if (isBankConnected) {
+      businessUpdate.bank_connected = true;
+      businessUpdate.bank_connected_at = new Date().toISOString();
+      // Also mark setup_completed if not already set
+      businessUpdate.setup_completed = true;
+      console.log("💳 Setting bank_connected = true for business:", businessId);
+    }
+    
     const { error: businessUpdateError } = await supabase
       .from("business_profiles")
-      .update({
-        stripe_account_id: connectAccount.account_id, // Correct column name per schema
-      })
+      .update(businessUpdate)
       .eq("id", businessId);
 
     if (businessUpdateError) {
-      console.error("Error updating business_profiles.stripe_account_id:", businessUpdateError);
+      console.error("Error updating business_profiles:", businessUpdateError);
       // Continue anyway
+    } else if (isBankConnected) {
+      console.log("✅ Updated business_profiles with bank_connected = true");
     }
 
     // Determine onboarding status

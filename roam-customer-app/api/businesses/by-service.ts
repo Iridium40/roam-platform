@@ -20,6 +20,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: "serviceId is required" });
     }
 
+    console.log(`DEBUG by-service - Fetching businesses for service: ${serviceId}`);
+
+    // First, get all business_services for this service (no filters)
+    const { data: debugData, error: debugError } = await supabase
+      .from("business_services")
+      .select("business_id, is_active")
+      .eq("service_id", serviceId);
+
+    console.log(`DEBUG by-service - All business_services for this service:`, JSON.stringify(debugData, null, 2));
+
+    // Now fetch with relaxed filters (no inner joins that might exclude)
     const { data, error } = await supabase
       .from("business_services")
       .select(
@@ -41,13 +52,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           verification_status,
           bank_connected,
           stripe_account_id,
-          providers!inner (
+          providers (
             id,
             provider_role,
             is_active,
             active_for_bookings
           ),
-          business_locations!inner (
+          business_locations (
             city,
             state,
             postal_code,
@@ -57,21 +68,58 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       `,
       )
       .eq("service_id", serviceId)
-      .eq("is_active", true)
-      .eq("business_profiles.is_active", true)
-      .eq("business_profiles.verification_status", "approved")
-      .eq("business_profiles.bank_connected", true)
-      .not("business_profiles.stripe_account_id", "is", null)
-      .eq("business_profiles.providers.is_active", true)
-      .eq("business_profiles.providers.active_for_bookings", true)
-      .in("business_profiles.providers.provider_role", ["owner", "provider"]);
+      .eq("is_active", true);
+
+    console.log(`DEBUG by-service - Raw data count: ${data?.length}`);
 
     if (error) {
       console.error("Error fetching businesses by service:", error);
       return res.status(500).json({ error: "Failed to fetch businesses", details: error.message });
     }
 
-    return res.status(200).json({ data: data || [] });
+    // Filter in JS to see what's being excluded and why
+    const eligibleBusinesses = (data || []).filter(item => {
+      const business = item.business_profiles as any;
+      if (!business) {
+        console.log(`DEBUG by-service - item excluded: no business_profiles`);
+        return false;
+      }
+      if (!business.is_active) {
+        console.log(`DEBUG by-service - ${business.business_name} excluded: is_active is false`);
+        return false;
+      }
+      if (business.verification_status !== "approved") {
+        console.log(`DEBUG by-service - ${business.business_name} excluded: verification_status is ${business.verification_status}`);
+        return false;
+      }
+      if (!business.bank_connected) {
+        console.log(`DEBUG by-service - ${business.business_name} excluded: bank_connected is false`);
+        return false;
+      }
+      if (!business.stripe_account_id) {
+        console.log(`DEBUG by-service - ${business.business_name} excluded: stripe_account_id is null`);
+        return false;
+      }
+      // Check providers
+      const bookableProviders = (business.providers || []).filter(
+        (p: any) => p.is_active && p.active_for_bookings && ["owner", "provider"].includes(p.provider_role)
+      );
+      if (bookableProviders.length === 0) {
+        console.log(`DEBUG by-service - ${business.business_name} excluded: no bookable providers`, business.providers);
+        return false;
+      }
+      // Check locations
+      if (!business.business_locations || business.business_locations.length === 0) {
+        console.log(`DEBUG by-service - ${business.business_name} excluded: no business_locations`);
+        return false;
+      }
+      console.log(`DEBUG by-service - ${business.business_name} is ELIGIBLE`);
+      return true;
+    });
+
+    console.log(`DEBUG by-service - Final eligible: ${eligibleBusinesses.length} out of ${data?.length}`);
+
+    return res.status(200).json({ data: eligibleBusinesses, debug: { total: data?.length, eligible: eligibleBusinesses.length } });
   } catch (err) {
     console.error("Unexpected error fetching businesses by service:", err);
     return res.status(500).json({

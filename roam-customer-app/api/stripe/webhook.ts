@@ -1974,17 +1974,33 @@ async function handleAccountUpdated(account: Stripe.Account) {
       console.log('✅ Updated stripe_connect_accounts record:', existingAccount.id);
     }
 
-    // Also ensure business_profiles has the stripe_account_id
+    // Also ensure business_profiles has the stripe_account_id and bank_connected status
     if (existingAccount.business_id) {
+      // Determine if bank is connected (can accept payments and receive payouts)
+      const isBankConnected = account.charges_enabled && account.payouts_enabled;
+      
+      const businessUpdate: Record<string, any> = {
+        stripe_account_id: account.id,
+      };
+      
+      // If account is fully onboarded, mark bank as connected
+      if (isBankConnected) {
+        businessUpdate.bank_connected = true;
+        businessUpdate.bank_connected_at = new Date().toISOString();
+        // Also mark setup_completed if not already set
+        businessUpdate.setup_completed = true;
+        console.log('💳 Setting bank_connected = true for business:', existingAccount.business_id);
+      }
+      
       const { error: businessUpdateError } = await supabase
         .from('business_profiles')
-        .update({
-          stripe_account_id: account.id,
-        })
+        .update(businessUpdate)
         .eq('id', existingAccount.business_id);
 
       if (businessUpdateError) {
-        console.error('❌ Error updating business_profiles.stripe_account_id:', businessUpdateError);
+        console.error('❌ Error updating business_profiles:', businessUpdateError);
+      } else if (isBankConnected) {
+        console.log('✅ Updated business_profiles with bank_connected = true');
       }
     }
 

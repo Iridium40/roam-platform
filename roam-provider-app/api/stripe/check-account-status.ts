@@ -75,6 +75,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         })
         .eq("account_id", connectAccount.account_id);
 
+      // Also update business_profiles if account is fully onboarded
+      const isBankConnected = stripeAccount.charges_enabled && stripeAccount.payouts_enabled;
+      if (isBankConnected) {
+        console.log("💳 Account fully onboarded, updating business_profiles.bank_connected for business:", businessId);
+        await supabase
+          .from("business_profiles")
+          .update({
+            stripe_account_id: stripeAccount.id,
+            bank_connected: true,
+            bank_connected_at: new Date().toISOString(),
+            setup_completed: true,
+          })
+          .eq("id", businessId);
+        console.log("✅ Updated business_profiles with bank_connected = true");
+      }
+
       return res.status(200).json({
         hasAccount: true,
         accountId: stripeAccount.id,

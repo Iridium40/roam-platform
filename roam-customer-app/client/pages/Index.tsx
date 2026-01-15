@@ -402,8 +402,16 @@ export default function Index() {
         }
 
         // Fetch featured businesses via server API (bypasses RLS joins in production)
+        console.log("🏪 Fetching featured businesses from /api/businesses/featured...");
         const businessesResponse = await fetch("/api/businesses/featured");
         const businessesJson = await businessesResponse.json().catch(() => ({}));
+        console.log("🏪 Featured businesses API response:", {
+          status: businessesResponse.status,
+          ok: businessesResponse.ok,
+          data: businessesJson?.data,
+          debug: businessesJson?.debug,
+          error: businessesJson?.error,
+        });
         const businessesData = businessesJson?.data || [];
         const businessesError = businessesResponse.ok ? null : (businessesJson?.error || "Failed to fetch featured businesses");
 
