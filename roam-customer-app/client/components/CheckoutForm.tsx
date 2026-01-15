@@ -372,6 +372,12 @@ export function CheckoutForm({ bookingDetails, clientSecret, onSuccess, onError 
             console.error('Error saving payment method:', saveError);
             // Don't fail the payment - just continue without saving
             // User can still complete payment, just won't save the card
+            // But notify the user that their card won't be saved
+            toast({
+              title: "Card not saved",
+              description: "Your payment will still go through, but we couldn't save your card for future use.",
+              variant: "default",
+            });
           }
         }
 

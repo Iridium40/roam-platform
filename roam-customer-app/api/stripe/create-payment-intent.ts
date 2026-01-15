@@ -388,6 +388,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         : `ROAM Booking: ${service?.name || 'Service'}`,
       capture_method: captureMethod, // Manual for new bookings, automatic for add more services
       confirm: false, // Explicitly set to false - will be confirmed on frontend
+      // IMPORTANT: setup_future_usage enables saving payment methods for future use
+      // This allows the customer's card to be saved and reused for future bookings
+      setup_future_usage: 'off_session',
       metadata: {
         bookingId: bookingId || '',
         customerId,
