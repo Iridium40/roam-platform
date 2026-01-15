@@ -1381,37 +1381,6 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
                     )}
                   </div>
                 </div>
-
-                {/* Cover Image Upload */}
-                <div className="space-y-2">
-                  <Label>Cover Image</Label>
-                  <div className="space-y-2">
-                    {selectedStaff.cover_image_url && (
-                      <div className="relative w-full h-32 rounded-lg overflow-hidden">
-                        <img
-                          src={selectedStaff.cover_image_url}
-                          alt="Cover"
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                    )}
-                    <div className="flex items-center gap-2">
-                      <Input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleCoverImageUpload}
-                        disabled={coverImageUploading}
-                        className="cursor-pointer flex-1"
-                      />
-                      {coverImageUploading && (
-                        <Loader2 className="h-5 w-5 animate-spin text-roam-blue" />
-                      )}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Upload a cover photo (JPG, PNG, or GIF)
-                    </p>
-                  </div>
-                </div>
               </TabsContent>
 
               <TabsContent value="services" className="space-y-4 mt-4">

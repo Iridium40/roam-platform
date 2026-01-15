@@ -42,6 +42,7 @@ interface Service {
   min_price: number;
   duration_minutes: number;
   image_url?: string;
+  delivery_type?: string;
 }
 
 interface Business {
@@ -93,43 +94,17 @@ interface CustomerLocation {
 
 // Helper functions for delivery types
 const getDeliveryTypes = (business: Business): string[] => {
-  // Safety check: ensure delivery_types is an array
-  if (business.delivery_types) {
-    // If it's already an array, use it
-    if (Array.isArray(business.delivery_types)) {
-      return business.delivery_types;
-    }
-    // If it's an object or string, try to handle it gracefully
-    console.warn('delivery_types is not an array:', business.delivery_types);
+  // Safety check: ensure delivery_types is an array with actual values
+  if (business.delivery_types && Array.isArray(business.delivery_types) && business.delivery_types.length > 0) {
+    return business.delivery_types;
   }
 
-  // Otherwise, determine based on business type/name (intelligent defaults)
-  const businessName = business.business_name.toLowerCase();
-  const description = business.description?.toLowerCase() || '';
+  // If delivery_types is not set or empty, fall back to defaults
+  // This should rarely happen as delivery_type comes from business_services
+  console.warn('No delivery_types set for business, using defaults:', business.business_name);
 
-  // Mobile services (likely to travel to customers)
-  if (businessName.includes('mobile') ||
-      businessName.includes('home') ||
-      businessName.includes('house') ||
-      description.includes('mobile') ||
-      description.includes('your location') ||
-      description.includes('on-site')) {
-    return ['customer_location', 'business_location'];
-  }
-
-  // Virtual services (online consultations, therapy, etc.)
-  if (businessName.includes('virtual') ||
-      businessName.includes('online') ||
-      businessName.includes('telehealth') ||
-      businessName.includes('consultation') ||
-      description.includes('virtual') ||
-      description.includes('video call')) {
-    return ['virtual', 'business_location'];
-  }
-
-  // Default: most businesses offer services at their location
-  // Some also offer mobile services
-  return ['business_location', 'customer_location'];
+  // Default: business location only (safest fallback)
+  return ['business_location'];
 };
 
 // Note: getDeliveryTypeLabel and getDeliveryTypeIcon are now imported from utils/deliveryTypeHelpers.tsx
@@ -723,15 +698,26 @@ export default function BookService() {
           : 0;
         const reviewCount = ratingData?.count || 0;
         
-        // Map delivery_type to delivery_types array
+        // Map delivery_type to delivery_types array based on business_services.delivery_type
         let deliveryTypes: string[] = [];
         if (item.delivery_type) {
-          if (item.delivery_type === 'both' || item.delivery_type === 'both_locations') {
+          const dt = item.delivery_type.toLowerCase();
+          if (dt === 'both' || dt === 'both_locations') {
             deliveryTypes = ['business_location', 'customer_location'];
+          } else if (dt === 'mobile') {
+            // 'mobile' is an alias for customer_location
+            deliveryTypes = ['customer_location'];
+          } else if (dt === 'business' || dt === 'in_store' || dt === 'in-store') {
+            deliveryTypes = ['business_location'];
           } else {
             deliveryTypes = [item.delivery_type];
           }
+        } else {
+          // Default to business_location if not specified
+          deliveryTypes = ['business_location'];
         }
+        
+        console.log(`📍 Business "${item.business_profiles.business_name}" delivery_type: "${item.delivery_type}" → deliveryTypes:`, deliveryTypes);
         
         return {
           id: item.business_profiles.id,
@@ -1032,6 +1018,23 @@ export default function BookService() {
   };
 
   const handleNext = async () => {
+    // Helper to determine if we should skip location selection
+    const shouldSkipLocationSelection = (deliveryTypes: string[]) => {
+      // Skip if service is virtual
+      if (service?.delivery_type === 'virtual') {
+        return true;
+      }
+      // Skip if only one delivery type and it's virtual
+      if (deliveryTypes.length === 1 && deliveryTypes[0] === 'virtual') {
+        return true;
+      }
+      // Skip if only one delivery type (will auto-select)
+      if (deliveryTypes.length === 1) {
+        return true;
+      }
+      return false;
+    };
+
     switch (currentStep) {
       case 'datetime':
         if (selectedDate && selectedTime) {
@@ -1042,11 +1045,24 @@ export default function BookService() {
             // Check delivery types for the selected business
             const deliveryTypes = getDeliveryTypes(selectedBusiness);
             
+            // If service is virtual, auto-select virtual and skip location step
+            if (service?.delivery_type === 'virtual') {
+              setSelectedDeliveryType('virtual');
+              
+              // Skip provider step for independent businesses
+              if (selectedBusiness?.business_type === 'independent') {
+                setNoProviderPreference(true);
+                setSelectedProvider(null);
+                setCurrentStep('summary');
+              } else {
+                setCurrentStep('provider');
+              }
+            }
             // If only one delivery type, auto-select and skip delivery-location step
-            if (deliveryTypes.length === 1) {
+            else if (deliveryTypes.length === 1) {
               setSelectedDeliveryType(deliveryTypes[0]);
               
-              // Load locations if needed
+              // Load locations if needed (not for virtual)
               if (deliveryTypes[0] === 'business_location') {
                 loadBusinessLocations(selectedBusiness.id);
               } else if (deliveryTypes[0] === 'customer_location') {
@@ -1080,18 +1096,38 @@ export default function BookService() {
           // Check delivery types for the selected business
           const deliveryTypes = getDeliveryTypes(selectedBusiness);
           
+          // If service is virtual, auto-select virtual and skip location step
+          if (service?.delivery_type === 'virtual') {
+            setSelectedDeliveryType('virtual');
+            
+            // Skip provider step for independent businesses
+            if (selectedBusiness?.business_type === 'independent') {
+              setNoProviderPreference(true);
+              setSelectedProvider(null);
+              setCurrentStep('summary');
+            } else {
+              setCurrentStep('provider');
+            }
+          }
           // If only one delivery type, auto-select and skip delivery-location step
-          if (deliveryTypes.length === 1) {
+          else if (deliveryTypes.length === 1) {
             setSelectedDeliveryType(deliveryTypes[0]);
             
-            // Load locations if needed
+            // Load locations if needed (not for virtual)
             if (deliveryTypes[0] === 'business_location') {
               loadBusinessLocations(selectedBusiness.id);
             } else if (deliveryTypes[0] === 'customer_location') {
               loadCustomerLocations();
             }
             
-            setCurrentStep('provider');
+            // Skip provider step for independent businesses
+            if (selectedBusiness?.business_type === 'independent') {
+              setNoProviderPreference(true);
+              setSelectedProvider(null);
+              setCurrentStep('summary');
+            } else {
+              setCurrentStep('provider');
+            }
           } else {
             // Multiple delivery types available, go to delivery-location selection
             setCurrentStep('delivery-location');
@@ -1756,8 +1792,8 @@ export default function BookService() {
                 </>
               )}
               
-              {/* Step 3: Delivery & Location (if applicable) */}
-              {selectedBusiness && (getDeliveryTypes(selectedBusiness).length > 1 || getDeliveryTypes(selectedBusiness).some(type => type !== 'virtual')) && (
+              {/* Step 3: Delivery & Location (if applicable - skip for virtual services) */}
+              {selectedBusiness && service?.delivery_type !== 'virtual' && (getDeliveryTypes(selectedBusiness).length > 1 || getDeliveryTypes(selectedBusiness).some(type => type !== 'virtual')) && (
                 <>
                   <div className="w-8 h-0.5 bg-gray-300"></div>
                   <div className={`flex items-center ${currentStep === 'delivery-location' ? 'text-roam-blue' : 'text-gray-400'}`}>
