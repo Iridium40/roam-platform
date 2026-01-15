@@ -401,65 +401,16 @@ export default function Index() {
           setPopularServices(transformedPopular);
         }
 
-        // Fetch featured businesses with their subcategories
-        const businessesResponse = await supabase
-          .from("business_profiles")
-          .select(
-            `
-            id,
-            business_name,
-            business_type,
-            logo_url,
-            image_url,
-            cover_image_url,
-            verification_status,
-            service_categories,
-            is_active,
-            is_featured,
-            bank_connected,
-            stripe_account_id,
-            providers!inner (
-              id,
-              provider_role,
-              is_active,
-              active_for_bookings
-            ),
-            business_locations (
-              location_name,
-              city,
-              state
-            ),
-            business_services (
-              service_id,
-              is_active,
-              services (
-                subcategory_id,
-                service_subcategories (
-                  id,
-                  service_subcategory_type
-                )
-              )
-            )
-          `,
-          )
-          .eq("is_featured", true)
-          .eq("is_active", true)
-          .eq("verification_status", "approved")
-          .eq("bank_connected", true)
-          .not("stripe_account_id", "is", null)
-          .eq("providers.is_active", true)
-          .eq("providers.active_for_bookings", true)
-          .in("providers.provider_role", ["owner", "provider"])
-          .limit(12);
-
-        const { data: businessesData, error: businessesError } =
-          businessesResponse;
+        // Fetch featured businesses via server API (bypasses RLS joins in production)
+        const businessesResponse = await fetch("/api/businesses/featured");
+        const businessesJson = await businessesResponse.json().catch(() => ({}));
+        const businessesData = businessesJson?.data || [];
+        const businessesError = businessesResponse.ok ? null : (businessesJson?.error || "Failed to fetch featured businesses");
 
         // Check for authentication errors
         const authErrors = [
           featuredServicesResponse,
           popularServicesResponse,
-          businessesResponse,
         ].filter((response) => response.status === 401);
 
         if (authErrors.length > 0 && retryCount === 0) {
@@ -477,10 +428,7 @@ export default function Index() {
           }
         }
 
-        logger.debug("Featured businesses query result:", {
-          businessesData,
-          businessesError,
-        });
+        logger.debug("Featured businesses query result:", { businessesData, businessesError });
 
         if (!businessesError && businessesData) {
           const transformedBusinesses = (businessesData as BusinessQueryResult[]).map((business) => {

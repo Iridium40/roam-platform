@@ -640,78 +640,21 @@ export default function BookService() {
         return;
       }
 
-      console.log('🏪 Fetching business services with pricing...');
+      console.log('🏪 Fetching business services with pricing (server API)...');
 
-      // First, try a simple query to see if business_services table exists
-      console.log('🔍 Testing business_services table access...');
-      const { data: testBusinessServices, error: testError } = await supabase
-        .from('business_services')
-        .select('business_id, service_id, business_price, is_active')
-        .eq('service_id', serviceId)
-        .limit(5);
+      const resp = await fetch(`/api/businesses/by-service?serviceId=${encodeURIComponent(serviceId)}`);
+      const json = await resp.json().catch(() => ({}));
+      const businessServiceData = json?.data || [];
 
-      console.log('🔍 Test query result:', { testBusinessServices, testError });
-
-      if (testError) {
-        console.log('❌ business_services table query failed, using fallback approach');
-        throw new Error(`business_services query failed: ${testError.message}`);
-      }
-
-      // If test query works, try the full query
-      const { data: businessServiceData, error: businessServiceError } = await supabase
-        .from('business_services')
-        .select(`
-          business_id,
-          business_price,
-          business_duration_minutes,
-          delivery_type,
-          is_active,
-          business_profiles (
-            id,
-            business_name,
-            business_description,
-            image_url,
-            logo_url,
-            business_type,
-            business_hours,
-            is_active,
-            verification_status,
-            bank_connected,
-            stripe_account_id,
-            providers!inner (
-              id,
-              provider_role,
-              is_active,
-              provider_services!inner (
-                id,
-                is_active
-              )
-            ),
-            business_locations!inner (
-              city,
-              state,
-              postal_code,
-              is_primary
-            )
-          )
-        `)
-        .eq('service_id', serviceId)
-        .eq('is_active', true)
-        .eq('business_profiles.is_active', true)
-        .eq('business_profiles.verification_status', 'approved')
-        .eq('business_profiles.bank_connected', true)
-        .not('business_profiles.stripe_account_id', 'is', null)
-        .eq('business_profiles.providers.is_active', true)
-        .eq('business_profiles.providers.provider_services.is_active', true)
-        .in('business_profiles.providers.provider_role', ['owner', 'provider']);
-
-      console.log('🏪 Business services query result:', {
-        businessServiceData,
-        businessServiceError,
-        count: businessServiceData?.length
+      console.log('🏪 Business services API result:', {
+        ok: resp.ok,
+        count: businessServiceData?.length,
+        error: json?.error,
       });
 
-      if (businessServiceError) throw businessServiceError;
+      if (!resp.ok) {
+        throw new Error(json?.error || json?.details || 'Failed to load businesses');
+      }
 
       if (!businessServiceData || businessServiceData.length === 0) {
         console.log('⚠️ No businesses offer this service (business_services is empty).');
@@ -869,34 +812,14 @@ export default function BookService() {
 
     setProvidersLoading(true);
     try {
-      // Only load providers that explicitly offer this service
-      const { data, error } = await supabase
-        .from('provider_services')
-        .select(`
-          provider_id,
-          providers:provider_id!inner (
-            id,
-            user_id,
-            first_name,
-            last_name,
-            image_url,
-            provider_role,
-            business_id,
-            is_active
-          )
-        `)
-        .eq('service_id', serviceId)
-        .eq('is_active', true)
-        .eq('providers.business_id', businessId)
-        .eq('providers.is_active', true)
-        .in('providers.provider_role', ['owner', 'provider']);
-
-      if (error) throw error;
+      const resp = await fetch(
+        `/api/providers/by-service?serviceId=${encodeURIComponent(serviceId)}&businessId=${encodeURIComponent(businessId)}`,
+      );
+      const json = await resp.json().catch(() => ({}));
+      if (!resp.ok) throw new Error(json?.error || json?.details || "Failed to load providers");
 
       // Apply filtering logic based on business type and provider role
-      let filteredProviders = (data || [])
-        .map((row: any) => row.providers)
-        .filter(Boolean);
+      let filteredProviders = (json?.data || []) as any[];
 
       console.log('Provider filtering debug:', {
         businessType: selectedBusiness?.business_type,
@@ -917,53 +840,17 @@ export default function BookService() {
         console.log('Filtered for business (owners and providers):', filteredProviders.length);
       }
 
-      // Fetch ratings for each provider from reviews table
-      const providerIds = filteredProviders.map(p => p.id);
-      if (providerIds.length === 0) {
-        setProviders([]);
-        return;
-      }
-      
-      // Get all reviews for these providers
-      const { data: reviewsData } = await supabase
-        .from('reviews')
-        .select('provider_id, overall_rating')
-        .in('provider_id', providerIds)
-        .eq('is_approved', true);
-      
-      // Calculate ratings per provider
-      const providerRatings: Record<string, { total: number; count: number }> = {};
-      if (reviewsData) {
-        reviewsData.forEach(review => {
-          if (review.provider_id) {
-            if (!providerRatings[review.provider_id]) {
-              providerRatings[review.provider_id] = { total: 0, count: 0 };
-            }
-            providerRatings[review.provider_id].total += review.overall_rating || 0;
-            providerRatings[review.provider_id].count += 1;
-          }
-        });
-      }
-
-      // Transform data to match Provider interface with actual ratings
-      const providerData = filteredProviders.map(provider => {
-        const ratingData = providerRatings[provider.id];
-        const rating = ratingData && ratingData.count > 0 
-          ? ratingData.total / ratingData.count 
-          : 0;
-        const reviewCount = ratingData?.count || 0;
-        
-        return {
-          id: provider.id,
-          user_id: provider.user_id,
-          first_name: provider.first_name,
-          last_name: provider.last_name,
-          image_url: provider.image_url,
-          provider_role: provider.provider_role,
-          rating: rating,
-          review_count: reviewCount,
-        };
-      });
+      // Ratings already included by the API endpoint
+      const providerData = filteredProviders.map((provider: any) => ({
+        id: provider.id,
+        user_id: provider.user_id,
+        first_name: provider.first_name,
+        last_name: provider.last_name,
+        image_url: provider.image_url,
+        provider_role: provider.provider_role,
+        rating: provider.rating || 0,
+        review_count: provider.review_count || 0,
+      }));
 
       setProviders(providerData);
 

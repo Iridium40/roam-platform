@@ -679,6 +679,17 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
   };
 
   const handleDeleteStaff = async (staffId: string) => {
+    const staffMember = staff.find((s) => s.id === staffId);
+    // Hard guard: never allow deleting the owner.
+    if (staffMember?.provider_role === "owner") {
+      toast({
+        title: "Cannot Remove Owner",
+        description: "Business owners cannot be removed. Transfer ownership first if needed.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from("providers")
@@ -1136,38 +1147,40 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
                             <Edit className="w-4 h-4" />
                           </Button>
 
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="text-red-600 hover:bg-red-50"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>
-                                  Remove Staff Member
-                                </AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  This will permanently remove{" "}
-                                  {member.first_name} {member.last_name} from
-                                  your team. This action cannot be undone.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => handleDeleteStaff(member.id)}
-                                  className="bg-red-600 hover:bg-red-700"
+                          {member.provider_role !== "owner" && (
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="text-red-600 hover:bg-red-50"
                                 >
-                                  Remove
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>
+                                    Remove Staff Member
+                                  </AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    This will permanently remove{" "}
+                                    {member.first_name} {member.last_name} from
+                                    your team. This action cannot be undone.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => handleDeleteStaff(member.id)}
+                                    className="bg-red-600 hover:bg-red-700"
+                                  >
+                                    Remove
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          )}
                         </div>
                       </div>
                     )}

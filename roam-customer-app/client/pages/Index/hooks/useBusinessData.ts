@@ -12,56 +12,11 @@ export const useBusinessData = () => {
       try {
         setLoading(true);
 
-        // Fetch featured businesses
-        const businessesResponse = await supabase
-          .from("business_profiles")
-          .select(
-            `
-            id,
-            business_name,
-            business_type,
-            business_description,
-            logo_url,
-            image_url,
-            cover_image_url,
-            verification_status,
-            is_featured,
-            bank_connected,
-            stripe_account_id,
-            providers!inner (
-              id,
-              provider_role,
-              is_active,
-              active_for_bookings
-            ),
-            business_locations (
-              location_name,
-              city,
-              state
-            )
-          `,
-          )
-          .eq("is_featured", true)
-          .eq("is_active", true)
-          .eq("verification_status", "approved")
-          .eq("bank_connected", true)
-          .not("stripe_account_id", "is", null)
-          .eq("providers.is_active", true)
-          .eq("providers.active_for_bookings", true)
-          .in("providers.provider_role", ["owner", "provider"])
-          .limit(12);
-
-        const { data: businessesData, error: businessesError } = businessesResponse;
-
-        // Check for authentication errors
-        if (businessesResponse.status === 401 && retryCount === 0) {
-          const { data: refreshData, error: refreshError } =
-            await supabase.auth.refreshSession();
-
-          if (!refreshError && refreshData?.session) {
-            return await fetchBusinessData(1);
-          }
-        }
+        // Fetch featured businesses via server API (bypasses RLS joins in production)
+        const businessesResponse = await fetch("/api/businesses/featured");
+        const businessesJson = await businessesResponse.json().catch(() => ({}));
+        const businessesData = businessesJson?.data || [];
+        const businessesError = businessesResponse.ok ? null : (businessesJson?.error || "Failed to fetch featured businesses");
 
         if (!businessesError && businessesData) {
           const transformedBusinesses = businessesData.map((business: any) => ({
@@ -80,6 +35,8 @@ export const useBusinessData = () => {
               : "Florida",
           }));
           setFeaturedBusinesses(transformedBusinesses);
+        } else if (businessesError) {
+          logger.error("Error fetching featured businesses:", businessesError);
         }
       } catch (error: unknown) {
         logger.error("Error fetching business data:", error);

@@ -311,6 +311,45 @@ export function createServer() {
     }
   );
 
+  // Featured businesses route (server-side to bypass RLS joins)
+  app.get("/api/businesses/featured",
+    async (req, res) => {
+      try {
+        const featuredHandler = await import("../api/businesses/featured");
+        await featuredHandler.default(req, res);
+      } catch (error) {
+        console.error("Error importing featured businesses handler:", error);
+        res.status(500).json({ error: "Failed to load featured businesses handler" });
+      }
+    }
+  );
+
+  // Businesses-by-service route (server-side to bypass RLS joins)
+  app.get("/api/businesses/by-service",
+    async (req, res) => {
+      try {
+        const handler = await import("../api/businesses/by-service");
+        await handler.default(req, res);
+      } catch (error) {
+        console.error("Error importing businesses by-service handler:", error);
+        res.status(500).json({ error: "Failed to load businesses by-service handler" });
+      }
+    }
+  );
+
+  // Providers-by-service route (server-side to bypass RLS joins)
+  app.get("/api/providers/by-service",
+    async (req, res) => {
+      try {
+        const handler = await import("../api/providers/by-service");
+        await handler.default(req, res);
+      } catch (error) {
+        console.error("Error importing providers by-service handler:", error);
+        res.status(500).json({ error: "Failed to load providers by-service handler" });
+      }
+    }
+  );
+
   // Favorites routes
   app.get("/api/favorites/service",
     async (req, res) => {
