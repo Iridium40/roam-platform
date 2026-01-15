@@ -124,21 +124,34 @@ export default function BankAccountManager({ userId, businessId }: BankAccountMa
         body: JSON.stringify({ business_id: businessId }),
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        if (!popup) {
-          throw new Error("Popup was blocked. Please allow popups for this site and try again.");
-        }
-        popup.location.href = data.url;
-        try {
-          popup.opener = null;
-        } catch {
-          // ignore
-        }
-      } else {
-        throw new Error('Failed to create dashboard link');
+      const data = await response.json();
+      
+      // Check for URL in response (could be url or fallbackUrl)
+      const targetUrl = data.url || data.fallbackUrl;
+      
+      if (!targetUrl) {
+        throw new Error(data.error || data.details || 'No dashboard URL returned');
       }
-    } catch (error) {
+
+      if (!popup) {
+        throw new Error("Popup was blocked. Please allow popups for this site and try again.");
+      }
+      
+      popup.location.href = targetUrl;
+      try {
+        popup.opener = null;
+      } catch {
+        // ignore
+      }
+      
+      // Show a helpful message if there's additional info
+      if (data.message) {
+        toast({
+          title: "Opening Stripe",
+          description: data.message,
+        });
+      }
+    } catch (error: any) {
       console.error('Error opening Stripe dashboard:', error);
       try {
         popup?.close();
@@ -147,7 +160,7 @@ export default function BankAccountManager({ userId, businessId }: BankAccountMa
       }
       toast({
         title: "Error",
-        description: "Failed to open Stripe dashboard",
+        description: error.message || "Failed to open Stripe dashboard. Please try again.",
         variant: "destructive",
       });
     }

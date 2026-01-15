@@ -1313,15 +1313,27 @@ export default function FinancialsTab({
                     Payouts are managed through Stripe Express. You can set your own payout schedule, and you can also choose an instant payout (funds delivered in minutes).
                   </CardDescription>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={exportStripePayoutsToCSV}
-                  className="flex items-center space-x-2"
-                >
-                  <Download className="w-4 h-4" />
-                  <span>Export CSV</span>
-                </Button>
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={openStripeDashboard}
+                    disabled={stripeLoading}
+                    className="flex items-center space-x-2"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    <span>Manage Payouts in Stripe</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={exportStripePayoutsToCSV}
+                    className="flex items-center space-x-2"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>Export CSV</span>
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
@@ -1460,7 +1472,7 @@ export default function FinancialsTab({
                       <Building2 className="w-5 h-5" />
                       <span>Booking Earnings</span>
                     </CardTitle>
-                    <CardDescription>Earnings from confirmed bookings (paid out weekly on Fridays)</CardDescription>
+                    <CardDescription>Earnings from confirmed bookings</CardDescription>
                   </div>
                   <Button
                     variant="outline"
