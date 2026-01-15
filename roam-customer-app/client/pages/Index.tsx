@@ -47,6 +47,7 @@ import {
   Palette,
   Wrench,
   Briefcase,
+  BadgeCheck,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import React, { useState, useEffect, useMemo, useCallback, Suspense, lazy } from "react";
@@ -470,6 +471,7 @@ export default function Index() {
                 ? `${business.business_locations.city}, ${business.business_locations.state}`
                 : "Florida",
               verification_status: business.verification_status,
+              is_verified: business.verification_status === 'approved',
               is_featured: business.is_featured,
               years_in_business: 5, // Default years
             };
@@ -1512,10 +1514,13 @@ export default function Index() {
                       {/* Content Section */}
                       <div className="px-6 pt-12 pb-6 space-y-6">
                         {/* Business Name */}
-                        <div>
-                          <h3 className="font-bold text-xl text-gray-900 group-hover:text-roam-blue transition-colors leading-tight mb-1">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-bold text-xl text-gray-900 group-hover:text-roam-blue transition-colors leading-tight">
                             {business.name}
                           </h3>
+                          {business.is_verified && (
+                            <BadgeCheck className="w-5 h-5 text-green-500 flex-shrink-0" aria-label="Verified Provider" />
+                          )}
                         </div>
 
                         {/* Specialties */}
@@ -1677,10 +1682,13 @@ export default function Index() {
                               {/* Content Section */}
                               <div className="px-6 pt-12 pb-6 space-y-6">
                                 {/* Business Name */}
-                                <div>
-                                  <h3 className="font-bold text-xl text-gray-900 group-hover:text-roam-blue transition-colors leading-tight mb-1">
+                                <div className="flex items-center gap-2">
+                                  <h3 className="font-bold text-xl text-gray-900 group-hover:text-roam-blue transition-colors leading-tight">
                                     {business.name}
                                   </h3>
+                                  {business.is_verified && (
+                                    <BadgeCheck className="w-5 h-5 text-green-500 flex-shrink-0" aria-label="Verified Provider" />
+                                  )}
                                 </div>
 
                                 {/* Specialties */}

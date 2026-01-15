@@ -24,7 +24,8 @@ import {
   ExternalLink,
   ArrowRight,
   ArrowLeft,
-  Info
+  Info,
+  BadgeCheck
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { Header } from "@/components/Header";
@@ -46,6 +47,7 @@ interface Business {
   image_url: string | null;
   rating: number;
   review_count: number;
+  verification_status?: string;
   business_locations?: BusinessLocation[];
   business_service_subcategories?: BusinessServiceSubcategory[];
 }
@@ -813,9 +815,14 @@ export default function BusinessResults() {
                               {/* Business Header with More Info Button */}
                               <div className="flex items-start justify-between mb-2">
                           <div className="flex-1 min-w-0">
-                                  <h3 className="font-semibold text-base sm:text-lg mb-1 truncate">
-                              {business.business_name}
-                            </h3>
+                                  <div className="flex items-center gap-1.5 mb-1">
+                                    <h3 className="font-semibold text-base sm:text-lg truncate">
+                                      {business.business_name}
+                                    </h3>
+                                    {business.verification_status === 'approved' && (
+                                      <BadgeCheck className="w-4 h-4 sm:w-5 sm:h-5 text-green-500 flex-shrink-0" aria-label="Verified Provider" />
+                                    )}
+                                  </div>
                                   <div className="flex items-center space-x-3 sm:space-x-4 text-xs sm:text-sm text-gray-600">
                               <div className="flex items-center">
                                       <Star className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-500 mr-1 fill-yellow-500" />

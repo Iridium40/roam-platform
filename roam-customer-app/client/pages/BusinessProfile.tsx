@@ -473,9 +473,14 @@ export default function BusinessProfile() {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-2">
-                  <h1 className="text-2xl sm:text-3xl font-bold text-foreground break-words">
-                    {business.business_name}
-                  </h1>
+                  <div className="flex items-center gap-2">
+                    <h1 className="text-2xl sm:text-3xl font-bold text-foreground break-words">
+                      {business.business_name}
+                    </h1>
+                    {business.verification_status === 'approved' && (
+                      <BadgeCheck className="w-6 h-6 text-green-500 flex-shrink-0" aria-label="Verified Provider" />
+                    )}
+                  </div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <FavoriteButton
                       type="business"
