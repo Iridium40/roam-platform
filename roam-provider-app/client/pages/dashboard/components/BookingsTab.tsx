@@ -686,9 +686,19 @@ export default function BookingsTab({
                           <div className="flex items-center justify-between sm:justify-end space-x-2 sm:space-x-3 flex-shrink-0">
                             <BookingStatusIndicator status={booking.booking_status || 'unknown'} size="sm" showProgress={false} />
                             <div className="text-right">
-                              <p className="text-base sm:text-lg font-bold text-gray-900">
-                                ${(parseFloat(booking.total_amount || "0")).toFixed(2)}
-                              </p>
+                              {(() => {
+                                const totalAmount = parseFloat(booking.total_amount || '0');
+                                const serviceFee = parseFloat(booking.service_fee || '0');
+                                const businessEarnings = totalAmount - serviceFee;
+                                return (
+                                  <>
+                                    <p className="text-base sm:text-lg font-bold text-green-600">
+                                      ${businessEarnings.toFixed(2)}
+                                    </p>
+                                    <p className="text-xs text-gray-400">Your earnings</p>
+                                  </>
+                                );
+                              })()}
                             </div>
                           </div>
                         </div>
@@ -897,9 +907,19 @@ export default function BookingsTab({
                           <div className="flex items-center justify-between sm:justify-end space-x-2 sm:space-x-3 flex-shrink-0">
                             <BookingStatusIndicator status={booking.booking_status || 'unknown'} size="sm" showProgress={false} />
                             <div className="text-right">
-                              <p className="text-base sm:text-lg font-bold text-gray-900">
-                                ${(parseFloat(booking.total_amount || "0")).toFixed(2)}
-                              </p>
+                              {(() => {
+                                const totalAmount = parseFloat(booking.total_amount || '0');
+                                const serviceFee = parseFloat(booking.service_fee || '0');
+                                const businessEarnings = totalAmount - serviceFee;
+                                return (
+                                  <>
+                                    <p className="text-base sm:text-lg font-bold text-green-600">
+                                      ${businessEarnings.toFixed(2)}
+                                    </p>
+                                    <p className="text-xs text-gray-400">Your earnings</p>
+                                  </>
+                                );
+                              })()}
                             </div>
                           </div>
                         </div>
@@ -1102,9 +1122,19 @@ export default function BookingsTab({
                           <div className="flex items-center justify-between sm:justify-end space-x-2 sm:space-x-3 flex-shrink-0">
                             <BookingStatusIndicator status={booking.booking_status || 'unknown'} size="sm" showProgress={false} />
                             <div className="text-right">
-                              <p className="text-base sm:text-lg font-bold text-gray-900">
-                                ${(parseFloat(booking.total_amount || "0")).toFixed(2)}
-                              </p>
+                              {(() => {
+                                const totalAmount = parseFloat(booking.total_amount || '0');
+                                const serviceFee = parseFloat(booking.service_fee || '0');
+                                const businessEarnings = totalAmount - serviceFee;
+                                return (
+                                  <>
+                                    <p className="text-base sm:text-lg font-bold text-green-600">
+                                      ${businessEarnings.toFixed(2)}
+                                    </p>
+                                    <p className="text-xs text-gray-400">Your earnings</p>
+                                  </>
+                                );
+                              })()}
                             </div>
                           </div>
                         </div>

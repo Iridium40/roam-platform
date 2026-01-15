@@ -636,7 +636,17 @@ export default function DashboardTab({
                       <Badge className={getStatusBadge(booking.booking_status).className}>
                         {getStatusBadge(booking.booking_status).label}
                       </Badge>
-                      <p className="text-sm font-medium mt-1">${(parseFloat(booking.total_amount || '0')).toFixed(2)}</p>
+                      {(() => {
+                        const totalAmount = parseFloat(booking.total_amount || '0');
+                        const serviceFee = parseFloat(booking.service_fee || '0');
+                        const businessEarnings = totalAmount - serviceFee;
+                        return (
+                          <p className="text-sm font-medium mt-1 text-green-600">
+                            ${businessEarnings.toFixed(2)}
+                            <span className="text-xs text-gray-400 block">Your earnings</span>
+                          </p>
+                        );
+                      })()}
                     </div>
                   </div>
                 );

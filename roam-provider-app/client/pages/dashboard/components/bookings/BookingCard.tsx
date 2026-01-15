@@ -414,11 +414,29 @@ export default function BookingCard({
                 </p>
               </div>
               
-              {/* Price */}
+              {/* Price - Show business earnings clearly */}
               <div className="text-right flex-shrink-0">
-                <div className="text-2xl font-bold text-blue-600">
-                  ${parseFloat(booking.total_amount || '0').toFixed(2)}
-                </div>
+                {(() => {
+                  const totalAmount = parseFloat(booking.total_amount || '0');
+                  const serviceFee = parseFloat(booking.service_fee || '0');
+                  const businessEarnings = totalAmount - serviceFee;
+                  
+                  return (
+                    <div>
+                      <div className="text-2xl font-bold text-green-600">
+                        ${businessEarnings.toFixed(2)}
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        Your earnings
+                      </p>
+                      {serviceFee > 0 && (
+                        <p className="text-xs text-gray-400">
+                          (${totalAmount.toFixed(2)} - ${serviceFee.toFixed(2)} fee)
+                        </p>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           </div>
