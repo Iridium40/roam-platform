@@ -1200,6 +1200,8 @@ export async function handleBookingCancellation(
             await supabase
               .from('business_payment_transactions')
               .update({
+                transfer_reversed: true,
+                transfer_reversed_at: new Date().toISOString(),
                 stripe_tax_reported: false, // Mark as needing tax report update
                 stripe_tax_report_error: `Transfer reversed due to cancellation. Reversal ID: ${reversal.id}`,
               })

@@ -1868,6 +1868,8 @@ async function handleTransferReversed(transfer: Stripe.Transfer) {
       const { error: updateError } = await supabase
         .from('business_payment_transactions')
         .update({
+          transfer_reversed: true,
+          transfer_reversed_at: new Date().toISOString(),
           stripe_tax_reported: false, // Mark as needing update
           stripe_tax_report_error: `Transfer reversed. Amount reversed: $${(transfer.amount_reversed / 100).toFixed(2)}`,
         })
