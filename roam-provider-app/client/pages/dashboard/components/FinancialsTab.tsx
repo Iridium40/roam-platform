@@ -1081,7 +1081,11 @@ export default function FinancialsTab({
               <p className="text-4xl font-bold text-gray-900 mt-2">
                 ${stripeBalance?.pending?.toFixed(2) || "0.00"}
               </p>
-              <p className="text-sm text-gray-500 mt-2">2-7 days to available</p>
+              <p className="text-sm text-gray-500 mt-2">
+                {stripeBalance?.pending > 0 
+                  ? "May include refunds in progress" 
+                  : "2-7 days to available"}
+              </p>
             </div>
             <div className="w-14 h-14 bg-blue-100 rounded-lg flex items-center justify-center">
               <Clock className="w-7 h-7 text-blue-600" />
