@@ -744,8 +744,8 @@ export default function ProviderDashboard() {
             <div className="flex items-center">
               <img
                 src="/default-placeholder_2.png"
-                alt="ROAM"
-                className="h-8 w-auto"
+                alt="ROAM Provider Management"
+                className="h-12 w-auto"
               />
             </div>
             
