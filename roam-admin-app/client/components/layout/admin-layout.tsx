@@ -5,7 +5,6 @@ import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ROAMLogo } from "@/components/ui/roam-logo";
 import { useToast } from "@/hooks/use-toast";
 import {
   DropdownMenu,
@@ -421,7 +420,11 @@ export function AdminLayout({
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="flex items-center justify-center p-6 border-b border-sidebar-border">
-            <ROAMLogo size="sm" showText={true} />
+            <img 
+              src="/admin_logo.png" 
+              alt="ROAM Provider Management" 
+              className="h-16 w-auto object-contain"
+            />
           </div>
 
           {/* Navigation */}
