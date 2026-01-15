@@ -2687,6 +2687,61 @@ export default function BookService() {
                   </div>
                 </div>
 
+                {/* Guest Information Section */}
+                <div className="bg-gray-50 rounded-lg p-6 mb-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="space-y-0.5">
+                      <h3 className="font-semibold">Booking for someone else?</h3>
+                      <p className="text-sm text-gray-500">
+                        Enter guest details if booking on behalf of another person
+                      </p>
+                    </div>
+                    <Switch
+                      id="guest-booking-toggle-summary"
+                      checked={isBookingForGuest}
+                      onCheckedChange={setIsBookingForGuest}
+                    />
+                  </div>
+
+                  {isBookingForGuest && (
+                    <div className="space-y-4 pt-4 border-t">
+                      <div>
+                        <Label htmlFor="guest-name-summary">Guest Name *</Label>
+                        <Input
+                          id="guest-name-summary"
+                          type="text"
+                          placeholder="Enter guest's full name"
+                          value={guestName}
+                          onChange={(e) => setGuestName(e.target.value)}
+                          className="mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="guest-email-summary">Guest Email</Label>
+                        <Input
+                          id="guest-email-summary"
+                          type="email"
+                          placeholder="guest@example.com"
+                          value={guestEmail}
+                          onChange={(e) => setGuestEmail(e.target.value)}
+                          className="mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="guest-phone-summary">Guest Phone *</Label>
+                        <Input
+                          id="guest-phone-summary"
+                          type="tel"
+                          placeholder="(555) 123-4567"
+                          value={guestPhone}
+                          onChange={(e) => setGuestPhone(e.target.value)}
+                          className="mt-1"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 {/* Addon Selection Section */}
                 {availableAddons.length > 0 && (
                   <div className="bg-gray-50 rounded-lg p-6 mb-6">
@@ -2776,68 +2831,6 @@ export default function BookService() {
                         </p>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-
-                {/* Guest Information Section */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">Guest Information</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <Label htmlFor="guest-booking-toggle" className="text-base font-medium">
-                          Booking for someone else?
-                        </Label>
-                        <p className="text-sm text-gray-500">
-                          Enter guest details if booking on behalf of another person
-                        </p>
-                      </div>
-                      <Switch
-                        id="guest-booking-toggle"
-                        checked={isBookingForGuest}
-                        onCheckedChange={setIsBookingForGuest}
-                      />
-                    </div>
-
-                    {isBookingForGuest && (
-                      <div className="mt-4 space-y-4 pt-4 border-t">
-                        <div>
-                          <Label htmlFor="guest-name">Guest Name</Label>
-                          <Input
-                            id="guest-name"
-                            type="text"
-                            placeholder="Enter guest's full name"
-                            value={guestName}
-                            onChange={(e) => setGuestName(e.target.value)}
-                            className="mt-1"
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="guest-email">Guest Email</Label>
-                          <Input
-                            id="guest-email"
-                            type="email"
-                            placeholder="guest@example.com"
-                            value={guestEmail}
-                            onChange={(e) => setGuestEmail(e.target.value)}
-                            className="mt-1"
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="guest-phone">Guest Phone</Label>
-                          <Input
-                            id="guest-phone"
-                            type="tel"
-                            placeholder="(555) 123-4567"
-                            value={guestPhone}
-                            onChange={(e) => setGuestPhone(e.target.value)}
-                            className="mt-1"
-                          />
-                        </div>
-                      </div>
-                    )}
                   </CardContent>
                 </Card>
 
