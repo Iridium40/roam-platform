@@ -89,7 +89,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .from('provider_bookings_enriched')
         .select(`
           id, booking_reference, booking_date, start_time, 
-          booking_status, total_amount, created_at, guest_name,
+          booking_status, total_amount, service_fee, created_at, guest_name,
           service_name, service_id,
           customer_first_name, customer_last_name, customer_email, customer_image_url, customer_id
         `)
@@ -199,7 +199,7 @@ async function fallbackStats(supabase: any, businessId: string, res: VercelRespo
       .from('provider_bookings_enriched')
       .select(`
         id, booking_reference, booking_date, start_time, 
-        booking_status, total_amount, created_at, guest_name,
+        booking_status, total_amount, service_fee, created_at, guest_name,
         service_name, service_id,
         customer_first_name, customer_last_name, customer_email, customer_image_url, customer_id
       `)
