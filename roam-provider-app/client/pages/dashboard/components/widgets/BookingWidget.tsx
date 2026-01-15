@@ -284,9 +284,6 @@ export const BookingWidget: React.FC<BookingWidgetProps> = ({ data, onRefresh })
                         <div>
                           <div className="text-sm font-medium text-gray-900">Customer</div>
                           <div className="text-sm text-gray-600">{booking.customer_name}</div>
-                          {booking.customer_email && (
-                            <div className="text-xs text-gray-500 mt-1">{booking.customer_email}</div>
-                          )}
                         </div>
                       </div>
 

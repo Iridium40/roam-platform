@@ -325,11 +325,12 @@ export default function BookingCard({
                   />
                 );
               } else {
+                const initial = booking.guest_name?.[0] || booking.customer_profiles?.first_name?.[0] || booking.customer_profiles?.last_name?.[0];
                 return (
                   <div className="w-full h-full bg-blue-600 rounded-lg flex items-center justify-center">
-                    {booking.customer_profiles?.first_name?.[0] || booking.customer_profiles?.last_name?.[0] ? (
+                    {initial ? (
                       <span className="text-white font-semibold text-lg">
-                        {booking.customer_profiles.first_name[0] || booking.customer_profiles.last_name[0]}
+                        {initial}
                       </span>
                     ) : (
                       <User className="w-7 h-7 text-white" />
@@ -404,13 +405,12 @@ export default function BookingCard({
                 </div>
                 <p className="text-sm text-gray-600 mt-0.5">
                   <span className="font-medium">Customer:</span>{" "}
-                  {booking.customer_profiles
-                    ? `${booking.customer_profiles.first_name || ""} ${booking.customer_profiles.last_name || ""}`
-                    : "Unknown Customer"
+                  {booking.guest_name
+                    ? booking.guest_name
+                    : booking.customer_profiles
+                      ? `${booking.customer_profiles.first_name || ""} ${booking.customer_profiles.last_name || ""}`
+                      : "Unknown Customer"
                   }
-                  {booking.customer_profiles?.phone && (
-                    <span className="text-gray-400 ml-2">• {booking.customer_profiles.phone}</span>
-                  )}
                 </p>
               </div>
               
@@ -667,11 +667,12 @@ export default function BookingCard({
                   />
                 );
               } else {
+                const initial = booking.guest_name?.[0] || booking.customer_profiles?.first_name?.[0] || booking.customer_profiles?.last_name?.[0];
                 return (
                   <div className="w-full h-full bg-blue-600 rounded-lg flex items-center justify-center">
-                    {booking.customer_profiles?.first_name?.[0] || booking.customer_profiles?.last_name?.[0] ? (
+                    {initial ? (
                       <span className="text-white font-semibold text-sm">
-                        {booking.customer_profiles.first_name[0] || booking.customer_profiles.last_name[0]}
+                        {initial}
                       </span>
                     ) : (
                       <User className="w-6 h-6 text-white" />
@@ -701,9 +702,11 @@ export default function BookingCard({
                   )}
                 </div>
                 <p className="text-sm text-gray-600 mt-0.5">
-                  {booking.customer_profiles
-                    ? `${booking.customer_profiles.first_name || ""} ${booking.customer_profiles.last_name || ""}`
-                    : "Unknown Customer"
+                  {booking.guest_name
+                    ? booking.guest_name
+                    : booking.customer_profiles
+                      ? `${booking.customer_profiles.first_name || ""} ${booking.customer_profiles.last_name || ""}`
+                      : "Unknown Customer"
                   }
                 </p>
               </div>
@@ -950,9 +953,11 @@ export default function BookingCard({
         onConfirm={handleDeclineConfirm}
         bookingDetails={{
           serviceName: booking.services?.name,
-          customerName: booking.customer_profiles 
-            ? `${booking.customer_profiles.first_name || ""} ${booking.customer_profiles.last_name || ""}`.trim()
-            : undefined,
+          customerName: booking.guest_name 
+            ? booking.guest_name
+            : booking.customer_profiles 
+              ? `${booking.customer_profiles.first_name || ""} ${booking.customer_profiles.last_name || ""}`.trim()
+              : undefined,
           bookingDate: booking.booking_date,
         }}
       />
@@ -993,9 +998,11 @@ export default function BookingCard({
               <div className="mt-3 p-3 bg-gray-50 rounded-lg">
                 <p className="text-sm font-medium text-gray-900">{booking.services?.name}</p>
                 <p className="text-sm text-gray-600">
-                  {booking.customer_profiles 
-                    ? `${booking.customer_profiles.first_name || ""} ${booking.customer_profiles.last_name || ""}`.trim()
-                    : "Customer"
+                  {booking.guest_name 
+                    ? booking.guest_name
+                    : booking.customer_profiles 
+                      ? `${booking.customer_profiles.first_name || ""} ${booking.customer_profiles.last_name || ""}`.trim()
+                      : "Customer"
                   } • {booking.booking_date} at {formatDisplayTime(booking.start_time)}
                 </p>
               </div>

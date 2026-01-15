@@ -709,9 +709,11 @@ export default function BookingsTab({
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 space-y-2 sm:space-y-0">
                           <div className="flex-1 min-w-0">
                             <p className="font-medium text-gray-900 text-sm truncate">
-                              Customer: {booking.customer_profiles?.first_name && booking.customer_profiles?.last_name
-                                ? `${booking.customer_profiles.first_name} ${booking.customer_profiles.last_name}`
-                                : booking.guest_name || "Alan Smith"}
+                              Customer: {booking.guest_name 
+                                ? booking.guest_name
+                                : booking.customer_profiles?.first_name && booking.customer_profiles?.last_name
+                                  ? `${booking.customer_profiles.first_name} ${booking.customer_profiles.last_name}`
+                                  : "Guest"}
                             </p>
                             <div className="flex items-center space-x-2 text-xs text-gray-600">
                               <MapPin className="w-3 h-3" />
@@ -930,9 +932,11 @@ export default function BookingsTab({
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 space-y-2 sm:space-y-0">
                           <div className="flex-1 min-w-0">
                             <p className="font-medium text-gray-900 text-sm truncate">
-                              Customer: {booking.customer_profiles?.first_name && booking.customer_profiles?.last_name
-                                ? `${booking.customer_profiles.first_name} ${booking.customer_profiles.last_name}`
-                                : booking.guest_name || "Alan Smith"}
+                              Customer: {booking.guest_name 
+                                ? booking.guest_name
+                                : booking.customer_profiles?.first_name && booking.customer_profiles?.last_name
+                                  ? `${booking.customer_profiles.first_name} ${booking.customer_profiles.last_name}`
+                                  : "Guest"}
                             </p>
                             <div className="flex items-center space-x-2 text-xs text-gray-600">
                               <MapPin className="w-3 h-3" />
@@ -1145,9 +1149,11 @@ export default function BookingsTab({
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 space-y-2 sm:space-y-0">
                           <div className="flex-1 min-w-0">
                             <p className="font-medium text-gray-900 text-sm truncate">
-                              Customer: {booking.customer_profiles?.first_name && booking.customer_profiles?.last_name
-                                ? `${booking.customer_profiles.first_name} ${booking.customer_profiles.last_name}`
-                                : booking.guest_name || "Alan Smith"}
+                              Customer: {booking.guest_name 
+                                ? booking.guest_name
+                                : booking.customer_profiles?.first_name && booking.customer_profiles?.last_name
+                                  ? `${booking.customer_profiles.first_name} ${booking.customer_profiles.last_name}`
+                                  : "Guest"}
                             </p>
                             <div className="flex items-center space-x-2 text-xs text-gray-600">
                               <MapPin className="w-3 h-3" />
@@ -1354,15 +1360,7 @@ export default function BookingsTab({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm font-medium text-gray-600">Name</label>
-                    <p className="text-sm">{selectedBooking.customer_profiles?.first_name} {selectedBooking.customer_profiles?.last_name}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-600">Email</label>
-                    <p className="text-sm">{selectedBooking.customer_profiles?.email}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-600">Phone</label>
-                    <p className="text-sm">{selectedBooking.customer_profiles?.phone || 'Not provided'}</p>
+                    <p className="text-sm">{selectedBooking.guest_name || `${selectedBooking.customer_profiles?.first_name || ''} ${selectedBooking.customer_profiles?.last_name || ''}`.trim() || 'Guest'}</p>
                   </div>
                 </div>
               </div>

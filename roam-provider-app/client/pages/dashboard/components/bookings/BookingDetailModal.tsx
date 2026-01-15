@@ -366,7 +366,8 @@ export default function BookingDetailModal({
                     />
                   ) : (
                     <span className="text-white font-semibold text-lg">
-                      {selectedBooking.customer_profiles?.first_name?.[0] || 
+                      {selectedBooking.guest_name?.[0] ||
+                       selectedBooking.customer_profiles?.first_name?.[0] || 
                        selectedBooking.customer_profiles?.last_name?.[0] || 
                        <User className="w-6 h-6" />}
                     </span>
@@ -375,33 +376,13 @@ export default function BookingDetailModal({
                 
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-gray-900 truncate">
-                    {selectedBooking.customer_profiles
-                      ? `${selectedBooking.customer_profiles.first_name || ""} ${selectedBooking.customer_profiles.last_name || ""}`.trim() || "Unknown Customer"
-                      : "Unknown Customer"
+                    {selectedBooking.guest_name
+                      ? selectedBooking.guest_name
+                      : selectedBooking.customer_profiles
+                        ? `${selectedBooking.customer_profiles.first_name || ""} ${selectedBooking.customer_profiles.last_name || ""}`.trim() || "Unknown Customer"
+                        : "Unknown Customer"
                     }
                   </p>
-                  
-                  {/* Contact info */}
-                  <div className="mt-1.5 space-y-1">
-                    {selectedBooking.customer_profiles?.email && (
-                      <a 
-                        href={`mailto:${selectedBooking.customer_profiles.email}`}
-                        className="flex items-center gap-2 text-sm text-gray-600 hover:text-blue-600 transition-colors"
-                      >
-                        <Mail className="h-3.5 w-3.5 flex-shrink-0" />
-                        <span className="truncate">{selectedBooking.customer_profiles.email}</span>
-                      </a>
-                    )}
-                    {selectedBooking.customer_profiles?.phone && (
-                      <a 
-                        href={`tel:${selectedBooking.customer_profiles.phone}`}
-                        className="flex items-center gap-2 text-sm text-gray-600 hover:text-blue-600 transition-colors"
-                      >
-                        <Phone className="h-3.5 w-3.5 flex-shrink-0" />
-                        <span>{selectedBooking.customer_profiles.phone}</span>
-                      </a>
-                    )}
-                  </div>
                 </div>
               </div>
             </CardContent>

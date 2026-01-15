@@ -618,9 +618,11 @@ export default function DashboardTab({
                       </div>
                       <div>
                         <p className="font-medium text-sm">
-                          {customerFirstName && customerLastName
-                            ? `${customerFirstName} ${customerLastName}`
-                            : booking.guest_name || "Guest"}
+                          {booking.guest_name
+                            ? booking.guest_name
+                            : customerFirstName && customerLastName
+                              ? `${customerFirstName} ${customerLastName}`
+                              : "Guest"}
                         </p>
                         <p className="text-xs text-gray-600">
                           {serviceName || "Service"} • {booking.booking_date}
