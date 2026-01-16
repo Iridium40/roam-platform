@@ -15,58 +15,13 @@ import {
 } from "lucide-react";
 import { ServiceIconPattern } from "@/components/ServiceIconPattern";
 
-function Check({ className = "w-5 h-5 text-green-500 mr-2" }: { className?: string }) {
-  return (
-    <svg className={className} fill="currentColor" viewBox="0 0 20 20" aria-hidden>
-      <path
-        fillRule="evenodd"
-        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-        clipRule="evenodd"
-      />
-    </svg>
-  );
-}
-
 export default function HowItWorks() {
   return (
     <div className="bg-background">
-      <Hero />
-      <Features />
-      <HowItWorksSteps />
       <WhyChooseROAM />
+      <HowItWorksSteps />
+      <Features />
       <FinalCTA />
-    </div>
-  );
-}
-
-function Hero() {
-  return (
-    <div className="relative overflow-hidden bg-gradient-to-br from-roam-blue to-roam-light-blue text-white">
-      {/* Service icon pattern overlay */}
-      <ServiceIconPattern />
-      
-      <div className="container py-20 md:py-28 relative">
-        <div className="max-w-4xl mx-auto text-center animate-fade-in">
-          <div className="inline-flex items-center gap-2 rounded-full bg-white/20 backdrop-blur-sm px-4 py-2 text-sm font-medium mb-6">
-            <TrendingUp className="w-4 h-4" />
-            Provider Platform Features
-          </div>
-          <h1 className="text-4xl md:text-6xl font-bold mb-6">
-            Everything You Need to Grow Your Wellness Business
-          </h1>
-          <p className="text-xl text-white/90 mb-8 max-w-3xl mx-auto">
-            Powerful tools to manage bookings, communicate with clients, track revenue, and scale your business—all in one intuitive platform.
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-4">
-            <Button asChild size="lg" className="bg-white text-roam-blue hover:bg-white/90 button-shine">
-              <Link to="/provider-portal">Get Started</Link>
-            </Button>
-            <Button asChild size="lg" className="bg-roam-yellow text-roam-blue hover:bg-roam-yellow/90 font-semibold">
-              <Link to="/contact">Talk to Our Team</Link>
-            </Button>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
@@ -158,32 +113,32 @@ function Features() {
   ];
 
   return (
-    <div className="container py-20">
-      <div className="text-center mb-16 animate-fade-in">
-        <h2 className="text-4xl md:text-5xl font-bold mb-4 gradient-text">
+    <div className="container py-12 md:py-16">
+      <div className="text-center mb-10">
+        <h2 className="text-3xl md:text-4xl font-bold mb-3">
           Powerful Features Built For You
         </h2>
-        <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-          Everything you need to manage bookings, communicate with clients, and grow your revenue—all in one intuitive platform.
+        <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+          Everything you need to manage and grow your business
         </p>
       </div>
 
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
         {cards.map((card, idx) => {
           const Icon = card.icon;
           return (
             <div 
               key={card.title} 
-              className="rounded-2xl border bg-card p-8 shadow-lg card-hover group"
-              style={{ animationDelay: `${idx * 100}ms` }}
+              className="rounded-2xl border bg-card p-6 shadow-lg card-hover group"
+              style={{ animationDelay: `${idx * 50}ms` }}
             >
               {/* Gradient icon container */}
-              <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-roam-blue to-roam-light-blue text-white mb-6 group-hover:scale-110 transition-transform">
-                <Icon className="w-8 h-8" />
+              <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-roam-blue to-roam-light-blue text-white mb-4 group-hover:scale-110 transition-transform">
+                <Icon className="w-6 h-6" />
             </div>
               
-              <h3 className="text-2xl font-bold mb-3">{card.title}</h3>
-              <p className="text-muted-foreground leading-relaxed mb-4">{card.description}</p>
+              <h3 className="text-xl font-bold mb-2">{card.title}</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed mb-3">{card.description}</p>
               
             <div
                 className="mt-4 overflow-hidden rounded-xl border bg-white cursor-zoom-in hover-scale"
@@ -264,31 +219,31 @@ function HowItWorksSteps() {
   ];
 
   return (
-    <div className="bg-gradient-to-b from-roam-light-blue/10 to-transparent py-20">
+    <div className="bg-muted/30 py-12 md:py-16">
       <div className="container">
-        <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-bold mb-4">How It Works</h2>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Get started in 4 simple steps and start growing your business
+        <div className="text-center mb-10">
+          <h2 className="text-3xl md:text-4xl font-bold mb-3">How It Works</h2>
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            Get started in 4 simple steps
           </p>
         </div>
 
-        <div className="max-w-5xl mx-auto grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="max-w-5xl mx-auto grid md:grid-cols-2 lg:grid-cols-4 gap-6">
           {steps.map((step, idx) => (
             <div key={step.number} className="relative">
               <div className="bg-card rounded-2xl p-6 shadow-lg border h-full card-hover">
                 {/* Gradient number badge */}
-                <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-roam-blue to-roam-light-blue text-white font-bold text-xl mb-4">
+                <div className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-gradient-to-br from-roam-blue to-roam-light-blue text-white font-bold text-lg mb-4">
                   {step.number}
                 </div>
-                <h3 className="text-xl font-bold mb-3">{step.title}</h3>
-                <p className="text-muted-foreground">{step.description}</p>
+                <h3 className="text-lg font-bold mb-2">{step.title}</h3>
+                <p className="text-sm text-muted-foreground">{step.description}</p>
               </div>
               
               {/* Arrow between steps */}
               {idx < steps.length - 1 && (
-                <div className="hidden lg:block absolute top-1/2 -right-4 transform -translate-y-1/2 z-10">
-                  <ArrowRight className="w-8 h-8 text-roam-blue" />
+                <div className="hidden lg:block absolute top-1/2 -right-3 transform -translate-y-1/2 z-10">
+                  <ArrowRight className="w-6 h-6 text-roam-blue/60" />
                 </div>
               )}
             </div>
@@ -334,31 +289,54 @@ function WhyChooseROAM() {
   ];
 
   return (
-    <div className="container py-20">
-      <div className="text-center mb-16">
-        <h2 className="text-4xl md:text-5xl font-bold mb-4">Why Choose ROAM?</h2>
-        <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-          Built specifically for wellness professionals who want to grow
-        </p>
+    <div className="relative overflow-hidden">
+      {/* Gradient header with page title */}
+      <div className="bg-gradient-to-br from-roam-blue to-roam-light-blue text-white py-12 md:py-16">
+        <ServiceIconPattern />
+        <div className="container relative">
+          <div className="max-w-3xl mx-auto text-center">
+            <h1 className="text-3xl md:text-5xl font-bold mb-3">
+              Why Choose ROAM?
+            </h1>
+            <p className="text-lg md:text-xl text-white/90">
+              Built specifically for wellness professionals who want to grow
+            </p>
+          </div>
+        </div>
       </div>
-
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
-        {benefits.map((benefit, idx) => {
-          const Icon = benefit.icon;
-          return (
-            <div 
-              key={benefit.title} 
-              className="bg-card rounded-2xl p-6 shadow-lg border card-hover"
-              style={{ animationDelay: `${idx * 100}ms` }}
-            >
-              <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-roam-blue to-roam-light-blue text-white mb-4">
-                <Icon className="w-6 h-6" />
+      
+      {/* Benefits grid */}
+      <div className="container py-12 md:py-16">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+          {benefits.map((benefit, idx) => {
+            const Icon = benefit.icon;
+            return (
+              <div 
+                key={benefit.title} 
+                className="bg-card rounded-2xl p-6 shadow-lg border card-hover"
+                style={{ animationDelay: `${idx * 50}ms` }}
+              >
+                <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-roam-blue to-roam-light-blue text-white mb-4">
+                  <Icon className="w-6 h-6" />
+                </div>
+                <h3 className="text-xl font-bold mb-2">{benefit.title}</h3>
+                <p className="text-muted-foreground">{benefit.description}</p>
               </div>
-              <h3 className="text-xl font-bold mb-2">{benefit.title}</h3>
-              <p className="text-muted-foreground">{benefit.description}</p>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
+        
+        {/* Quick CTA inline */}
+        <div className="text-center mt-10">
+          <div className="inline-flex flex-wrap items-center justify-center gap-4">
+            <Button asChild size="lg" className="bg-roam-blue text-white hover:bg-roam-blue/90 button-shine">
+              <Link to="/provider-portal">Get Started</Link>
+            </Button>
+            <Button asChild size="lg" variant="outline" className="border-roam-blue text-roam-blue hover:bg-roam-blue/10">
+              <Link to="/contact">Talk to Our Team</Link>
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -366,17 +344,17 @@ function WhyChooseROAM() {
 
 function FinalCTA() {
   return (
-    <div className="relative overflow-hidden bg-gradient-to-br from-roam-blue to-roam-light-blue text-white py-20">
+    <div className="relative overflow-hidden bg-gradient-to-br from-roam-blue to-roam-light-blue text-white py-12 md:py-16">
       {/* Service icon pattern overlay */}
       <ServiceIconPattern />
       
       <div className="container relative">
-        <div className="max-w-3xl mx-auto text-center">
-          <h2 className="text-4xl md:text-5xl font-bold mb-6">
+        <div className="max-w-2xl mx-auto text-center">
+          <h2 className="text-2xl md:text-3xl font-bold mb-4">
             Ready to Grow Your Wellness Business?
           </h2>
-          <p className="text-xl text-white/90 mb-8">
-            Join ROAM today and start connecting with customers who need your services.
+          <p className="text-lg text-white/90 mb-6">
+            Join ROAM today and start connecting with customers.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-4">
             <Button asChild size="lg" className="bg-white text-roam-blue hover:bg-white/90 button-shine">

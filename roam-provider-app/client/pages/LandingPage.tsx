@@ -13,10 +13,10 @@ export default function LandingPage() {
   return (
     <div className="bg-background">
       <Hero />
-      <Comparison />
-      <EarningsCalculator />
       <ValueProps />
       <HowItWorks />
+      <Comparison />
+      <EarningsCalculator />
       <CTA />
       <FAQ />
     </div>
