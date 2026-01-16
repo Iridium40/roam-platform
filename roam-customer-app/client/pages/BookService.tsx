@@ -257,11 +257,20 @@ export default function BookService() {
   // Exit confirmation state
   const [showExitConfirmation, setShowExitConfirmation] = useState(false);
   
-  // Guest booking state
+  // Guest booking state (booking on behalf of someone else as a logged-in user)
   const [isBookingForGuest, setIsBookingForGuest] = useState(false);
   const [guestName, setGuestName] = useState('');
   const [guestEmail, setGuestEmail] = useState('');
   const [guestPhone, setGuestPhone] = useState('');
+  
+  // Guest checkout state (checkout without creating an account)
+  const [isGuestCheckout, setIsGuestCheckout] = useState(false);
+  const [guestCheckoutInfo, setGuestCheckoutInfo] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+  });
 
   // Addon selection state
   const [availableAddons, setAvailableAddons] = useState<ServiceAddon[]>([]);
@@ -1303,11 +1312,33 @@ export default function BookService() {
   };
 
   async function handleCheckout() {
-    // Check if user is authenticated first
-    if (!customer) {
+    // Check if user is authenticated first (unless guest checkout is enabled)
+    if (!customer && !isGuestCheckout) {
       setShowAuthModal(true);
       setPendingCheckout(true);
       return;
+    }
+
+    // Validate guest checkout info if in guest checkout mode
+    if (isGuestCheckout && !customer) {
+      const { firstName, lastName, email, phone } = guestCheckoutInfo;
+      if (!firstName.trim() || !lastName.trim() || !email.trim()) {
+        toast({
+          title: "Guest Information Required",
+          description: "Please enter your name and email to continue.",
+          variant: "destructive",
+        });
+        return;
+      }
+      // Basic email validation
+      if (!/\S+@\S+\.\S+/.test(email)) {
+        toast({
+          title: "Invalid Email",
+          description: "Please enter a valid email address.",
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     // Ensure all necessary data is available
@@ -1395,18 +1426,44 @@ export default function BookService() {
       selectedAddons,
     });
 
+    // Determine guest info based on checkout type
+    let guestInfoForBooking: { name: string; email: string | null; phone: string | null };
+    
+    if (isGuestCheckout && !customer) {
+      // Guest checkout - use guest checkout info
+      guestInfoForBooking = {
+        name: `${guestCheckoutInfo.firstName.trim()} ${guestCheckoutInfo.lastName.trim()}`,
+        email: guestCheckoutInfo.email.trim(),
+        phone: guestCheckoutInfo.phone.trim() || null,
+      };
+    } else if (isBookingForGuest) {
+      // Logged-in user booking for someone else
+      guestInfoForBooking = {
+        name: guestName.trim(),
+        email: guestEmail.trim() || null,
+        phone: guestPhone.trim(),
+      };
+    } else {
+      // Regular logged-in user booking for themselves
+      guestInfoForBooking = {
+        name: `${customer!.first_name} ${customer!.last_name}`.trim(),
+        email: customer!.email,
+        phone: customer!.phone || null,
+      };
+    }
+
     const bookingDetails = {
       service_id: service.id,
       business_id: selectedBusiness.id,
-      customer_id: customer.id,
+      customer_id: customer?.id || null, // null for guest checkout
       provider_id: selectedProvider?.id || null,
       booking_date: selectedDate.toISOString().split('T')[0],
       start_time: formattedStartTime,
       // Store attendee/recipient info on the booking row.
-      // Stripe customer/payer remains the logged-in customer (handled server-side).
-      guest_name: isBookingForGuest ? guestName.trim() : `${customer.first_name} ${customer.last_name}`.trim(),
-      guest_email: isBookingForGuest ? (guestEmail.trim() || null) : customer.email,
-      guest_phone: isBookingForGuest ? guestPhone.trim() : (customer.phone || null),
+      // For guest checkout, this is the guest's info for notifications.
+      guest_name: guestInfoForBooking.name,
+      guest_email: guestInfoForBooking.email,
+      guest_phone: guestInfoForBooking.phone,
       delivery_type: deliveryType,
       business_location_id,
       customer_location_id,
@@ -1416,6 +1473,7 @@ export default function BookService() {
       total_amount: totalAmount,
       service_fee: serviceFee,
       remaining_balance: remainingBalance,
+      // Guest bookings are identified by customer_id being null
     };
 
     console.log('💳 Creating booking with pending status (payment to follow):', bookingDetails);
@@ -1424,30 +1482,35 @@ export default function BookService() {
       // Get auth headers - try multiple methods for Vercel compatibility
       let token: string | null = null;
       
-      // Method 1: Try getting fresh session
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.access_token) {
-          token = session.access_token;
-          console.log('✅ Using session token');
+      // Only try to get auth token if we have a customer (not guest checkout)
+      if (customer) {
+        // Method 1: Try getting fresh session
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.access_token) {
+            token = session.access_token;
+            console.log('✅ Using session token');
+          }
+        } catch (error) {
+          console.warn('⚠️ Session retrieval failed, trying localStorage:', error);
         }
-      } catch (error) {
-        console.warn('⚠️ Session retrieval failed, trying localStorage:', error);
-      }
-      
-      // Method 2: Fallback to localStorage cached token
-      if (!token) {
-        token = localStorage.getItem('roam_access_token');
-        if (token) {
-          console.log('✅ Using cached token from localStorage');
+        
+        // Method 2: Fallback to localStorage cached token
+        if (!token) {
+          token = localStorage.getItem('roam_access_token');
+          if (token) {
+            console.log('✅ Using cached token from localStorage');
+          }
         }
-      }
-      
-      // Method 3: Check if customer object has user_id (they're authenticated)
-      if (!token && customer?.user_id) {
-        console.warn('⚠️ No token but customer exists, proceeding anyway');
-        // For Supabase operations, the client is already authenticated
-        // For API calls, we'll try without explicit auth header
+        
+        // Method 3: Check if customer object has user_id (they're authenticated)
+        if (!token && customer?.user_id) {
+          console.warn('⚠️ No token but customer exists, proceeding anyway');
+          // For Supabase operations, the client is already authenticated
+          // For API calls, we'll try without explicit auth header
+        }
+      } else {
+        console.log('🎫 Guest checkout - proceeding without auth token');
       }
       
       const headers: Record<string, string> = {
@@ -1459,25 +1522,53 @@ export default function BookService() {
       }
 
       // Step 1: Create the booking in pending status
-      const { data: newBooking, error: bookingError } = await supabase
-        .from('bookings')
-        .insert({
-          ...bookingDetails,
-          booking_status: 'pending',  // Using 'pending' - payment will be processed immediately
-          payment_status: 'pending'
-        })
-        .select('id')
-        .single();
+      // For guest checkout, we use the service role via a guest booking endpoint
+      let newBooking: { id: string } | null = null;
+      
+      if (isGuestCheckout && !customer) {
+        // Guest checkout - use API endpoint to create booking
+        const guestBookingResponse = await fetch('/api/bookings/create-guest-booking', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...bookingDetails,
+            booking_status: 'pending',
+            payment_status: 'pending'
+          }),
+        });
+        
+        if (!guestBookingResponse.ok) {
+          const errorData = await guestBookingResponse.json();
+          throw new Error(errorData.error || 'Failed to create guest booking');
+        }
+        
+        const guestBookingData = await guestBookingResponse.json();
+        newBooking = { id: guestBookingData.bookingId };
+        console.log('✅ Guest booking created with ID:', newBooking.id);
+      } else {
+        // Logged-in user - use direct Supabase insert
+        const { data: bookingData, error: bookingError } = await supabase
+          .from('bookings')
+          .insert({
+            ...bookingDetails,
+            booking_status: 'pending',  // Using 'pending' - payment will be processed immediately
+            payment_status: 'pending'
+          })
+          .select('id')
+          .single();
 
-      if (bookingError || !newBooking) {
-        throw new Error(bookingError?.message || 'Failed to create booking');
+        if (bookingError || !bookingData) {
+          throw new Error(bookingError?.message || 'Failed to create booking');
+        }
+        
+        newBooking = bookingData;
+        console.log('✅ Booking created with ID:', newBooking.id);
       }
 
-      console.log('✅ Booking created with ID:', newBooking.id);
       setCreatedBookingId(newBooking.id);
 
-      // Step 2: Create promotion usage if promotion was applied
-      if (promotion) {
+      // Step 2: Create promotion usage if promotion was applied (only for logged-in users)
+      if (promotion && customer) {
         await supabase
           .from('promotion_usage')
           .insert({
@@ -1517,7 +1608,7 @@ export default function BookService() {
         bookingId: newBooking.id,
         serviceId: service.id,
         businessId: selectedBusiness.id,
-        customerId: customer.id,
+        customerId: customer?.id || null, // null for guest checkout
         bookingDate: bookingDetails.booking_date,
         startTime: formattedStartTime,
         guestName: bookingDetails.guest_name,
@@ -1525,7 +1616,7 @@ export default function BookService() {
         guestPhone: bookingDetails.guest_phone,
         deliveryType,
         specialInstructions: bookingDetails.special_instructions,
-        promotionId: promotion?.id || null,
+        promotionId: customer ? (promotion?.id || null) : null, // No promotions for guests
         // Addon information
         addon_ids: selectedAddons,
         addons_total: calculateAddonsTotal(),
@@ -1536,10 +1627,18 @@ export default function BookService() {
           state: selectedCustomerLocation.state,
           postal_code: selectedCustomerLocation.zip_code,
           country: 'US'
-        } : null
+        } : null,
+        // Guest checkout info
+        isGuestCheckout: isGuestCheckout && !customer,
+        guestCheckoutEmail: isGuestCheckout && !customer ? guestCheckoutInfo.email : null,
       };
 
-      const response = await fetch('/api/stripe/create-payment-intent', {
+      // Use guest payment endpoint for guest checkout, regular endpoint for logged-in users
+      const paymentEndpoint = isGuestCheckout && !customer 
+        ? '/api/stripe/create-guest-payment-intent' 
+        : '/api/stripe/create-payment-intent';
+      
+      const response = await fetch(paymentEndpoint, {
         method: 'POST',
         headers,
         body: JSON.stringify(paymentPayload),
@@ -2687,60 +2786,158 @@ export default function BookService() {
                   </div>
                 </div>
 
-                {/* Guest Information Section */}
-                <div className="bg-gray-50 rounded-lg p-6 mb-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="space-y-0.5">
-                      <h3 className="font-semibold">Booking for someone else?</h3>
-                      <p className="text-sm text-gray-500">
-                        Enter guest details if booking on behalf of another person
-                      </p>
+                {/* Guest Checkout Section (only show if not logged in) */}
+                {!customer && (
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6 mb-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="space-y-0.5">
+                        <h3 className="font-semibold text-blue-900">Checkout as Guest</h3>
+                        <p className="text-sm text-blue-700">
+                          Complete your booking without creating an account
+                        </p>
+                      </div>
+                      <Switch
+                        id="guest-checkout-toggle"
+                        checked={isGuestCheckout}
+                        onCheckedChange={(checked) => {
+                          setIsGuestCheckout(checked);
+                          // Reset guest checkout info when toggling off
+                          if (!checked) {
+                            setGuestCheckoutInfo({ firstName: '', lastName: '', email: '', phone: '' });
+                          }
+                        }}
+                      />
                     </div>
-                    <Switch
-                      id="guest-booking-toggle-summary"
-                      checked={isBookingForGuest}
-                      onCheckedChange={setIsBookingForGuest}
-                    />
-                  </div>
 
-                  {isBookingForGuest && (
-                    <div className="space-y-4 pt-4 border-t">
-                      <div>
-                        <Label htmlFor="guest-name-summary">Guest Name *</Label>
-                        <Input
-                          id="guest-name-summary"
-                          type="text"
-                          placeholder="Enter guest's full name"
-                          value={guestName}
-                          onChange={(e) => setGuestName(e.target.value)}
-                          className="mt-1"
-                        />
+                    {isGuestCheckout && (
+                      <div className="space-y-4 pt-4 border-t border-blue-200">
+                        <p className="text-xs text-blue-600 mb-3">
+                          Your name and email will only be used for booking notifications. No account will be created.
+                        </p>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label htmlFor="guest-checkout-firstname">First Name *</Label>
+                            <Input
+                              id="guest-checkout-firstname"
+                              type="text"
+                              placeholder="John"
+                              value={guestCheckoutInfo.firstName}
+                              onChange={(e) => setGuestCheckoutInfo({ ...guestCheckoutInfo, firstName: e.target.value })}
+                              className="mt-1 bg-white"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="guest-checkout-lastname">Last Name *</Label>
+                            <Input
+                              id="guest-checkout-lastname"
+                              type="text"
+                              placeholder="Doe"
+                              value={guestCheckoutInfo.lastName}
+                              onChange={(e) => setGuestCheckoutInfo({ ...guestCheckoutInfo, lastName: e.target.value })}
+                              className="mt-1 bg-white"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <Label htmlFor="guest-checkout-email">Email *</Label>
+                          <Input
+                            id="guest-checkout-email"
+                            type="email"
+                            placeholder="your@email.com"
+                            value={guestCheckoutInfo.email}
+                            onChange={(e) => setGuestCheckoutInfo({ ...guestCheckoutInfo, email: e.target.value })}
+                            className="mt-1 bg-white"
+                          />
+                          <p className="text-xs text-blue-600 mt-1">We'll send booking confirmation to this email</p>
+                        </div>
+                        <div>
+                          <Label htmlFor="guest-checkout-phone">Phone (Optional)</Label>
+                          <Input
+                            id="guest-checkout-phone"
+                            type="tel"
+                            placeholder="(555) 123-4567"
+                            value={guestCheckoutInfo.phone}
+                            onChange={(e) => setGuestCheckoutInfo({ ...guestCheckoutInfo, phone: e.target.value })}
+                            className="mt-1 bg-white"
+                          />
+                        </div>
                       </div>
-                      <div>
-                        <Label htmlFor="guest-email-summary">Guest Email</Label>
-                        <Input
-                          id="guest-email-summary"
-                          type="email"
-                          placeholder="guest@example.com"
-                          value={guestEmail}
-                          onChange={(e) => setGuestEmail(e.target.value)}
-                          className="mt-1"
-                        />
+                    )}
+                    
+                    {!isGuestCheckout && (
+                      <div className="pt-3 text-center">
+                        <p className="text-sm text-gray-600 mb-3">Or</p>
+                        <Button
+                          variant="outline"
+                          onClick={() => setShowAuthModal(true)}
+                          className="w-full"
+                        >
+                          Sign In / Create Account
+                        </Button>
+                        <p className="text-xs text-gray-500 mt-2">
+                          Create an account to track bookings, save favorites, and more
+                        </p>
                       </div>
-                      <div>
-                        <Label htmlFor="guest-phone-summary">Guest Phone *</Label>
-                        <Input
-                          id="guest-phone-summary"
-                          type="tel"
-                          placeholder="(555) 123-4567"
-                          value={guestPhone}
-                          onChange={(e) => setGuestPhone(e.target.value)}
-                          className="mt-1"
-                        />
+                    )}
+                  </div>
+                )}
+
+                {/* Guest Information Section (only show for logged-in users) */}
+                {customer && (
+                  <div className="bg-gray-50 rounded-lg p-6 mb-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="space-y-0.5">
+                        <h3 className="font-semibold">Booking for someone else?</h3>
+                        <p className="text-sm text-gray-500">
+                          Enter guest details if booking on behalf of another person
+                        </p>
                       </div>
+                      <Switch
+                        id="guest-booking-toggle-summary"
+                        checked={isBookingForGuest}
+                        onCheckedChange={setIsBookingForGuest}
+                      />
                     </div>
-                  )}
-                </div>
+
+                    {isBookingForGuest && (
+                      <div className="space-y-4 pt-4 border-t">
+                        <div>
+                          <Label htmlFor="guest-name-summary">Guest Name *</Label>
+                          <Input
+                            id="guest-name-summary"
+                            type="text"
+                            placeholder="Enter guest's full name"
+                            value={guestName}
+                            onChange={(e) => setGuestName(e.target.value)}
+                            className="mt-1"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="guest-email-summary">Guest Email</Label>
+                          <Input
+                            id="guest-email-summary"
+                            type="email"
+                            placeholder="guest@example.com"
+                            value={guestEmail}
+                            onChange={(e) => setGuestEmail(e.target.value)}
+                            className="mt-1"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="guest-phone-summary">Guest Phone *</Label>
+                          <Input
+                            id="guest-phone-summary"
+                            type="tel"
+                            placeholder="(555) 123-4567"
+                            value={guestPhone}
+                            onChange={(e) => setGuestPhone(e.target.value)}
+                            className="mt-1"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Addon Selection Section */}
                 {availableAddons.length > 0 && (
