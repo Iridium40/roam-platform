@@ -48,9 +48,11 @@ export async function processBookingAcceptance(
       .from('bookings')
       .select(`
         id,
+        stripe_payment_intent_id,
         stripe_service_amount_payment_intent_id,
         total_amount,
         service_fee,
+        remaining_balance,
         booking_date,
         start_time,
         booking_status,
@@ -80,23 +82,30 @@ export async function processBookingAcceptance(
       };
     }
 
-    // Look up payment intent from business_payment_transactions table
-    // Note: stripe_payment_intent_id is NOT stored on bookings table
-    // Filter by transaction_type='initial_booking' to get the correct payment intent
-    const { data: businessPaymentTransaction, error: transactionError } = await supabase
-      .from('business_payment_transactions')
-      .select('stripe_payment_intent_id')
-      .eq('booking_id', bookingId)
-      .eq('transaction_type', 'initial_booking')
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    // First, check if stripe_payment_intent_id is stored directly on the booking
+    // This is the preferred method as it's the most direct
+    let paymentIntentId = booking.stripe_payment_intent_id;
+    
+    if (paymentIntentId) {
+      console.log('✅ Payment intent ID found directly on booking:', paymentIntentId);
+    } else {
+      // Fallback: Look up payment intent from business_payment_transactions table
+      // Filter by both 'initial_booking' and 'guest_booking' transaction types
+      const { data: businessPaymentTransaction, error: transactionError } = await supabase
+        .from('business_payment_transactions')
+        .select('stripe_payment_intent_id')
+        .eq('booking_id', bookingId)
+        .in('transaction_type', ['initial_booking', 'guest_booking'])
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
-    if (transactionError) {
-      console.error('❌ Error fetching payment transaction:', transactionError);
+      if (transactionError) {
+        console.error('❌ Error fetching payment transaction:', transactionError);
+      }
+
+      paymentIntentId = businessPaymentTransaction?.stripe_payment_intent_id;
     }
-
-    let paymentIntentId = businessPaymentTransaction?.stripe_payment_intent_id;
 
     // Fallback: Check financial_transactions table if not found in business_payment_transactions
     // The webhook may have created financial_transactions before business_payment_transactions
