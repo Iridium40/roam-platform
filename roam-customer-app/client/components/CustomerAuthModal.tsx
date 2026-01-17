@@ -333,7 +333,8 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
                       Continue with Google
                     </Button>
 
-                    {isAppleDevice() && (
+                    {/* Apple Sign In - Hidden until configured */}
+                    {/* {isAppleDevice() && (
                       <Button
                         type="button"
                         variant="outline"
@@ -350,7 +351,7 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
                         </svg>
                         Continue with Apple
                       </Button>
-                    )}
+                    )} */}
 
                     <div className="relative">
                       <div className="absolute inset-0 flex items-center">
@@ -506,7 +507,8 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
                       Continue with Google
                     </Button>
 
-                    {isAppleDevice() && (
+                    {/* Apple Sign In - Hidden until configured */}
+                    {/* {isAppleDevice() && (
                       <Button
                         type="button"
                         variant="outline"
@@ -523,7 +525,7 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
                         </svg>
                         Continue with Apple
                       </Button>
-                    )}
+                    )} */}
 
                     <div className="relative">
                       <div className="absolute inset-0 flex items-center">
