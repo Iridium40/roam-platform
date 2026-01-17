@@ -19,12 +19,14 @@ interface CustomerAuthModalProps {
   isOpen: boolean;
   onClose: () => void;
   defaultTab?: "signin" | "signup";
+  onBeforeOAuth?: () => void; // Called before OAuth redirect (for saving state)
 }
 
 export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
   isOpen,
   onClose,
   defaultTab = "signin",
+  onBeforeOAuth,
 }) => {
   const {
     signInCustomer,
@@ -192,6 +194,8 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
   const handleGoogleSignIn = async () => {
     setError(null);
     try {
+      // Save state before OAuth redirect (for booking flow resumption)
+      onBeforeOAuth?.();
       await signInWithGoogle();
       // OAuth will redirect, so we don't need to handle success here
     } catch (err: any) {
@@ -215,6 +219,8 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
   const handleAppleSignIn = async () => {
     setError(null);
     try {
+      // Save state before OAuth redirect (for booking flow resumption)
+      onBeforeOAuth?.();
       await signInWithApple();
       // OAuth will redirect, so we don't need to handle success here
     } catch (err: any) {

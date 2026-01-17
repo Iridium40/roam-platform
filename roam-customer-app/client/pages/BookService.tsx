@@ -254,6 +254,51 @@ export default function BookService() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [pendingCheckout, setPendingCheckout] = useState(false);
   
+  // Key for storing booking state in sessionStorage (for OAuth redirects)
+  const BOOKING_STATE_KEY = 'roam_pending_booking_state';
+  
+  // Save booking state to sessionStorage before OAuth redirect
+  const saveBookingStateForOAuth = () => {
+    const bookingState = {
+      serviceId,
+      selectedDate: selectedDate?.toISOString(),
+      selectedTime,
+      selectedBusiness: selectedBusiness ? {
+        id: selectedBusiness.id,
+        business_name: selectedBusiness.business_name,
+        service_price: selectedBusiness.service_price,
+        service_duration_minutes: selectedBusiness.service_duration_minutes,
+        delivery_types: selectedBusiness.delivery_types,
+      } : null,
+      selectedProvider: selectedProvider ? {
+        id: selectedProvider.id,
+        first_name: selectedProvider.first_name,
+        last_name: selectedProvider.last_name,
+      } : null,
+      noProviderPreference,
+      selectedDeliveryType,
+      selectedBusinessLocation: selectedBusinessLocation ? {
+        id: selectedBusinessLocation.id,
+        location_name: selectedBusinessLocation.location_name,
+        address_line1: selectedBusinessLocation.address_line1,
+        city: selectedBusinessLocation.city,
+        state: selectedBusinessLocation.state,
+        postal_code: selectedBusinessLocation.postal_code,
+      } : null,
+      selectedAddons,
+      currentStep,
+      pendingCheckout: true, // Mark that we need to resume checkout
+      savedAt: Date.now(),
+    };
+    sessionStorage.setItem(BOOKING_STATE_KEY, JSON.stringify(bookingState));
+    console.log('💾 Saved booking state for OAuth redirect');
+  };
+  
+  // Clear saved booking state
+  const clearSavedBookingState = () => {
+    sessionStorage.removeItem(BOOKING_STATE_KEY);
+  };
+  
   // Exit confirmation state
   const [showExitConfirmation, setShowExitConfirmation] = useState(false);
   
@@ -421,6 +466,78 @@ export default function BookService() {
     return acc;
   }, {} as Record<string, typeof timeSlots>);
 
+  // Restore booking state from sessionStorage (for OAuth redirects)
+  useEffect(() => {
+    const restoreBookingState = async () => {
+      const savedStateJson = sessionStorage.getItem(BOOKING_STATE_KEY);
+      if (!savedStateJson) return;
+      
+      try {
+        const savedState = JSON.parse(savedStateJson);
+        
+        // Only restore if saved within the last 30 minutes
+        const thirtyMinutesAgo = Date.now() - (30 * 60 * 1000);
+        if (savedState.savedAt < thirtyMinutesAgo) {
+          console.log('⏰ Saved booking state expired, clearing');
+          clearSavedBookingState();
+          return;
+        }
+        
+        // Only restore if user is now logged in and state was saved for checkout
+        if (!customer || !savedState.pendingCheckout) {
+          return;
+        }
+        
+        console.log('🔄 Restoring booking state from OAuth redirect');
+        
+        // Restore state
+        if (savedState.selectedDate) {
+          setSelectedDate(new Date(savedState.selectedDate));
+        }
+        if (savedState.selectedTime) {
+          setSelectedTime(savedState.selectedTime);
+        }
+        if (savedState.selectedBusiness) {
+          setSelectedBusiness(savedState.selectedBusiness as Business);
+        }
+        if (savedState.selectedProvider) {
+          setSelectedProvider(savedState.selectedProvider as Provider);
+        }
+        if (savedState.noProviderPreference !== undefined) {
+          setNoProviderPreference(savedState.noProviderPreference);
+        }
+        if (savedState.selectedDeliveryType) {
+          setSelectedDeliveryType(savedState.selectedDeliveryType);
+        }
+        if (savedState.selectedBusinessLocation) {
+          setSelectedBusinessLocation(savedState.selectedBusinessLocation as BusinessLocation);
+        }
+        if (savedState.selectedAddons) {
+          setSelectedAddons(savedState.selectedAddons);
+        }
+        if (savedState.currentStep) {
+          setCurrentStep(savedState.currentStep);
+        }
+        
+        // Clear saved state
+        clearSavedBookingState();
+        
+        // Set pending checkout to trigger the checkout flow
+        setPendingCheckout(true);
+        
+        console.log('✅ Booking state restored, will proceed to checkout');
+      } catch (error) {
+        console.error('❌ Error restoring booking state:', error);
+        clearSavedBookingState();
+      }
+    };
+    
+    // Only run once when customer changes from null to a value
+    if (customer) {
+      restoreBookingState();
+    }
+  }, [customer]);
+
   // Auto-proceed with checkout after successful login
   useEffect(() => {
     if (customer && pendingCheckout) {
@@ -433,7 +550,7 @@ export default function BookService() {
         });
       }, 300);
     }
-  }, [customer, pendingCheckout, handleCheckout]);
+  }, [customer, pendingCheckout]);
 
   // Load service details and promotion if applicable
   useEffect(() => {
@@ -3145,6 +3262,7 @@ export default function BookService() {
           }
         }}
         defaultTab="signin"
+        onBeforeOAuth={saveBookingStateForOAuth}
       />
 
       {/* Footer */}

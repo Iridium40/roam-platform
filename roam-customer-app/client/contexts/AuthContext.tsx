@@ -424,11 +424,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setLoading(true);
     try {
       logger.debug("AuthContext: Starting Google OAuth sign-in...");
+      
+      // Redirect back to current page after OAuth (preserves booking flow)
+      const currentPath = window.location.pathname + window.location.search;
+      const redirectUrl = `${window.location.origin}${currentPath}`;
+      logger.debug("AuthContext: OAuth redirect URL:", redirectUrl);
 
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/home`,
+          redirectTo: redirectUrl,
         },
       });
 
@@ -484,11 +489,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setLoading(true);
     try {
       logger.debug("AuthContext: Starting Apple OAuth sign-in...");
+      
+      // Redirect back to current page after OAuth (preserves booking flow)
+      const currentPath = window.location.pathname + window.location.search;
+      const redirectUrl = `${window.location.origin}${currentPath}`;
+      logger.debug("AuthContext: OAuth redirect URL:", redirectUrl);
 
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "apple",
         options: {
-          redirectTo: `${window.location.origin}/home`,
+          redirectTo: redirectUrl,
         },
       });
 
