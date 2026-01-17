@@ -1,11 +1,22 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-// Initialize Supabase with service role for guest bookings (no auth required)
-const supabase = createClient(
-  process.env.VITE_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Lazy-initialize Supabase client to ensure env vars are available
+let supabase: SupabaseClient | null = null;
+
+function getSupabase(): SupabaseClient {
+  if (!supabase) {
+    const url = process.env.VITE_PUBLIC_SUPABASE_URL;
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    
+    if (!url || !key) {
+      throw new Error('Missing Supabase environment variables');
+    }
+    
+    supabase = createClient(url, key);
+  }
+  return supabase;
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Enable CORS
@@ -24,6 +35,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     console.log('🎫 Creating guest booking...');
+    
+    // Get Supabase client (lazy initialization)
+    const db = getSupabase();
     
     const {
       service_id,
@@ -59,7 +73,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Verify service exists and is offered by the business
-    const { data: businessService, error: serviceError } = await supabase
+    const { data: businessService, error: serviceError } = await db
       .from('business_services')
       .select('id, is_active')
       .eq('business_id', business_id)
@@ -74,7 +88,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Verify business has Stripe Connect set up
-    const { data: stripeConnect, error: stripeError } = await supabase
+    const { data: stripeConnect, error: stripeError } = await db
       .from('stripe_connect_accounts')
       .select('charges_enabled')
       .eq('business_id', business_id)
@@ -115,7 +129,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       guest_email: '***' // Mask email in logs
     });
 
-    const { data: newBooking, error: bookingError } = await supabase
+    const { data: newBooking, error: bookingError } = await db
       .from('bookings')
       .insert(bookingData)
       .select('id, booking_reference')
@@ -123,9 +137,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (bookingError) {
       console.error('❌ Error creating guest booking:', bookingError);
+      console.error('❌ Booking error details:', {
+        code: bookingError.code,
+        message: bookingError.message,
+        details: bookingError.details,
+        hint: bookingError.hint,
+      });
       return res.status(500).json({ 
         error: 'Failed to create booking',
-        details: bookingError.message 
+        details: bookingError.message,
+        code: bookingError.code,
+        hint: bookingError.hint
       });
     }
 
