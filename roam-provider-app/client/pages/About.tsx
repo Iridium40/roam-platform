@@ -43,6 +43,20 @@ export default function About() {
 function Hero() {
   return (
     <div className="relative overflow-hidden bg-gradient-to-br from-roam-blue to-roam-light-blue text-white">
+      {/* YouTube Video Background */}
+      <div className="absolute inset-0 w-full h-full overflow-hidden">
+        <iframe
+          className="absolute top-1/2 left-1/2 w-[300%] h-[300%] -translate-x-1/2 -translate-y-1/2 pointer-events-none"
+          src="https://www.youtube.com/embed/-g5P96JAif0?autoplay=1&mute=1&loop=1&controls=0&showinfo=0&modestbranding=1&playlist=-g5P96JAif0&rel=0&enablejsapi=1"
+          title="ROAM Background Video"
+          frameBorder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+        />
+        {/* Dark overlay for text readability */}
+        <div className="absolute inset-0 bg-gradient-to-br from-roam-blue/80 to-roam-light-blue/80" />
+      </div>
+
       {/* Service icon pattern overlay */}
       <ServiceIconPattern />
       
