@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -56,11 +56,19 @@ import {
   Settings,
   Building2,
   Star,
+  Search,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import BankAccountManager from "@/components/BankAccountManager";
 import { Switch } from "@/components/ui/switch";
+import { 
+  FINANCIALS_PAGINATION_CONFIG, 
+  getDefaultDateRange, 
+  getPageSize 
+} from "./financials/config/pagination.config";
 
 interface FinancialsTabProps {
   providerData: any;
@@ -97,27 +105,40 @@ export default function FinancialsTab({
   const [tipsData, setTipsData] = useState<any[]>([]);
   const [tipsLoading, setTipsLoading] = useState(false);
 
-  // Filter state for transactions and tips
+  // Get default date range (last 30 days)
+  const defaultDateRange = getDefaultDateRange(FINANCIALS_PAGINATION_CONFIG.defaultDateRangeDays);
+
+  // Filter state for transactions and tips - with default date range
   const [transactionFilters, setTransactionFilters] = useState({
-    startDate: '',
-    endDate: '',
+    startDate: defaultDateRange.startDate,
+    endDate: defaultDateRange.endDate,
     providerId: 'all',
     serviceId: 'all',
+    searchQuery: '', // New: search by booking ref, customer name
   });
   const [tipFilters, setTipFilters] = useState({
-    startDate: '',
-    endDate: '',
+    startDate: defaultDateRange.startDate,
+    endDate: defaultDateRange.endDate,
     providerId: 'all',
   });
   const [payoutFilters, setPayoutFilters] = useState({
-    startDate: '',
-    endDate: '',
+    startDate: defaultDateRange.startDate,
+    endDate: defaultDateRange.endDate,
     providerId: 'all',
   });
   const [stripePayoutFilters, setStripePayoutFilters] = useState({
-    startDate: '',
-    endDate: '',
+    startDate: defaultDateRange.startDate,
+    endDate: defaultDateRange.endDate,
   });
+
+  // Pagination state
+  const [transactionPage, setTransactionPage] = useState(1);
+  const [tipPage, setTipPage] = useState(1);
+  const [payoutPage, setPayoutPage] = useState(1);
+  const [pageSize] = useState(getPageSize());
+
+  // Date preset for quick selection
+  const [selectedDatePreset, setSelectedDatePreset] = useState<number>(30);
 
   // Providers and services for filters
   const [providers, setProviders] = useState<any[]>([]);
@@ -136,6 +157,80 @@ export default function FinancialsTab({
       setActiveTab(tab);
     }
   }, [isOwner, searchParams]);
+
+  // Handle date preset change
+  const handleDatePresetChange = useCallback((days: number) => {
+    setSelectedDatePreset(days);
+    const newRange = getDefaultDateRange(days);
+    setTransactionFilters(prev => ({
+      ...prev,
+      startDate: newRange.startDate,
+      endDate: newRange.endDate,
+    }));
+    setTipFilters(prev => ({
+      ...prev,
+      startDate: newRange.startDate,
+      endDate: newRange.endDate,
+    }));
+    setPayoutFilters(prev => ({
+      ...prev,
+      startDate: newRange.startDate,
+      endDate: newRange.endDate,
+    }));
+    // Reset to page 1 when filter changes
+    setTransactionPage(1);
+    setTipPage(1);
+    setPayoutPage(1);
+  }, []);
+
+  // Pagination controls component
+  const PaginationControls = ({ 
+    currentPage, 
+    totalPages, 
+    totalItems,
+    onPageChange,
+    itemName = "items"
+  }: { 
+    currentPage: number; 
+    totalPages: number; 
+    totalItems: number;
+    onPageChange: (page: number) => void;
+    itemName?: string;
+  }) => {
+    if (totalPages <= 1) return null;
+    
+    const startItem = (currentPage - 1) * pageSize + 1;
+    const endItem = Math.min(currentPage * pageSize, totalItems);
+    
+    return (
+      <div className="flex items-center justify-between mt-4 pt-4 border-t">
+        <p className="text-sm text-gray-600">
+          Showing {startItem}-{endItem} of {totalItems} {itemName}
+        </p>
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onPageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </Button>
+          <span className="text-sm text-gray-600">
+            Page {currentPage} of {totalPages}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onPageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+          >
+            <ChevronRight className="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
+    );
+  };
 
   // Helper function to get filtered transactions
   const getFilteredTransactions = useMemo(() => {
@@ -197,6 +292,24 @@ export default function FinancialsTab({
         }
       }
 
+      // Search filter - search by booking reference, customer name, service name
+      if (transactionFilters.searchQuery && transactionFilters.searchQuery.trim()) {
+        const query = transactionFilters.searchQuery.toLowerCase().trim();
+        const booking = Array.isArray(transaction.bookings) ? transaction.bookings[0] : transaction.bookings;
+        
+        const bookingRef = (transaction.booking_reference || booking?.booking_reference || '').toLowerCase();
+        const customerName = `${transaction.customer_first_name || booking?.customer_profiles?.first_name || ''} ${transaction.customer_last_name || booking?.customer_profiles?.last_name || ''}`.toLowerCase();
+        const serviceName = (transaction.service_name || booking?.services?.name || '').toLowerCase();
+        const description = (transaction.transaction_description || transaction.description || '').toLowerCase();
+        
+        if (!bookingRef.includes(query) && 
+            !customerName.includes(query) && 
+            !serviceName.includes(query) &&
+            !description.includes(query)) {
+          return false;
+        }
+      }
+
       return true;
     });
   }, [
@@ -206,6 +319,23 @@ export default function FinancialsTab({
     transactionFilters,
     services,
   ]);
+
+  // Paginated transactions
+  const paginatedTransactions = useMemo(() => {
+    const filtered = getFilteredTransactions;
+    const startIndex = (transactionPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    return {
+      items: filtered.slice(startIndex, endIndex),
+      totalItems: filtered.length,
+      totalPages: Math.ceil(filtered.length / pageSize),
+    };
+  }, [getFilteredTransactions, transactionPage, pageSize]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setTransactionPage(1);
+  }, [transactionFilters.startDate, transactionFilters.endDate, transactionFilters.providerId, transactionFilters.serviceId, transactionFilters.searchQuery]);
 
   // CSV Export function for transactions
   const exportTransactionsToCSV = () => {
@@ -1599,38 +1729,76 @@ export default function FinancialsTab({
         <TabsContent value="transactions" className="space-y-6 mt-6">
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
                   <CardTitle className="flex items-center space-x-2">
                     <Receipt className="w-5 h-5" />
                     <span>Transaction History</span>
                   </CardTitle>
-                  <CardDescription>All charges, fees, and balance changes from your bookings</CardDescription>
+                  <CardDescription>
+                    {paginatedTransactions.totalItems > 0 
+                      ? `${paginatedTransactions.totalItems} transactions found`
+                      : 'All charges, fees, and balance changes from your bookings'
+                    }
+                  </CardDescription>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={exportTransactionsToCSV}
-                  className="flex items-center space-x-2"
-                >
-                  <Download className="w-4 h-4" />
-                  <span>Export CSV</span>
-                </Button>
+                <div className="flex items-center gap-2">
+                  {/* Quick Date Presets */}
+                  <Select
+                    value={selectedDatePreset.toString()}
+                    onValueChange={(value) => handleDatePresetChange(parseInt(value))}
+                  >
+                    <SelectTrigger className="w-[140px] text-xs">
+                      <SelectValue placeholder="Date range" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {FINANCIALS_PAGINATION_CONFIG.datePresets.map((preset) => (
+                        <SelectItem key={preset.value} value={preset.value.toString()}>
+                          {preset.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={exportTransactionsToCSV}
+                    className="flex items-center space-x-2"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span className="hidden sm:inline">Export CSV</span>
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
-              {/* Filters */}
-              <div className="mb-6 p-4 bg-gray-50 rounded-lg border">
+              {/* Search and Filters */}
+              <div className="mb-6 p-4 bg-gray-50 rounded-lg border space-y-4">
+                {/* Search Bar */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    type="text"
+                    placeholder="Search by booking reference, customer name, or service..."
+                    value={transactionFilters.searchQuery}
+                    onChange={(e) => setTransactionFilters(prev => ({ ...prev, searchQuery: e.target.value }))}
+                    className="pl-10 text-sm"
+                  />
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
                   {/* Date Range */}
-                  <div className="md:col-span-5 space-y-2">
-                    <label className="text-xs font-medium text-gray-700">Date Range</label>
+                  <div className="md:col-span-4 space-y-2">
+                    <label className="text-xs font-medium text-gray-700">Custom Date Range</label>
                     <div className="flex gap-2">
                       <div className="relative flex-1 min-w-0">
                         <Input
                           type="date"
                           value={transactionFilters.startDate}
-                          onChange={(e) => setTransactionFilters(prev => ({ ...prev, startDate: e.target.value }))}
+                          onChange={(e) => {
+                            setTransactionFilters(prev => ({ ...prev, startDate: e.target.value }));
+                            setSelectedDatePreset(0); // Custom range
+                          }}
                           className="text-xs pr-10"
                           placeholder="From"
                         />
@@ -1640,7 +1808,10 @@ export default function FinancialsTab({
                         <Input
                           type="date"
                           value={transactionFilters.endDate}
-                          onChange={(e) => setTransactionFilters(prev => ({ ...prev, endDate: e.target.value }))}
+                          onChange={(e) => {
+                            setTransactionFilters(prev => ({ ...prev, endDate: e.target.value }));
+                            setSelectedDatePreset(0); // Custom range
+                          }}
                           className="text-xs pr-10"
                           placeholder="To"
                         />
@@ -1649,39 +1820,6 @@ export default function FinancialsTab({
                     </div>
                   </div>
 
-                  {/* Provider Filter */}
-                  <div className="md:col-span-3 space-y-2">
-                    <label className="text-xs font-medium text-gray-700">Provider</label>
-                    <Select
-                      value={transactionFilters.providerId}
-                      onValueChange={(value) => setTransactionFilters(prev => ({ ...prev, providerId: value }))}
-                    >
-                      <SelectTrigger className="text-xs">
-                        <SelectValue placeholder="All Providers" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Providers</SelectItem>
-                        {providers.map((provider) => (
-                          <SelectItem key={provider.id} value={provider.id}>
-                            {provider.first_name} {provider.last_name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Service Filter */}
-                  <div className="md:col-span-2 space-y-2">
-                    <label className="text-xs font-medium text-gray-700">Service Type</label>
-                    <Select
-                      value={transactionFilters.serviceId}
-                      onValueChange={(value) => setTransactionFilters(prev => ({ ...prev, serviceId: value }))}
-                    >
-                      <SelectTrigger className="text-xs">
-                        <SelectValue placeholder="All Services" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Services</SelectItem>
                         {services.map((service) => (
                           <SelectItem key={service.id} value={service.id}>
                             {service.name}
@@ -1697,15 +1835,20 @@ export default function FinancialsTab({
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setTransactionFilters({
-                        startDate: '',
-                        endDate: '',
-                        providerId: 'all',
-                        serviceId: 'all',
-                      })}
+                      onClick={() => {
+                        const defaultRange = getDefaultDateRange(30);
+                        setTransactionFilters({
+                          startDate: defaultRange.startDate,
+                          endDate: defaultRange.endDate,
+                          providerId: 'all',
+                          serviceId: 'all',
+                          searchQuery: '',
+                        });
+                        setSelectedDatePreset(30);
+                      }}
                       className="text-xs w-full"
                     >
-                      Clear
+                      Reset
                     </Button>
                   </div>
                 </div>
@@ -1713,19 +1856,32 @@ export default function FinancialsTab({
 
               <div className="space-y-3">
                 {(() => {
-                  const filtered = getFilteredTransactions;
-
-                  if (filtered.length === 0) {
+                  if (paginatedTransactions.totalItems === 0) {
                     return (
                       <div className="text-center py-8">
                         <Receipt className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                         <p className="text-sm text-gray-500">No transactions match your filters</p>
-                        <p className="text-xs text-gray-400 mt-1">Try adjusting your filter criteria</p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          {transactionFilters.searchQuery 
+                            ? 'Try a different search term or adjust your filters'
+                            : 'Try adjusting your date range or filter criteria'
+                          }
+                        </p>
+                        {selectedDatePreset !== 0 && (
+                          <Button
+                            variant="link"
+                            size="sm"
+                            onClick={() => handleDatePresetChange(0)}
+                            className="mt-2 text-xs"
+                          >
+                            View all time
+                          </Button>
+                        )}
                       </div>
                     );
                   }
 
-                  return filtered.map((transaction: any) => {
+                  return paginatedTransactions.items.map((transaction: any) => {
                     // Handle different data structures
                     const isBusinessPaymentTransaction = !!transaction.transaction_description;
                     const booking = Array.isArray(transaction.bookings) 
@@ -1820,6 +1976,15 @@ export default function FinancialsTab({
                   });
                 })()}
               </div>
+
+              {/* Pagination Controls */}
+              <PaginationControls
+                currentPage={transactionPage}
+                totalPages={paginatedTransactions.totalPages}
+                totalItems={paginatedTransactions.totalItems}
+                onPageChange={setTransactionPage}
+                itemName="transactions"
+              />
             </CardContent>
           </Card>
 
