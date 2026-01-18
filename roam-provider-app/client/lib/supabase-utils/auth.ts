@@ -264,29 +264,21 @@ export class AuthAPI {
 
   // Provider Authentication
   static async getProviderByUserId(userId: string): Promise<AuthProvider | null> {
-    console.log("🔍 getProviderByUserId called with userId:", userId);
-    
     const { data: providers, error } = await supabase
       .from("providers")
       .select("id, user_id, business_id, location_id, first_name, last_name, email, provider_role, is_active")
       .eq("user_id", userId);
 
-    console.log("🔍 getProviderByUserId result:", { providers, error });
-
     if (error) {
-      console.error("🔍 getProviderByUserId error:", error);
       throw new Error(`Provider lookup failed: ${error.message}`);
     }
 
     // If no provider record exists, create a basic one
     if (providers.length === 0) {
-      console.log("🔍 No provider record found, creating basic provider record");
-      
       // Get user data from auth
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
-        console.error("🔍 No user found in auth context");
         return null;
       }
 
@@ -305,11 +297,9 @@ export class AuthAPI {
         .single();
 
       if (createError) {
-        console.error("🔍 Error creating provider record:", createError);
         return null;
       }
 
-      console.log("🔍 Created basic provider record:", newProvider);
       return newProvider;
     }
 

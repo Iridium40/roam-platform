@@ -104,7 +104,7 @@ interface ServiceSubcategory {
 }
 
 export default function ProviderDashboard() {
-  const { provider, signOut, isOwner, isDispatcher, isProvider } = useProviderAuth();
+  const { provider, signOut, isOwner, isDispatcher, isProvider, loading: authLoading } = useProviderAuth();
   const user = provider; // Map provider to user for compatibility
   const userId = provider?.user_id; // Get the user ID from the provider record
   const { toast } = useToast();
@@ -205,7 +205,7 @@ export default function ProviderDashboard() {
   const [providerData, setProviderData] = useState<ProviderWithRelations | null>(null);
   const [business, setBusiness] = useState<BusinessProfile | null>(null);
   const [locations, setLocations] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(false); // Changed: only tracks data loading, not auth
   const [error, setError] = useState("");
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   
@@ -228,13 +228,14 @@ export default function ProviderDashboard() {
     }
   };
 
-  // Data loading effect
+  // Data loading effect - only runs when auth is complete and we have a user
   useEffect(() => {
     const loadInitialData = async () => {
-      if (!user?.id) return;
+      // Wait for auth to complete and provide user data
+      if (!userId) return;
 
       try {
-        setLoading(true);
+        setDataLoading(true);
 
         // ✅ Optimized: Single query with nested relations (admin app pattern)
         // Note: We don't filter by is_active here to allow approved providers to access
@@ -299,19 +300,36 @@ export default function ProviderDashboard() {
         console.error('Error loading initial data:', error);
         setError(error.message || 'Failed to load dashboard data');
       } finally {
-        setLoading(false);
+        setDataLoading(false);
       }
     };
 
     loadInitialData();
   }, [userId]);
 
-  if (loading) {
+  // Show loading if auth is loading OR if we're fetching dashboard data
+  if (authLoading || dataLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading dashboard...</p>
+          <p className="mt-4 text-gray-600">
+            {authLoading ? "Authenticating..." : "Loading dashboard..."}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // If auth is complete but no provider found, show authentication error
+  if (!authLoading && !provider) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <AlertCircle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Authentication Required</h2>
+          <p className="text-gray-600 mb-4">Please sign in to access the dashboard.</p>
+          <Button onClick={() => navigate("/provider-portal")}>Go to Sign In</Button>
         </div>
       </div>
     );

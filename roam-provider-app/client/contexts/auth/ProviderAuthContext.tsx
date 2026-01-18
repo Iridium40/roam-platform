@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { AuthAPI } from "@/lib/supabase-utils/auth";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "@/hooks/use-toast";
+// IMPORTANT: Use static import to ensure singleton - dynamic imports can create multiple instances
+import { supabase } from "@/lib/supabase";
 
 // Dev-only debug logging
 const isDev = import.meta.env.DEV;
@@ -96,45 +98,41 @@ export const ProviderAuthProvider: React.FC<ProviderAuthProviderProps> = ({ chil
     localStorage.removeItem("roam_user_type");
   }, []);
 
-  // Immediate auth state validation to prevent loops
-  const validateAuthState = useCallback(async (): Promise<boolean> => {
-    if (authValidationRef.current) return true;
-    
+  // Validate auth state and return session if valid (avoids redundant getSession calls)
+  const getValidSession = useCallback(async (): Promise<{ user: { id: string }; access_token: string } | null> => {
     try {
-      const { supabase } = await import("@/lib/supabase");
+      // Use static import (imported at top of file) to ensure singleton
       const { data: { session }, error } = await supabase.auth.getSession();
       
       if (error) {
         debugLog("Auth validation failed:", error.message);
         clearStoredData();
-        authValidationRef.current = true;
-        return false;
+        return null;
       }
       
       if (!session?.user) {
         debugLog("No active session found");
         clearStoredData();
-        authValidationRef.current = true;
-        return false;
+        return null;
       }
       
       debugLog("Auth state validated for user:", session.user.id);
-      authValidationRef.current = true;
-      return true;
+      return session;
     } catch (error) {
       if (isDev) console.error("Auth validation error:", error);
       clearStoredData();
-      authValidationRef.current = true;
-      return false;
+      return null;
     }
   }, [clearStoredData]);
 
-  const processUserAuth = useCallback(async (userId: string, accessToken: string): Promise<boolean> => {
-    // Validate auth state first
-    const isValidAuth = await validateAuthState();
-    if (!isValidAuth) {
-      debugLog("Auth validation failed, skipping user processing");
-      return false;
+  const processUserAuth = useCallback(async (userId: string, accessToken: string, skipValidation = false): Promise<boolean> => {
+    // Validate auth state first (skip if already validated by caller)
+    if (!skipValidation) {
+      const session = await getValidSession();
+      if (!session) {
+        debugLog("Auth validation failed, skipping user processing");
+        return false;
+      }
     }
 
     // Prevent duplicate processing with Set-based tracking
@@ -179,7 +177,7 @@ export const ProviderAuthProvider: React.FC<ProviderAuthProviderProps> = ({ chil
     } finally {
       authProcessingRef.current.delete(userId);
     }
-  }, [clearStoredData, validateAuthState]);
+  }, [clearStoredData, getValidSession]);
 
   // Initial auth setup with immediate validation
   useEffect(() => {
@@ -187,16 +185,7 @@ export const ProviderAuthProvider: React.FC<ProviderAuthProviderProps> = ({ chil
 
     const initAuth = async () => {
       try {
-        // Immediate auth state validation
-        const isValidAuth = await validateAuthState();
-        if (!isValidAuth) {
-          debugLog("Initial auth validation failed");
-          setLoading(false);
-          setAuthInitialized(true);
-          return;
-        }
-
-        // Check localStorage first
+        // Check localStorage first for fast restore
         const storedProvider = localStorage.getItem("roam_provider");
         const storedToken = localStorage.getItem("roam_access_token");
 
@@ -204,27 +193,31 @@ export const ProviderAuthProvider: React.FC<ProviderAuthProviderProps> = ({ chil
           try {
             const providerData = JSON.parse(storedProvider);
             if (providerData.user_id) {
-              setProvider(providerData);
-              lastProcessedUserRef.current = providerData.user_id;
-              apiClient.setAuthToken(storedToken);
-              debugLog("Restored from localStorage:", providerData.provider_role);
-              setLoading(false);
-              setAuthInitialized(true);
-              return;
+              // Verify the session is still valid before restoring
+              const session = await getValidSession();
+              if (session && session.user.id === providerData.user_id) {
+                setProvider(providerData);
+                lastProcessedUserRef.current = providerData.user_id;
+                apiClient.setAuthToken(storedToken);
+                debugLog("Restored from localStorage:", providerData.provider_role);
+                setLoading(false);
+                setAuthInitialized(true);
+                return;
+              }
             }
           } catch (e) {
             debugLog("Invalid stored data, clearing");
-            clearStoredData();
           }
+          // If we got here, stored data is invalid
+          clearStoredData();
         }
 
-        // Check current session
-        const { data: { session } } = await import("@/lib/supabase").then(m => m.supabase.auth.getSession());
+        // No valid cached data - get session and process
+        const session = await getValidSession();
         
-        if (session?.user) {
-          await processUserAuth(session.user.id, session.access_token);
-        } else {
-          clearStoredData();
+        if (session) {
+          // Skip validation in processUserAuth since we just validated
+          await processUserAuth(session.user.id, session.access_token, true);
         }
       } catch (error) {
         if (isDev) console.error("Auth initialization error:", error);
@@ -236,7 +229,7 @@ export const ProviderAuthProvider: React.FC<ProviderAuthProviderProps> = ({ chil
     };
 
     initAuth();
-  }, [authInitialized, processUserAuth, clearStoredData, validateAuthState]);
+  }, [authInitialized, processUserAuth, clearStoredData, getValidSession]);
 
   // Auth state listener
   useEffect(() => {
@@ -244,8 +237,8 @@ export const ProviderAuthProvider: React.FC<ProviderAuthProviderProps> = ({ chil
 
     let authSubscription: any;
     
-    const setupListener = async () => {
-      const { supabase } = await import("@/lib/supabase");
+    const setupListener = () => {
+      // Use static import (imported at top of file) to ensure singleton
       const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
         debugLog("Auth event:", event, session?.user?.id);
         

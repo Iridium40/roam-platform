@@ -1820,6 +1820,45 @@ export default function FinancialsTab({
                     </div>
                   </div>
 
+                  {/* Provider Filter */}
+                  <div className="md:col-span-3 space-y-2">
+                    <label className="text-xs font-medium text-gray-700">Provider</label>
+                    <Select
+                      value={transactionFilters.providerId}
+                      onValueChange={(value) => {
+                        setTransactionFilters(prev => ({ ...prev, providerId: value }));
+                        setTransactionPage(1);
+                      }}
+                    >
+                      <SelectTrigger className="text-xs">
+                        <SelectValue placeholder="All providers" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Providers</SelectItem>
+                        {providers.map((provider: any) => (
+                          <SelectItem key={provider.id} value={provider.id}>
+                            {provider.first_name} {provider.last_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Service Filter */}
+                  <div className="md:col-span-3 space-y-2">
+                    <label className="text-xs font-medium text-gray-700">Service</label>
+                    <Select
+                      value={transactionFilters.serviceId}
+                      onValueChange={(value) => {
+                        setTransactionFilters(prev => ({ ...prev, serviceId: value }));
+                        setTransactionPage(1);
+                      }}
+                    >
+                      <SelectTrigger className="text-xs">
+                        <SelectValue placeholder="All services" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Services</SelectItem>
                         {services.map((service) => (
                           <SelectItem key={service.id} value={service.id}>
                             {service.name}
