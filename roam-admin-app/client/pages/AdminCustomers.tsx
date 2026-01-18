@@ -323,55 +323,33 @@ export default function AdminCustomers() {
     }
   };
 
-  // Toggle customer active status
+  // Toggle customer active status using mutation
   const toggleCustomerStatus = async (
     customerId: string,
     newStatus: boolean,
   ) => {
     try {
-      const response = await fetch('/api/customers/update-status', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          customerId,
-          isActive: newStatus,
-        }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to update customer status');
-      }
-
-      if (!result.success) {
-        throw new Error(result.error || 'API returned unsuccessful response');
-      }
-
-      await fetchCustomers(); // Refresh the customers list
+      await updateStatusMutation.mutateAsync({ customerId, isActive: newStatus });
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
       alert(`Error updating customer status: ${errorMessage}`);
     }
   };
 
-  // Filter customers based on selected filters - memoized for performance
-  const filteredCustomers = useMemo(() => 
-    customers.filter((customer) => {
-      const statusMatch =
-        statusFilter === "all" ||
-        (statusFilter === "active" && customer.is_active) ||
-        (statusFilter === "inactive" && !customer.is_active);
+  // Handle search - server-side filtering is used
+  const handleSearch = useCallback((value: string) => {
+    setSearch(value);
+  }, []);
 
-      return statusMatch;
-    }), [customers, statusFilter]
-  );
+  // Handle page size change
+  const handlePageSizeChange = useCallback((newSize: number) => {
+    setPageSize(newSize);
+    setPage(1); // Reset to first page
+  }, []);
 
-  // Customer statistics - memoized for performance
+  // Customer statistics - using server-provided total and current page data
   const customerStats = useMemo(() => ({
-    total: customers.length,
+    total: totalCustomers,
     active: customers.filter((c) => c.is_active).length,
     verified: customers.filter((c) => c.email_verified && c.phone_verified).length,
     newThisMonth: customers.filter((c) => {
@@ -382,7 +360,7 @@ export default function AdminCustomers() {
         createdDate.getFullYear() === now.getFullYear()
       );
     }).length,
-  }), [customers]);
+  }), [customers, totalCustomers]);
 
   const columns: Column[] = [
     {
@@ -571,8 +549,17 @@ export default function AdminCustomers() {
         </div>
 
         <div className="space-y-4">
-          {/* Filter Controls */}
-          <div className="flex gap-4 items-center bg-muted/30 p-4 rounded-lg">
+          {/* Search and Filter Controls */}
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center bg-muted/30 p-4 rounded-lg">
+            {/* Search Input */}
+            <SearchInput
+              value={search}
+              onSearch={handleSearch}
+              placeholder="Search customers..."
+              className="w-full sm:w-64"
+            />
+            
+            {/* Status Filter */}
             <div className="flex items-center gap-2">
               <label className="text-sm font-medium">Status:</label>
               <select
@@ -590,26 +577,47 @@ export default function AdminCustomers() {
               </select>
             </div>
 
-            <div className="text-sm text-muted-foreground ml-auto">
-              {loading
-                ? "Loading..."
-                : `Showing ${filteredCustomers.length} of ${customers.length} customers`}
-              {error && (
-                <div className="text-orange-600 text-xs mt-1">{error}</div>
-              )}
-            </div>
+            {/* Refresh Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => refetch()}
+              disabled={loading}
+              className="ml-auto"
+            >
+              <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
           </div>
+
+          {/* Error Display */}
+          {error && (
+            <div className="text-orange-600 text-sm bg-orange-50 p-3 rounded-lg border border-orange-200">
+              {error}
+            </div>
+          )}
 
           {/* Customers Table */}
           <ROAMDataTable
             title="Customers"
             columns={columns}
-            data={loading ? [] : filteredCustomers}
-            searchable={true}
+            data={loading ? [] : customers}
+            searchable={false}
             filterable={false}
             addable={false}
             onRowClick={() => {}}
-            pageSize={10}
+            pageSize={pageSize}
+          />
+
+          {/* Server-side Pagination */}
+          <Pagination
+            currentPage={page}
+            totalPages={totalPages}
+            totalItems={totalCustomers}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={handlePageSizeChange}
+            isLoading={loading}
           />
         </div>
       </div>

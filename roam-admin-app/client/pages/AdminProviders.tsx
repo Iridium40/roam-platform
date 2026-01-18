@@ -11,6 +11,8 @@ import {
 import { ROAMStatCard } from "@/components/ui/roam-stat-card";
 import { ROAMBadge } from "@/components/ui/roam-badge";
 import { Button } from "@/components/ui/button";
+import { SearchInput } from "@/components/ui/search-input";
+import { Pagination } from "@/components/ui/pagination";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -30,6 +32,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { RefreshCw, Plus } from "lucide-react";
+import { useProvidersPaginated } from "@/hooks/useQueries";
 import {
   UserCheck,
   UserX,
@@ -682,33 +685,28 @@ const formatServiceSubcategoryType = (type: ServiceSubcategoryType): string => {
 };
 
 export default function AdminProviders() {
-  const [providers, setProviders] = useState<Provider[]>([]);
-  const [providerServices, setProviderServices] = useState<ProviderService[]>(
-    [],
-  );
-  const [providerAddons, setProviderAddons] = useState<ProviderAddon[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [selectedProviders, setSelectedProviders] = useState<string[]>([]);
-  const [selectedProviderServices, setSelectedProviderServices] = useState<
-    string[]
-  >([]);
-  const [selectedProvider, setSelectedProvider] = useState<Provider | null>(
-    null,
-  );
-  const [isProviderDetailsOpen, setIsProviderDetailsOpen] = useState(false);
-  const [verificationFilter, setVerificationFilter] = useState<
-    "all" | VerificationStatus
-  >("all");
-  const [statusFilter, setStatusFilter] = useState<
-    "all" | "active" | "inactive"
-  >("all");
+  // Pagination and search state
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [search, setSearch] = useState("");
+  
+  // Filter states
+  const [verificationFilter, setVerificationFilter] = useState<"all" | VerificationStatus>("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
   const [roleFilter, setRoleFilter] = useState<"all" | ProviderRole>("all");
+  
+  // Related data state
+  const [providerServices, setProviderServices] = useState<ProviderService[]>([]);
+  const [providerAddons, setProviderAddons] = useState<ProviderAddon[]>([]);
+  const [businesses, setBusinesses] = useState<{ id: string; business_name: string }[]>([]);
+  
+  // UI state
+  const [selectedProviders, setSelectedProviders] = useState<string[]>([]);
+  const [selectedProviderServices, setSelectedProviderServices] = useState<string[]>([]);
+  const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null);
+  const [isProviderDetailsOpen, setIsProviderDetailsOpen] = useState(false);
   const [isAddProviderOpen, setIsAddProviderOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [businesses, setBusinesses] = useState<
-    { id: string; business_name: string }[]
-  >([]);
   const [newProvider, setNewProvider] = useState({
     first_name: "",
     last_name: "",
@@ -728,52 +726,49 @@ export default function AdminProviders() {
   // Initialize data cache (5 minute cache duration)
   const cache = useDataCache();
 
-  // Fetch providers, provider services, provider add-ons, and businesses from Supabase
+  // Fetch providers with pagination using React Query
+  const { 
+    data: providersResponse, 
+    isLoading: loading, 
+    error: queryError,
+    refetch 
+  } = useProvidersPaginated({
+    page,
+    limit: pageSize,
+    search,
+    status: statusFilter,
+  });
+
+  // Extract data from response
+  const providers = providersResponse?.data || [];
+  const totalProviders = providersResponse?.total || 0;
+  const totalPages = providersResponse?.totalPages || 1;
+  
+  // Error message
+  const error = queryError ? (queryError as Error).message : null;
+
+  // Reset to page 1 when filters change
   useEffect(() => {
-    fetchProviders();
+    setPage(1);
+  }, [search, statusFilter, verificationFilter, roleFilter]);
+
+  // Fetch related data on mount
+  useEffect(() => {
     fetchProviderServices();
     fetchProviderAddons();
     fetchBusinesses();
   }, []);
 
-  const fetchProviders = async (forceRefresh = false) => {
-    try {
-      // Check cache first unless force refresh
-      if (!forceRefresh && !cache.shouldRefetch('providers')) {
-        const cached = cache.getCachedData('providers');
-        if (cached) {
-          setProviders(cached);
-          setLoading(false);
-          return;
-        }
-      }
+  // Handle search
+  const handleSearch = useCallback((value: string) => {
+    setSearch(value);
+  }, []);
 
-      setLoading(true);
-      setError(null);
-
-      const response = await fetch('/api/providers');
-      const result = await response.json();
-
-      if (!response.ok) {
-        setError(`API Error: ${result.error || 'Failed to fetch providers'}`);
-        setProviders([]);
-      } else {
-        const providersData = result.data || [];
-        setProviders(providersData);
-        cache.setCachedData('providers', providersData);
-        if (providersData.length === 0) {
-          setError("No provider records found.");
-        }
-      }
-    } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Unknown error occurred";
-      setError(`Connection Error: ${errorMessage}`);
-      setProviders([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Handle page size change
+  const handlePageSizeChange = useCallback((newSize: number) => {
+    setPageSize(newSize);
+    setPage(1);
+  }, []);
 
   const fetchProviderServices = async (forceRefresh = false) => {
     try {
@@ -1012,28 +1007,24 @@ export default function AdminProviders() {
     }
   };
 
-  // Filter providers based on selected filters - memoized for performance
+  // Filter providers based on selected filters (client-side for verification and role)
+  // Note: status filtering is done server-side
   const filteredProviders = useMemo(() => 
     providers.filter((provider) => {
       const verificationMatch =
         verificationFilter === "all" ||
         provider.verification_status === verificationFilter;
 
-      const statusMatch =
-        statusFilter === "all" ||
-        (statusFilter === "active" && provider.is_active) ||
-        (statusFilter === "inactive" && !provider.is_active);
-
       const roleMatch =
         roleFilter === "all" || provider.provider_role === roleFilter;
 
-      return verificationMatch && statusMatch && roleMatch;
-    }), [providers, verificationFilter, statusFilter, roleFilter]
+      return verificationMatch && roleMatch;
+    }), [providers, verificationFilter, roleFilter]
   );
 
-  // Provider statistics - memoized for performance
+  // Provider statistics - using server-provided total and current page data
   const providerStats = useMemo(() => ({
-    total: providers.length,
+    total: totalProviders,
     active: providers.filter((p) => p.is_active).length,
     verified: providers.filter((p) => p.verification_status === "approved").length,
     backgroundApproved: providers.filter(
@@ -1453,108 +1444,113 @@ export default function AdminProviders() {
         </div>
 
         <div className="space-y-4">
-          {/* Filter Controls */}
-          <div className="flex gap-4 items-center bg-muted/30 p-4 rounded-lg">
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium">Status:</label>
-              <select
-                value={statusFilter}
-                onChange={(e) =>
-                  setStatusFilter(
-                    e.target.value as "all" | "active" | "inactive",
-                  )
-                }
-                className="px-3 py-1 border border-border rounded-md text-sm bg-background"
-              >
-                <option value="all">All</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
+          {/* Search and Filter Controls */}
+          <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center bg-muted/30 p-4 rounded-lg">
+            {/* Search Input */}
+            <SearchInput
+              value={search}
+              onSearch={handleSearch}
+              placeholder="Search providers..."
+              className="w-full sm:w-64"
+            />
+            
+            {/* Filters Row */}
+            <div className="flex flex-wrap gap-3 items-center">
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium">Status:</label>
+                <select
+                  value={statusFilter}
+                  onChange={(e) =>
+                    setStatusFilter(
+                      e.target.value as "all" | "active" | "inactive",
+                    )
+                  }
+                  className="px-3 py-1 border border-border rounded-md text-sm bg-background"
+                >
+                  <option value="all">All</option>
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium">Verification:</label>
+                <select
+                  value={verificationFilter}
+                  onChange={(e) =>
+                    setVerificationFilter(
+                      e.target.value as "all" | VerificationStatus,
+                    )
+                  }
+                  className="px-3 py-1 border border-border rounded-md text-sm bg-background"
+                >
+                  <option value="all">All</option>
+                  <option value="pending">Pending</option>
+                  <option value="documents_submitted">Documents Submitted</option>
+                  <option value="under_review">Under Review</option>
+                  <option value="approved">Approved</option>
+                  <option value="rejected">Rejected</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium">Role:</label>
+                <select
+                  value={roleFilter}
+                  onChange={(e) =>
+                    setRoleFilter(e.target.value as "all" | ProviderRole)
+                  }
+                  className="px-3 py-1 border border-border rounded-md text-sm bg-background"
+                >
+                  <option value="all">All</option>
+                  <option value="provider">Provider</option>
+                  <option value="owner">Owner</option>
+                  <option value="dispatcher">Dispatcher</option>
+                </select>
+              </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium">
-                Verification Status:
-              </label>
-              <select
-                value={verificationFilter}
-                onChange={(e) =>
-                  setVerificationFilter(
-                    e.target.value as "all" | VerificationStatus,
-                  )
-                }
-                className="px-3 py-1 border border-border rounded-md text-sm bg-background"
-              >
-                <option value="all">All</option>
-                <option value="pending">Pending</option>
-                <option value="documents_submitted">Documents Submitted</option>
-                <option value="under_review">Under Review</option>
-                <option value="approved">Approved</option>
-                <option value="rejected">Rejected</option>
-              </select>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium">Role:</label>
-              <select
-                value={roleFilter}
-                onChange={(e) =>
-                  setRoleFilter(e.target.value as "all" | ProviderRole)
-                }
-                className="px-3 py-1 border border-border rounded-md text-sm bg-background"
-              >
-                <option value="all">All</option>
-                <option value="provider">Provider</option>
-                <option value="owner">Owner</option>
-                <option value="dispatcher">Dispatcher</option>
-              </select>
-            </div>
-
+            {/* Refresh Button */}
             <Button
               variant="outline"
               size="sm"
-              onClick={() => {
-                fetchProviders(true);
-                fetchProviderServices(true);
-                fetchProviderAddons(true);
-                fetchBusinesses(true);
-              }}
+              onClick={() => refetch()}
               disabled={loading}
-              className="flex items-center gap-2"
+              className="ml-auto flex items-center gap-2"
             >
-              {loading ? (
-                <RefreshCw className="w-4 h-4 animate-spin" />
-              ) : (
-                <RefreshCw className="w-4 h-4" />
-              )}
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
               Refresh
             </Button>
-
-            <div className="text-sm text-muted-foreground ml-auto">
-              {loading
-                ? "Loading..."
-                : `Showing ${filteredProviders.length} of ${providers.length} providers`}
-              {cache.getTimeSinceLastFetch('providers') && (
-                <span className="text-xs text-muted-foreground ml-2">
-                  (Updated {cache.getTimeSinceLastFetch('providers')})
-                </span>
-              )}
-              {error && (
-                <div className="text-orange-600 text-xs mt-1">{error}</div>
-              )}
-            </div>
           </div>
+
+          {/* Error Display */}
+          {error && (
+            <div className="text-orange-600 text-sm bg-orange-50 p-3 rounded-lg border border-orange-200">
+              {error}
+            </div>
+          )}
 
           {/* Providers Table */}
           <ROAMDataTable
             title="Providers"
             columns={columns}
             data={loading ? [] : filteredProviders}
-            searchable={true}
+            searchable={false}
             filterable={false}
             addable={false}
             onRowClick={() => {}}
-            pageSize={10}
+            pageSize={pageSize}
+          />
+
+          {/* Server-side Pagination */}
+          <Pagination
+            currentPage={page}
+            totalPages={totalPages}
+            totalItems={totalProviders}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={handlePageSizeChange}
+            isLoading={loading}
           />
         </div>
       </div>
