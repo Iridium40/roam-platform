@@ -28,6 +28,7 @@ import {
 import { supabase } from '@/lib/supabase';
 import { FavoriteButton } from '@/components/FavoriteButton';
 import { cn } from '@/lib/utils';
+import { logger } from '@/utils/logger';
 
 interface Service {
   id: string;
@@ -86,6 +87,7 @@ export function BrowseAllServices() {
   const [services, setServices] = useState<Service[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [displayCount, setDisplayCount] = useState(12); // Show 12 initially for Featured/Category views
   const [allServicesDisplayCount, setAllServicesDisplayCount] = useState(12); // Show 12 initially for All Services
   
@@ -94,9 +96,21 @@ export function BrowseAllServices() {
 
   // Fetch all services and categories
   useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+    
     const fetchData = async () => {
       try {
         setLoading(true);
+        setError(null);
+
+        // Set a timeout to prevent infinite loading
+        timeoutId = setTimeout(() => {
+          setLoading(false);
+          setError('Loading took too long. Please refresh the page.');
+          logger.error('BrowseAllServices: Timeout - query took too long');
+        }, 30000); // 30 second timeout
+
+        logger.debug('BrowseAllServices: Fetching services and categories...');
 
         // Fetch all active services with category and subcategory info
         const { data: servicesData, error: servicesError } = await supabase
@@ -122,7 +136,12 @@ export function BrowseAllServices() {
           .eq('is_active', true)
           .order('created_at', { ascending: false });
 
-        if (servicesError) throw servicesError;
+        if (servicesError) {
+          logger.error('BrowseAllServices: Error fetching services:', servicesError);
+          throw servicesError;
+        }
+
+        logger.debug('BrowseAllServices: Services fetched:', servicesData?.length || 0);
 
         // Fetch categories with subcategories
         const { data: categoriesData, error: categoriesError } = await supabase
@@ -137,7 +156,12 @@ export function BrowseAllServices() {
           `)
           .eq('is_active', true);
 
-        if (categoriesError) throw categoriesError;
+        if (categoriesError) {
+          logger.error('BrowseAllServices: Error fetching categories:', categoriesError);
+          throw categoriesError;
+        }
+
+        logger.debug('BrowseAllServices: Categories fetched:', categoriesData?.length || 0);
 
         // Transform services
         const transformedServices: Service[] = (servicesData || []).map((service: any) => ({
@@ -165,14 +189,23 @@ export function BrowseAllServices() {
 
         setServices(transformedServices);
         setCategories(transformedCategories);
-      } catch (error) {
-        console.error('Error fetching services:', error);
+        clearTimeout(timeoutId);
+        logger.debug('BrowseAllServices: Data loaded successfully');
+      } catch (err: any) {
+        clearTimeout(timeoutId);
+        logger.error('BrowseAllServices: Error fetching services:', err);
+        setError(err?.message || 'Failed to load services. Please refresh the page.');
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
+    
+    // Cleanup timeout on unmount
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+    };
   }, []);
 
   // Helper function to convert to title case
@@ -458,6 +491,17 @@ export function BrowseAllServices() {
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-10 h-10 animate-spin text-roam-blue" />
+          </div>
+        ) : error ? (
+          <div className="text-center py-20">
+            <h3 className="text-2xl font-bold mb-2 text-red-600">Error Loading Services</h3>
+            <p className="text-gray-600 mb-6">{error}</p>
+            <Button
+              onClick={() => window.location.reload()}
+              className="bg-roam-blue hover:bg-roam-blue/90"
+            >
+              Refresh Page
+            </Button>
           </div>
         ) : filteredAndSortedServices.length === 0 ? (
           <div className="text-center py-20">

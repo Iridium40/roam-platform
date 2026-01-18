@@ -32,6 +32,8 @@ interface ServiceQueryResult {
 
 // Fetch featured services
 const fetchFeaturedServices = async (): Promise<FeaturedService[]> => {
+  logger.debug("useServiceData: Fetching featured services...");
+  
   const { data, error } = await supabase
     .from("services")
     .select(`
@@ -57,9 +59,11 @@ const fetchFeaturedServices = async (): Promise<FeaturedService[]> => {
     .eq("is_featured", true);
 
   if (error) {
-    logger.error("Error fetching featured services:", error);
+    logger.error("useServiceData: Error fetching featured services:", error);
     throw error;
   }
+  
+  logger.debug("useServiceData: Featured services fetched:", data?.length || 0);
 
   return (data as ServiceQueryResult[]).map((service) => {
     const category = service.service_subcategories?.service_categories?.service_category_type || 'general';
@@ -78,6 +82,8 @@ const fetchFeaturedServices = async (): Promise<FeaturedService[]> => {
 
 // Fetch popular services
 const fetchPopularServices = async (): Promise<PopularService[]> => {
+  logger.debug("useServiceData: Fetching popular services...");
+  
   const { data, error } = await supabase
     .from("services")
     .select(`
@@ -104,9 +110,11 @@ const fetchPopularServices = async (): Promise<PopularService[]> => {
     .limit(6);
 
   if (error) {
-    logger.error("Error fetching popular services:", error);
+    logger.error("useServiceData: Error fetching popular services:", error);
     throw error;
   }
+  
+  logger.debug("useServiceData: Popular services fetched:", data?.length || 0);
 
   return (data as ServiceQueryResult[]).map((service) => {
     const category = service.service_subcategories?.service_categories?.service_category_type || 'general';
