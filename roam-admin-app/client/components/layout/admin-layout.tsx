@@ -541,7 +541,7 @@ export function AdminLayout({
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 p-3 sm:p-4 md:p-6 lg:p-8 overflow-x-auto">{children}</main>
+        <main className="flex-1 p-3 sm:p-4 md:p-6 lg:p-8 overflow-x-auto overflow-y-auto min-w-0">{children}</main>
       </div>
 
       {/* Mobile Overlay */}

@@ -100,10 +100,14 @@
     @apply bg-background text-foreground font-sans;
   }
 
-  /* Mobile optimization - prevent horizontal scroll */
-  html, body {
-    overflow-x: hidden;
-    max-width: 100%;
+  /* Allow horizontal scroll for data tables while preventing body overflow */
+  html {
+    overflow-x: auto;
+  }
+  
+  body {
+    min-width: 100%;
+    overflow-x: auto;
   }
 
   /* Improve touch targets on mobile */

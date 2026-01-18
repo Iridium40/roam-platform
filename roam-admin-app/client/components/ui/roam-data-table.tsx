@@ -104,7 +104,7 @@ export function ROAMDataTable({
   return (
     <div
       className={cn(
-        "bg-card rounded-lg border border-border w-full overflow-x-auto",
+        "bg-card rounded-lg border border-border w-full",
         className,
       )}
     >
@@ -240,35 +240,41 @@ export function ROAMDataTable({
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 sm:px-6 py-4 border-t border-border bg-muted/50">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 sm:px-6 py-4 border-t border-border bg-muted/50 relative z-10">
           <div className="text-xs sm:text-sm text-muted-foreground order-2 sm:order-1">
             Showing {(currentPage - 1) * pageSize + 1}-
             {Math.min(currentPage * pageSize, sortedData.length)} of{" "}
             {sortedData.length} results
           </div>
 
-          <div className="flex items-center gap-2 order-1 sm:order-2">
+          <div className="flex items-center gap-2 order-1 sm:order-2 flex-shrink-0">
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              onClick={(e) => {
+                e.stopPropagation();
+                setCurrentPage((p) => Math.max(1, p - 1));
+              }}
               disabled={currentPage === 1}
-              className="h-8"
+              className="h-8 z-10"
             >
               <ChevronLeft className="w-4 h-4 sm:mr-1" />
               <span className="hidden sm:inline">Previous</span>
             </Button>
 
-            <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
+            <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap px-2">
               Page {currentPage} of {totalPages}
             </span>
 
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              onClick={(e) => {
+                e.stopPropagation();
+                setCurrentPage((p) => Math.min(totalPages, p + 1));
+              }}
               disabled={currentPage === totalPages}
-              className="h-8"
+              className="h-8 z-10"
             >
               <span className="hidden sm:inline">Next</span>
               <ChevronRight className="w-4 h-4 sm:ml-1" />
