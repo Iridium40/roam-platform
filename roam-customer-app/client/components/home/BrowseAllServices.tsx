@@ -25,7 +25,6 @@ import {
   ChevronRight,
   ChevronDown,
 } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
 import { FavoriteButton } from '@/components/FavoriteButton';
 import { cn } from '@/lib/utils';
 import { logger } from '@/utils/logger';
@@ -108,67 +107,31 @@ export function BrowseAllServices() {
           setLoading(false);
           setError('Loading took too long. Please refresh the page.');
           logger.error('BrowseAllServices: Timeout - query took too long');
-        }, 30000); // 30 second timeout
+        }, 15000); // 15 second timeout
 
-        logger.debug('BrowseAllServices: Fetching services and categories...');
+        logger.debug('BrowseAllServices: Fetching services via API...');
 
-        // Fetch all active services with category and subcategory info
-        const { data: servicesData, error: servicesError } = await supabase
-          .from('services')
-          .select(`
-            id,
-            name,
-            description,
-            min_price,
-            duration_minutes,
-            image_url,
-            is_featured,
-            subcategory_id,
-            service_subcategories!subcategory_id (
-              id,
-              service_subcategory_type,
-              service_categories (
-                id,
-                service_category_type
-              )
-            )
-          `)
-          .eq('is_active', true)
-          .order('created_at', { ascending: false });
+        // Fetch services via server API (bypasses RLS)
+        const response = await fetch('/api/services/browse');
+        const json = await response.json().catch(() => ({}));
 
-        if (servicesError) {
-          logger.error('BrowseAllServices: Error fetching services:', servicesError);
-          throw servicesError;
+        if (!response.ok) {
+          const errorMsg = json?.error || 'Failed to fetch services';
+          logger.error('BrowseAllServices: API error:', errorMsg);
+          throw new Error(errorMsg);
         }
+
+        const { services: servicesData, categories: categoriesData } = json.data || {};
 
         logger.debug('BrowseAllServices: Services fetched:', servicesData?.length || 0);
-
-        // Fetch categories with subcategories
-        const { data: categoriesData, error: categoriesError } = await supabase
-          .from('service_categories')
-          .select(`
-            id,
-            service_category_type,
-            service_subcategories (
-              id,
-              service_subcategory_type
-            )
-          `)
-          .eq('is_active', true);
-
-        if (categoriesError) {
-          logger.error('BrowseAllServices: Error fetching categories:', categoriesError);
-          throw categoriesError;
-        }
-
         logger.debug('BrowseAllServices: Categories fetched:', categoriesData?.length || 0);
 
         // Transform services
         const transformedServices: Service[] = (servicesData || []).map((service: any) => ({
           id: service.id,
           title: service.name,
-          category: service.service_subcategories?.service_categories?.service_category_type || 'General',
-          subcategory: service.service_subcategories?.service_subcategory_type || 'Other',
+          category: service.category || 'General',
+          subcategory: service.subcategory || 'Other',
           image: service.image_url || 'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=500&h=300&fit=crop',
           description: service.description || 'Professional service',
           price: `$${service.min_price || 50}`,
