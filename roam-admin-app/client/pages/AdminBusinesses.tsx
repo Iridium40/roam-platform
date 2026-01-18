@@ -3478,7 +3478,6 @@ export default function AdminBusinesses() {
                     contact_email: "",
                     phone: "",
                     website_url: "",
-        business_type: "business",
                     business_type: "business",
                     is_active: true,
                     verification_status: "pending",
