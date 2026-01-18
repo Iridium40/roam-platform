@@ -3,6 +3,8 @@
  * 
  * These hooks provide automatic caching, background refetching, and 
  * proper loading/error states with minimal boilerplate.
+ * 
+ * Paginated hooks return: { data, total, page, limit, totalPages }
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -22,6 +24,27 @@ export const queryKeys = {
 // Default stale time (5 minutes)
 const DEFAULT_STALE_TIME = 5 * 60 * 1000;
 
+// Default page size
+const DEFAULT_PAGE_SIZE = 20;
+
+// Paginated response type
+export interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+// Pagination params type
+export interface PaginationParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+}
+
 // Generic fetch function
 async function fetchApi<T>(endpoint: string): Promise<T> {
   const response = await fetch(endpoint);
@@ -33,7 +56,163 @@ async function fetchApi<T>(endpoint: string): Promise<T> {
   return result.data || result;
 }
 
-// Providers hook
+// Generic paginated fetch function
+async function fetchPaginatedApi<T>(endpoint: string): Promise<PaginatedResponse<T>> {
+  const response = await fetch(endpoint);
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Network error' }));
+    throw new Error(error.error || `Failed to fetch ${endpoint}`);
+  }
+  const result = await response.json();
+  
+  // Handle different response formats from server
+  return {
+    data: result.data || [],
+    total: result.total || result.count || 0,
+    page: result.page || 1,
+    limit: result.limit || DEFAULT_PAGE_SIZE,
+    totalPages: result.totalPages || Math.ceil((result.total || result.count || 0) / (result.limit || DEFAULT_PAGE_SIZE)),
+  };
+}
+
+// ============================================================================
+// PAGINATED HOOKS (recommended for large datasets)
+// ============================================================================
+
+/**
+ * Paginated customers hook with search
+ * @param params - Pagination and filter params
+ * @returns Paginated response with customers data
+ */
+export function useCustomersPaginated(params: PaginationParams & { status?: string } = {}) {
+  const { page = 1, limit = DEFAULT_PAGE_SIZE, search = '', status = 'all' } = params;
+  
+  const queryParams = new URLSearchParams({
+    page: String(page),
+    limit: String(limit),
+    status,
+  });
+  if (search) queryParams.set('search', search);
+  
+  return useQuery({
+    queryKey: [...queryKeys.customers, 'paginated', { page, limit, search, status }],
+    queryFn: () => fetchPaginatedApi<any>(`/api/customers?${queryParams.toString()}`),
+    staleTime: DEFAULT_STALE_TIME,
+    placeholderData: (previousData) => previousData, // Keep previous data while loading
+  });
+}
+
+/**
+ * Paginated providers hook with search
+ * @param params - Pagination and filter params
+ * @returns Paginated response with providers data
+ */
+export function useProvidersPaginated(params: PaginationParams & { status?: string } = {}) {
+  const { page = 1, limit = DEFAULT_PAGE_SIZE, search = '', status = 'all' } = params;
+  
+  const queryParams = new URLSearchParams({
+    page: String(page),
+    limit: String(limit),
+    status,
+  });
+  if (search) queryParams.set('search', search);
+  
+  return useQuery({
+    queryKey: [...queryKeys.providers, 'paginated', { page, limit, search, status }],
+    queryFn: () => fetchPaginatedApi<any>(`/api/providers?${queryParams.toString()}`),
+    staleTime: DEFAULT_STALE_TIME,
+    placeholderData: (previousData) => previousData,
+  });
+}
+
+/**
+ * Paginated businesses hook with search and filters
+ * @param params - Pagination and filter params
+ * @returns Paginated response with businesses data
+ */
+export function useBusinessesPaginated(params: PaginationParams & {
+  verificationStatus?: string;
+  businessType?: string;
+  useApprovalsView?: boolean;
+} = {}) {
+  const { 
+    page = 1, 
+    limit = DEFAULT_PAGE_SIZE, 
+    search = '', 
+    sortBy = 'created_at',
+    sortOrder = 'desc',
+    verificationStatus = 'all',
+    businessType = 'all',
+    useApprovalsView = false,
+  } = params;
+  
+  const queryParams = new URLSearchParams({
+    page: String(page),
+    limit: String(limit),
+    sortBy,
+    sortOrder,
+  });
+  if (search) queryParams.set('search', search);
+  if (verificationStatus !== 'all') queryParams.set('verification_status', verificationStatus);
+  if (businessType !== 'all') queryParams.set('business_type', businessType);
+  if (useApprovalsView) queryParams.set('use_approvals_view', 'true');
+  
+  return useQuery({
+    queryKey: [...queryKeys.businesses, 'paginated', { page, limit, search, sortBy, sortOrder, verificationStatus, businessType, useApprovalsView }],
+    queryFn: () => fetchPaginatedApi<any>(`/api/businesses?${queryParams.toString()}`),
+    staleTime: DEFAULT_STALE_TIME,
+    placeholderData: (previousData) => previousData,
+  });
+}
+
+/**
+ * Paginated bookings hook with search and filters
+ * @param params - Pagination and filter params
+ * @returns Paginated response with bookings data
+ */
+export function useBookingsPaginated(params: PaginationParams & {
+  status?: string;
+  paymentStatus?: string;
+  startDate?: string;
+  endDate?: string;
+} = {}) {
+  const { 
+    page = 1, 
+    limit = 25, // Bookings default to 25 per page
+    search = '', 
+    sortBy = 'created_at',
+    sortOrder = 'desc',
+    status = 'all',
+    paymentStatus = 'all',
+    startDate,
+    endDate,
+  } = params;
+  
+  const queryParams = new URLSearchParams({
+    page: String(page),
+    limit: String(limit),
+    sortBy,
+    sortOrder,
+  });
+  if (search) queryParams.set('search', search);
+  if (status !== 'all') queryParams.set('status', status);
+  if (paymentStatus !== 'all') queryParams.set('payment_status', paymentStatus);
+  if (startDate) queryParams.set('start_date', startDate);
+  if (endDate) queryParams.set('end_date', endDate);
+  
+  return useQuery({
+    queryKey: [...queryKeys.bookings, 'paginated', { page, limit, search, sortBy, sortOrder, status, paymentStatus, startDate, endDate }],
+    queryFn: () => fetchPaginatedApi<any>(`/api/bookings?${queryParams.toString()}`),
+    staleTime: DEFAULT_STALE_TIME,
+    placeholderData: (previousData) => previousData,
+  });
+}
+
+// ============================================================================
+// LEGACY HOOKS (for backward compatibility - fetch all records)
+// ============================================================================
+
+// Providers hook (legacy - fetches all)
 export function useProviders() {
   return useQuery({
     queryKey: queryKeys.providers,
@@ -42,7 +221,7 @@ export function useProviders() {
   });
 }
 
-// Customers hook with optional status filter
+// Customers hook with optional status filter (legacy - fetches all)
 export function useCustomers(statusFilter: string = 'all') {
   return useQuery({
     queryKey: [...queryKeys.customers, statusFilter],
@@ -51,7 +230,7 @@ export function useCustomers(statusFilter: string = 'all') {
   });
 }
 
-// Businesses hook with optional filters
+// Businesses hook with optional filters (legacy - fetches all)
 export function useBusinesses(options?: {
   verificationStatus?: string;
   businessType?: string;
@@ -80,7 +259,7 @@ export function useServices() {
   });
 }
 
-// Bookings hook
+// Bookings hook (legacy - fetches all)
 export function useBookings() {
   return useQuery({
     queryKey: queryKeys.bookings,

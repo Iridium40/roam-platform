@@ -10,6 +10,8 @@ import {
 import { ROAMStatCard } from "@/components/ui/roam-stat-card";
 import { ROAMBadge } from "@/components/ui/roam-badge";
 import { Button } from "@/components/ui/button";
+import { SearchInput } from "@/components/ui/search-input";
+import { Pagination } from "@/components/ui/pagination";
 import {
   Dialog,
   DialogContent,
@@ -36,7 +38,9 @@ import {
   CreditCard,
   User,
   CalendarDays,
+  RefreshCw,
 } from "lucide-react";
+import { useCustomersPaginated, useUpdateCustomerStatus } from "@/hooks/useQueries";
 
 interface CustomerProfile {
   id: string;
@@ -233,60 +237,53 @@ const calculateAge = (birthDate: string) => {
 };
 
 export default function AdminCustomers() {
-  const [customers, setCustomers] = useState<CustomerProfile[]>([]);
-  const [customerLocations, setCustomerLocations] = useState<
-    CustomerLocation[]
-  >([]);
-  const [customerBookings, setCustomerBookings] = useState<CustomerBooking[]>(
-    [],
-  );
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Pagination and search state
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
+  
+  // UI state
+  const [customerLocations, setCustomerLocations] = useState<CustomerLocation[]>([]);
+  const [customerBookings, setCustomerBookings] = useState<CustomerBooking[]>([]);
   const [selectedCustomers, setSelectedCustomers] = useState<string[]>([]);
-  const [selectedCustomer, setSelectedCustomer] =
-    useState<CustomerProfile | null>(null);
+  const [selectedCustomer, setSelectedCustomer] = useState<CustomerProfile | null>(null);
   const [isCustomerDetailsOpen, setIsCustomerDetailsOpen] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<
-    "all" | "active" | "inactive"
-  >("all");
 
-  // Fetch customers, locations, and bookings from Supabase
+  // Fetch customers with pagination using React Query
+  const { 
+    data: customersResponse, 
+    isLoading: loading, 
+    error: queryError,
+    refetch 
+  } = useCustomersPaginated({
+    page,
+    limit: pageSize,
+    search,
+    status: statusFilter,
+  });
+
+  // Extract data from response
+  const customers = customersResponse?.data || [];
+  const totalCustomers = customersResponse?.total || 0;
+  const totalPages = customersResponse?.totalPages || 1;
+  
+  // Error message
+  const error = queryError ? (queryError as Error).message : null;
+
+  // Update customer status mutation
+  const updateStatusMutation = useUpdateCustomerStatus();
+
+  // Reset to page 1 when filters change
   useEffect(() => {
-    fetchCustomers();
+    setPage(1);
+  }, [search, statusFilter]);
+
+  // Fetch related data on mount
+  useEffect(() => {
     fetchCustomerLocations();
     fetchCustomerBookings();
   }, []);
-
-  const fetchCustomers = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const response = await fetch(`/api/customers?status=${statusFilter}`);
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to fetch customers');
-      }
-
-      if (!result.success) {
-        throw new Error(result.error || 'API returned unsuccessful response');
-      }
-
-      setCustomers(result.data || []);
-      
-      if (result.data?.length === 0) {
-        setError("No customer records found.");
-      }
-    } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Unknown error occurred";
-      setError(`Failed to load customers: ${errorMessage}`);
-      setCustomers([]);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const fetchCustomerLocations = async () => {
     try {
