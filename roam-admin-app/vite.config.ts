@@ -1,28 +1,38 @@
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
 
 // https://vitejs.dev/config/
-export default defineConfig({
-  plugins: [react()],
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./client"),
-      "@shared": path.resolve(__dirname, "./shared"),
-    },
-  },
-  server: {
-    port: 5175,
-    strictPort: true,
-    host: true,
-    proxy: {
-      '/api': {
-        target: 'http://localhost:3001',
-        changeOrigin: true,
+export default defineConfig(({ mode }) => {
+  // Load env file based on `mode` in the current working directory.
+  const env = loadEnv(mode, process.cwd(), '');
+  
+  return {
+    plugins: [react()],
+    resolve: {
+      alias: {
+        "@": path.resolve(__dirname, "./client"),
+        "@shared": path.resolve(__dirname, "./shared"),
       },
     },
-  },
-  build: {
-    outDir: "dist/spa",
-  },
+    // Explicitly define env variables for the client
+    define: {
+      'import.meta.env.VITE_PUBLIC_SUPABASE_URL': JSON.stringify(env.VITE_PUBLIC_SUPABASE_URL),
+      'import.meta.env.VITE_PUBLIC_SUPABASE_ANON_KEY': JSON.stringify(env.VITE_PUBLIC_SUPABASE_ANON_KEY),
+    },
+    server: {
+      port: 5175,
+      strictPort: true,
+      host: true,
+      proxy: {
+        '/api': {
+          target: 'http://localhost:3001',
+          changeOrigin: true,
+        },
+      },
+    },
+    build: {
+      outDir: "dist/spa",
+    },
+  };
 });
