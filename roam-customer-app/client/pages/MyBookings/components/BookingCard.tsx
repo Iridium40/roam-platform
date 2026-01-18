@@ -176,15 +176,15 @@ export const BookingCard: React.FC<BookingCardProps> = ({
         <div className="hidden lg:block space-y-4">
           {/* Header Row - Service, Provider, Rating, Price */}
           <div className="flex items-start gap-4">
-            {/* Service Image */}
+            {/* Provider Avatar */}
             <Avatar className="w-14 h-14 flex-shrink-0">
               <AvatarImage
-                src={booking.services?.image_url || booking.service_image}
-                alt={booking.service_name}
+                src={booking.providers?.image_url}
+                alt={`${booking.providers?.first_name} ${booking.providers?.last_name}`}
                 className="object-cover"
               />
               <AvatarFallback className="bg-gradient-to-br from-roam-blue to-roam-light-blue text-white text-lg font-semibold">
-                {booking.service_name?.[0]?.toUpperCase() || "S"}
+                {booking.providers?.first_name?.[0]?.toUpperCase() || booking.service_name?.[0]?.toUpperCase() || "P"}
               </AvatarFallback>
             </Avatar>
             
@@ -543,15 +543,15 @@ export const BookingCard: React.FC<BookingCardProps> = ({
         <div className="lg:hidden space-y-4">
           {/* Header Section - Service Info with Price */}
           <div className="flex items-start gap-3">
-            {/* Service Image */}
+            {/* Provider Avatar */}
             <Avatar className="w-14 h-14 flex-shrink-0">
               <AvatarImage
-                src={booking.services?.image_url || booking.service_image}
-                alt={booking.service_name}
+                src={booking.providers?.image_url}
+                alt={`${booking.providers?.first_name} ${booking.providers?.last_name}`}
                 className="object-cover"
               />
               <AvatarFallback className="bg-gradient-to-br from-roam-blue to-roam-light-blue text-white text-sm font-semibold">
-                {booking.service_name?.[0]?.toUpperCase() || "S"}
+                {booking.providers?.first_name?.[0]?.toUpperCase() || booking.service_name?.[0]?.toUpperCase() || "P"}
               </AvatarFallback>
             </Avatar>
             
