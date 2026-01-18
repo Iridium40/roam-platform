@@ -982,7 +982,6 @@ export default function AdminBusinesses() {
       if (!forceRefresh && !cache.shouldRefetch('businesses')) {
         const cached = cache.getCachedData('businesses');
         if (cached) {
-          console.log("Using cached businesses data");
           setBusinesses(cached);
           setLoading(false);
           return;
@@ -992,14 +991,11 @@ export default function AdminBusinesses() {
       setLoading(true);
       setError(null);
 
-      console.log("Fetching businesses from API...");
-
       const response = await fetch('/api/businesses');
       
       // Check if response is ok before trying to parse JSON
       if (!response.ok) {
         const text = await response.text();
-        console.error('Server error response:', text);
         
         // Try to parse as JSON if possible
         let errorMessage = 'Failed to fetch businesses';
@@ -1025,29 +1021,10 @@ export default function AdminBusinesses() {
       try {
         result = JSON.parse(responseText);
       } catch (jsonError) {
-        console.error('Failed to parse JSON:', responseText.substring(0, 200));
         throw new Error('Server returned invalid JSON response');
       }
 
-      console.log("Business API response:", result);
-
       if (result.data) {
-        console.log(
-          `Successfully fetched ${result.data.length || 0} businesses from API`,
-        );
-        // Debug business hours data
-        if (result.data && result.data.length > 0) {
-          console.log(
-            "Business hours debug:",
-            result.data.map((b: any) => ({
-              name: b.business_name,
-              business_hours: b.business_hours,
-              business_hours_type: typeof b.business_hours,
-              service_categories: b.service_categories,
-              service_subcategories: b.service_subcategories,
-            })),
-          );
-        }
         const businessesData = result.data || [];
         setBusinesses(businessesData);
         cache.setCachedData('businesses', businessesData);
@@ -1061,7 +1038,6 @@ export default function AdminBusinesses() {
         setBusinesses([]);
       }
     } catch (err) {
-      console.error("Unexpected error:", err);
       const errorMessage =
         err instanceof Error ? err.message : "Unknown error occurred";
       setError(`Connection Error: ${errorMessage}`);
@@ -1077,33 +1053,25 @@ export default function AdminBusinesses() {
       if (!forceRefresh && !cache.shouldRefetch('businessLocations')) {
         const cached = cache.getCachedData('businessLocations');
         if (cached) {
-          console.log("Using cached business locations data");
           setBusinessLocations(cached);
           return;
         }
       }
 
-      console.log("Fetching business locations from API...");
-
       const response = await fetch('/api/business-locations');
       const result = await response.json();
 
       if (!response.ok) {
-        console.error("Business locations error:", result.error);
         setError(
           `Business Locations Error: ${result.error || 'Failed to fetch business locations'}`,
         );
         setBusinessLocations([]);
       } else {
-        console.log(
-          `Successfully fetched ${result.data?.length || 0} business locations`,
-        );
         const locationsData = result.data || [];
         setBusinessLocations(locationsData);
         cache.setCachedData('businessLocations', locationsData);
       }
     } catch (err) {
-      console.error("Unexpected error fetching business locations:", err);
       const errorMessage =
         err instanceof Error ? err.message : "Unknown error occurred";
       setError(`Business Locations Connection Error: ${errorMessage}`);
@@ -1117,33 +1085,25 @@ export default function AdminBusinesses() {
       if (!forceRefresh && !cache.shouldRefetch('businessServices')) {
         const cached = cache.getCachedData('businessServices');
         if (cached) {
-          console.log("Using cached business services data");
           setBusinessServices(cached);
           return;
         }
       }
 
-      console.log("Fetching business services from API...");
-
       const response = await fetch('/api/business-services');
       const result = await response.json();
 
       if (!response.ok) {
-        console.error("Business services error:", result.error);
         setError(
           `Business Services Error: ${result.error || 'Failed to fetch business services'}`,
         );
         setBusinessServices([]);
       } else {
-        console.log(
-          `Successfully fetched ${result.data?.length || 0} business services`,
-        );
         const servicesData = result.data || [];
         setBusinessServices(servicesData);
         cache.setCachedData('businessServices', servicesData);
       }
     } catch (err) {
-      console.error("Unexpected error fetching business services:", err);
       const errorMessage =
         err instanceof Error ? err.message : "Unknown error occurred";
       setError(`Business Services Connection Error: ${errorMessage}`);
@@ -1153,8 +1113,6 @@ export default function AdminBusinesses() {
 
   const fetchBusinessServiceCategories = async (businessId?: string) => {
     try {
-      console.log("Fetching business service categories via API...");
-
       if (!businessId) {
         setBusinessServiceCategories([]);
         return;
@@ -1174,78 +1132,17 @@ export default function AdminBusinesses() {
 
       const { data } = await response.json();
 
-      console.log("Business service categories query response:", {
-        data,
-        error,
-      });
-
       if (error) {
-        console.error(
-          "Full error object for business service categories:",
-          error,
-        );
-        console.error("Error type:", typeof error);
-        console.error("Error keys:", Object.keys(error || {}));
-
-        let errorMessage = "Unknown error occurred";
-        if (error instanceof Error) {
-          errorMessage = error.message;
-        } else if (error?.message) {
-          errorMessage = error.message;
-        } else if (error?.error_description) {
-          errorMessage = error.error_description;
-        } else if (error?.details) {
-          errorMessage = error.details;
-        } else if (error?.hint) {
-          errorMessage = error.hint;
-        } else if (typeof error === "string") {
-          errorMessage = error;
-        } else {
-          try {
-            errorMessage = JSON.stringify(error);
-          } catch (e) {
-            errorMessage = `Serialization failed. Error type: ${typeof error}`;
-          }
-        }
-
-        console.error("Business service categories query error:", errorMessage);
+        const errorMessage = error instanceof Error ? error.message : String(error);
         setError(`Business Service Categories Query Error: ${errorMessage}`);
         setBusinessServiceCategories([]);
       } else {
-        console.log(
-          `Successfully fetched ${data?.length || 0} business service categories from database`,
-        );
         setBusinessServiceCategories(data || []);
       }
     } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
       console.error(
-        "Full catch error object for business service categories:",
-        err,
-      );
-      console.error("Catch error type:", typeof err);
-      console.error("Catch error keys:", Object.keys(err || {}));
-
-      let errorMessage = "Unknown error occurred";
-      if (err instanceof Error) {
-        errorMessage = err.message;
-      } else if (err?.message) {
-        errorMessage = err.message;
-      } else if (err?.error_description) {
-        errorMessage = err.error_description;
-      } else if (err?.details) {
-        errorMessage = err.details;
-      } else if (typeof err === "string") {
-        errorMessage = err;
-      } else {
-        try {
-          errorMessage = JSON.stringify(err);
-        } catch (e) {
-          errorMessage = `Serialization failed. Error type: ${typeof err}`;
-        }
-      }
-
-      console.error(
-        "Unexpected error fetching business service categories:",
+        "Error fetching business service categories:",
         errorMessage,
       );
       setError(`Business Service Categories Connection Error: ${errorMessage}`);
@@ -1255,8 +1152,6 @@ export default function AdminBusinesses() {
 
   const fetchBusinessServiceSubcategories = async (businessId?: string) => {
     try {
-      console.log("Fetching business service subcategories via API...");
-
       if (!businessId) {
         setBusinessServiceSubcategories([]);
         return;
@@ -1276,83 +1171,15 @@ export default function AdminBusinesses() {
 
       const { data } = await response.json();
 
-      console.log("Business service subcategories query response:", {
-        data,
-        error,
-      });
-
       if (error) {
-        console.error(
-          "Full error object for business service subcategories:",
-          error,
-        );
-        console.error("Error type:", typeof error);
-        console.error("Error keys:", Object.keys(error || {}));
-
-        let errorMessage = "Unknown error occurred";
-        if (error instanceof Error) {
-          errorMessage = error.message;
-        } else if (error?.message) {
-          errorMessage = error.message;
-        } else if (error?.error_description) {
-          errorMessage = error.error_description;
-        } else if (error?.details) {
-          errorMessage = error.details;
-        } else if (error?.hint) {
-          errorMessage = error.hint;
-        } else if (typeof error === "string") {
-          errorMessage = error;
-        } else {
-          try {
-            errorMessage = JSON.stringify(error);
-          } catch (e) {
-            errorMessage = `Serialization failed. Error type: ${typeof error}`;
-          }
-        }
-
-        console.error(
-          "Business service subcategories query error:",
-          errorMessage,
-        );
+        const errorMessage = error instanceof Error ? error.message : String(error);
         setError(`Business Service Subcategories Query Error: ${errorMessage}`);
         setBusinessServiceSubcategories([]);
       } else {
-        console.log(
-          `Successfully fetched ${data?.length || 0} business service subcategories from database`,
-        );
         setBusinessServiceSubcategories(data || []);
       }
     } catch (err) {
-      console.error(
-        "Full catch error object for business service subcategories:",
-        err,
-      );
-      console.error("Catch error type:", typeof err);
-      console.error("Catch error keys:", Object.keys(err || {}));
-
-      let errorMessage = "Unknown error occurred";
-      if (err instanceof Error) {
-        errorMessage = err.message;
-      } else if (err?.message) {
-        errorMessage = err.message;
-      } else if (err?.error_description) {
-        errorMessage = err.error_description;
-      } else if (err?.details) {
-        errorMessage = err.details;
-      } else if (typeof err === "string") {
-        errorMessage = err;
-      } else {
-        try {
-          errorMessage = JSON.stringify(err);
-        } catch (e) {
-          errorMessage = `Serialization failed. Error type: ${typeof err}`;
-        }
-      }
-
-      console.error(
-        "Unexpected error fetching business service subcategories:",
-        errorMessage,
-      );
+      const errorMessage = err instanceof Error ? err.message : String(err);
       setError(
         `Business Service Subcategories Connection Error: ${errorMessage}`,
       );
@@ -1362,67 +1189,33 @@ export default function AdminBusinesses() {
 
   const fetchAvailableServiceCategories = async () => {
     try {
-      console.log("Fetching available service categories from Supabase...");
-
       const { data, error } = await supabase
         .from("service_categories")
         .select("id, service_category_type, description")
         .eq("is_active", true)
         .order("service_category_type", { ascending: true });
 
-      if (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : "Unknown error occurred";
-        console.error(
-          "Available service categories query error:",
-          errorMessage,
-        );
-      } else {
-        console.log(
-          `Successfully fetched ${data?.length || 0} available service categories`,
-        );
+      if (!error) {
         setAvailableServiceCategories(data || []);
       }
     } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Unknown error occurred";
-      console.error(
-        "Unexpected error fetching available service categories:",
-        errorMessage,
-      );
+      // Silent fail - non-critical data
     }
   };
 
   const fetchAvailableServiceSubcategories = async () => {
     try {
-      console.log("Fetching available service subcategories from Supabase...");
-
       const { data, error } = await supabase
         .from("service_subcategories")
         .select("id, category_id, service_subcategory_type, description")
         .eq("is_active", true)
         .order("service_subcategory_type", { ascending: true });
 
-      if (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : "Unknown error occurred";
-        console.error(
-          "Available service subcategories query error:",
-          errorMessage,
-        );
-      } else {
-        console.log(
-          `Successfully fetched ${data?.length || 0} available service subcategories`,
-        );
+      if (!error) {
         setAvailableServiceSubcategories(data || []);
       }
     } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Unknown error occurred";
-      console.error(
-        "Unexpected error fetching available service subcategories:",
-        errorMessage,
-      );
+      // Silent fail - non-critical data
     }
   };
 
@@ -1432,37 +1225,25 @@ export default function AdminBusinesses() {
       if (!forceRefresh && !cache.shouldRefetch('providers')) {
         const cached = cache.getCachedData('providers');
         if (cached) {
-          console.log("Using cached providers data");
           setProviders(cached);
           return;
         }
       }
-
-      console.log("Fetching providers from Supabase...");
 
       const { data, error } = await supabase
         .from("providers")
         .select("*")
         .order("created_at", { ascending: false });
 
-      console.log("Providers query response:", { data, error });
-
       if (error) {
-        console.error("Providers query error:", error);
-        setError(
-          `Providers Query Error: ${error.message}. You may need to create RLS policy: CREATE POLICY "Allow anon read access" ON public.providers FOR SELECT USING (true);`,
-        );
+        setError(`Providers Query Error: ${error.message}`);
         setProviders([]);
       } else {
-        console.log(
-          `Successfully fetched ${data?.length || 0} providers from database`,
-        );
         const providersData = data || [];
         setProviders(providersData);
         cache.setCachedData('providers', providersData);
       }
     } catch (err) {
-      console.error("Unexpected error fetching providers:", err);
       const errorMessage =
         err instanceof Error ? err.message : "Unknown error occurred";
       setError(`Providers Connection Error: ${errorMessage}`);
@@ -1521,18 +1302,13 @@ export default function AdminBusinesses() {
       const result = await response.json();
 
       if (!response.ok) {
-        console.error("Error updating business status:", result.error);
         alert(
           `Error updating business status: ${result.error || 'Update failed'}`,
         );
       } else {
-        console.log(
-          `Business ${businessId} status updated to ${newStatus ? "active" : "inactive"}`,
-        );
         await fetchBusinesses(); // Refresh the businesses list
       }
     } catch (err) {
-      console.error("Unexpected error:", err);
       alert(`Unexpected error: ${err}`);
     }
   };
@@ -1542,12 +1318,6 @@ export default function AdminBusinesses() {
     businessId: string,
     newStatus: VerificationStatus,
   ) => {
-    console.log("toggleVerificationStatus called with:", {
-      businessId,
-      newStatus,
-      type: typeof newStatus,
-    });
-
     // Validate enum value
     const validStatuses: VerificationStatus[] = [
       "pending",
@@ -1556,9 +1326,7 @@ export default function AdminBusinesses() {
       "suspended",
     ];
     if (!validStatuses.includes(newStatus)) {
-      const errorMsg = `Invalid verification status: '${newStatus}'. Valid values are: ${validStatuses.join(", ")}`;
-      console.error(errorMsg);
-      alert(errorMsg);
+      alert(`Invalid verification status: '${newStatus}'`);
       return;
     }
 
@@ -1577,37 +1345,11 @@ export default function AdminBusinesses() {
       const result = await response.json();
 
       if (!response.ok) {
-        console.error("Error updating verification status - details:");
-        console.error("Message:", result.error);
-        console.error("Business ID:", businessId);
-        console.error("New Status:", newStatus);
-
-        let errorMessage = result.error || "Unknown error occurred";
-        alert(`Error updating verification status: ${errorMessage}`);
+        alert(`Error updating verification status: ${result.error || "Unknown error occurred"}`);
       } else {
-        console.log(
-          `Business ${businessId} verification status updated to ${newStatus}`,
-        );
         await fetchBusinesses(); // Refresh the businesses list
       }
     } catch (err: any) {
-      console.error("Unexpected error updating verification status:");
-      console.error("Message:", err?.message);
-      console.error("Code:", err?.code);
-      console.error("Details:", err?.details);
-      console.error("Type:", typeof err);
-      console.error("Business ID:", businessId);
-      console.error("New Status:", newStatus);
-      console.error("Full error object:", err);
-      if (err) {
-        console.error("Error keys:", Object.keys(err));
-        try {
-          console.error("Error JSON:", JSON.stringify(err, null, 2));
-        } catch (jsonErr) {
-          console.error("Could not stringify error:", jsonErr);
-        }
-      }
-
       const errorMessage =
         err?.message || err?.details || err?.hint || "Unknown error";
       alert(`Unexpected error updating verification status: ${errorMessage}`);
@@ -1634,14 +1376,10 @@ export default function AdminBusinesses() {
       const result = await response.json();
 
       if (!response.ok) {
-        console.error("Error updating featured status:", result.error);
         alert(
           `Error updating featured status: ${result.error || 'Update failed'}`,
         );
       } else {
-        console.log(
-          `Business ${businessId} featured status updated to ${newStatus}`,
-        );
         await fetchBusinesses(); // Refresh the businesses list
         toast({
           title: "Featured Status Updated",
@@ -1649,7 +1387,6 @@ export default function AdminBusinesses() {
         });
       }
     } catch (err) {
-      console.error("Unexpected error:", err);
       alert(`Unexpected error: ${err}`);
     }
   };
@@ -1674,18 +1411,6 @@ export default function AdminBusinesses() {
     if (!editingBusiness) return;
 
     try {
-      // Log the data being sent for debugging
-      console.log("Updating business with data:", {
-        business_name: editFormData.business_name,
-        contact_email: editFormData.contact_email,
-        phone: editFormData.phone,
-        verification_status: editFormData.verification_status,
-        verification_notes: editFormData.verification_notes,
-        is_active: editFormData.is_active,
-        is_featured: editFormData.is_featured,
-        business_type: editFormData.business_type,
-      });
-
       // First update the business profile
       const response = await fetch('/api/businesses', {
         method: 'PUT',
@@ -1708,13 +1433,11 @@ export default function AdminBusinesses() {
       const result = await response.json();
 
       if (!response.ok) {
-        console.error("Error updating business profile:", result.error);
         alert(
           `Error updating business profile: ${result.error || 'Update failed'}`,
         );
         return;
       }
-
 
       setIsEditBusinessOpen(false);
       setEditingBusiness(null);
@@ -1725,10 +1448,8 @@ export default function AdminBusinesses() {
         description: "Business updated successfully!",
       });
     } catch (err: any) {
-      console.error("Error updating business:", err);
-      console.error("Full error object:", JSON.stringify(err, null, 2));
       alert(
-        `Error updating business: ${err.message || err.error?.message || JSON.stringify(err)}`,
+        `Error updating business: ${err.message || err.error?.message || "Unknown error"}`,
       );
     }
   };
@@ -1745,8 +1466,6 @@ export default function AdminBusinesses() {
 
   const approveDocument = async (document: BusinessDocument) => {
     try {
-      console.log("Approving document:", document.id, document);
-
       // Show initial processing toast
       toast({
         title: "Verifying Document",
@@ -1759,7 +1478,6 @@ export default function AdminBusinesses() {
         data: { user },
         error: authError,
       } = await supabase.auth.getUser();
-      console.log("Auth user:", { user, authError });
 
       if (authError || !user) {
         throw new Error("Failed to get current user authentication");
@@ -1771,8 +1489,6 @@ export default function AdminBusinesses() {
         .select("id, email")
         .eq("email", user.email)
         .single();
-
-      console.log("Admin user lookup:", { adminUser, adminError });
 
       if (adminError || !adminUser) {
         throw new Error(
@@ -1786,8 +1502,6 @@ export default function AdminBusinesses() {
         .select("id, verification_status")
         .eq("id", document.id)
         .single();
-
-      console.log("Existing document check:", { existingDoc, fetchError });
 
       if (fetchError) {
         throw new Error(
@@ -1805,8 +1519,6 @@ export default function AdminBusinesses() {
         })
         .eq("id", document.id)
         .select();
-
-      console.log("Update result:", { data, error });
 
       if (error) {
         console.error("Error approving document:", error);

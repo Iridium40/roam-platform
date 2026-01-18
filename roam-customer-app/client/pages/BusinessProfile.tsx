@@ -13,6 +13,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { FavoriteButton } from "@/components/FavoriteButton";
 import { Footer } from "@/components/Footer";
+import { logger } from "@/utils/logger";
+import { PageErrorBoundary } from "@/components/ErrorBoundary";
 
 // Lazy load ShareModal
 const ShareModal = lazy(() => import("@/components/ShareModal"));
@@ -108,7 +110,7 @@ const normalizeBusinessHours = (raw: any): Record<string, { open?: string; close
   return out;
 };
 
-export default function BusinessProfile() {
+function BusinessProfileContent() {
   const { businessId } = useParams();
   const [searchParams] = useSearchParams();
   const { customer } = useAuth();
@@ -249,7 +251,7 @@ export default function BusinessProfile() {
         });
 
         // Load services for this business with business-specific pricing and duration
-        console.log('🔍 Loading services for business ID:', businessId);
+        logger.debug('Loading services for business ID:', businessId);
         const { data: servicesData, error: servicesError } = await supabase
           .from('business_services')
           .select(`
@@ -268,7 +270,7 @@ export default function BusinessProfile() {
           .eq('business_id', businessId)
           .eq('is_active', true);
 
-        console.log('📊 Services query result:', { 
+        logger.debug('Services query result:', { 
           servicesData, 
           servicesError,
           servicesCount: servicesData?.length || 0
@@ -291,10 +293,10 @@ export default function BusinessProfile() {
             image_url: item.services.image_url,
             delivery_type: item.delivery_type,
           }));
-          console.log('✅ Transformed services:', transformedServices);
+          logger.debug('Transformed services:', transformedServices);
           setServices(transformedServices);
         } else {
-          console.log('⚠️ No services found for business');
+          logger.debug('No services found for business');
           setServices([]);
         }
 
@@ -318,11 +320,11 @@ export default function BusinessProfile() {
           .eq('is_active', true)
           .eq('active_for_bookings', true);
 
-        console.log('📊 Staff query result:', { staffData, staffError });
+        logger.debug('Staff query result:', { staffData, staffError });
 
         if (staffError) {
-          console.error('❌ Error loading staff:', staffError);
-          console.error('Error details:', JSON.stringify(staffError, null, 2));
+          logger.error('Error loading staff:', staffError);
+          logger.error('Error details:', JSON.stringify(staffError, null, 2));
         }
 
         if (!staffError && staffData) {
@@ -366,10 +368,10 @@ export default function BusinessProfile() {
           });
           setStaff(staffWithRatings);
         } else if (!staffError && !staffData) {
-          console.log('⚠️ No staff data returned (null)');
+          logger.debug('No staff data returned (null)');
           setStaff([]);
         } else {
-          console.log('⚠️ No staff members found for this business');
+          logger.debug('No staff members found for this business');
           setStaff([]);
         }
 
@@ -377,7 +379,7 @@ export default function BusinessProfile() {
         // No automatic redirect - let them choose which service to book
 
       } catch (error) {
-        console.error('Error loading business:', error);
+        logger.error('Error loading business:', error);
         toast({
           title: "Error",
           description: "Failed to load business details",
@@ -1093,5 +1095,14 @@ export default function BusinessProfile() {
       {/* Footer */}
       <Footer />
     </div>
+  );
+}
+
+// Wrap the component with PageErrorBoundary for resilient error handling
+export default function BusinessProfile() {
+  return (
+    <PageErrorBoundary>
+      <BusinessProfileContent />
+    </PageErrorBoundary>
   );
 }

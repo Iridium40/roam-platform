@@ -144,7 +144,7 @@ export default function EnhancedConversationChat({
           setAccessToken(storedToken);
         }
       } catch (error) {
-        console.error('Error getting session token:', error);
+        logger.error('Error getting session token:', error);
         // Fallback to localStorage
         const storedToken = localStorage.getItem('roam_access_token');
         setAccessToken(storedToken);
@@ -216,7 +216,7 @@ export default function EnhancedConversationChat({
 
   const loadMessages = useCallback(async (convId?: string) => {
     const targetConversationId = convId || conversationId;
-    console.log('🔄 loadMessages called:', { 
+    logger.debug('loadMessages called:', { 
       convId, 
       conversationId, 
       targetConversationId, 
@@ -224,17 +224,17 @@ export default function EnhancedConversationChat({
     });
     
     if (!targetConversationId || !bookingConversationsClient) {
-      console.warn('⚠️ Cannot load messages - missing conversationId or client');
+      logger.warn('Cannot load messages - missing conversationId or client');
       return;
     }
 
     try {
-      console.log('📞 Calling getMessages API...');
+      logger.debug('Calling getMessages API...');
       const fetchedMessages = await bookingConversationsClient.getMessages(targetConversationId);
-      console.log('✅ Messages fetched:', fetchedMessages.length, 'messages');
+      logger.debug('Messages fetched:', fetchedMessages.length, 'messages');
       setMessages(fetchedMessages);
     } catch (err) {
-      console.error('❌ Error loading messages:', err);
+      logger.error('Error loading messages:', err);
     }
   }, [bookingConversationsClient, conversationId]);
 
@@ -243,7 +243,7 @@ export default function EnhancedConversationChat({
     if (!convId || !customer?.user_id) return;
     
     try {
-      console.log('📖 Marking messages as read:', { conversationId: convId, userId: customer.user_id });
+      logger.debug('Marking messages as read:', { conversationId: convId, userId: customer.user_id });
       const response = await fetch('/api/mark-messages-read', {
         method: 'POST',
         headers: {
@@ -256,12 +256,12 @@ export default function EnhancedConversationChat({
       });
 
       if (!response.ok) {
-        console.error('Failed to mark messages as read:', await response.text());
+        logger.error('Failed to mark messages as read:', await response.text());
       } else {
-        console.log('✅ Messages marked as read');
+        logger.debug('Messages marked as read');
       }
     } catch (error) {
-      console.error('Error marking messages as read:', error);
+      logger.error('Error marking messages as read:', error);
       // Don't throw - this is a non-critical operation
     }
   }, [customer?.user_id]);
@@ -294,7 +294,7 @@ export default function EnhancedConversationChat({
           email: customer.email ?? null,
         });
       } else {
-        console.error('❌ Customer user_id not found in auth context:', customer);
+        logger.error('Customer user_id not found in auth context:', customer);
       }
 
       // Add provider participant
@@ -306,7 +306,7 @@ export default function EnhancedConversationChat({
           email: booking.providers.email ?? null,
         });
       } else {
-        console.error('❌ Provider user_id not found in booking.providers:', booking.providers);
+        logger.error('Provider user_id not found in booking.providers:', booking.providers);
       }
 
       const result = await bookingConversationsClient.getOrCreateConversationForBooking(
@@ -330,7 +330,7 @@ export default function EnhancedConversationChat({
 
       setConversationStatus('ready');
     } catch (err) {
-      console.error('Error initializing conversation:', err);
+      logger.error('Error initializing conversation:', err);
       setError('Failed to initialize conversation. Please try again.');
       setConversationStatus('error');
     } finally {
@@ -399,7 +399,7 @@ export default function EnhancedConversationChat({
       
       if (selectedFile) {
         // Send message with attachment
-        console.log('📤 Sending message with attachment...', { 
+        logger.debug('Sending message with attachment...', { 
           conversationId,
           fileName: selectedFile.name,
           fileType: selectedFile.type,
@@ -437,7 +437,7 @@ export default function EnhancedConversationChat({
       // Clear any previous errors
       setError(null);
     } catch (err) {
-      console.error('Error sending message:', err);
+      logger.error('Error sending message:', err);
       setError('Failed to send message. Please try again.');
       setUploading(false);
     } finally {
@@ -471,14 +471,14 @@ export default function EnhancedConversationChat({
   }, [isOpen, conversationId, loadMessages]);
 
   const participantMap = useMemo(() => {
-    console.log('🗺️ Building participantMap from participants:', participants);
+    logger.debug('Building participantMap from participants:', participants);
     const map = new Map<string, BookingConversationParticipant>();
     for (const participant of participants) {
       const key = `${participant.userType}-${participant.userId}`;
-      console.log(`  Adding to map: ${key} =>`, participant);
+      logger.debug(`Adding to map: ${key} =>`, participant);
       map.set(key, participant);
     }
-    console.log('🗺️ Final participantMap size:', map.size);
+    logger.debug('Final participantMap size:', map.size);
     return map;
   }, [participants]);
 
@@ -566,7 +566,7 @@ export default function EnhancedConversationChat({
           };
         }
       } catch (e) {
-        console.warn('Failed to parse message attributes:', e);
+        logger.warn('Failed to parse message attributes:', e);
       }
     }
     

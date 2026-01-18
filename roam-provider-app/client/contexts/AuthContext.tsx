@@ -3,11 +3,6 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { User } from "@supabase/supabase-js";
 import { toast } from "../hooks/use-toast";
-
-console.log('🔥 AuthContext.tsx file is being loaded...');
-console.log('🔍 AuthContext - Supabase URL:', import.meta.env.VITE_PUBLIC_SUPABASE_URL);
-console.log('🔍 AuthContext - Supabase Key:', import.meta.env.VITE_PUBLIC_SUPABASE_ANON_KEY ? '✅ Present' : '❌ Missing');
-
 import type { AuthCustomer } from "@roam/shared";
 
 interface AuthContextType {

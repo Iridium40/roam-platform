@@ -82,7 +82,16 @@ const AdminSystemSettings = lazy(() => import("./pages/AdminSystemSettings"));
 const AdminProfile = lazy(() => import("./pages/AdminProfile"));
 const AdminSettings = lazy(() => import("./pages/AdminSettings"));
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 // Global error handling for authentication errors
 window.addEventListener("unhandledrejection", async (event) => {

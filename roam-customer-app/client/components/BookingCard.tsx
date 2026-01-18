@@ -76,7 +76,7 @@ interface BookingCardProps {
   showFullActions?: boolean;
 }
 
-export const BookingCard: React.FC<BookingCardProps> = ({
+export const BookingCard: React.FC<BookingCardProps> = React.memo(({
   booking,
   availableProviders = [],
   onUpdate,
@@ -741,4 +741,6 @@ export const BookingCard: React.FC<BookingCardProps> = ({
       />
     </Card>
   );
-};
+});
+
+BookingCard.displayName = 'BookingCard';

@@ -26,7 +26,9 @@ import {
   XCircle,
   Clock,
 } from "lucide-react";
-import type { VerificationStatus, BusinessType } from "@roam/shared";
+// Local type definitions (matches database schema)
+type VerificationStatus = 'pending' | 'approved' | 'rejected' | 'suspended';
+type BusinessType = 'independent' | 'business';
 
 interface BusinessProfile {
   id: string;

@@ -2,32 +2,33 @@ import React, { createContext, useContext, useMemo } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { useProfile } from "../hooks/useProfile";
 import { useOAuth } from "../hooks/useOAuth";
+import type { Customer, SignUpData, ProfileUpdateData, OAuthResult, AuthResult } from "@/types/index";
 
 interface AuthContextType {
   // Auth state
-  customer: any;
+  customer: Customer | null;
   loading: boolean;
   error: string | null;
   
   // Auth actions
   signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  signUp: (email: string, password: string, userData: any) => Promise<{ success: boolean; error?: string }>;
+  signUp: (email: string, password: string, userData: SignUpData) => Promise<{ success: boolean; error?: string }>;
   signOut: () => Promise<{ success: boolean; error?: string }>;
   fetchCustomerProfile: (userId: string) => Promise<void>;
   
   // Profile actions
   updatingProfile: boolean;
-  updateProfile: (customerId: string, updates: any) => Promise<{ success: boolean; error?: string }>;
-  updateUserMetadata: (updates: any) => Promise<{ success: boolean; error?: string }>;
+  updateProfile: (customerId: string, updates: ProfileUpdateData) => Promise<{ success: boolean; error?: string }>;
+  updateUserMetadata: (updates: Record<string, unknown>) => Promise<{ success: boolean; error?: string }>;
   changePassword: (newPassword: string) => Promise<{ success: boolean; error?: string }>;
   deleteAccount: (customerId: string) => Promise<{ success: boolean; error?: string }>;
   
   // OAuth actions
   oauthLoading: boolean;
-  signInWithGoogle: () => Promise<{ success: boolean; error?: string; data?: any }>;
-  signInWithFacebook: () => Promise<{ success: boolean; error?: string; data?: any }>;
-  signInWithApple: () => Promise<{ success: boolean; error?: string; data?: any }>;
-  handleOAuthCallback: () => Promise<{ success: boolean; error?: string; user?: any }>;
+  signInWithGoogle: () => Promise<OAuthResult>;
+  signInWithFacebook: () => Promise<OAuthResult>;
+  signInWithApple: () => Promise<OAuthResult>;
+  handleOAuthCallback: () => Promise<AuthResult>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);

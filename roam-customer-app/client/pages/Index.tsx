@@ -82,9 +82,9 @@ const ComponentLoader = () => (
     <Loader2 className="w-6 h-6 animate-spin text-roam-blue" />
   </div>
 );
-import { supabase } from "@/lib/supabase";
 import { logger } from '@/utils/logger';
 import { formatSpecialty } from '@/utils/formatSpecialty';
+import { useServiceData, useBusinessData, usePromotions } from './Index/hooks';
 
 export default function Index() {
   const { customer, isCustomer, signOut } = useAuth();
@@ -131,12 +131,11 @@ export default function Index() {
   const setShareModalOpen = (value: boolean) => setModals(prev => ({ ...prev, shareModalOpen: value }));
   const setAuthModalOpen = (value: boolean) => setModals(prev => ({ ...prev, authModalOpen: value }));
 
-  // Database-driven state
-  const [featuredServices, setFeaturedServices] = useState<FeaturedService[]>([]);
-  const [popularServices, setPopularServices] = useState<PopularService[]>([]);
-  const [featuredBusinesses, setFeaturedBusinesses] = useState<FeaturedBusiness[]>([]);
-  const [promotions, setPromotions] = useState<TransformedPromotion[]>([]);
-  const [loading, setLoading] = useState(false);
+  // Data fetching with React Query hooks
+  const { featuredServices, popularServices, loading: servicesLoading } = useServiceData();
+  const { featuredBusinesses, loading: businessLoading } = useBusinessData();
+  const { promotions, loading: promotionsLoading } = usePromotions();
+  const loading = servicesLoading || businessLoading || promotionsLoading;
 
   // Category icon mapping function
   const getCategoryIcon = (category: string) => {
@@ -279,341 +278,7 @@ export default function Index() {
     return null;
   };
 
-  // Fetch real data from Supabase
-  useEffect(() => {
-    const fetchData = async (retryCount = 0) => {
-      try {
-        setLoading(true);
-
-        // Fetch featured services using is_featured flag with proper category information
-        const featuredServicesResponse = await supabase
-          .from("services")
-          .select(
-            `
-            id,
-            name,
-            description,
-            min_price,
-            duration_minutes,
-            image_url,
-            is_active,
-            is_featured,
-            subcategory_id,
-            service_subcategories!subcategory_id (
-              id,
-              service_subcategory_type,
-              service_categories (
-                id,
-                service_category_type
-              )
-            )
-          `
-          )
-          .eq("is_active", true)
-          .eq("is_featured", true);
-
-        const { data: featuredServicesData, error: featuredError } =
-          featuredServicesResponse;
-
-        logger.debug("Featured services query result:", {
-          featuredServicesData,
-          featuredError,
-        });
-
-        if (!featuredError && featuredServicesData) {
-          const transformedFeatured = (featuredServicesData as ServiceQueryResult[]).map(
-            (service) => {
-              const category = service.service_subcategories?.service_categories?.service_category_type || 'general';
-              return {
-                id: service.id,
-                title: service.name,
-                category: category,
-                image:
-                  service.image_url ||
-                  "https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=500&h=300&fit=crop",
-                description:
-                  service.description || "Professional featured service",
-                price: `$${service.min_price || 50}`,
-                rating: 4.8, // Default rating
-                duration: `${service.duration_minutes || 60} min`,
-              };
-            }
-          );
-          setFeaturedServices(transformedFeatured);
-        }
-
-        // Fetch popular services using is_popular flag with proper category information
-        const popularServicesResponse = await supabase
-          .from("services")
-          .select(
-            `
-            id,
-            name,
-            description,
-            min_price,
-            duration_minutes,
-            image_url,
-            is_active,
-            is_popular,
-            subcategory_id,
-            service_subcategories!subcategory_id (
-              id,
-              service_subcategory_type,
-              service_categories (
-                id,
-                service_category_type
-              )
-            )
-          `
-          )
-          .eq("is_active", true)
-          .eq("is_popular", true)
-          .limit(6);
-
-        const { data: popularServicesData, error: popularError } =
-          popularServicesResponse;
-
-        logger.debug("Popular services query result:", {
-          popularServicesData,
-          popularError,
-        });
-
-        if (!popularError && popularServicesData) {
-          const transformedPopular = (popularServicesData as ServiceQueryResult[]).map(
-            (service) => {
-              const category = service.service_subcategories?.service_categories?.service_category_type || 'general';
-              return {
-                id: service.id,
-                title: service.name,
-                category: category,
-                image:
-                  service.image_url ||
-                  "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=500&h=300&fit=crop",
-                description:
-                  service.description || "Popular professional service",
-                price: `$${service.min_price || 50}`,
-                rating: 4.9, // Default rating
-                duration: `${service.duration_minutes || 60} min`,
-                bookings: `${Math.floor(Math.random() * 50) + 10} bookings this month`, // Dynamic booking count
-                availability: `${Math.floor(Math.random() * 8) + 1} slots available`, // Dynamic availability
-              };
-            }
-          );
-          setPopularServices(transformedPopular);
-        }
-
-        // Fetch featured businesses via server API (bypasses RLS joins in production)
-        console.log("🏪 Fetching featured businesses from /api/businesses/featured...");
-        const businessesResponse = await fetch("/api/businesses/featured");
-        const businessesJson = await businessesResponse.json().catch(() => ({}));
-        console.log("🏪 Featured businesses API response:", {
-          status: businessesResponse.status,
-          ok: businessesResponse.ok,
-          data: businessesJson?.data,
-          debug: businessesJson?.debug,
-          error: businessesJson?.error,
-        });
-        const businessesData = businessesJson?.data || [];
-        const businessesError = businessesResponse.ok ? null : (businessesJson?.error || "Failed to fetch featured businesses");
-
-        // Check for authentication errors
-        const authErrors = [
-          featuredServicesResponse,
-          popularServicesResponse,
-        ].filter((response) => response.status === 401);
-
-        if (authErrors.length > 0 && retryCount === 0) {
-          logger.debug("JWT token expired, refreshing session...");
-          const { data: refreshData, error: refreshError } =
-            await supabase.auth.refreshSession();
-
-          if (refreshError) {
-            logger.error("Token refresh failed:", refreshError);
-            // For the index page, we can continue without authentication
-            logger.debug("Continuing without authentication for public content");
-          } else if (refreshData?.session) {
-            logger.debug("Session refreshed successfully, retrying...");
-            return await fetchData(1);
-          }
-        }
-
-        logger.debug("Featured businesses query result:", { businessesData, businessesError });
-
-        if (!businessesError && businessesData) {
-          const transformedBusinesses = (businessesData as BusinessQueryResult[]).map((business) => {
-            // Extract unique subcategories from business_services (only active services)
-            const subcategoriesSet = new Set<string>();
-            if (business.business_services && Array.isArray(business.business_services)) {
-              business.business_services
-                .filter((bs) => bs.is_active === true) // Only include active services
-                .forEach((bs) => {
-                  if (bs.services?.service_subcategories?.service_subcategory_type) {
-                    subcategoriesSet.add(bs.services.service_subcategories.service_subcategory_type);
-                  }
-                });
-            }
-            const specialties = Array.from(subcategoriesSet).slice(0, 4); // Limit to 4 specialties
-
-            return {
-              id: business.id,
-              name: business.business_name,
-              description: `Professional ${business.business_type.replace("_", " ")} services`,
-              type: business.business_type,
-              deliveryTypes: ["mobile", "business_location", "virtual"],
-              price: "Starting at $100",
-              image:
-                business.logo_url ||
-                business.image_url ||
-                "/api/placeholder/80/80",
-              cover_image_url: business.cover_image_url,
-              specialties: specialties.length > 0 ? specialties : ["Professional Service"], // Fallback if no subcategories
-              location: business.business_locations?.city
-                ? `${business.business_locations.city}, ${business.business_locations.state}`
-                : "Florida",
-              verification_status: business.verification_status,
-              is_verified: business.verification_status === 'approved',
-              is_featured: business.is_featured,
-              years_in_business: 5, // Default years
-            };
-          });
-          logger.debug(
-            "Transformed featured businesses:",
-            transformedBusinesses,
-          );
-          setFeaturedBusinesses(transformedBusinesses);
-        }
-
-        // Fetch active promotions with business and service information
-        const promotionsResponse = await supabase
-          .from("promotions")
-          .select(
-            `
-            id,
-            title,
-            description,
-            start_date,
-            end_date,
-            is_active,
-            created_at,
-            business_id,
-            image_url,
-            promo_code,
-            savings_type,
-            savings_amount,
-            savings_max_amount,
-            service_id,
-            business_profiles (
-              id,
-              business_name,
-              logo_url,
-              business_type
-            ),
-            services (
-              id,
-              name,
-              min_price
-            )
-          `,
-          )
-          .eq("is_active", true)
-          .order("created_at", { ascending: false })
-          .limit(6);
-
-        const { data: promotionsData, error: promotionsError } =
-          promotionsResponse;
-
-        if (promotionsError) {
-          logger.error("Error fetching promotions:", promotionsError);
-        } else {
-          logger.debug("Raw promotions data:", promotionsData);
-        }
-
-        if (!promotionsError && promotionsData) {
-          const currentDate = new Date();
-          currentDate.setHours(0, 0, 0, 0); // Set to start of day for accurate comparison
-
-          const transformedPromotions = (promotionsData as PromotionQueryResult[])
-            .filter((promotion) => {
-              // Filter out promotions with expired end dates
-              if (promotion.end_date) {
-                const endDate = new Date(promotion.end_date);
-                endDate.setHours(23, 59, 59, 999); // Set to end of day
-                return endDate >= currentDate;
-              }
-              // Keep promotions without end dates (ongoing promotions)
-              return true;
-            })
-            .map((promotion) => ({
-              id: promotion.id,
-              title: promotion.title,
-              description: promotion.description || "Limited time offer",
-              startDate: promotion.start_date,
-              endDate: promotion.end_date,
-              isActive: promotion.is_active,
-              createdAt: promotion.created_at,
-              businessId: promotion.business_id,
-              imageUrl: promotion.image_url,
-              promoCode: promotion.promo_code,
-              savingsType: promotion.savings_type,
-              savingsAmount: promotion.savings_amount,
-              savingsMaxAmount: promotion.savings_max_amount,
-              serviceId: promotion.service_id,
-              business: promotion.business_profiles
-                ? {
-                    id: promotion.business_profiles.id,
-                    name: promotion.business_profiles.business_name,
-                    logo: promotion.business_profiles.logo_url,
-                    type: promotion.business_profiles.business_type,
-                  }
-                : null,
-              service: promotion.services
-                ? {
-                    id: promotion.services.id,
-                    name: promotion.services.name,
-                    minPrice: promotion.services.min_price,
-                  }
-                : null,
-            }));
-          logger.debug(
-            "Transformed promotions (expired filtered):",
-            transformedPromotions,
-          );
-
-          setPromotions(transformedPromotions);
-        }
-      } catch (error: unknown) {
-        logger.error("Error fetching data:", error);
-
-        // Check if this is a JWT expiration error and we haven't retried yet
-        if (
-          (error.message?.includes("JWT") ||
-            error.message?.includes("401") ||
-            error.status === 401) &&
-          retryCount === 0
-        ) {
-          logger.debug("JWT error detected, attempting token refresh...");
-          try {
-            const { data: refreshData, error: refreshError } =
-              await supabase.auth.refreshSession();
-
-            if (!refreshError && refreshData?.session) {
-              logger.debug("Session refreshed, retrying data fetch...");
-              return await fetchData(1);
-            }
-          } catch (refreshError) {
-            logger.error("Token refresh failed:", refreshError);
-          }
-
-          // For index page, continue even if refresh fails since it has public content
-          logger.debug("Continuing with public content after auth error");
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, []);
+  // Data is now fetched via React Query hooks (useServiceData, useBusinessData, usePromotions)
 
   const serviceCategories = [
     {
@@ -902,6 +567,7 @@ export default function Index() {
                         <img
                           src={promotion.imageUrl}
                           alt={promotion.title}
+                          loading="lazy"
                           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                         />
                       ) : (
@@ -1052,6 +718,7 @@ export default function Index() {
                                 <img
                                   src={promotion.imageUrl}
                                   alt={promotion.title}
+                                  loading="lazy"
                                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                                 />
                               ) : (
@@ -1062,6 +729,7 @@ export default function Index() {
                                         <img
                                           src={promotion.business.logo}
                                           alt={promotion.business.name}
+                                          loading="lazy"
                                           className="w-full h-full object-cover"
                                         />
                                       </div>
@@ -1221,6 +889,7 @@ export default function Index() {
                       <img
                         src={service.image}
                         alt={service.title}
+                        loading="lazy"
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent"></div>
@@ -1338,6 +1007,7 @@ export default function Index() {
                               <img
                                 src={service.image}
                                 alt={service.title}
+                                loading="lazy"
                                 className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                               />
                               <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent"></div>
@@ -1502,6 +1172,7 @@ export default function Index() {
                               <img
                                 src={business.image}
                                 alt={business.name}
+                                loading="lazy"
                                 className="w-full h-full object-cover rounded-xl"
                               />
                             ) : (
@@ -1669,6 +1340,7 @@ export default function Index() {
                                       <img
                                         src={business.image}
                                         alt={business.name}
+                                        loading="lazy"
                                         className="w-full h-full object-cover rounded-xl"
                                       />
                                     ) : (

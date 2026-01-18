@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Save, Loader2 } from 'lucide-react';
+import { logger } from '@/utils/logger';
 
 export function NotificationPreferences() {
   const { customer, loading: authLoading } = useAuth();
@@ -113,7 +114,7 @@ export function NotificationPreferences() {
       }
       setHasChanges(false);
     } catch (error) {
-      console.error('Error loading settings:', error);
+      logger.error('Error loading settings:', error);
       toast({
         title: 'Error',
         description: 'Failed to load notification preferences',
@@ -171,7 +172,7 @@ export function NotificationPreferences() {
       setOriginalSettings(JSON.parse(JSON.stringify(settings)));
       setHasChanges(false);
     } catch (error) {
-      console.error('Error saving settings:', error);
+      logger.error('Error saving settings:', error);
       toast({
         title: 'Error',
         description: 'Failed to save settings. Please try again.',

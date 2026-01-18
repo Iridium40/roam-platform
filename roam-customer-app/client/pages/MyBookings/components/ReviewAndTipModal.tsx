@@ -8,6 +8,7 @@ import { Star, DollarSign, MessageCircle, X, CheckCircle, Loader2, AlertCircle }
 import type { BookingWithDetails, ReviewFormData, TipFormData } from "@/types/index";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
+import { logger } from "@/utils/logger";
 import { Elements } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
 import { TipCheckoutForm } from '@/components/TipCheckoutForm';
@@ -69,7 +70,7 @@ const ReviewAndTipModal: React.FC<ReviewAndTipModalProps> = ({
   const hasSubmittedTip = !!existingTip;
 
   // Debug logging to understand the data
-  console.log('🔍 REVIEW MODAL DEBUG:', {
+  logger.debug('REVIEW MODAL DEBUG:', {
     bookingId: booking?.id,
     bookingReviews: booking?.reviews,
     isReviewsArray: Array.isArray(booking?.reviews),
@@ -147,7 +148,7 @@ const ReviewAndTipModal: React.FC<ReviewAndTipModalProps> = ({
     try {
       // If the booking data already shows there are reviews, don't proceed
       if (hasSubmittedReview) {
-        console.log('⚠️ SUBMIT REVIEW DEBUG: Booking data shows review already exists, not proceeding');
+        logger.debug('SUBMIT REVIEW DEBUG: Booking data shows review already exists, not proceeding');
         toast({
           title: "Review already submitted",
           description: "You have already submitted a review for this booking.",
@@ -157,7 +158,7 @@ const ReviewAndTipModal: React.FC<ReviewAndTipModalProps> = ({
       }
 
       // First, check if a review already exists for this booking
-      console.log('🔍 DATABASE CHECK DEBUG: Checking for existing review for booking:', booking.id);
+      logger.debug('DATABASE CHECK DEBUG: Checking for existing review for booking:', booking.id);
       
       const { data: existingReview, error: checkError } = await supabase
         .from('reviews')
@@ -165,7 +166,7 @@ const ReviewAndTipModal: React.FC<ReviewAndTipModalProps> = ({
         .eq('booking_id', booking.id)
         .maybeSingle();
 
-      console.log('🔍 DATABASE CHECK DEBUG: Database query result:', {
+      logger.debug('DATABASE CHECK DEBUG: Database query result:', {
         existingReview,
         checkError,
         errorCode: checkError?.code,
@@ -174,13 +175,13 @@ const ReviewAndTipModal: React.FC<ReviewAndTipModalProps> = ({
 
       if (checkError && checkError.code !== 'PGRST116') {
         // PGRST116 is "not found" error, which is expected if no review exists
-        console.log('❌ DATABASE CHECK DEBUG: Unexpected error:', checkError);
+        logger.error('DATABASE CHECK DEBUG: Unexpected error:', checkError);
         throw checkError;
       }
 
       if (existingReview) {
         // Review already exists, show appropriate message
-        console.log('⚠️ DATABASE CHECK DEBUG: Review found in database, showing error');
+        logger.debug('DATABASE CHECK DEBUG: Review found in database, showing error');
         toast({
           title: "Review already submitted",
           description: "You have already submitted a review for this booking.",
@@ -189,7 +190,7 @@ const ReviewAndTipModal: React.FC<ReviewAndTipModalProps> = ({
         throw new Error('Review already exists for this booking');
       }
 
-      console.log('✅ DATABASE CHECK DEBUG: No existing review found, proceeding with submission');
+      logger.debug('DATABASE CHECK DEBUG: No existing review found, proceeding with submission');
 
       // No existing review, proceed with insertion
       // Include business_id and provider_id from the booking
@@ -217,7 +218,7 @@ const ReviewAndTipModal: React.FC<ReviewAndTipModalProps> = ({
 
       return data;
     } catch (error) {
-      console.error('Error submitting review:', error);
+      logger.error('Error submitting review:', error);
       
       // Don't show generic error toast if it's already handled above
       if (error instanceof Error && error.message === 'Review already exists for this booking') {
@@ -246,17 +247,17 @@ const ReviewAndTipModal: React.FC<ReviewAndTipModalProps> = ({
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.access_token) {
           token = session.access_token;
-          console.log('✅ Using session token for tip');
+          logger.debug('Using session token for tip');
         }
       } catch (error) {
-        console.warn('⚠️ Session retrieval failed for tip, trying localStorage:', error);
+        logger.warn('Session retrieval failed for tip, trying localStorage:', error);
       }
       
       // Method 2: Fallback to localStorage cached token
       if (!token) {
         token = localStorage.getItem('roam_access_token');
         if (token) {
-          console.log('✅ Using cached token for tip');
+          logger.debug('Using cached token for tip');
         }
       }
       
@@ -291,7 +292,7 @@ const ReviewAndTipModal: React.FC<ReviewAndTipModalProps> = ({
       setClientSecret(clientSecret);
       setCurrentStep('checkout');
     } catch (error) {
-      console.error('Error creating tip payment intent:', error);
+      logger.error('Error creating tip payment intent:', error);
       toast({
         title: "Error processing tip",
         description: "Please try again.",
@@ -310,7 +311,7 @@ const ReviewAndTipModal: React.FC<ReviewAndTipModalProps> = ({
       await submitReview();
       setCurrentStep('success');
     } catch (error) {
-      console.error('Error in submission:', error);
+      logger.error('Error in submission:', error);
     } finally {
       setIsSubmitting(false);
     }

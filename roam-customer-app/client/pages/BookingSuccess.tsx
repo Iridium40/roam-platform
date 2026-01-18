@@ -21,6 +21,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
+import { logger } from '@/utils/logger';
 
 interface BookingDetails {
   id: string;
@@ -84,10 +85,10 @@ export default function BookingSuccess() {
         const { data: bookingData, error: bookingError } = await query.single<BookingDataRow>();
 
         if (bookingError) {
-          console.error('Error fetching booking:', bookingError);
+          logger.error('Error fetching booking:', bookingError);
           // If booking not found and we haven't retried too many times, retry
           if (bookingError.code === 'PGRST116' && retryCount < 10) {
-            console.log(`Booking not found yet, retrying in 2 seconds (attempt ${retryCount + 1}/10)...`);
+            logger.debug(`Booking not found yet, retrying in 2 seconds (attempt ${retryCount + 1}/10)...`);
             setTimeout(() => fetchBookingDetails(retryCount + 1), 2000);
             return;
           }
@@ -113,7 +114,7 @@ export default function BookingSuccess() {
 
         setLoading(false);
       } catch (err) {
-        console.error('Error:', err);
+        logger.error('Error:', err);
         setError('An unexpected error occurred');
         setLoading(false);
       }

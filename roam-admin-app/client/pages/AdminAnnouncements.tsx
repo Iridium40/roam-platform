@@ -104,7 +104,7 @@ const getAnnouncementTypeVariant = (type: AnnouncementType) => {
     case "promotional":
       return "success" as const;
     case "feature":
-      return "primary" as const;
+      return "default" as const;
     case "update":
       return "secondary" as const;
     case "news":

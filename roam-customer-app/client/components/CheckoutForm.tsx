@@ -14,6 +14,7 @@ import { useToast } from '../hooks/use-toast';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Link } from 'react-router-dom';
+import { logger } from '@/utils/logger';
 
 /**
  * Get a user-friendly error message for Stripe payment errors
@@ -214,7 +215,7 @@ export function CheckoutForm({ bookingDetails, clientSecret, onSuccess, onError 
           });
         }
       } catch (error) {
-        console.error('Error loading billing address:', error);
+        logger.error('Error loading billing address:', error);
         // Fallback to customer profile data
         if (customer.first_name || customer.last_name || customer.email) {
           setBillingAddress({
@@ -298,9 +299,9 @@ export function CheckoutForm({ bookingDetails, clientSecret, onSuccess, onError 
         
         // Check if payment was authorized but not captured (manual capture)
         if (paymentIntent && paymentIntent.status === 'requires_capture') {
-          console.log('✅ Payment authorized successfully (will be captured when booking is accepted)');
+          logger.debug('Payment authorized successfully (will be captured when booking is accepted)');
         } else if (paymentIntent && paymentIntent.status === 'succeeded') {
-          console.log('✅ Payment charged successfully');
+          logger.debug('Payment charged successfully');
         }
       } else {
         // Use new payment method from PaymentElement
@@ -365,11 +366,11 @@ export function CheckoutForm({ bookingDetails, clientSecret, onSuccess, onError 
               });
 
               if (!updateResponse.ok) {
-                console.warn('⚠️ Could not update payment intent with payment method, continuing anyway');
+                logger.warn('Could not update payment intent with payment method, continuing anyway');
               }
             }
           } catch (saveError: any) {
-            console.error('Error saving payment method:', saveError);
+            logger.error('Error saving payment method:', saveError);
             // Don't fail the payment - just continue without saving
             // User can still complete payment, just won't save the card
             // But notify the user that their card won't be saved
@@ -407,7 +408,7 @@ export function CheckoutForm({ bookingDetails, clientSecret, onSuccess, onError 
         
         // Check if payment was authorized but not captured (manual capture)
         if (paymentIntent && paymentIntent.status === 'requires_capture') {
-          console.log('✅ Payment authorized successfully (will be captured when booking is accepted)');
+          logger.debug('Payment authorized successfully (will be captured when booking is accepted)');
         }
       }
 
@@ -418,9 +419,9 @@ export function CheckoutForm({ bookingDetails, clientSecret, onSuccess, onError 
       } else if (paymentIntent && (paymentIntent.status === 'succeeded' || paymentIntent.status === 'requires_capture')) {
         // Payment succeeded (charged) OR authorized (requires_capture - will be charged when booking is accepted)
         if (paymentIntent.status === 'requires_capture') {
-          console.log('✅ Payment authorized - will be charged when booking is accepted');
+          logger.debug('Payment authorized - will be charged when booking is accepted');
         } else {
-          console.log('✅ Payment charged successfully');
+          logger.debug('Payment charged successfully');
         }
         // Save payment method if requested and using new card
         if (savePaymentMethod && selectedPaymentMethod === 'new' && customer?.user_id && paymentIntent.payment_method) {
@@ -448,7 +449,7 @@ export function CheckoutForm({ bookingDetails, clientSecret, onSuccess, onError 
               }
             }
           } catch (saveError) {
-            console.error('Error saving payment method:', saveError);
+            logger.error('Error saving payment method:', saveError);
             // Don't fail the payment if saving fails
           }
         }
@@ -497,7 +498,7 @@ export function CheckoutForm({ bookingDetails, clientSecret, onSuccess, onError 
         throw new Error('Failed to delete payment method');
       }
     } catch (error: any) {
-      console.error('Error deleting payment method:', error);
+      logger.error('Error deleting payment method:', error);
     }
   };
 

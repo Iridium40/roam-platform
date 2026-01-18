@@ -154,20 +154,6 @@ export default function FinancialsTab({
       return acc;
     }, []);
 
-    // Debug: Log transaction structure when filtering by provider
-    if (transactionFilters.providerId !== 'all' && uniqueTransactions.length > 0) {
-      console.log('🔍 Filtering transactions by provider:', {
-        providerId: transactionFilters.providerId,
-        totalTransactions: uniqueTransactions.length,
-        sampleTransaction: uniqueTransactions[0],
-        hasProviderId: uniqueTransactions[0].provider_id,
-        hasBookings: !!uniqueTransactions[0].bookings,
-        bookingsProviderId: Array.isArray(uniqueTransactions[0].bookings) 
-          ? uniqueTransactions[0].bookings[0]?.provider_id 
-          : uniqueTransactions[0].bookings?.provider_id,
-      });
-    }
-
     // Apply filters
     return uniqueTransactions.filter((transaction: any) => {
       // Filter by date range - compare date strings to avoid timezone issues

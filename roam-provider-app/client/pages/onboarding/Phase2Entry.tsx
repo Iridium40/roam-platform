@@ -40,19 +40,12 @@ export default function Phase2Entry() {
     useState<TokenValidationResult | null>(null);
 
   useEffect(() => {
-    console.log("Phase2Entry component mounted");
-    console.log("Current URL:", window.location.href);
-
     const token = searchParams.get("token");
     const testMode = searchParams.get("test");
     const directAccess = searchParams.get("direct");
-    console.log("Token from URL:", token ? "Token present" : "No token found");
-    console.log("Test mode:", testMode);
-    console.log("Direct access:", directAccess);
 
     // Allow direct access to bypass token validation for development/testing
     if (directAccess === "true") {
-      console.log("Direct access enabled - bypassing token validation");
       const testSessionData: Phase2SessionData = {
         business_id: "direct-access-business-id",
         user_id: "direct-access-user-id",
@@ -79,7 +72,6 @@ export default function Phase2Entry() {
 
     // Allow test mode to bypass token validation
     if (testMode === "true") {
-      console.log("Test mode enabled - bypassing token validation");
       const testSessionData: Phase2SessionData = {
         business_id: "test-business-id",
         user_id: "test-user-id",
@@ -119,8 +111,6 @@ export default function Phase2Entry() {
       setLoading(true);
       setError(null);
 
-      console.log("Validating Phase 2 token...");
-
       const response = await fetch("/api/onboarding/validate-phase2-token", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -133,7 +123,6 @@ export default function Phase2Entry() {
         throw new Error(result.error || "Token validation failed");
       }
 
-      console.log("Token validation successful:", result);
       setValidationResult(result);
 
       // Store validated session data for Phase 2 access
@@ -150,8 +139,6 @@ export default function Phase2Entry() {
 
       // Determine starting step based on progress
       const startStep = determineStartStep(result.progress);
-
-      console.log("Redirecting to Phase 2 step:", startStep);
 
       // Auto-redirect after 2 seconds or let user click
       setTimeout(() => {

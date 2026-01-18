@@ -96,7 +96,6 @@ export default function ProviderOnboardingPhase1() {
     
     // Don't overwrite state if we're in the middle of a step transition
     if (isTransitioning.current) {
-      console.log("Skipping server status check - currently transitioning between steps");
       return;
     }
 
@@ -136,7 +135,6 @@ export default function ProviderOnboardingPhase1() {
               setApplicationSubStep("business_info");
             }
           } else {
-            console.log("Keeping current client step:", onboardingState.phase1Step, "over server step:", status.currentStep);
             // Still update userId and businessId if missing
             setOnboardingState((prev) => ({
               ...prev,
@@ -172,33 +170,18 @@ export default function ProviderOnboardingPhase1() {
       setLoading(true);
       setError(null);
 
-      console.log("Starting signup process for:", signupData.email);
-      console.log("Signup data keys:", Object.keys(signupData));
-
       // Add role field for provider signup
       const signupDataWithRole = {
         ...signupData,
         role: 'provider'
       };
 
-      console.log("Enhanced signup data keys:", Object.keys(signupDataWithRole));
-
       // Create user account using the safe API utility
       const response = await postJson("/api/auth/signup", signupDataWithRole);
-
-      console.log("Signup API response:", {
-        success: response.success,
-        status: response.status,
-        hasData: !!response.data,
-        hasError: !!response.error
-      });
 
       if (!response.success) {
         // Handle specific error cases
         if (response.status === 409) {
-          console.log(
-            "💡 Developer tip: To delete test users, call: DELETE /api/admin/delete-test-user with { email: 'test@example.com' }",
-          );
           throw new Error(
             "An account with this email already exists. Please use a different email or try logging in.",
           );
@@ -210,7 +193,6 @@ export default function ProviderOnboardingPhase1() {
       }
 
       const result = response.data;
-      console.log("Signup successful:", { userId: result?.user?.id, email: result?.user?.email });
 
       // Validate result structure
       if (!result) {
@@ -223,7 +205,6 @@ export default function ProviderOnboardingPhase1() {
         throw new Error("Invalid response: missing user data");
       }
 
-      console.log("Moving to business info sub-step");
       setOnboardingState((prev) => ({
         ...prev,
         userData: result.user,
@@ -263,20 +244,10 @@ export default function ProviderOnboardingPhase1() {
         );
       }
 
-      // Log the data being sent for debugging
       const requestData = {
         userId: onboardingState.userId,
         businessData,
       };
-      console.log("Sending business info request:", requestData);
-      console.log("Business data keys:", Object.keys(businessData));
-      console.log("Required fields check:", {
-        businessName: !!businessData.businessName,
-        businessType: !!businessData.businessType,
-        contactEmail: !!businessData.contactEmail,
-        phone: !!businessData.phone,
-        serviceCategories: !!businessData.serviceCategories && businessData.serviceCategories.length > 0,
-      });
 
       const response = await fetch("/api/onboarding/business-info", {
         method: "POST",
@@ -291,13 +262,10 @@ export default function ProviderOnboardingPhase1() {
       try {
         // Read response directly as text - no cloning needed
         responseText = await response.text();
-        console.log("Business info response - Status:", response.status);
-        console.log("Raw response length:", responseText.length);
 
         // Parse the response text as JSON
         if (responseText.trim()) {
           result = JSON.parse(responseText);
-          console.log("Parsed response:", result);
         } else {
           throw new Error("Empty response from server");
         }
@@ -358,7 +326,6 @@ export default function ProviderOnboardingPhase1() {
   };
 
   const handleIdentityVerificationComplete = async (verificationData: any) => {
-    console.log("Identity verification completed:", verificationData);
     // Set transitioning flag to prevent server from overwriting this state change
     isTransitioning.current = true;
     setOnboardingState((prev) => ({
@@ -374,7 +341,6 @@ export default function ProviderOnboardingPhase1() {
   };
 
   const handleIdentityVerificationPending = () => {
-    console.log("Identity verification pending - processing...");
     // User has submitted their information, we're waiting for results
     // Can show a loading state or allow them to continue
   };
@@ -411,11 +377,6 @@ export default function ProviderOnboardingPhase1() {
         );
       }
 
-      console.log("Submitting application with:", {
-        userId: onboardingState.userId,
-        businessId: onboardingState.businessId,
-      });
-
       const response = await fetch("/api/onboarding/submit-application", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -430,19 +391,13 @@ export default function ProviderOnboardingPhase1() {
         }),
       });
 
-      // Handle response based on status without reading body initially
-      console.log("Submit application response - Status:", response.status);
-
       // Check if response is successful first
       if (response.ok) {
         // Only try to read the body if the response was successful
         try {
-          const result = await response.json();
-          console.log("Application submitted successfully:", result);
+          await response.json();
         } catch (jsonError) {
-          console.log(
-            "Success response but couldn't parse JSON, continuing anyway",
-          );
+          // Success response but couldn't parse JSON, continuing anyway
         }
       } else {
         // For error responses, try to read the actual error message from the API
@@ -450,7 +405,6 @@ export default function ProviderOnboardingPhase1() {
         try {
           // First try to read as text to see what we're dealing with
           const responseText = await response.text();
-          console.log("Error response text:", responseText);
           
           // Try to parse as JSON
           try {

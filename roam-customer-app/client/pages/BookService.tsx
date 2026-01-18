@@ -24,6 +24,8 @@ import { getDeliveryTypeLabel, getDeliveryTypeIcon } from '@/utils/deliveryTypeH
 import { CustomerAuthModal } from '@/components/CustomerAuthModal';
 import GooglePlacesAutocomplete from '@/components/GooglePlacesAutocomplete';
 import { Footer } from '@/components/Footer';
+import { logger } from '@/utils/logger';
+import { BookingErrorBoundary } from '@/components/ErrorBoundary';
 
 type BookingStep = 'datetime' | 'business' | 'provider' | 'delivery-location' | 'summary' | 'checkout';
 
@@ -101,7 +103,7 @@ const getDeliveryTypes = (business: Business): string[] => {
 
   // If delivery_types is not set or empty, fall back to defaults
   // This should rarely happen as delivery_type comes from business_services
-  console.warn('No delivery_types set for business, using defaults:', business.business_name);
+  logger.warn('No delivery_types set for business, using defaults:', business.business_name);
 
   // Default: business location only (safest fallback)
   return ['business_location'];
@@ -114,7 +116,7 @@ const getDeliveryTypes = (business: Business): string[] => {
 // Business sorting and filtering logic
 const sortAndFilterBusinesses = (businesses: Business[], sortBy: string, sortOrder: string): Business[] => {
   try {
-    console.log('🔄 Sorting businesses:', { count: businesses.length, sortBy, sortOrder });
+    logger.debug('Sorting businesses:', { count: businesses.length, sortBy, sortOrder });
 
     const sorted = [...businesses].sort((a, b) => {
       try {
@@ -140,15 +142,15 @@ const sortAndFilterBusinesses = (businesses: Business[], sortBy: string, sortOrd
             return 0;
         }
       } catch (sortError) {
-        console.error('Error in individual sort comparison:', sortError);
+        logger.error('Error in individual sort comparison:', sortError);
         return 0;
       }
     });
 
-    console.log('✅ Sorting completed successfully');
+    logger.debug('Sorting completed successfully');
     return sorted;
   } catch (error) {
-    console.error('❌ Error in sortAndFilterBusinesses:', error);
+    logger.error('Error in sortAndFilterBusinesses:', error);
     return businesses; // Return original array if sorting fails
   }
 };
@@ -173,7 +175,7 @@ interface ServiceAddon {
   price: number;  // Business custom_price
 }
 
-export default function BookService() {
+function BookServiceContent() {
   const { serviceId } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -291,7 +293,7 @@ export default function BookService() {
       savedAt: Date.now(),
     };
     sessionStorage.setItem(BOOKING_STATE_KEY, JSON.stringify(bookingState));
-    console.log('💾 Saved booking state for OAuth redirect');
+    logger.debug('Saved booking state for OAuth redirect');
   };
   
   // Clear saved booking state
@@ -378,7 +380,7 @@ export default function BookService() {
         .eq('service_id', serviceId);
 
       if (eligibilityError || !eligibleAddons || eligibleAddons.length === 0) {
-        console.log('📦 No eligible addons found for service:', serviceId);
+        logger.debug('No eligible addons found for service:', serviceId);
         setAvailableAddons([]);
         return;
       }
@@ -393,7 +395,7 @@ export default function BookService() {
         .eq('is_available', true);
 
       if (businessError) {
-        console.error('Error fetching business addons:', businessError);
+        logger.error('Error fetching business addons:', businessError);
       }
 
       // Combine eligibility with business pricing
@@ -426,7 +428,7 @@ export default function BookService() {
       // Clear selected addons when available addons change
       setSelectedAddons([]);
     } catch (error) {
-      console.error('Error loading addons:', error);
+      logger.error('Error loading addons:', error);
       setAvailableAddons([]);
     } finally {
       setAddonsLoading(false);
@@ -478,7 +480,7 @@ export default function BookService() {
         // Only restore if saved within the last 30 minutes
         const thirtyMinutesAgo = Date.now() - (30 * 60 * 1000);
         if (savedState.savedAt < thirtyMinutesAgo) {
-          console.log('⏰ Saved booking state expired, clearing');
+          logger.debug('Saved booking state expired, clearing');
           clearSavedBookingState();
           return;
         }
@@ -488,7 +490,7 @@ export default function BookService() {
           return;
         }
         
-        console.log('🔄 Restoring booking state from OAuth redirect');
+        logger.debug('Restoring booking state from OAuth redirect');
         
         // Restore state
         if (savedState.selectedDate) {
@@ -525,9 +527,9 @@ export default function BookService() {
         // Set pending checkout to trigger the checkout flow
         setPendingCheckout(true);
         
-        console.log('✅ Booking state restored, will proceed to checkout');
+        logger.debug('Booking state restored, will proceed to checkout');
       } catch (error) {
-        console.error('❌ Error restoring booking state:', error);
+        logger.error('Error restoring booking state:', error);
         clearSavedBookingState();
       }
     };
@@ -546,7 +548,7 @@ export default function BookService() {
       // Small delay to ensure modal closes before checkout
       setTimeout(() => {
         handleCheckout().catch((err) => {
-          console.error('❌ Failed to resume checkout after login:', err);
+          logger.error('Failed to resume checkout after login:', err);
         });
       }, 300);
     }
@@ -626,7 +628,7 @@ export default function BookService() {
           }
         }
       } catch (error) {
-        console.error('Error loading service:', error);
+        logger.error('Error loading service:', error);
       } finally {
         setLoading(false);
       }
@@ -647,7 +649,7 @@ export default function BookService() {
   useEffect(() => {
     const fetchPlatformFee = async () => {
       try {
-        console.log('💰 Fetching platform fee configuration...');
+        logger.debug('Fetching platform fee configuration...');
         const { data, error } = await supabase
           .from('system_config')
           .select('config_value')
@@ -655,17 +657,17 @@ export default function BookService() {
           .maybeSingle();
 
         if (error) {
-          console.error('Error fetching platform fee:', error);
+          logger.error('Error fetching platform fee:', error);
           // Default to 0% if config not found
           setPlatformFeePercentage(0);
           return;
         }
 
         const feePercentage = parseFloat(data?.config_value ?? '') || 0;
-        console.log('💰 Platform fee percentage loaded:', feePercentage + '%');
+        logger.debug('Platform fee percentage loaded:', feePercentage + '%');
         setPlatformFeePercentage(feePercentage);
       } catch (error) {
-        console.error('Error fetching platform fee configuration:', error);
+        logger.error('Error fetching platform fee configuration:', error);
         setPlatformFeePercentage(0);
       }
     };
@@ -696,7 +698,7 @@ export default function BookService() {
 
   // Load businesses that offer this service with pricing and availability validation
   const loadBusinesses = async () => {
-    console.log('🏢 loadBusinesses called with:', {
+    logger.debug('loadBusinesses called with:', {
       serviceId,
       selectedDate,
       selectedTime: selectedTime,
@@ -706,24 +708,24 @@ export default function BookService() {
     });
 
     if (!serviceId) {
-      console.log('❌ Missing serviceId');
+      logger.debug('Missing serviceId');
       return;
     }
 
     if (!selectedDate) {
-      console.log('❌ Missing selectedDate');
+      logger.debug('Missing selectedDate');
       return;
     }
 
     if (!selectedTime) {
-      console.log('❌ Missing selectedTime');
+      logger.debug('Missing selectedTime');
       return;
     }
 
     setCheckoutLoading(true);
 
     try {
-      console.log('📋 Fetching service details...');
+      logger.debug('Fetching service details...');
       // Get the service details first
       const { data: serviceData, error: serviceError } = await supabase
         .from('services')
@@ -731,7 +733,7 @@ export default function BookService() {
         .eq('id', serviceId)
         .single();
 
-      console.log('📋 Service query result:', { serviceData, serviceError });
+      logger.debug('Service query result:', { serviceData, serviceError });
 
       if (serviceError) throw serviceError;
 
@@ -741,13 +743,13 @@ export default function BookService() {
         return;
       }
 
-      console.log('🏪 Fetching business services with pricing (server API)...');
+      logger.debug('Fetching business services with pricing (server API)...');
 
       const resp = await fetch(`/api/businesses/by-service?serviceId=${encodeURIComponent(serviceId)}`);
       const json = await resp.json().catch(() => ({}));
       const businessServiceData = json?.data || [];
 
-      console.log('🏪 Business services API result:', {
+      logger.debug('Business services API result:', {
         ok: resp.ok,
         count: businessServiceData?.length,
         debug: json?.debug,
@@ -763,7 +765,7 @@ export default function BookService() {
       }
 
       if (!businessServiceData || businessServiceData.length === 0) {
-        console.log('⚠️ No businesses offer this service (business_services is empty).');
+        logger.debug('No businesses offer this service (business_services is empty).');
         setAllBusinesses([]);
         setFilteredAndSortedBusinesses([]);
         toast({
@@ -843,7 +845,7 @@ export default function BookService() {
           deliveryTypes = ['business_location'];
         }
         
-        console.log(`📍 Business "${item.business_profiles.business_name}" delivery_type: "${item.delivery_type}" → deliveryTypes:`, deliveryTypes);
+        logger.debug(`Business "${item.business_profiles.business_name}" delivery_type: "${item.delivery_type}" → deliveryTypes:`, deliveryTypes);
         
         return {
           id: item.business_profiles.id,
@@ -865,7 +867,7 @@ export default function BookService() {
         };
       });
 
-      console.log('Loaded businesses with pricing:', transformedBusinesses.map(b => ({
+      logger.debug('Loaded businesses with pricing:', transformedBusinesses.map(b => ({
         name: b.business_name,
         price: b.service_price,
         originalBusinessPrice: availableBusinesses.find(item => item.business_profiles.id === b.id)?.business_price
@@ -878,9 +880,9 @@ export default function BookService() {
       setFilteredAndSortedBusinesses(sortedBusinesses);
 
     } catch (error) {
-      console.error('Error loading businesses - Full error object:', error);
-      console.error('Error type:', typeof error);
-      console.error('Error keys:', Object.keys(error || {}));
+      logger.error('Error loading businesses - Full error object:', error);
+      logger.error('Error type:', typeof error);
+      logger.error('Error keys:', Object.keys(error || {}));
 
       let errorMessage = "Unknown error occurred";
       if (error) {
@@ -905,9 +907,9 @@ export default function BookService() {
         }
       }
 
-      console.error('Parsed error message:', errorMessage);
+      logger.error('Parsed error message:', errorMessage);
 
-      console.error('Error loading businesses:', errorMessage);
+      logger.error('Error loading businesses:', errorMessage);
       setAllBusinesses([]);
       setFilteredAndSortedBusinesses([]);
       toast({
@@ -938,7 +940,7 @@ export default function BookService() {
       // Apply filtering logic based on business type and provider role
       let filteredProviders = (json?.data || []) as any[];
 
-      console.log('Provider filtering debug:', {
+      logger.debug('Provider filtering debug:', {
         businessType: selectedBusiness?.business_type,
         businessName: selectedBusiness?.business_name,
         allProviders: filteredProviders?.map((p: any) => ({ name: `${p.first_name} ${p.last_name}`, role: p.provider_role })),
@@ -951,10 +953,10 @@ export default function BookService() {
         filteredProviders = filteredProviders.filter(
           (provider) => provider.provider_role === 'owner',
         );
-        console.log('Filtered for independent business (owners only):', filteredProviders.length);
+        logger.debug('Filtered for independent business (owners only):', filteredProviders.length);
       } else {
         // Business: show both owners and providers (already filtered to those roles by query)
-        console.log('Filtered for business (owners and providers):', filteredProviders.length);
+        logger.debug('Filtered for business (owners and providers):', filteredProviders.length);
       }
 
       // Ratings already included by the API endpoint
@@ -975,12 +977,12 @@ export default function BookService() {
       if (providerId) {
         const preSelectedProvider = providerData.find(p => p.user_id === providerId);
         if (preSelectedProvider) {
-          console.log('Auto-selecting provider from URL:', preSelectedProvider);
+          logger.debug('Auto-selecting provider from URL:', preSelectedProvider);
           setSelectedProvider(preSelectedProvider);
         }
       }
     } catch (error) {
-      console.error('Error loading providers:', error);
+      logger.error('Error loading providers:', error);
       setProviders([]);
     }
     finally {
@@ -1014,7 +1016,7 @@ export default function BookService() {
         }
       }
     } catch (error) {
-      console.error('Error loading business locations:', error);
+      logger.error('Error loading business locations:', error);
     }
   };
 
@@ -1043,7 +1045,7 @@ export default function BookService() {
         }
       }
     } catch (error) {
-      console.error('Error loading customer locations:', error);
+      logger.error('Error loading customer locations:', error);
     }
   };
 
@@ -1138,7 +1140,7 @@ export default function BookService() {
 
       return data;
     } catch (error) {
-      console.error('Error saving customer location:', error);
+      logger.error('Error saving customer location:', error);
       return null;
     }
   };
@@ -1386,7 +1388,7 @@ export default function BookService() {
             .delete()
             .eq('id', createdBookingId)
             .then(() => {
-              console.log('🗑️ Cancelled pending booking:', createdBookingId);
+              logger.debug('Cancelled pending booking:', createdBookingId);
             });
           setCreatedBookingId(null);
           setClientSecret('');
@@ -1534,7 +1536,7 @@ export default function BookService() {
     // Remaining balance is the service amount (what the business receives)
     const remainingBalance = serviceAmount;
     
-    console.log('💰 Checkout amounts:', {
+    logger.debug('Checkout amounts:', {
       baseServiceAmount,
       addonsTotal,
       serviceAmount,
@@ -1593,7 +1595,7 @@ export default function BookService() {
       // Guest bookings are identified by customer_id being null
     };
 
-    console.log('💳 Creating booking with pending status (payment to follow):', bookingDetails);
+    logger.debug('Creating booking with pending status (payment to follow):', bookingDetails);
 
     try {
       // Get auth headers - try multiple methods for Vercel compatibility
@@ -1606,28 +1608,28 @@ export default function BookService() {
           const { data: { session } } = await supabase.auth.getSession();
           if (session?.access_token) {
             token = session.access_token;
-            console.log('✅ Using session token');
+            logger.debug('Using session token');
           }
         } catch (error) {
-          console.warn('⚠️ Session retrieval failed, trying localStorage:', error);
+          logger.warn('Session retrieval failed, trying localStorage:', error);
         }
         
         // Method 2: Fallback to localStorage cached token
         if (!token) {
           token = localStorage.getItem('roam_access_token');
           if (token) {
-            console.log('✅ Using cached token from localStorage');
+            logger.debug('Using cached token from localStorage');
           }
         }
         
         // Method 3: Check if customer object has user_id (they're authenticated)
         if (!token && customer?.user_id) {
-          console.warn('⚠️ No token but customer exists, proceeding anyway');
+          logger.warn('No token but customer exists, proceeding anyway');
           // For Supabase operations, the client is already authenticated
           // For API calls, we'll try without explicit auth header
         }
       } else {
-        console.log('🎫 Guest checkout - proceeding without auth token');
+        logger.debug('Guest checkout - proceeding without auth token');
       }
       
       const headers: Record<string, string> = {
@@ -1661,7 +1663,7 @@ export default function BookService() {
         
         const guestBookingData = await guestBookingResponse.json();
         newBooking = { id: guestBookingData.bookingId };
-        console.log('✅ Guest booking created with ID:', newBooking.id);
+        logger.debug('Guest booking created with ID:', newBooking.id);
       } else {
         // Logged-in user - use direct Supabase insert
         const { data: bookingData, error: bookingError } = await supabase
@@ -1679,7 +1681,7 @@ export default function BookService() {
         }
         
         newBooking = bookingData;
-        console.log('✅ Booking created with ID:', newBooking.id);
+        logger.debug('Booking created with ID:', newBooking.id);
       }
 
       setCreatedBookingId(newBooking.id);
@@ -1714,9 +1716,9 @@ export default function BookService() {
           .insert(addonRecords);
 
         if (addonsError) {
-          console.error('⚠️ Error creating booking addons (non-fatal):', addonsError);
+          logger.error('Error creating booking addons (non-fatal):', addonsError);
         } else {
-          console.log('✅ Booking addons created:', selectedAddons.length);
+          logger.debug('Booking addons created:', selectedAddons.length);
         }
       }
 
@@ -1761,17 +1763,17 @@ export default function BookService() {
         body: JSON.stringify(paymentPayload),
       });
 
-      console.log('📡 Response status:', response.status);
-      console.log('���� Response headers:', Object.fromEntries(response.headers.entries()));
+      logger.debug('Response status:', response.status);
+      logger.debug('Response headers:', Object.fromEntries(response.headers.entries()));
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('❌ HTTP Error:', response.status, errorText);
+        logger.error('HTTP Error:', response.status, errorText);
         throw new Error(`HTTP ${response.status}: ${errorText}`);
       }
 
       const paymentData = await response.json();
-      console.log('✅ Payment Intent created:', paymentData);
+      logger.debug('Payment Intent created:', paymentData);
 
       // Store client secret and payment breakdown
       setClientSecret(paymentData.clientSecret);
@@ -1781,7 +1783,7 @@ export default function BookService() {
       setCurrentStep('checkout');
       setCheckoutLoading(false);
     } catch (error) {
-      console.error('❌ Error preparing checkout:', error);
+      logger.error('Error preparing checkout:', error);
       setCheckoutLoading(false);
       
       // Clean up booking if it was created
@@ -1797,7 +1799,7 @@ export default function BookService() {
         errorMessage = error.message;
       }
       
-      console.error('Checkout error:', errorMessage);
+      logger.error('Checkout error:', errorMessage);
     }
   }
 
@@ -3187,9 +3189,9 @@ export default function BookService() {
                         total: paymentBreakdown?.total || calculateTotalWithFees(),
                       }}
                       onSuccess={(paymentIntent) => {
-                        console.log('✅ Payment successful!', paymentIntent);
-                        console.log('📋 Payment Intent Status:', paymentIntent.status);
-                        console.log('📋 Booking ID:', createdBookingId);
+                        logger.debug('Payment successful!', paymentIntent);
+                        logger.debug('Payment Intent Status:', paymentIntent.status);
+                        logger.debug('Booking ID:', createdBookingId);
 
                         // Show success message
                         toast({
@@ -3204,7 +3206,7 @@ export default function BookService() {
                         navigate(`/booking-success?booking_id=${createdBookingId}`);
                       }}
                       onError={(error) => {
-                        console.error('❌ Payment error:', error);
+                        logger.error('Payment error:', error);
                         toast({
                           variant: "destructive",
                           title: "Payment Failed",
@@ -3268,5 +3270,14 @@ export default function BookService() {
       {/* Footer */}
       <Footer />
     </div>
+  );
+}
+
+// Wrap the component with BookingErrorBoundary for resilient error handling
+export default function BookService() {
+  return (
+    <BookingErrorBoundary>
+      <BookServiceContent />
+    </BookingErrorBoundary>
   );
 }

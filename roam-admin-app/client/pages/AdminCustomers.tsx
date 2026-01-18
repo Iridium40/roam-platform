@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { AdminLayout } from "@/components/layout/admin-layout";
 import { ROAMDataTable, Column } from "@/components/ui/roam-data-table";
 import {
@@ -262,8 +262,6 @@ export default function AdminCustomers() {
       setLoading(true);
       setError(null);
 
-      console.log("Fetching customers from API...");
-
       const response = await fetch(`/api/customers?status=${statusFilter}`);
       const result = await response.json();
 
@@ -275,14 +273,12 @@ export default function AdminCustomers() {
         throw new Error(result.error || 'API returned unsuccessful response');
       }
 
-      console.log(`Successfully fetched ${result.data?.length || 0} customers`);
       setCustomers(result.data || []);
       
       if (result.data?.length === 0) {
         setError("No customer records found.");
       }
     } catch (err) {
-      console.error("Error fetching customers:", err);
       const errorMessage =
         err instanceof Error ? err.message : "Unknown error occurred";
       setError(`Failed to load customers: ${errorMessage}`);
@@ -294,8 +290,6 @@ export default function AdminCustomers() {
 
   const fetchCustomerLocations = async () => {
     try {
-      console.log("Fetching customer locations from API...");
-
       const response = await fetch('/api/customers/locations');
       const result = await response.json();
 
@@ -307,21 +301,14 @@ export default function AdminCustomers() {
         throw new Error(result.error || 'API returned unsuccessful response');
       }
 
-      console.log(`Successfully fetched ${result.data?.length || 0} customer locations`);
       setCustomerLocations(result.data || []);
     } catch (err) {
-      console.error("Error fetching customer locations:", err);
-      const errorMessage =
-        err instanceof Error ? err.message : "Unknown error occurred";
-      console.warn(`Customer Locations Error: ${errorMessage}`);
       setCustomerLocations([]);
     }
   };
 
   const fetchCustomerBookings = async () => {
     try {
-      console.log("Fetching customer bookings from API...");
-
       const response = await fetch('/api/customers/bookings');
       const result = await response.json();
 
@@ -333,10 +320,8 @@ export default function AdminCustomers() {
         throw new Error(result.error || 'API returned unsuccessful response');
       }
 
-      console.log(`Successfully fetched ${result.data?.length || 0} customer bookings`);
       setCustomerBookings(result.data || []);
     } catch (err) {
-      console.error("Error fetching customer bookings:", err);
       setCustomerBookings([]);
     }
   };
@@ -368,30 +353,30 @@ export default function AdminCustomers() {
         throw new Error(result.error || 'API returned unsuccessful response');
       }
 
-      console.log(`Customer ${customerId} status updated to ${newStatus ? "active" : "inactive"}`);
       await fetchCustomers(); // Refresh the customers list
     } catch (err) {
-      console.error("Error updating customer status:", err);
       const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
       alert(`Error updating customer status: ${errorMessage}`);
     }
   };
 
-  // Filter customers based on selected filters
-  const filteredCustomers = customers.filter((customer) => {
-    const statusMatch =
-      statusFilter === "all" ||
-      (statusFilter === "active" && customer.is_active) ||
-      (statusFilter === "inactive" && !customer.is_active);
+  // Filter customers based on selected filters - memoized for performance
+  const filteredCustomers = useMemo(() => 
+    customers.filter((customer) => {
+      const statusMatch =
+        statusFilter === "all" ||
+        (statusFilter === "active" && customer.is_active) ||
+        (statusFilter === "inactive" && !customer.is_active);
 
-    return statusMatch;
-  });
+      return statusMatch;
+    }), [customers, statusFilter]
+  );
 
-  const customerStats = {
+  // Customer statistics - memoized for performance
+  const customerStats = useMemo(() => ({
     total: customers.length,
     active: customers.filter((c) => c.is_active).length,
-    verified: customers.filter((c) => c.email_verified && c.phone_verified)
-      .length,
+    verified: customers.filter((c) => c.email_verified && c.phone_verified).length,
     newThisMonth: customers.filter((c) => {
       const createdDate = new Date(c.created_at);
       const now = new Date();
@@ -400,7 +385,7 @@ export default function AdminCustomers() {
         createdDate.getFullYear() === now.getFullYear()
       );
     }).length,
-  };
+  }), [customers]);
 
   const columns: Column[] = [
     {
@@ -626,7 +611,7 @@ export default function AdminCustomers() {
             searchable={true}
             filterable={false}
             addable={false}
-            onRowClick={(customer) => console.log("View customer:", customer)}
+            onRowClick={() => {}}
             pageSize={10}
           />
         </div>

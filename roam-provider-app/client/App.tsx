@@ -51,7 +51,20 @@ import HowItWorksPage from "./pages/HowItWorks";
 import AboutPage from "./pages/About";
 import Contact from "./pages/Contact";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60, // 1 minute - data considered fresh
+      gcTime: 1000 * 60 * 5, // 5 minutes - cache retention (formerly cacheTime)
+      refetchOnWindowFocus: false, // Don't refetch on tab focus
+      retry: 1, // Single retry on failure
+      refetchOnMount: true, // Refetch when component mounts
+    },
+    mutations: {
+      retry: 1, // Single retry on mutation failure
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>

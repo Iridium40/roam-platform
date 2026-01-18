@@ -1,91 +1,70 @@
 /**
- * Centralized logging utility for the ROAM Admin App
- * Provides consistent logging across the application with environment-aware behavior
+ * Environment-aware logger utility
+ * Only logs in development mode to avoid polluting production console
  */
+
+const isDevelopment = import.meta.env.DEV;
 
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
-interface LogContext {
-  component?: string;
-  action?: string;
-  userId?: string;
-  [key: string]: any;
+interface LoggerOptions {
+  prefix?: string;
 }
 
 class Logger {
-  private isDevelopment = process.env.NODE_ENV === 'development';
-  private isProduction = process.env.NODE_ENV === 'production';
+  private prefix: string;
 
-  private formatMessage(level: LogLevel, message: string, context?: LogContext, data?: any): string {
-    const timestamp = new Date().toISOString();
-    const contextStr = context ? ` [${Object.entries(context).map(([k, v]) => `${k}:${v}`).join(', ')}]` : '';
-    return `[${timestamp}] ${level.toUpperCase()}${contextStr}: ${message}`;
+  constructor(options: LoggerOptions = {}) {
+    this.prefix = options.prefix ? `[${options.prefix}]` : '';
   }
 
-  private shouldLog(level: LogLevel): boolean {
-    if (this.isDevelopment) return true;
-    if (this.isProduction && level !== 'debug') return true;
-    return false;
+  private formatMessage(message: string): string {
+    return this.prefix ? `${this.prefix} ${message}` : message;
   }
 
-  debug(message: string, context?: LogContext, data?: any): void {
-    if (!this.shouldLog('debug')) return;
-    const formattedMessage = this.formatMessage('debug', message, context);
-    console.debug(formattedMessage, data || '');
-  }
-
-  info(message: string, context?: LogContext, data?: any): void {
-    if (!this.shouldLog('info')) return;
-    const formattedMessage = this.formatMessage('info', message, context);
-    console.info(formattedMessage, data || '');
-  }
-
-  warn(message: string, context?: LogContext, data?: any): void {
-    if (!this.shouldLog('warn')) return;
-    const formattedMessage = this.formatMessage('warn', message, context);
-    console.warn(formattedMessage, data || '');
-  }
-
-  error(message: string, error?: Error | any, context?: LogContext): void {
-    if (!this.shouldLog('error')) return;
-    const formattedMessage = this.formatMessage('error', message, context);
-    
-    if (error instanceof Error) {
-      console.error(formattedMessage, {
-        message: error.message,
-        stack: error.stack,
-        name: error.name
-      });
-    } else {
-      console.error(formattedMessage, error || '');
+  debug(...args: unknown[]): void {
+    if (isDevelopment) {
+      console.debug(this.formatMessage(String(args[0])), ...args.slice(1));
     }
   }
 
-  // Specialized logging methods for common use cases
-  apiCall(endpoint: string, method: string, context?: LogContext): void {
-    this.info(`API ${method} ${endpoint}`, context);
+  info(...args: unknown[]): void {
+    if (isDevelopment) {
+      console.info(this.formatMessage(String(args[0])), ...args.slice(1));
+    }
   }
 
-  apiResponse(endpoint: string, method: string, status: number, context?: LogContext): void {
-    const level = status >= 400 ? 'error' : 'info';
-    this[level](`API ${method} ${endpoint} - ${status}`, context);
+  warn(...args: unknown[]): void {
+    // Warnings are logged in all environments
+    console.warn(this.formatMessage(String(args[0])), ...args.slice(1));
   }
 
-  userAction(action: string, userId?: string, context?: LogContext): void {
-    this.info(`User action: ${action}`, { ...context, userId });
+  error(...args: unknown[]): void {
+    // Errors are logged in all environments
+    console.error(this.formatMessage(String(args[0])), ...args.slice(1));
   }
 
-  dataFetch(table: string, recordCount: number, context?: LogContext): void {
-    this.info(`Fetched ${recordCount} records from ${table}`, context);
-  }
-
-  dataMutation(operation: 'create' | 'update' | 'delete', table: string, id: string, context?: LogContext): void {
-    this.info(`${operation} ${table} record ${id}`, context);
+  // For backwards compatibility with console.log
+  log(...args: unknown[]): void {
+    if (isDevelopment) {
+      console.log(this.formatMessage(String(args[0])), ...args.slice(1));
+    }
   }
 }
 
-// Export singleton instance
+// Create a default logger instance
 export const logger = new Logger();
 
-// Export individual methods for convenience
-export const { debug, info, warn, error, apiCall, apiResponse, userAction, dataFetch, dataMutation } = logger;
+// Factory function to create loggers with specific prefixes
+export function createLogger(prefix: string): Logger {
+  return new Logger({ prefix });
+}
+
+// Export individual log functions for convenience
+export const debug = (...args: unknown[]) => logger.debug(...args);
+export const info = (...args: unknown[]) => logger.info(...args);
+export const warn = (...args: unknown[]) => logger.warn(...args);
+export const error = (...args: unknown[]) => logger.error(...args);
+export const log = (...args: unknown[]) => logger.log(...args);
+
+export default logger;

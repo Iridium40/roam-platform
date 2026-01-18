@@ -45,7 +45,7 @@ interface ServiceGridProps {
   showDebugInfo?: boolean;
 }
 
-export const ServiceGrid: React.FC<ServiceGridProps> = ({
+export const ServiceGrid: React.FC<ServiceGridProps> = React.memo(({
   title,
   subtitle,
   services,
@@ -329,4 +329,6 @@ export const ServiceGrid: React.FC<ServiceGridProps> = ({
       </div>
     </section>
   );
-};
+});
+
+ServiceGrid.displayName = 'ServiceGrid';

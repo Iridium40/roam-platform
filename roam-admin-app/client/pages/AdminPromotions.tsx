@@ -262,14 +262,8 @@ export default function AdminPromotions() {
         return;
       }
 
-      console.log(`Fetched ${data?.length || 0} promotions`);
       setPromotions(data || []);
     } catch (error: any) {
-      console.error("Error in fetchPromotions - full details:", error);
-      console.error("Error message:", error?.message);
-      console.error("Error code:", error?.code);
-      console.error("Error details:", error?.details);
-      console.error("Error type:", typeof error);
       const errorMessage = error?.message || error?.details || "Unknown error";
       setError(`Failed to fetch promotions data: ${errorMessage}`);
     }
@@ -304,30 +298,13 @@ export default function AdminPromotions() {
         .order("created_at", { ascending: false });
 
       if (error) {
-        console.error("Error fetching promotion usage - details:", error);
-        console.error("Error message:", error.message);
-        console.error("Error code:", error.code);
-        console.error("Error details:", error.details);
-        console.error("Error hint:", error.hint);
-        const errorMessage =
-          error?.message ||
-          error?.details ||
-          error?.hint ||
-          "Unknown database error";
-        setError(
-          `Promotion Usage Query Error: ${errorMessage}. You may need to create RLS policy: CREATE POLICY "Allow anon read access" ON public.promotion_usage FOR SELECT USING (true);`,
-        );
+        const errorMessage = error?.message || error?.details || error?.hint || "Unknown database error";
+        setError(`Promotion Usage Query Error: ${errorMessage}`);
         return;
       }
 
-      console.log(`Fetched ${data?.length || 0} promotion usage records`);
       setPromotionUsage(data || []);
     } catch (error: any) {
-      console.error("Error in fetchPromotionUsage - full details:", error);
-      console.error("Error message:", error?.message);
-      console.error("Error code:", error?.code);
-      console.error("Error details:", error?.details);
-      console.error("Error type:", typeof error);
       const errorMessage = error?.message || error?.details || "Unknown error";
       setError(`Failed to fetch promotion usage data: ${errorMessage}`);
     }
@@ -343,22 +320,12 @@ export default function AdminPromotions() {
         .order("business_name", { ascending: true });
 
       if (error) {
-        console.error("Error fetching businesses - details:", error);
-        console.error("Error message:", error.message);
-        console.error("Error code:", error.code);
-        console.error("Error details:", error.details);
-        console.error("Error hint:", error.hint);
         return;
       }
 
-      console.log(`Fetched ${data?.length || 0} businesses`);
       setBusinesses(data || []);
     } catch (error: any) {
-      console.error("Error in fetchBusinesses - full details:", error);
-      console.error("Error message:", error?.message);
-      console.error("Error code:", error?.code);
-      console.error("Error details:", error?.details);
-      console.error("Error type:", typeof error);
+      // Silent fail - non-critical data
     }
   };
 
@@ -384,22 +351,12 @@ export default function AdminPromotions() {
         .order("name", { ascending: true });
 
       if (error) {
-        console.error("Error fetching services - details:", error);
-        console.error("Error message:", error.message);
-        console.error("Error code:", error.code);
-        console.error("Error details:", error.details);
-        console.error("Error hint:", error.hint);
         return;
       }
 
-      console.log(`Fetched ${data?.length || 0} services`);
       setServices(data || []);
     } catch (error: any) {
-      console.error("Error in fetchServices - full details:", error);
-      console.error("Error message:", error?.message);
-      console.error("Error code:", error?.code);
-      console.error("Error details:", error?.details);
-      console.error("Error type:", typeof error);
+      // Silent fail - non-critical data
     }
   };
 
@@ -457,27 +414,13 @@ export default function AdminPromotions() {
       const fileName = `promotion-${Date.now()}.${fileExt}`;
       const filePath = `promotion-images/${fileName}`;
 
-      console.log("Uploading file:", {
-        fileName,
-        filePath,
-        fileSize: file.size,
-        fileType: file.type,
-      });
-
-      // Upload to Supabase Storage (try direct upload)
-      console.log(
-        "Attempting upload to bucket: roam-file-storage, path:",
-        filePath,
-      );
-
+      // Upload to Supabase Storage
       const { data, error } = await supabase.storage
         .from("roam-file-storage")
         .upload(filePath, file, {
           cacheControl: "3600",
           upsert: false,
         });
-
-      console.log("Upload response:", { data, error });
 
       if (error) {
         console.error("Error uploading image:", error);
@@ -531,8 +474,6 @@ export default function AdminPromotions() {
         const {
           data: { publicUrl },
         } = supabase.storage.from("roam-file-storage").getPublicUrl(filePath);
-
-        console.log("Generated public URL:", publicUrl);
 
         if (!publicUrl) {
           throw new Error("Failed to generate public URL");
@@ -855,16 +796,6 @@ export default function AdminPromotions() {
           : null,
       };
 
-      console.log("Raw form data:", formData);
-      console.log("Prepared promotion data:", promotionData);
-      console.log("Data types:", {
-        title: typeof promotionData.title,
-        savings_amount: typeof promotionData.savings_amount,
-        savings_max_amount: typeof promotionData.savings_max_amount,
-        savings_type: typeof promotionData.savings_type,
-        is_active: typeof promotionData.is_active,
-      });
-
       if (editingPromotion) {
         const { error } = await supabase
           .from("promotions")
@@ -872,11 +803,6 @@ export default function AdminPromotions() {
           .eq("id", editingPromotion.id);
 
         if (error) {
-          console.error("Supabase update error details:", error);
-          console.error("Error message:", error.message);
-          console.error("Error code:", error.code);
-          console.error("Error details:", error.details);
-          console.error("Error hint:", error.hint);
           throw error;
         }
         toast({
@@ -1577,9 +1503,7 @@ export default function AdminPromotions() {
               filterable={false}
               addable={true}
               onAdd={openCreateModal}
-              onRowClick={(promotion) =>
-                console.log("View promotion:", promotion)
-              }
+              onRowClick={() => {}}
               pageSize={10}
             />
           </div>
@@ -1593,7 +1517,7 @@ export default function AdminPromotions() {
             searchable={true}
             filterable={false}
             addable={false}
-            onRowClick={(usage) => console.log("View usage:", usage)}
+            onRowClick={() => {}}
             pageSize={10}
           />
         )}

@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
+import { logger } from '@/utils/logger';
 
 interface MFAFactor {
   id: string;
@@ -257,7 +258,7 @@ export const useMFA = (userId: string): UseMFAReturn => {
       const result = await apiCall(`check-session&sessionId=${sessionId}`);
       return result.mfaCompleted;
     } catch (err) {
-      console.error('Error checking MFA session:', err);
+      logger.error('Error checking MFA session:', err);
       return false;
     }
   }, [apiCall]);

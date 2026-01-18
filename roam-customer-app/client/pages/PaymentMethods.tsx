@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
+import { logger } from '@/utils/logger';
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
@@ -64,7 +65,7 @@ export default function PaymentMethods() {
         throw new Error('Failed to load payment methods');
       }
     } catch (error: any) {
-      console.error('Error loading payment methods:', error);
+      logger.error('Error loading payment methods:', error);
       toast({
         title: "Error",
         description: error.message || "Failed to load payment methods",
@@ -100,7 +101,7 @@ export default function PaymentMethods() {
         throw new Error(errorData.error || 'Failed to set default payment method');
       }
     } catch (error: any) {
-      console.error('Error setting default payment method:', error);
+      logger.error('Error setting default payment method:', error);
       toast({
         title: "Error",
         description: error.message || "Failed to set default payment method",
@@ -138,7 +139,7 @@ export default function PaymentMethods() {
         throw new Error(errorData.error || 'Failed to delete payment method');
       }
     } catch (error: any) {
-      console.error('Error deleting payment method:', error);
+      logger.error('Error deleting payment method:', error);
       toast({
         title: "Error",
         description: error.message || "Failed to delete payment method",
@@ -466,7 +467,7 @@ function AddCardFormWrapper({ stripePromise, customerId, onSuccess, onError, set
           throw new Error(errorData.error || 'Failed to initialize payment form');
         }
       } catch (error: any) {
-        console.error('Error loading setup intent:', error);
+        logger.error('Error loading setup intent:', error);
         onError(error.message || 'Failed to initialize payment form');
       } finally {
         setLoadingSecret(false);
@@ -572,7 +573,7 @@ function AddCardForm({ customerId, onSuccess, onError, setAsDefault, onSetAsDefa
 
       onSuccess();
     } catch (error: any) {
-      console.error('Error adding card:', error);
+      logger.error('Error adding card:', error);
       onError(error.message || 'Failed to add payment method');
     } finally {
       setIsLoading(false);

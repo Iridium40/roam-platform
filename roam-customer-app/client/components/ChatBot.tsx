@@ -113,10 +113,10 @@ export default function ChatBot({ isOpen, onClose }: ChatBotProps) {
               src="/roam-icon.png" 
               alt="ROAM" 
               className="w-5 h-5"
-              onLoad={() => console.log('ROAM icon loaded successfully')}
+              onLoad={() => logger.debug('ROAM icon loaded successfully')}
               onError={(e) => {
-                console.error('ROAM icon failed to load:', e);
-                console.error('Image src:', e.currentTarget.src);
+                logger.error('ROAM icon failed to load:', e);
+                logger.error('Image src:', e.currentTarget.src);
                 e.currentTarget.style.display = 'none';
               }}
             />
@@ -154,7 +154,7 @@ export default function ChatBot({ isOpen, onClose }: ChatBotProps) {
                           alt="ROAM" 
                           className="w-4 h-4"
                           onError={(e) => {
-                            console.error('ROAM icon failed to load:', e);
+                            logger.error('ROAM icon failed to load:', e);
                             e.currentTarget.style.display = 'none';
                           }}
                         />
@@ -206,7 +206,7 @@ export default function ChatBot({ isOpen, onClose }: ChatBotProps) {
                       alt="ROAM" 
                       className="w-4 h-4"
                       onError={(e) => {
-                        console.error('ROAM icon failed to load:', e);
+                        logger.error('ROAM icon failed to load:', e);
                         e.currentTarget.style.display = 'none';
                       }}
                     />

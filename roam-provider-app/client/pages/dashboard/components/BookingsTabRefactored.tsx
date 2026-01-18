@@ -98,15 +98,6 @@ export function BookingsTab({ providerData, business }: BookingsTabProps) {
   // Check if user can view unassigned bookings (owner or dispatcher)
   const canViewUnassigned = providerData?.provider_role === 'owner' || providerData?.provider_role === 'dispatcher';
 
-  // Debug: Log tab data
-  console.log('📊 BookingsTab render:', {
-    activeTab,
-    activeCount: activeBookings.length,
-    closedCount: closedBookings.length,
-    paginatedActive: paginatedData.active.items.length,
-    paginatedClosed: paginatedData.closed.items.length,
-  });
-
   if (loading) {
     return (
       <div className="space-y-6">

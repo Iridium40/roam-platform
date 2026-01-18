@@ -3,6 +3,10 @@ import { AuthAPI } from "@/lib/supabase-utils/auth";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "@/hooks/use-toast";
 
+// Dev-only debug logging
+const isDev = import.meta.env.DEV;
+const debugLog = isDev ? (...args: any[]) => console.log(...args) : () => {};
+
 // Provider type - v3 auth fix with nested relations support
 interface Provider {
   id: string;
@@ -101,24 +105,24 @@ export const ProviderAuthProvider: React.FC<ProviderAuthProviderProps> = ({ chil
       const { data: { session }, error } = await supabase.auth.getSession();
       
       if (error) {
-        console.log(" Auth validation failed:", error.message);
+        debugLog("Auth validation failed:", error.message);
         clearStoredData();
         authValidationRef.current = true;
         return false;
       }
       
       if (!session?.user) {
-        console.log(" No active session found");
+        debugLog("No active session found");
         clearStoredData();
         authValidationRef.current = true;
         return false;
       }
       
-      console.log(" Auth state validated for user:", session.user.id);
+      debugLog("Auth state validated for user:", session.user.id);
       authValidationRef.current = true;
       return true;
     } catch (error) {
-      console.error(" Auth validation error:", error);
+      if (isDev) console.error("Auth validation error:", error);
       clearStoredData();
       authValidationRef.current = true;
       return false;
@@ -129,30 +133,30 @@ export const ProviderAuthProvider: React.FC<ProviderAuthProviderProps> = ({ chil
     // Validate auth state first
     const isValidAuth = await validateAuthState();
     if (!isValidAuth) {
-      console.log(" Auth validation failed, skipping user processing");
+      debugLog("Auth validation failed, skipping user processing");
       return false;
     }
 
     // Prevent duplicate processing with Set-based tracking
     if (authProcessingRef.current.has(userId)) {
-      console.log(" Auth already processing for user:", userId);
+      debugLog("Auth already processing for user:", userId);
       return true;
     }
 
     // Skip if this is the same user we just processed
     if (lastProcessedUserRef.current === userId) {
-      console.log(" Skipping - same user already processed:", userId);
+      debugLog("Skipping - same user already processed:", userId);
       return true;
     }
 
     authProcessingRef.current.add(userId);
-    console.log(" Processing auth for user:", userId);
+    debugLog("Processing auth for user:", userId);
     
     try {
       const providerData = await AuthAPI.getProviderByUserId(userId);
       
       if (providerData) {
-        console.log(" Provider data loaded:", providerData.provider_role);
+        debugLog("Provider data loaded:", providerData.provider_role);
         setProvider(providerData);
         lastProcessedUserRef.current = userId;
         
@@ -162,13 +166,13 @@ export const ProviderAuthProvider: React.FC<ProviderAuthProviderProps> = ({ chil
         apiClient.setAuthToken(accessToken);
         return true;
       } else {
-        console.log(" No provider data found");
+        debugLog("No provider data found");
         clearStoredData();
         lastProcessedUserRef.current = null;
         return false;
       }
     } catch (error) {
-      console.error(" Auth processing error:", error);
+      if (isDev) console.error("Auth processing error:", error);
       clearStoredData();
       lastProcessedUserRef.current = null;
       return false;
@@ -186,7 +190,7 @@ export const ProviderAuthProvider: React.FC<ProviderAuthProviderProps> = ({ chil
         // Immediate auth state validation
         const isValidAuth = await validateAuthState();
         if (!isValidAuth) {
-          console.log(" Initial auth validation failed");
+          debugLog("Initial auth validation failed");
           setLoading(false);
           setAuthInitialized(true);
           return;
@@ -203,13 +207,13 @@ export const ProviderAuthProvider: React.FC<ProviderAuthProviderProps> = ({ chil
               setProvider(providerData);
               lastProcessedUserRef.current = providerData.user_id;
               apiClient.setAuthToken(storedToken);
-              console.log(" Restored from localStorage:", providerData.provider_role);
+              debugLog("Restored from localStorage:", providerData.provider_role);
               setLoading(false);
               setAuthInitialized(true);
               return;
             }
           } catch (e) {
-            console.log(" Invalid stored data, clearing");
+            debugLog("Invalid stored data, clearing");
             clearStoredData();
           }
         }
@@ -223,7 +227,7 @@ export const ProviderAuthProvider: React.FC<ProviderAuthProviderProps> = ({ chil
           clearStoredData();
         }
       } catch (error) {
-        console.error(" Auth initialization error:", error);
+        if (isDev) console.error("Auth initialization error:", error);
         clearStoredData();
       } finally {
         setLoading(false);
@@ -243,26 +247,26 @@ export const ProviderAuthProvider: React.FC<ProviderAuthProviderProps> = ({ chil
     const setupListener = async () => {
       const { supabase } = await import("@/lib/supabase");
       const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
-        console.log(" Auth event:", event, session?.user?.id);
+        debugLog("Auth event:", event, session?.user?.id);
         
         if (event === 'SIGNED_IN' && session?.user) {
           // Only process if different from current user
           if (lastProcessedUserRef.current !== session.user.id) {
-            console.log(" New sign-in detected");
+            debugLog("New sign-in detected");
             await processUserAuth(session.user.id, session.access_token);
           } else {
-            console.log(" Same user sign-in, skipping");
+            debugLog("Same user sign-in, skipping");
           }
         } else if (event === 'TOKEN_REFRESHED' && session?.user) {
           // For token refresh, only update if we don't have current provider data
           if (!provider && lastProcessedUserRef.current === session.user.id) {
-            console.log(" Token refreshed, updating provider data");
+            debugLog("Token refreshed, updating provider data");
             await processUserAuth(session.user.id, session.access_token);
           } else {
-            console.log(" Token refreshed, but already have current data");
+            debugLog("Token refreshed, but already have current data");
           }
         } else if (event === 'SIGNED_OUT') {
-          console.log(" Sign-out detected");
+          debugLog("Sign-out detected");
           setProvider(null);
           lastProcessedUserRef.current = null;
           authProcessingRef.current.clear();
@@ -294,7 +298,7 @@ export const ProviderAuthProvider: React.FC<ProviderAuthProviderProps> = ({ chil
       apiClient.clearAuthToken();
       await AuthAPI.signOut();
     } catch (error) {
-      console.error(" Sign out error:", error);
+      if (isDev) console.error("Sign out error:", error);
     } finally {
       setLoading(false);
     }
@@ -313,7 +317,7 @@ export const ProviderAuthProvider: React.FC<ProviderAuthProviderProps> = ({ chil
         await signOut();
       }
     } catch (error) {
-      console.error(" Refresh error:", error);
+      if (isDev) console.error("Refresh error:", error);
     }
   };
 

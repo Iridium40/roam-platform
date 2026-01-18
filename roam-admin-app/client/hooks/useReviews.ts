@@ -163,13 +163,13 @@ export function useApproveReview() {
           moderated_by: adminUserId,
           moderated_at: new Date().toISOString(),
           moderation_notes: moderationNotes || null,
-        })
+        } as Record<string, unknown>)
         .eq('id', reviewId)
         .select()
         .single();
 
       if (error) throw error;
-      return data;
+      return data as Review;
     },
     onSuccess: () => {
       // Invalidate all review queries to refetch
@@ -199,7 +199,7 @@ export function useRejectReview() {
           moderated_by: adminUserId,
           moderated_at: new Date().toISOString(),
           moderation_notes: moderationNotes,
-        })
+        } as Record<string, unknown>)
         .eq('id', reviewId)
         .select()
         .single();
@@ -227,13 +227,13 @@ export function useFeatureReview() {
     }) => {
       const { data, error } = await supabase
         .from('reviews')
-        .update({ is_featured: isFeatured })
+        .update({ is_featured: isFeatured } as Record<string, unknown>)
         .eq('id', reviewId)
         .select()
         .single();
 
       if (error) throw error;
-      return data;
+      return data as Review;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: reviewKeys.lists() });

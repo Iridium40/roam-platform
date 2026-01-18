@@ -287,3 +287,43 @@ export interface TipFormData {
   tip_percentage?: number;
   customer_message?: string;
 }
+
+// Auth context types
+export interface Customer {
+  id: string;
+  user_id: string;
+  email: string;
+  customer_id: string;
+  first_name: string | null;
+  last_name: string | null;
+  phone: string | null;
+  image_url: string | null;
+}
+
+export interface SignUpData {
+  first_name: string;
+  last_name: string;
+  phone?: string;
+}
+
+export interface ProfileUpdateData {
+  first_name?: string;
+  last_name?: string;
+  phone?: string;
+  image_url?: string;
+}
+
+export interface OAuthResult {
+  success: boolean;
+  error?: string;
+  data?: {
+    provider?: string;
+    url?: string;
+  };
+}
+
+export interface AuthResult {
+  success: boolean;
+  error?: string;
+  user?: Customer;
+}

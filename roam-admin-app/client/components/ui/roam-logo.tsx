@@ -8,6 +8,12 @@ const DEFAULT_ROAM_LOGO_LIGHT_URL =
 const DEFAULT_ROAM_LOGO_DARK_URL =
   "https://cdn.builder.io/api/v1/image/assets%2Fa42b6f9ec53e4654a92af75aad56d14f%2Faf034f03595c4da2abd3db734aa6911c?format=webp&width=800";
 
+// Type for system config rows
+interface SystemConfigRow {
+  config_key: string;
+  config_value: string;
+}
+
 // Hook to get logo URLs from system settings
 const useSystemLogos = () => {
   const [logoUrls, setLogoUrls] = React.useState({
@@ -25,10 +31,11 @@ const useSystemLogos = () => {
           .eq("is_public", true);
 
         if (data) {
-          const lightLogo = data.find(
+          const configs = data as SystemConfigRow[];
+          const lightLogo = configs.find(
             (config) => config.config_key === "site_logo",
           );
-          const darkLogo = data.find(
+          const darkLogo = configs.find(
             (config) => config.config_key === "site_logo_dark",
           );
 

@@ -18,6 +18,7 @@ import { Elements } from "@stripe/react-stripe-js";
 import { CheckoutForm } from "@/components/CheckoutForm";
 import { useAuth } from "@/contexts/AuthContext";
 import type { BookingWithDetails } from "@/types/index";
+import { logger } from "@/utils/logger";
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
@@ -121,7 +122,7 @@ export const AddMoreServiceModal: React.FC<AddMoreServiceModalProps> = ({
       setPaymentBreakdown(paymentData.breakdown || null);
       setShowPayment(true);
     } catch (error: any) {
-      console.error('Error creating payment intent:', error);
+      logger.error('Error creating payment intent:', error);
       toast({
         title: "Error",
         description: error.message || "Failed to initialize payment. Please try again.",
@@ -177,7 +178,7 @@ export const AddMoreServiceModal: React.FC<AddMoreServiceModalProps> = ({
         onSuccess();
       }
     } catch (error: any) {
-      console.error('Error adding additional service after payment:', error);
+      logger.error('Error adding additional service after payment:', error);
       toast({
         title: "Payment Successful",
         description: "Payment was processed, but there was an issue updating the booking. Please contact support.",

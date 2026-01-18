@@ -757,72 +757,46 @@ export default function AdminServices() {
       setLoading(true);
       setError(null);
 
-      console.log("Fetching all service data from API...");
-
       const response = await fetch('/api/services/all-data');
       const result = await response.json();
 
       if (!response.ok) {
-        console.error("API error:", result.error);
         setError(`Failed to fetch service data: ${result.error || 'Unknown error'}`);
         return;
       }
 
       if (!result.success) {
-        console.error("API returned unsuccessful:", result);
         setError(`API error: ${result.error || 'Unknown error'}`);
         return;
       }
 
       const { services, categories, subcategories, addons, addonEligibility } = result.data;
 
-      console.log("API responses:", {
-        services: services?.length || 0,
-        categories: categories?.length || 0,
-        subcategories: subcategories?.length || 0,
-        addons: addons?.length || 0,
-        addonEligibility: addonEligibility?.length || 0,
-      });
-
       // Set all state data
       if (services) {
-        console.log(
-          "Services loaded successfully:",
-          services.length,
-          "records",
-        );
         setServices(services);
       }
 
       // Set categories
       if (categories) {
-        console.log("Categories loaded:", categories.length);
         setCategories(categories);
       }
 
       // Set subcategories
       if (subcategories) {
-        console.log("Subcategories loaded:", subcategories.length);
         setSubcategories(subcategories);
       }
 
       // Set addons
       if (addons) {
-        console.log("Addons loaded:", addons.length);
         setAddons(addons);
       }
 
       // Set addon eligibility
       if (addonEligibility) {
-        console.log("Addon eligibility loaded:", addonEligibility.length);
         setAddonEligibility(addonEligibility);
       }
-
-      console.log(
-        "Successfully fetched all service data including addon relationships",
-      );
     } catch (err) {
-      console.error("Unexpected error:", err);
       const errorMessage =
         err instanceof Error ? err.message : "Unknown error occurred";
       setError(`Connection Error: ${errorMessage}`);
@@ -1599,17 +1573,11 @@ export default function AdminServices() {
           : null,
       };
 
-      console.log("Creating category with data:", dataToInsert);
-
       // Check if the category type already exists in our current data
       const existingTypes = categories.map((c) => c.service_category_type);
       const typeExists = existingTypes.includes(categoryType);
 
-      console.log("Existing category types:", existingTypes);
-      console.log("Type exists?", typeExists);
-
       // Step 1: Try to insert the category directly first
-      console.log("Step 1: Attempting to insert category");
       const insertResponse = await supabase
         .from("service_categories")
         .insert([dataToInsert])
@@ -1623,13 +1591,8 @@ export default function AdminServices() {
         error.code === "22P02" &&
         error.message?.includes("invalid input value for enum")
       ) {
-        console.log(
-          "Step 2: Enum constraint error detected, attempting to add enum value",
-        );
-
         try {
-          // First, check if the custom function exists by trying to call it
-          console.log("Attempting to call add_category_type function via API");
+          // Try to add the enum value via API
           const rpcResponse = await fetch("/api/database/add-enum-value", {
             method: "POST",
             headers: {
@@ -1645,8 +1608,6 @@ export default function AdminServices() {
           const functionResult = rpcResponse.ok ? await rpcResponse.json() : null;
 
           if (enumError) {
-            console.error("Custom function error details:", enumError);
-
             // Check if the error is because the function doesn't exist
             if (
               enumError.error?.includes("function") &&
@@ -1683,33 +1644,20 @@ ALTER TYPE service_category_types ADD VALUE '${categoryType}';`);
             }
           }
 
-          console.log("Enum value added via custom function:", functionResult);
-
-          // Step 3: Retry the insert after adding the enum value
-          console.log("Step 3: Retrying category insert");
+          // Retry the insert after adding the enum value
           const retryResponse = await supabase
             .from("service_categories")
             .insert([dataToInsert])
             .select();
 
           if (retryResponse.error) {
-            console.error("Error on retry:", retryResponse.error);
             throw retryResponse.error;
           }
-
-          console.log(
-            "Category created successfully on retry:",
-            retryResponse.data,
-          );
         } catch (enumHandlingError) {
-          console.error("Error handling enum constraint:", enumHandlingError);
           throw enumHandlingError;
         }
       } else if (error) {
-        console.error("Error inserting category:", error);
         throw error;
-      } else {
-        console.log("Category created successfully:", data);
       }
 
       setNewCategory({
@@ -1724,8 +1672,6 @@ ALTER TYPE service_category_types ADD VALUE '${categoryType}';`);
 
       alert("Category created successfully!");
     } catch (error: any) {
-      console.error("Error creating category:", error);
-
       // Enhanced error message extraction (same as subcategory)
       let errorMessage = "Unknown error occurred";
 
@@ -1928,19 +1874,13 @@ ALTER TYPE service_category_types ADD VALUE '${categoryType}';`);
         is_active: newSubcategory.is_active,
       };
 
-      console.log("Creating subcategory with data:", dataToInsert);
-
       // Check if the subcategory type already exists in our current data
       const existingTypes = subcategories.map(
         (s) => s.service_subcategory_type,
       );
       const typeExists = existingTypes.includes(subcategoryType);
 
-      console.log("Existing subcategory types:", existingTypes);
-      console.log("Type exists?", typeExists);
-
-      // Step 1: Try to insert the subcategory directly first
-      console.log("Step 1: Attempting to insert subcategory");
+      // Try to insert the subcategory directly first
       const insertResponse = await supabase
         .from("service_subcategories")
         .insert([dataToInsert])
@@ -1954,13 +1894,8 @@ ALTER TYPE service_category_types ADD VALUE '${categoryType}';`);
         error.code === "22P02" &&
         error.message?.includes("invalid input value for enum")
       ) {
-        console.log(
-          "Step 2: Enum constraint error detected, attempting to add enum value",
-        );
-
         try {
-          // First, check if the custom function exists by trying to call it
-          console.log("Attempting to call add_subcategory_type function via API");
+          // Try to add the enum value via API
           const rpcResponse = await fetch("/api/database/add-enum-value", {
             method: "POST",
             headers: {
@@ -1976,8 +1911,6 @@ ALTER TYPE service_category_types ADD VALUE '${categoryType}';`);
           const functionResult = rpcResponse.ok ? await rpcResponse.json() : null;
 
           if (enumError) {
-            console.error("Custom function error details:", enumError);
-
             // Check if the error is because the function doesn't exist
             if (
               enumError.error?.includes("function") &&
@@ -2014,36 +1947,21 @@ ALTER TYPE service_subcategory_types ADD VALUE '${subcategoryType}';`);
             }
           }
 
-          console.log("Enum value added via custom function:", functionResult);
-
-          // Step 3: Retry the insert after adding the enum value
-          console.log("Step 3: Retrying subcategory insert");
+          // Retry the insert after adding the enum value
           const retryResponse = await supabase
             .from("service_subcategories")
             .insert([dataToInsert])
             .select();
 
           if (retryResponse.error) {
-            console.error("Error on retry:", retryResponse.error);
             throw retryResponse.error;
           }
-
-          console.log(
-            "Subcategory created successfully on retry:",
-            retryResponse.data,
-          );
         } catch (enumHandlingError) {
-          console.error("Error handling enum constraint:", enumHandlingError);
           throw enumHandlingError;
         }
       } else if (error) {
-        console.error("Error inserting subcategory:", error);
         throw error;
-      } else {
-        console.log("Subcategory created successfully:", data);
       }
-
-      console.log("Subcategory created successfully:", data);
 
       setNewSubcategory({
         service_subcategory_type: "",
@@ -2056,28 +1974,9 @@ ALTER TYPE service_subcategory_types ADD VALUE '${subcategoryType}';`);
 
       alert("Subcategory created successfully!");
     } catch (error: any) {
-      // Force the error to be properly logged
-      console.error("Raw error object:", error);
-      console.error("Error type:", typeof error);
-      console.error("Error constructor:", error.constructor.name);
-
-      // Try to extract all possible error information
-      let errorDetails = {};
       let errorMessage = "Unknown error occurred";
 
       try {
-        // Get all enumerable properties of the error object
-        errorDetails = Object.getOwnPropertyNames(error).reduce((acc, key) => {
-          try {
-            acc[key] = error[key];
-          } catch (e) {
-            acc[key] = `[Unable to access ${key}]`;
-          }
-          return acc;
-        }, {} as any);
-
-        console.error("Error properties:", errorDetails);
-
         // Handle specific database enum constraint error
         if (
           error?.code === "22P02" &&
@@ -2852,7 +2751,7 @@ ALTER TYPE service_subcategory_types ADD VALUE '${subcategoryType}';`);
             size="icon"
             className="h-8 w-8"
             title="Edit Add-on"
-            onClick={() => console.log("Edit addon:", row.id)}
+            onClick={() => {}}
           >
             <Edit className="h-4 w-4" />
           </Button>
@@ -2861,7 +2760,7 @@ ALTER TYPE service_subcategory_types ADD VALUE '${subcategoryType}';`);
             size="icon"
             className="h-8 w-8 text-destructive hover:text-destructive"
             title="Delete Add-on"
-            onClick={() => console.log("Delete addon:", row.id)}
+            onClick={() => {}}
           >
             <Trash2 className="h-4 w-4" />
           </Button>
@@ -3056,7 +2955,7 @@ ALTER TYPE service_subcategory_types ADD VALUE '${subcategoryType}';`);
               filterable={false}
               addable={true}
               onAdd={() => setIsAddServiceOpen(true)}
-              onRowClick={(service) => console.log("View service:", service)}
+              onRowClick={() => {}}
               pageSize={10}
             />
           </div>
@@ -3100,7 +2999,7 @@ ALTER TYPE service_subcategory_types ADD VALUE '${subcategoryType}';`);
               searchable={true}
               filterable={false}
               addable={false}
-              onRowClick={(category) => console.log("View category:", category)}
+              onRowClick={() => {}}
               pageSize={10}
             />
           </div>
@@ -3144,9 +3043,7 @@ ALTER TYPE service_subcategory_types ADD VALUE '${subcategoryType}';`);
               searchable={true}
               filterable={false}
               addable={false}
-              onRowClick={(subcategory) =>
-                console.log("View subcategory:", subcategory)
-              }
+              onRowClick={() => {}}
               pageSize={10}
             />
           </div>
@@ -3289,10 +3186,6 @@ ALTER TYPE service_subcategory_types ADD VALUE '${subcategoryType}';`);
                           variant="outline"
                           size="sm"
                           onClick={() => {
-                            console.log(
-                              "Assignment button clicked for addon:",
-                              row,
-                            );
                             setAddonForAssignment(row);
                             setIsAssignmentModalOpen(true);
                           }}
@@ -3374,7 +3267,7 @@ ALTER TYPE service_subcategory_types ADD VALUE '${subcategoryType}';`);
                 filterable={false}
                 addable={true}
                 onAdd={() => setIsAddAddonOpen(true)}
-                onRowClick={(addon) => console.log("View addon:", addon)}
+                onRowClick={() => {}}
                 pageSize={10}
               />
             </div>
@@ -5311,10 +5204,7 @@ ALTER TYPE service_subcategory_types ADD VALUE '${subcategoryType}';`);
       {/* Service Assignment Modal */}
       <Dialog
         open={isAssignmentModalOpen}
-        onOpenChange={(open) => {
-          console.log("Assignment modal open state changed to:", open);
-          setIsAssignmentModalOpen(open);
-        }}
+        onOpenChange={setIsAssignmentModalOpen}
       >
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>

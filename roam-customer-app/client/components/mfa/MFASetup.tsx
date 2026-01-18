@@ -10,6 +10,8 @@ import { Badge } from '@/components/ui/badge';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { Copy, Download, QrCode, Shield, Smartphone, Mail, Key } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
+import { logger } from '@/utils/logger';
 
 interface MFASetupProps {
   onComplete: () => void;
@@ -29,11 +31,15 @@ interface SetupStep {
 }
 
 const MFASetup: React.FC<MFASetupProps> = ({ onComplete, onCancel }) => {
+  const { customer } = useAuth();
   const [currentStep, setCurrentStep] = useState<'select' | 'setup' | 'verify'>('select');
   const [selectedMethod, setSelectedMethod] = useState<MFAMethod>('totp');
   const [setupStep, setSetupStep] = useState<SetupStep | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Get user ID from auth context
+  const userId = customer?.user_id || customer?.id;
 
   const { register, handleSubmit, watch, formState: { errors } } = useForm();
 
@@ -73,11 +79,15 @@ const MFASetup: React.FC<MFASetupProps> = ({ onComplete, onCancel }) => {
         ...(selectedMethod === 'email' && { email: data.email })
       };
 
+      if (!userId) {
+        throw new Error('You must be logged in to setup MFA');
+      }
+
       const response = await fetch('/api/mfa?action=setup', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id': 'current-user-id' // TODO: Get from auth context
+          'x-user-id': userId
         },
         body: JSON.stringify(payload)
       });
@@ -103,6 +113,10 @@ const MFASetup: React.FC<MFASetupProps> = ({ onComplete, onCancel }) => {
 
   const verifySetup = async (code: string) => {
     if (!setupStep?.factorId) return;
+    if (!userId) {
+      setError('You must be logged in to verify MFA');
+      return;
+    }
 
     setIsLoading(true);
     setError(null);
@@ -112,7 +126,7 @@ const MFASetup: React.FC<MFASetupProps> = ({ onComplete, onCancel }) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id': 'current-user-id' // TODO: Get from auth context
+          'x-user-id': userId
         },
         body: JSON.stringify({
           factorId: setupStep.factorId,
@@ -160,7 +174,7 @@ const MFASetup: React.FC<MFASetupProps> = ({ onComplete, onCancel }) => {
         }
       } catch (error) {
         // Element might have been removed already, ignore the error
-        console.warn('Element already removed:', error);
+        logger.warn('Element already removed:', error);
       }
       URL.revokeObjectURL(url);
     }, 100);

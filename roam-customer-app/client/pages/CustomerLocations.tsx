@@ -12,6 +12,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import GooglePlacesAutocomplete from '@/components/GooglePlacesAutocomplete';
+import { logger } from '@/utils/logger';
 
 // Declare global Google Maps types
 declare global {
@@ -83,7 +84,7 @@ export default function CustomerLocations() {
       if (error) throw error;
       setLocations(data || []);
     } catch (error) {
-      console.error('Error loading locations:', error);
+      logger.error('Error loading locations:', error);
       toast({
         title: 'Error',
         description: 'Failed to load your locations',
@@ -223,7 +224,7 @@ export default function CustomerLocations() {
       resetForm();
       loadLocations();
     } catch (error: any) {
-      console.error('Error adding location:', error);
+      logger.error('Error adding location:', error);
       toast({
         title: 'Error',
         description: error.message || 'Failed to add location',
@@ -279,7 +280,7 @@ export default function CustomerLocations() {
       resetForm();
       loadLocations();
     } catch (error: any) {
-      console.error('Error updating location:', error);
+      logger.error('Error updating location:', error);
       toast({
         title: 'Error',
         description: error.message || 'Failed to update location',
@@ -306,7 +307,7 @@ export default function CustomerLocations() {
 
       loadLocations();
     } catch (error) {
-      console.error('Error deleting location:', error);
+      logger.error('Error deleting location:', error);
       toast({
         title: 'Error',
         description: 'Failed to delete location',
@@ -340,7 +341,7 @@ export default function CustomerLocations() {
 
       loadLocations();
     } catch (error) {
-      console.error('Error setting primary location:', error);
+      logger.error('Error setting primary location:', error);
       toast({
         title: 'Error',
         description: 'Failed to update primary location',

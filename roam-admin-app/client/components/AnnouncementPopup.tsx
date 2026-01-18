@@ -3,8 +3,20 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import type { AnnouncementsTable } from "@roam/shared/dist/types/database/tables/notification";
-type Announcement = AnnouncementsTable;
+
+// Local type definition for announcements
+interface Announcement {
+  id: string;
+  title: string;
+  content: string;
+  announcement_type: string;
+  announcement_audience: string;
+  is_active: boolean;
+  start_date: string | null;
+  end_date: string | null;
+  created_at: string;
+  created_by: string | null;
+}
 
 interface AnnouncementPopupProps {
   appType?: 'customer' | 'provider' | 'admin';
@@ -61,7 +73,8 @@ export function AnnouncementPopup({
       }
 
       // Additional client-side filtering to ensure date range is valid
-      const validAnnouncements = (data || []).filter((announcement) => {
+      const announcements = (data || []) as Announcement[];
+      const validAnnouncements = announcements.filter((announcement) => {
         const today = new Date();
         today.setHours(0, 0, 0, 0); // Reset time to start of day
 

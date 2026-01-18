@@ -164,11 +164,6 @@ export default function DashboardTab({
         recent_bookings: data.recent_bookings || [],
       });
 
-      console.log("✅ Dashboard stats loaded via optimized API:", {
-        queryTime: data._meta?.query_time_ms,
-        fallbackMode: data._meta?.fallback_mode,
-      });
-
     } catch (error) {
       console.error('Error loading dashboard data:', error);
       // Set empty stats on error

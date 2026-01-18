@@ -45,11 +45,7 @@ export default function SignIn() {
 
   // Redirect if already authenticated
   useEffect(() => {
-    console.log("SignIn useEffect triggered:", { provider, authLoading });
-    
     if (provider && !authLoading) {
-      console.log("Provider data found, redirecting based on role:", provider.provider_role);
-      
       toast({
         title: "Already Signed In",
         description: `Welcome back, ${provider.first_name}!`,
@@ -58,19 +54,15 @@ export default function SignIn() {
       // Redirect based on provider role
       switch (provider.provider_role) {
         case "owner":
-          console.log("Redirecting to owner dashboard");
           navigate("/owner/dashboard");
           break;
         case "dispatcher":
-          console.log("Redirecting to dispatcher dashboard");
           navigate("/dispatcher/dashboard");
           break;
         case "provider":
-          console.log("Redirecting to provider dashboard");
           navigate("/provider/dashboard");
           break;
         default:
-          console.log("Redirecting to default provider dashboard");
           navigate("/provider/dashboard");
           break;
       }
@@ -80,8 +72,6 @@ export default function SignIn() {
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    console.log("Starting sign in process...");
-    console.log("Sign in email:", signInForm.email);
 
     try {
       // Add timeout to prevent hanging
@@ -118,23 +108,12 @@ export default function SignIn() {
       }
 
       if (data.user) {
-        console.log("Sign in successful, user ID:", data.user.id);
-        console.log("User email:", data.user.email);
-        console.log("User metadata:", data.user.user_metadata);
-        
         toast({
           title: "Welcome back!",
           description: "You have been successfully signed in.",
         });
-        
-        // Add a small delay to allow auth context to update
-        setTimeout(() => {
-          console.log("Auth context should have updated by now");
-        }, 1000);
-        
         // The auth context will handle the role-based redirection
         // The auth state change listener will trigger the useEffect above
-        console.log("Waiting for auth context to update...");
       } else {
         throw new Error("Sign in failed - no user data returned");
       }

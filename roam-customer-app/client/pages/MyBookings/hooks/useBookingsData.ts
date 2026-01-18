@@ -217,31 +217,7 @@ export const useBookingsData = (currentUser: any) => {
         const dateStartStr = dateStart.toISOString().split('T')[0];
         const dateEndStr = dateEnd.toISOString().split('T')[0];
         
-        // First, try a simple query to just get bookings without joins
-        // Apply date range filter and limit to prevent excessive data loading
-        const { data: simpleData, error: simpleError } = await supabase
-          .from("bookings")
-          .select("*")
-          .eq("customer_id", currentUser.id)
-          .gte("booking_date", dateStartStr)
-          .lte("booking_date", dateEndStr)
-          .order("booking_date", { ascending: false })
-          .limit(PAGINATION_CONFIG.databaseQueryLimit);
-
-        logger.debug("Simple query result:", { count: simpleData?.length || 0 });
-
-        if (simpleError) {
-          logger.error("Error fetching bookings:", simpleError);
-          throw simpleError;
-        }
-
-        if (!simpleData || simpleData.length === 0) {
-          logger.debug("No bookings found for customer:", currentUser.id);
-          setBookings([]);
-          return;
-        }
-
-        // Use a simpler Supabase query approach that should work
+        // Fetch bookings with all related data in a single query
         // Apply date range filter and limit for performance
         const { data, error } = await supabase
           .from("bookings")
@@ -330,11 +306,18 @@ export const useBookingsData = (currentUser: any) => {
           .order("booking_date", { ascending: false })
           .limit(PAGINATION_CONFIG.databaseQueryLimit);
 
-        logger.debug("Full query with joins result:", { count: data?.length || 0 });
+        logger.debug("Bookings query result:", { count: data?.length || 0 });
 
         if (error) {
-          logger.error("Error in full query:", { message: error.message, code: error.code });
+          logger.error("Error fetching bookings:", { message: error.message, code: error.code });
           throw error;
+        }
+
+        // Handle empty bookings
+        if (!data || data.length === 0) {
+          logger.debug("No bookings found for customer:", currentUser.id);
+          setBookings([]);
+          return;
         }
 
         // Transform the data to match the expected format

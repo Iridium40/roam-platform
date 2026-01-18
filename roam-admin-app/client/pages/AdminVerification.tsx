@@ -188,11 +188,9 @@ export default function AdminVerification() {
   // Fetch verification data
   const fetchVerifications = async () => {
     try {
-      console.log("fetchVerifications started");
       setLoading(true);
       setError(null);
 
-      console.log("Fetching business profiles from optimized API (with pre-aggregated document counts)...");
       // Use optimized approvals view that includes document counts in a single query
       // Pass verification_status=all to get ALL businesses with their document counts
       const businessResponse = await fetch('/api/businesses?use_approvals_view=true&verification_status=all');
@@ -204,13 +202,8 @@ export default function AdminVerification() {
       }
 
       const businessData = businessResult.data || [];
-      console.log("Business profiles result (optimized):", {
-        count: businessData.length,
-        sample: businessData[0],
-      });
 
       // Prepare verification data - document counts are already included in the view!
-      console.log("Preparing verification data...");
       const verificationData: BusinessVerification[] = (businessData || []).map(
         (business) => {
           const submittedDate = business.application_submitted_at
@@ -253,15 +246,9 @@ export default function AdminVerification() {
         },
       );
 
-      console.log(
-        "Verification data prepared:",
-        verificationData.length,
-        "total businesses",
-      );
       setVerifications(verificationData);
 
       // Calculate stats
-      console.log("Calculating stats...");
       const newStats: VerificationStats = {
         total: verificationData.length,
         pending: verificationData.filter(
@@ -278,13 +265,9 @@ export default function AdminVerification() {
         ).length,
         overdue: verificationData.filter((v) => v.priority === "urgent").length,
       };
-      console.log("Stats calculated:", newStats);
       setStats(newStats);
-      console.log("fetchVerifications completed successfully");
     } catch (error: any) {
-      console.error("Full error object in fetchVerifications:", error);
-      console.error("Error type:", typeof error);
-      console.error("Error keys:", Object.keys(error || {}));
+      console.error("Error fetching verifications:", error);
 
       let errorMessage = "Unknown error occurred";
 
@@ -320,8 +303,6 @@ export default function AdminVerification() {
   // Fetch documents for specific business
   const fetchBusinessDocuments = async (businessId: string) => {
     try {
-      console.log("fetchBusinessDocuments called for business_id:", businessId);
-      
       // Use server API endpoint with service role key (bypasses RLS)
       const response = await fetch(`/api/business-documents?business_id=${businessId}`);
       
@@ -331,22 +312,10 @@ export default function AdminVerification() {
       }
       
       const result = await response.json();
-      
-      console.log("fetchBusinessDocuments API result:", {
-        businessId,
-        documentsCount: result.data?.length || 0,
-        documents: result.data,
-      });
-
       setBusinessDocuments(result.data || []);
-      
-      if (!result.data || result.data.length === 0) {
-        console.warn("No documents found for business_id:", businessId);
-      }
     } catch (error: any) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error occurred";
-      console.error("Error fetching business documents:", errorMessage);
       toast({
         title: "Error",
         description: `Failed to load business documents: ${errorMessage}`,
@@ -422,8 +391,6 @@ export default function AdminVerification() {
         updateData.rejection_reason = rejectionReason;
       }
 
-      console.log("Updating document with data:", { documentId, updateData });
-
       const updateResponse = await fetch("/api/business-documents", {
         method: "PUT",
         headers: {
@@ -443,7 +410,6 @@ export default function AdminVerification() {
       }
 
       const result = await updateResponse.json();
-      console.log("Document update response:", result);
 
       toast({
         title: "Success",
@@ -460,9 +426,7 @@ export default function AdminVerification() {
       setSelectedDocumentForReject(null);
       setRejectionReasonText("");
     } catch (error: any) {
-      console.error("Full error object:", error);
-      console.error("Error type:", typeof error);
-      console.error("Error keys:", Object.keys(error || {}));
+      console.error("Error updating document status:", error);
 
       let errorMessage = "Unknown error occurred";
 
@@ -733,13 +697,6 @@ export default function AdminVerification() {
     notes?: string,
   ) => {
     try {
-      console.log("handleVerificationAction called with:", {
-        businessId,
-        action,
-        notes,
-        userId: user?.id,
-      });
-
       let newStatus: VerificationStatus;
       switch (action) {
         case "approve":
@@ -755,16 +712,11 @@ export default function AdminVerification() {
           newStatus = "pending";
           break;
         default:
-          console.error("Invalid action provided:", action);
           return;
       }
 
-      console.log("Status to set:", newStatus);
-
       // NOTE: Documents are optional. Approval should not be blocked by document status.
       if (action === "approve") {
-        console.log("Checking if all documents are verified before approval...");
-        
         // Fetch documents for this business
         const response = await fetch(`/api/business-documents?business_id=${businessId}`);
         
@@ -774,14 +726,6 @@ export default function AdminVerification() {
         
         const result = await response.json();
         const documents = result.data || [];
-        
-        console.log("Documents validation:", {
-          total: documents.length,
-          documents: documents.map((d: any) => ({
-            type: d.document_type,
-            status: d.verification_status
-          }))
-        });
         
         // Check if there are any unverified documents (only if documents exist)
         const unverifiedDocs = documents.filter(
@@ -800,8 +744,6 @@ export default function AdminVerification() {
             variant: "default",
           });
         }
-        
-        console.log("Proceeding with approval (documents verified or none uploaded)...");
       }
 
       const updateData: any = {
@@ -811,8 +753,6 @@ export default function AdminVerification() {
 
       // Handle approve action via proper API endpoint
       if (action === "approve") {
-        console.log("Approval action - calling approve-business API for:", businessId);
-
         if (!user?.id) {
           throw new Error("User ID not found. Please log in again.");
         }
@@ -831,18 +771,14 @@ export default function AdminVerification() {
           }),
         });
 
-        console.log("Approval API response status:", approvalResponse.status);
-
         if (!approvalResponse.ok) {
           const errorData = await approvalResponse.json().catch(() => ({}));
-          console.error("Approval API error:", errorData);
           throw new Error(
             errorData.error || `Failed to approve application (${approvalResponse.status})`
           );
         }
 
         const approvalResult = await approvalResponse.json();
-        console.log("Approval successful:", approvalResult);
 
         // Check email status
         const emailStatus = approvalResult.emailStatus;
@@ -906,13 +842,10 @@ export default function AdminVerification() {
       // Send rejection email if business was rejected
       if (action === "reject" && notes) {
         try {
-          console.log("Sending rejection email for business:", businessId);
-
           // Get business details for the email via API
           const businessResponse = await fetch(`/api/businesses?id=${businessId}`);
           
           if (!businessResponse.ok) {
-            console.error("Could not fetch business details");
             toast({
               title: "Business Rejected",
               description:
@@ -945,8 +878,6 @@ export default function AdminVerification() {
               userId: user?.id,
             };
 
-            console.log("Rejection email API payload:", emailPayload);
-
             // Send email via our server-side API endpoint
             const emailResponse = await fetch("/api/send-rejection-email", {
               method: "POST",
@@ -956,12 +887,9 @@ export default function AdminVerification() {
               body: JSON.stringify(emailPayload),
             });
 
-            console.log("Rejection email API response status:", emailResponse.status);
-
             if (emailResponse.ok) {
               try {
                 const emailResult = await emailResponse.json();
-                console.log("Rejection email API response:", emailResult);
                 
                 if (emailResult.emailStatus?.sent) {
                   toast({
@@ -982,7 +910,6 @@ export default function AdminVerification() {
                   });
                 }
               } catch (parseError) {
-                console.log("Rejection email sent successfully (could not parse response details)");
                 toast({
                   title: "Business Rejected",
                   description: "Business verification rejected and email sent to business",
@@ -1116,8 +1043,6 @@ export default function AdminVerification() {
   // Fetch documents for card view
   const fetchCardDocuments = async (businessId: string) => {
     try {
-      console.log("Fetching documents for business:", businessId);
-
       // Use server API endpoint (same as fetchBusinessDocuments) to bypass RLS
       const response = await fetch(`/api/business-documents?business_id=${businessId}`);
       
@@ -1128,11 +1053,6 @@ export default function AdminVerification() {
       
       const result = await response.json();
       const documents: BusinessDocument[] = result.data || [];
-      
-      console.log("fetchCardDocuments response:", {
-        businessId,
-        documentsCount: documents.length,
-      });
 
       setCardDocuments((prev) => ({
         ...prev,

@@ -39,6 +39,8 @@ import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import type { BookingWithDetails } from "@/types/index";
 import { Footer } from "@/components/Footer";
+import { logger } from "@/utils/logger";
+import { PageErrorBoundary } from "@/components/ErrorBoundary";
 
 // Lazy load modals
 const EnhancedConversationChat = lazy(() => import("@/components/EnhancedConversationChat"));
@@ -151,7 +153,7 @@ const isWithin24Hours = (booking: BookingWithDetails) => {
   return diffInHours <= 24 && diffInHours > 0;
 };
 
-export default function BookingDetails() {
+function BookingDetailsContent() {
   const { bookingId } = useParams<{ bookingId: string }>();
   const navigate = useNavigate();
   const { customer, loading: authLoading } = useAuth();
@@ -276,7 +278,7 @@ export default function BookingDetails() {
         .single();
 
       if (bookingError) {
-        console.error("Error fetching booking:", bookingError);
+        logger.error("Error fetching booking:", bookingError);
         throw new Error("Booking not found or you don't have access to it.");
       }
 
@@ -287,7 +289,7 @@ export default function BookingDetails() {
         .eq("booking_id", bookingId);
 
       if (reviewsError) {
-        console.error("Error fetching reviews:", reviewsError);
+        logger.error("Error fetching reviews:", reviewsError);
       }
 
       // Fetch tips separately (more reliable than join)
@@ -297,7 +299,7 @@ export default function BookingDetails() {
         .eq("booking_id", bookingId);
 
       if (tipsError) {
-        console.error("Error fetching tips:", tipsError);
+        logger.error("Error fetching tips:", tipsError);
       }
 
       // Transform booking data with explicitly fetched reviews and tips
@@ -316,7 +318,7 @@ export default function BookingDetails() {
         tips: tipsData || [],
       };
 
-      console.log("📋 Booking Details loaded:", {
+      logger.debug("Booking Details loaded:", {
         bookingId,
         reviewsCount: reviewsData?.length || 0,
         tipsCount: tipsData?.length || 0,
@@ -384,7 +386,7 @@ export default function BookingDetails() {
         }
       }
     } catch (err: any) {
-      console.error("Error loading booking details:", err);
+      logger.error("Error loading booking details:", err);
       setError(err.message || "Failed to load booking details.");
     } finally {
       setLoading(false);
@@ -1269,5 +1271,14 @@ export default function BookingDetails() {
       {/* Footer */}
       <Footer />
     </div>
+  );
+}
+
+// Wrap the component with PageErrorBoundary for resilient error handling
+export default function BookingDetails() {
+  return (
+    <PageErrorBoundary>
+      <BookingDetailsContent />
+    </PageErrorBoundary>
   );
 }

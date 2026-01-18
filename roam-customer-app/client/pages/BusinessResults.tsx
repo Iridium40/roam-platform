@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { logger } from "@/utils/logger";
 import { useSearchParams, useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -163,7 +164,7 @@ export default function BusinessResults() {
         
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
-          console.error('Error fetching businesses:', errorData);
+          logger.error('Error fetching businesses:', errorData);
           setBusinesses([]);
           setLoading(false);
           return;
@@ -256,7 +257,7 @@ export default function BusinessResults() {
           .eq('is_active', true);
 
         if (error) {
-          console.error('Error fetching business services:', error);
+          logger.error('Error fetching business services:', error);
           return;
         }
 
@@ -398,7 +399,7 @@ export default function BusinessResults() {
     const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
     
     if (!GOOGLE_MAPS_API_KEY) {
-      console.warn('Google Maps API key not configured');
+      logger.warn('Google Maps API key not configured');
       return;
     }
 
@@ -425,7 +426,7 @@ export default function BusinessResults() {
     script.async = true;
     script.defer = true;
     script.onload = () => setMapsLoaded(true);
-    script.onerror = () => console.error('Failed to load Google Maps script');
+    script.onerror = () => logger.error('Failed to load Google Maps script');
     document.head.appendChild(script);
   }, []);
 

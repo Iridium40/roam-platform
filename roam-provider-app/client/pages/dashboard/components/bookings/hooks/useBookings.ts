@@ -139,13 +139,6 @@ export function useBookings(providerData: any, business: any) {
       const bookingsData = data.bookings || [];
       setBookings(bookingsData);
       
-      console.log("✅ Bookings loaded via optimized API:", {
-        count: bookingsData.length,
-        queryTime: data._meta?.query_time_ms,
-        fallbackMode: data._meta?.fallback_mode,
-        dateRange: { from: startDateStr, to: endDateStr },
-      });
-      
     } catch (error: any) {
       console.error("Error loading bookings:", error);
       toast({
@@ -180,19 +173,11 @@ export function useBookings(providerData: any, business: any) {
   
   useEffect(() => {
     if (!bookings.length || !providerUserId) {
-      console.log('🔍 Unread fetch skipped:', { 
-        hasBookings: !!bookings.length, 
-        hasProviderUserId: !!providerUserId,
-        providerUserId,
-        provider: provider?.provider
-      });
       return;
     }
 
     const fetchUnreadCounts = async () => {
       try {
-        console.log('🔍 Fetching unread counts for provider:', providerUserId);
-        
         // Get all conversation IDs for these bookings
         const bookingIds = bookings.map(b => b.id);
         const { data: conversations, error: convError } = await supabase
@@ -202,16 +187,12 @@ export function useBookings(providerData: any, business: any) {
           .eq('is_active', true);
 
         if (convError || !conversations) {
-          console.error('Error fetching conversations:', convError);
           return;
         }
-
-        console.log('🔍 Found conversations:', conversations.length);
 
         // Get unread counts for all conversations
         const conversationIds = conversations.map(c => c.id);
         if (conversationIds.length === 0) {
-          console.log('🔍 No conversations found');
           return;
         }
 
@@ -223,15 +204,8 @@ export function useBookings(providerData: any, business: any) {
           .eq('is_read', false);
 
         if (notifError) {
-          console.error('Error fetching notifications:', notifError);
           return;
         }
-
-        console.log('🔍 Found unread notifications:', notifications?.length || 0, {
-          providerUserId,
-          conversationIds,
-          notifications
-        });
 
         // Count unread messages per conversation
         const counts: Record<string, number> = {};
@@ -248,10 +222,9 @@ export function useBookings(providerData: any, business: any) {
           }
         });
 
-        console.log('🔍 Unread counts by booking:', unreadByBooking);
         setUnreadCounts(unreadByBooking);
       } catch (error) {
-        console.error('Error fetching unread counts:', error);
+        // Silent failure - unread counts are not critical
       }
     };
 
@@ -264,7 +237,6 @@ export function useBookings(providerData: any, business: any) {
 
   // Reset pagination when tab changes
   useEffect(() => {
-    console.log('🔄 useBookings: Tab changed, resetting pagination for:', activeTab);
     if (activeTab === "active") setActivePage(1);
     if (activeTab === "closed") setClosedPage(1);
   }, [activeTab]);

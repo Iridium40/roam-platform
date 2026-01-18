@@ -8,6 +8,7 @@ import { Loader2, DollarSign, AlertCircle, CreditCard, Trash2, Check } from 'luc
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
+import { logger } from '@/utils/logger';
 
 interface TipCheckoutFormProps {
   tipAmount: number;
@@ -49,7 +50,7 @@ export function TipCheckoutForm({ tipAmount, providerName, clientSecret, onSucce
           }
         }
       } catch (error) {
-        console.error('Error loading payment methods:', error);
+        logger.error('Error loading payment methods:', error);
       } finally {
         setLoadingPaymentMethods(false);
       }
@@ -97,7 +98,7 @@ export function TipCheckoutForm({ tipAmount, providerName, clientSecret, onSucce
           });
         }
       } catch (error) {
-        console.error('Error loading billing address:', error);
+        logger.error('Error loading billing address:', error);
         if (customer.first_name || customer.last_name || customer.email) {
           setBillingAddress({
             name: customer.first_name && customer.last_name 
@@ -159,7 +160,7 @@ export function TipCheckoutForm({ tipAmount, providerName, clientSecret, onSucce
               throw new Error(errorData.error || 'Payment method verification failed');
             }
           } catch (verifyError: any) {
-            console.error('Payment method verification error:', verifyError);
+            logger.error('Payment method verification error:', verifyError);
             setErrorMessage(verifyError.message || 'This payment method cannot be used. Please select a different card or add a new one.');
             onError(verifyError.message || 'This payment method cannot be used. Please select a different card or add a new one.');
             setIsProcessing(false);
@@ -187,15 +188,15 @@ export function TipCheckoutForm({ tipAmount, providerName, clientSecret, onSucce
       }
 
       if (error) {
-        console.error('Payment failed:', error);
+        logger.error('Payment failed:', error);
         setErrorMessage(error.message || 'Payment failed. Please try again.');
         onError(error.message || 'Payment failed');
       } else if (paymentIntent && paymentIntent.status === 'succeeded') {
-        console.log('✅ Tip payment successful');
+        logger.debug('Tip payment successful');
         onSuccess();
       }
     } catch (err: any) {
-      console.error('Payment error:', err);
+      logger.error('Payment error:', err);
       const errorMsg = err.message || 'An unexpected error occurred. Please try again.';
       setErrorMessage(errorMsg);
       onError(errorMsg);

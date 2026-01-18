@@ -172,190 +172,6 @@ interface Tip {
   updated_at: string;
 }
 
-const sampleBookings: Booking[] = [
-  {
-    id: "booking_1",
-    customer_id: "cust_1",
-    customer_name: "Alice Johnson",
-    provider_id: "prov_1",
-    provider_name: "Sarah Martinez",
-    service_id: "srv_1",
-    service_name: "Premium Hair Cut & Style",
-    business_name: "Miami Spa & Wellness",
-    booking_date: "2025-07-15",
-    start_time: "14:00:00",
-    total_amount: 110.0,
-    created_at: "2025-07-10T10:30:00Z",
-    service_fee: 10.0,
-    service_fee_charged: true,
-    service_fee_charged_at: "2025-07-10T10:30:00Z",
-    remaining_balance: 100.0,
-    remaining_balance_charged: false,
-    cancellation_fee: 0,
-    refund_amount: 0,
-    delivery_type: "business",
-    payment_status: "paid",
-    booking_status: "confirmed",
-    admin_notes: "Customer requested early appointment",
-    tip_eligible: false,
-    tip_amount: 0,
-    tip_status: "none",
-  },
-  {
-    id: "booking_2",
-    customer_id: "cust_2",
-    customer_name: "Bob Smith",
-    provider_id: "prov_2",
-    provider_name: "Marcus Johnson",
-    service_id: "srv_3",
-    service_name: "1-on-1 Personal Training Session",
-    business_name: "Elite Fitness Center",
-    booking_date: "2025-08-05",
-    start_time: "09:00:00",
-    total_amount: 115.0,
-    created_at: "2025-07-28T14:20:00Z",
-    service_fee: 15.0,
-    service_fee_charged: true,
-    service_fee_charged_at: "2025-07-28T14:20:00Z",
-    remaining_balance: 100.0,
-    remaining_balance_charged: true,
-    remaining_balance_charged_at: "2025-08-02T16:00:00Z",
-    cancellation_fee: 0,
-    refund_amount: 0,
-    delivery_type: "mobile",
-    payment_status: "paid",
-    booking_status: "completed",
-    tip_eligible: true,
-    tip_amount: 20.0,
-    tip_status: "completed",
-    tip_requested_at: "2025-08-05T17:30:00Z",
-    tip_deadline: "2025-08-08T17:30:00Z",
-  },
-  {
-    id: "booking_3",
-    customer_name: "Carol Davis",
-    customer_id: "cust_3",
-    provider_id: "prov_3",
-    provider_name: "Lisa Chen",
-    service_id: "srv_4",
-    service_name: "Swedish Relaxation Massage",
-    business_name: "Zen Massage Therapy",
-    booking_date: "2025-09-12",
-    start_time: "16:30:00",
-    total_amount: 130.0,
-    created_at: "2025-09-05T11:15:00Z",
-    service_fee: 15.0,
-    service_fee_charged: true,
-    service_fee_charged_at: "2025-09-05T11:15:00Z",
-    remaining_balance: 115.0,
-    remaining_balance_charged: false,
-    cancellation_fee: 25.0,
-    refund_amount: 90.0,
-    cancelled_at: "2025-09-10T09:30:00Z",
-    cancelled_by: "cust_3",
-    cancellation_reason: "Personal emergency",
-    delivery_type: "business",
-    payment_status: "partially_refunded",
-    booking_status: "cancelled",
-    tip_eligible: false,
-    tip_amount: 0,
-    tip_status: "none",
-  },
-  {
-    id: "booking_4",
-    guest_name: "David Wilson",
-    guest_email: "david.w@email.com",
-    guest_phone: "+1-305-555-9999",
-    customer_id: "guest_1",
-    customer_name: "David Wilson (Guest)",
-    provider_id: "prov_1",
-    provider_name: "Sarah Martinez",
-    service_id: "srv_2",
-    service_name: "Deep Cleansing Facial",
-    business_name: "Miami Spa & Wellness",
-    booking_date: "2025-10-18",
-    start_time: "11:00:00",
-    total_amount: 120.0,
-    created_at: "2025-10-10T16:45:00Z",
-    service_fee: 0.0,
-    service_fee_charged: false,
-    remaining_balance: 120.0,
-    remaining_balance_charged: false,
-    cancellation_fee: 0,
-    refund_amount: 0,
-    delivery_type: "business",
-    payment_status: "pending",
-    booking_status: "pending",
-    tip_eligible: false,
-    tip_amount: 0,
-    tip_status: "none",
-  },
-];
-
-const sampleChanges: BookingChange[] = [
-  {
-    id: "change_1",
-    booking_id: "booking_2",
-    change_type: "addon_added",
-    old_value: null,
-    new_value: { addon_name: "Extended Time (30 min)", addon_price: 45.0 },
-    additional_cost: 45.0,
-    refund_amount: 0,
-    changed_by: "prov_2",
-    changed_by_name: "Marcus Johnson",
-    change_reason: "Customer requested longer session",
-    stripe_charge_id: "ch_1234567890",
-    created_at: "2025-08-02T08:30:00Z",
-  },
-  {
-    id: "change_2",
-    booking_id: "booking_3",
-    change_type: "cancelled",
-    old_value: { booking_status: "confirmed" },
-    new_value: {
-      booking_status: "cancelled",
-      cancellation_reason: "Personal emergency",
-    },
-    additional_cost: 0,
-    refund_amount: 90.0,
-    changed_by: "cust_3",
-    changed_by_name: "Carol Davis",
-    change_reason: "Personal emergency",
-    stripe_refund_id: "re_0987654321",
-    created_at: "2025-09-10T09:30:00Z",
-  },
-];
-
-const sampleTips: Tip[] = [
-  {
-    id: "tip_1",
-    booking_id: "booking_2",
-    customer_id: "cust_2",
-    customer_name: "Bob Smith",
-    provider_id: "prov_2",
-    provider_name: "Marcus Johnson",
-    business_id: "biz_2",
-    business_name: "Elite Fitness Center",
-    tip_amount: 20.0,
-    tip_percentage: 17.39, // $20 on $115 service
-    stripe_payment_intent_id: "pi_1234567890",
-    payment_status: "completed",
-    platform_fee_amount: 0,
-    provider_net_amount: 20.0,
-    customer_message: "Great workout session! Really pushed me to my limits.",
-    provider_response:
-      "Thank you so much! It was great working with you. Looking forward to our next session!",
-    provider_responded_at: "2024-01-22T20:15:00Z",
-    tip_given_at: "2024-01-22T18:45:00Z",
-    payment_processed_at: "2024-01-22T18:45:30Z",
-    payout_status: "paid",
-    payout_batch_id: "po_batch_001",
-    payout_date: "2024-01-24",
-    created_at: "2024-01-22T18:45:00Z",
-    updated_at: "2024-01-22T20:15:00Z",
-  },
-];
-
 const formatPrice = (price: number) => {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -604,7 +420,6 @@ export default function AdminBookings() {
         return;
       }
 
-      console.log(`Fetched ${data?.length || 0} bookings`);
       setBookings(data || []);
     } catch (error) {
       console.error("Error in fetchBookings:", error);
@@ -625,7 +440,6 @@ export default function AdminBookings() {
         return;
       }
 
-      console.log(`Fetched ${data?.length || 0} booking changes`);
       setBookingChanges(data || []);
     } catch (error) {
       console.error("Error in fetchBookingChanges:", error);
@@ -1318,7 +1132,7 @@ export default function AdminBookings() {
               searchable={true}
               filterable={false}
               addable={false}
-              onRowClick={(booking) => console.log("View booking:", booking)}
+              onRowClick={() => {}}
               pageSize={10}
             />
           </div>
@@ -1332,7 +1146,7 @@ export default function AdminBookings() {
             searchable={true}
             filterable={false}
             addable={false}
-            onRowClick={(change) => console.log("View change:", change)}
+            onRowClick={() => {}}
             pageSize={10}
           />
         )}

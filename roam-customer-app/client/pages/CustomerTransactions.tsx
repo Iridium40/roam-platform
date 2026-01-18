@@ -21,6 +21,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
+import { logger } from '@/utils/logger';
 
 interface Transaction {
   id: string;
@@ -106,7 +107,7 @@ export default function CustomerTransactions() {
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Supabase query error:', error);
+        logger.error('Supabase query error:', error);
         throw error;
       }
 
@@ -133,10 +134,10 @@ export default function CustomerTransactions() {
         };
       });
 
-      console.log('Loaded transactions:', transformedTransactions.length);
+      logger.debug('Loaded transactions:', transformedTransactions.length);
       setTransactions(transformedTransactions);
     } catch (error: any) {
-      console.error('Error loading transactions:', error);
+      logger.error('Error loading transactions:', error);
       toast({
         title: 'Error',
         description: error?.message || 'Failed to load transaction history',

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, memo } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -74,7 +74,7 @@ const STATUS_CONFIRMATION_CONFIG: Record<string, { title: string; description: s
   },
 };
 
-export default function BookingCard({
+function BookingCard({
   booking,
   onViewDetails,
   onUpdateStatus,
@@ -1027,3 +1027,15 @@ export default function BookingCard({
     </Card>
   );
 }
+
+// Memoize the component to prevent unnecessary re-renders in large lists
+export default memo(BookingCard, (prevProps, nextProps) => {
+  // Custom comparison - only re-render if these props change
+  return (
+    prevProps.booking.id === nextProps.booking.id &&
+    prevProps.booking.booking_status === nextProps.booking.booking_status &&
+    prevProps.booking.provider_id === nextProps.booking.provider_id &&
+    prevProps.unreadCount === nextProps.unreadCount &&
+    prevProps.showActions === nextProps.showActions
+  );
+});

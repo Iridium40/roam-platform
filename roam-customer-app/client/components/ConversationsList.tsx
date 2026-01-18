@@ -15,6 +15,7 @@ import { MessageCircle, Search, Clock, RefreshCw, X } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
+import { logger } from "@/utils/logger";
 
 interface ConversationsListProps {
   isOpen: boolean;
@@ -80,7 +81,7 @@ const ConversationsList = ({ isOpen, onClose }: ConversationsListProps) => {
       const data = await response.json();
       setConversations(data.conversations || []);
     } catch (error) {
-      console.error("Error loading conversations:", error);
+      logger.error("Error loading conversations:", error);
       toast({
         title: "Error",
         description: "Unable to load conversations. Please try again.",
@@ -191,7 +192,7 @@ const ConversationsList = ({ isOpen, onClose }: ConversationsListProps) => {
                 <Card
                   key={conversation.metadataId}
                   className="cursor-pointer hover:shadow-md transition-shadow border"
-                  onClick={() => console.log("Conversation clicked:", conversation.twilioConversationSid)}
+                  onClick={() => logger.debug("Conversation clicked:", conversation.twilioConversationSid)}
                 >
                   <CardContent className="p-4 flex gap-3">
                     <Avatar className="w-10 h-10">

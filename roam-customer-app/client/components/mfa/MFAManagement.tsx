@@ -11,6 +11,7 @@ import { Shield, Plus, Trash2, Download, RefreshCw, Smartphone, Mail, QrCode, Ke
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import MFASetup from './MFASetup';
+import { logger } from '@/utils/logger';
 
 interface MFAManagementProps {
   userId: string;
@@ -81,7 +82,7 @@ const MFAManagement: React.FC<MFAManagementProps> = ({ userId }) => {
       if (statusResponse.ok) setStatus(statusResult);
     } catch (err) {
       setError('Failed to load MFA data');
-      console.error('Error loading MFA data:', err);
+      logger.error('Error loading MFA data:', err);
     } finally {
       setIsLoading(false);
     }
@@ -108,7 +109,7 @@ const MFAManagement: React.FC<MFAManagementProps> = ({ userId }) => {
       await loadMFAData();
     } catch (err) {
       toast.error('Failed to update MFA settings');
-      console.error('Error updating MFA:', err);
+      logger.error('Error updating MFA:', err);
     }
   };
 
@@ -131,7 +132,7 @@ const MFAManagement: React.FC<MFAManagementProps> = ({ userId }) => {
       await loadMFAData();
     } catch (err) {
       toast.error('Failed to remove MFA method');
-      console.error('Error removing MFA method:', err);
+      logger.error('Error removing MFA method:', err);
     }
   };
 
@@ -158,7 +159,7 @@ const MFAManagement: React.FC<MFAManagementProps> = ({ userId }) => {
       await loadMFAData();
     } catch (err) {
       toast.error('Failed to regenerate backup codes');
-      console.error('Error regenerating backup codes:', err);
+      logger.error('Error regenerating backup codes:', err);
     }
   };
 
@@ -181,7 +182,7 @@ const MFAManagement: React.FC<MFAManagementProps> = ({ userId }) => {
         }
       } catch (error) {
         // Element might have been removed already, ignore the error
-        console.warn('Element already removed:', error);
+        logger.warn('Element already removed:', error);
       }
       URL.revokeObjectURL(url);
     }, 100);

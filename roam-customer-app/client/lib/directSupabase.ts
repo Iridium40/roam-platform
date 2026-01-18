@@ -28,19 +28,6 @@ interface AuthResponse {
   session?: any; // May be present in some responses
 }
 
-interface ProviderRecord {
-  id: string;
-  user_id: string;
-  business_id: string;
-  location_id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-  provider_role: "provider" | "owner" | "dispatcher";
-  is_active: boolean;
-  [key: string]: any;
-}
-
 interface CustomerRecord {
   id: string;
   user_id: string;
@@ -115,30 +102,6 @@ class DirectSupabaseAPI {
 
     this.accessToken = authData.access_token;
     return authData;
-  }
-
-  async getProviderByUserId(userId: string): Promise<ProviderRecord | null> {
-    const response = await fetch(
-      `${this.baseURL}/rest/v1/providers?user_id=eq.${userId}&is_active=eq.true&select=id,user_id,business_id,location_id,first_name,last_name,email,provider_role,is_active`,
-      {
-        headers: this.getHeaders(true),
-      },
-    );
-
-    const responseText = await response.text();
-
-    if (!response.ok) {
-      throw new Error(`Provider lookup failed: ${responseText}`);
-    }
-
-    let providers: ProviderRecord[];
-    try {
-      providers = JSON.parse(responseText);
-    } catch (parseError) {
-      throw new Error(`Invalid response format: ${responseText}`);
-    }
-
-    return providers.length > 0 ? providers[0] : null;
   }
 
   async signOut(): Promise<void> {
@@ -390,145 +353,6 @@ class DirectSupabaseAPI {
       logger.warn(`Delete failed: ${responseText}`);
       // Don't throw error for delete failures, just warn
     }
-  }
-
-  async updateProviderImage(
-    providerId: string,
-    imageUrl: string | null,
-  ): Promise<void> {
-    const response = await fetch(
-      `${this.baseURL}/rest/v1/providers?id=eq.${providerId}`,
-      {
-        method: "PATCH",
-        headers: {
-          apikey: this.apiKey,
-          Authorization: `Bearer ${this.accessToken || this.apiKey}`,
-          "Content-Type": "application/json",
-          Prefer: "return=minimal",
-        },
-        body: JSON.stringify({ image_url: imageUrl }),
-      },
-    );
-
-    // Read response text once and use it for both success and error cases
-    const responseText = await response.text();
-
-    if (!response.ok) {
-      throw new Error(`Database update failed: ${responseText}`);
-    }
-    // Success case - responseText is empty due to Prefer: return=minimal
-  }
-
-  async updateProviderBannerImage(
-    providerId: string,
-    bannerImageUrl: string | null,
-  ): Promise<void> {
-    const response = await fetch(
-      `${this.baseURL}/rest/v1/providers?id=eq.${providerId}`,
-      {
-        method: "PATCH",
-        headers: {
-          apikey: this.apiKey,
-          Authorization: `Bearer ${this.accessToken || this.apiKey}`,
-          "Content-Type": "application/json",
-          Prefer: "return=minimal",
-        },
-        body: JSON.stringify({ cover_image_url: bannerImageUrl }),
-      },
-    );
-
-    // Read response text once and use it for both success and error cases
-    const responseText = await response.text();
-
-    if (!response.ok) {
-      throw new Error(`Database update failed: ${responseText}`);
-    }
-    // Success case - responseText is empty due to Prefer: return=minimal
-  }
-
-  async updateBusinessCoverImage(
-    businessId: string,
-    coverImageUrl: string | null,
-  ): Promise<void> {
-    const response = await fetch(
-      `${this.baseURL}/rest/v1/business_profiles?id=eq.${businessId}`,
-      {
-        method: "PATCH",
-        headers: {
-          apikey: this.apiKey,
-          Authorization: `Bearer ${this.accessToken || this.apiKey}`,
-          "Content-Type": "application/json",
-          Prefer: "return=minimal",
-        },
-        body: JSON.stringify({ cover_image_url: coverImageUrl }),
-      },
-    );
-
-    // Read response text once and use it for both success and error cases
-    const responseText = await response.text();
-
-    if (!response.ok) {
-      throw new Error(`Database update failed: ${responseText}`);
-    }
-    // Success case - responseText is empty due to Prefer: return=minimal
-  }
-
-  async updateBusinessProfile(
-    businessId: string,
-    updateData: any,
-  ): Promise<void> {
-    const response = await fetch(
-      `${this.baseURL}/rest/v1/business_profiles?id=eq.${businessId}`,
-      {
-        method: "PATCH",
-        headers: {
-          apikey: this.apiKey,
-          Authorization: `Bearer ${this.accessToken || this.apiKey}`,
-          "Content-Type": "application/json",
-          Prefer: "return=minimal",
-        },
-        body: JSON.stringify(updateData),
-      },
-    );
-
-    // Read response text once and use it for both success and error cases
-    let responseText = "";
-    try {
-      responseText = await response.text();
-    } catch (readError) {
-      logger.warn("Could not read response text:", readError);
-      responseText = `HTTP ${response.status} - ${response.statusText}`;
-    }
-
-    if (!response.ok) {
-      // Parse response text to get detailed error info
-      let errorDetails = responseText;
-      try {
-        const errorJson = JSON.parse(responseText);
-        if (errorJson.message) {
-          errorDetails = errorJson.message;
-        } else if (errorJson.error) {
-          errorDetails = errorJson.error;
-        } else if (errorJson.hint) {
-          errorDetails = errorJson.hint;
-        }
-      } catch (parseError) {
-        // responseText is not JSON, use as-is
-      }
-
-      logger.error("Business profile update failed:", {
-        status: response.status,
-        statusText: response.statusText,
-        responseText: responseText,
-        errorDetails: errorDetails,
-        updateData: JSON.stringify(updateData, null, 2),
-        url: `${this.baseURL}/rest/v1/business_profiles?id=eq.${businessId}`,
-      });
-      throw new Error(
-        `Failed to update business profile: HTTP ${response.status} - ${errorDetails}`,
-      );
-    }
-    // Success case - responseText is empty due to Prefer: return=minimal
   }
 
   // Customer authentication methods

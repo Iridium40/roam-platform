@@ -3,16 +3,6 @@ import { supabase } from '../lib/supabase.js';
 
 export async function handleBusinesses(req: Request, res: Response) {
   try {
-    console.log('[handleBusinesses] Request received');
-    console.log('[handleBusinesses] Method:', req.method);
-    console.log('[handleBusinesses] Method type:', typeof req.method);
-    console.log('[handleBusinesses] Method uppercase:', req.method?.toUpperCase());
-    console.log('[handleBusinesses] URL:', req.url);
-    console.log('[handleBusinesses] Path:', req.path);
-    console.log('[handleBusinesses] Original URL:', req.originalUrl);
-    console.log('[handleBusinesses] Request body:', JSON.stringify(req.body, null, 2));
-    console.log('[handleBusinesses] Headers:', JSON.stringify(req.headers, null, 2));
-    
     const method = req.method?.toUpperCase();
     
     switch (method) {
@@ -21,13 +11,10 @@ export async function handleBusinesses(req: Request, res: Response) {
       case 'PUT':
         return await updateBusinessVerification(req, res);
       default:
-        console.warn('[handleBusinesses] Method not allowed:', method);
-        console.warn('[handleBusinesses] Available methods: GET, PUT');
         return res.status(405).json({ error: 'Method not allowed', receivedMethod: method });
     }
   } catch (error) {
     console.error('Unexpected error in businesses API:', error);
-    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
     const errorMessage = error instanceof Error ? error.message : 'Internal server error';
     return res.status(500).json({ error: errorMessage });
   }
@@ -35,9 +22,6 @@ export async function handleBusinesses(req: Request, res: Response) {
 
 async function getBusinesses(req: Request, res: Response) {
   try {
-    console.log('[Businesses API] GET request received');
-    console.log('[Businesses API] Query params:', req.query);
-
     const { 
       verification_status,
       business_type,
@@ -53,8 +37,6 @@ async function getBusinesses(req: Request, res: Response) {
     if (use_approvals_view === 'true') {
       return await getBusinessesForApprovals(req, res);
     }
-
-    console.log('[Businesses API] Building query...');
 
     let query = supabase
       .from('business_profiles')
@@ -112,28 +94,22 @@ async function getBusinesses(req: Request, res: Response) {
     const offset = (pageNum - 1) * limitNum;
     
     query = query.range(offset, offset + limitNum - 1);
-
-    console.log('[Businesses API] Executing query...');
     
-    // Execute the query directly without timeout wrapper (Supabase has its own timeout)
+    // Execute the query
     const { data: businesses, error: fetchError, count } = await query;
 
     if (fetchError) {
-      console.error('[Businesses API] Error fetching businesses:', fetchError);
       return res.status(500).json({ 
         error: fetchError.message,
         details: fetchError.details 
       });
     }
 
-    console.log(`[Businesses API] Query successful. Found ${businesses?.length || 0} businesses (total: ${count})`);
-
     // Fetch service categories and subcategories for each business
     let businessCategories: any[] = [];
     let businessSubcategories: any[] = [];
     
     if (businesses && businesses.length > 0) {
-      console.log('[Businesses API] Fetching service categories and subcategories...');
       const businessIds = businesses.map(b => b.id);
       
       // Fetch business service categories
@@ -186,7 +162,6 @@ async function getBusinesses(req: Request, res: Response) {
     });
 
     // Transform the data
-    console.log('[Businesses API] Transforming business data...');
     const transformedBusinesses = (businesses || []).map((business: any) => ({
       ...business,
       // Populate service categories and subcategories from junction tables
@@ -214,8 +189,6 @@ async function getBusinesses(req: Request, res: Response) {
       }
     }));
 
-    console.log('[Businesses API] Transformation complete. Sending response...');
-    
     const response = { 
       data: transformedBusinesses,
       pagination: {
@@ -226,16 +199,10 @@ async function getBusinesses(req: Request, res: Response) {
       }
     };
 
-    console.log('[Businesses API] Response ready:', {
-      businessCount: response.data.length,
-      pagination: response.pagination
-    });
-
     return res.status(200).json(response);
 
   } catch (error) {
     console.error('[Businesses API] Error in getBusinesses:', error);
-    console.error('[Businesses API] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
     return res.status(500).json({ 
       error: 'Failed to fetch businesses',
       message: error instanceof Error ? error.message : 'Unknown error'
@@ -245,19 +212,12 @@ async function getBusinesses(req: Request, res: Response) {
 
 async function updateBusinessVerification(req: Request, res: Response) {
   try {
-    console.log('[updateBusinessVerification] PUT request received');
-    console.log('[updateBusinessVerification] Request body:', JSON.stringify(req.body, null, 2));
-    console.log('[updateBusinessVerification] Request query:', req.query);
-    
     // Prioritize body.id over query.id for PUT requests
     const businessId = req.body.id || req.body.business_id || req.query.id;
     
     if (!businessId) {
-      console.error('[updateBusinessVerification] Missing business ID');
       return res.status(400).json({ error: 'Business ID is required' });
     }
-
-    console.log('[updateBusinessVerification] Updating business:', businessId);
 
     // Extract all possible update fields
     const {
@@ -313,11 +273,8 @@ async function updateBusinessVerification(req: Request, res: Response) {
 
     // Check if there are any fields to update
     if (Object.keys(updateData).length === 0) {
-      console.warn('[updateBusinessVerification] No fields to update');
       return res.status(400).json({ error: 'No fields provided for update' });
     }
-
-    console.log('[updateBusinessVerification] Update data:', JSON.stringify(updateData, null, 2));
 
     // Update business profile
     const { data: business, error: updateError } = await supabase
@@ -484,8 +441,6 @@ async function getRecentVerificationActivity(startDate: string) {
 // Optimized function for business approvals page
 async function getBusinessesForApprovals(req: Request, res: Response) {
   try {
-    console.log('[Businesses API] Using optimized approvals view');
-    
     const { 
       verification_status,
       search,
@@ -537,8 +492,6 @@ async function getBusinessesForApprovals(req: Request, res: Response) {
         details: error.details 
       });
     }
-
-    console.log(`[Businesses API] Returned ${businesses?.length || 0} businesses for approval`);
 
     return res.status(200).json({ 
       data: businesses || [],

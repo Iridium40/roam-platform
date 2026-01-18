@@ -1,18 +1,17 @@
 import { useState, useEffect, useCallback } from "react";
 import { useDataCache } from "./useDataCache";
 import { useToast } from "./use-toast";
-import type {
-  Database,
-  VerificationStatus,
-  BusinessType,
-  ServiceCategoryType,
-  ServiceSubcategoryType,
-  ProviderVerificationStatus,
-  BackgroundCheckStatus,
-  BusinessDocumentStatus,
-  ProviderRole,
-  DeliveryType,
-} from "@roam/shared";
+
+// Local type definitions (matches database schema - avoids stale dist issue)
+type VerificationStatus = 'pending' | 'approved' | 'rejected' | 'suspended';
+type BusinessType = 'independent' | 'business';
+type ServiceCategoryType = "beauty" | "fitness" | "therapy" | "healthcare";
+type ServiceSubcategoryType = "hair_and_makeup" | "spray_tan" | "esthetician" | "massage_therapy" | "iv_therapy" | "physical_therapy" | "nurse_practitioner" | "physician" | "chiropractor" | "yoga_instructor" | "pilates_instructor" | "personal_trainer" | "injectables" | "health_coach";
+type ProviderVerificationStatus = 'pending' | 'documents_submitted' | 'under_review' | 'approved' | 'rejected';
+type BackgroundCheckStatus = 'under_review' | 'pending' | 'approved' | 'rejected' | 'expired';
+type BusinessDocumentStatus = 'pending' | 'verified' | 'rejected' | 'under_review';
+type ProviderRole = 'provider' | 'owner' | 'dispatcher';
+type DeliveryType = 'business_location' | 'customer_location' | 'virtual' | 'both_locations';
 
 // Local type aliases for convenience
 type DocumentVerificationStatus = BusinessDocumentStatus;

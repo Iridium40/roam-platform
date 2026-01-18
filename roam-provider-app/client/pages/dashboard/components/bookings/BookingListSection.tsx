@@ -100,15 +100,10 @@ export default function BookingListSection({
     </div>
   );
 
-  // Debug: Log when component renders with current tab
-  console.log('📋 BookingListSection render:', { activeTab, activeCount: activeBookings.length, closedCount: closedBookings.length });
-
   return (
     <Tabs value={activeTab} onValueChange={(value) => {
-      console.log('🔄 Tab change requested:', { from: activeTab, to: value });
       if (value !== activeTab) {
         setActiveTab(value);
-        console.log('✅ setActiveTab called with:', value);
       }
     }} className="w-full">
       <TabsList className="grid w-full grid-cols-2 h-12">

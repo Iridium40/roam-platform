@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useDataCache } from "@/hooks/useDataCache";
 import { AdminLayout } from "@/components/layout/admin-layout";
 import { ROAMDataTable, Column } from "@/components/ui/roam-data-table";
@@ -742,7 +742,6 @@ export default function AdminProviders() {
       if (!forceRefresh && !cache.shouldRefetch('providers')) {
         const cached = cache.getCachedData('providers');
         if (cached) {
-          console.log("Using cached providers data");
           setProviders(cached);
           setLoading(false);
           return;
@@ -752,30 +751,21 @@ export default function AdminProviders() {
       setLoading(true);
       setError(null);
 
-      console.log("Fetching providers from API...");
-
       const response = await fetch('/api/providers');
       const result = await response.json();
 
       if (!response.ok) {
-        console.error("Provider API error:", result.error);
         setError(`API Error: ${result.error || 'Failed to fetch providers'}`);
         setProviders([]);
       } else {
-        console.log(
-          `Successfully fetched ${result.data?.length || 0} providers`,
-        );
         const providersData = result.data || [];
         setProviders(providersData);
         cache.setCachedData('providers', providersData);
         if (providersData.length === 0) {
-          setError(
-            "No provider records found.",
-          );
+          setError("No provider records found.");
         }
       }
     } catch (err) {
-      console.error("Unexpected error:", err);
       const errorMessage =
         err instanceof Error ? err.message : "Unknown error occurred";
       setError(`Connection Error: ${errorMessage}`);
@@ -791,38 +781,28 @@ export default function AdminProviders() {
       if (!forceRefresh && !cache.shouldRefetch('providerServices')) {
         const cached = cache.getCachedData('providerServices');
         if (cached) {
-          console.log("Using cached provider services data");
           setProviderServices(cached);
           return;
         }
       }
 
-      console.log("Fetching provider services from API...");
-
       const response = await fetch('/api/provider-services');
       const result = await response.json();
 
       if (!response.ok) {
-        console.error("Provider services API error:", result.error);
         setError(`Provider Services Error: ${result.error || 'Failed to fetch provider services'}`);
         setProviderServices([]);
       } else {
-        console.log(
-          `Successfully fetched ${result.data?.length || 0} provider services`,
-        );
         const servicesData = result.data || [];
         setProviderServices(servicesData);
         cache.setCachedData('providerServices', servicesData);
         if (servicesData.length === 0) {
-          setError(
-            "Provider services table is empty. This is normal if no provider services have been created yet.",
-          );
+          setError("Provider services table is empty. This is normal if no provider services have been created yet.");
         } else {
-          setError(null); // Clear any previous errors
+          setError(null);
         }
       }
     } catch (err) {
-      console.error("Unexpected error fetching provider services:", err);
       const errorMessage =
         err instanceof Error ? err.message : "Unknown error occurred";
       setError(`Provider Services Connection Error: ${errorMessage}`);
@@ -836,31 +816,23 @@ export default function AdminProviders() {
       if (!forceRefresh && !cache.shouldRefetch('providerAddons')) {
         const cached = cache.getCachedData('providerAddons');
         if (cached) {
-          console.log("Using cached provider addons data");
           setProviderAddons(cached);
           return;
         }
       }
 
-      console.log("Fetching provider add-ons from API...");
-
       const response = await fetch('/api/provider-addons');
       const result = await response.json();
 
       if (!response.ok) {
-        console.error("Provider add-ons API error:", result.error);
         setError(`Provider Add-ons Error: ${result.error || 'Failed to fetch provider add-ons'}`);
         setProviderAddons([]);
       } else {
-        console.log(
-          `Successfully fetched ${result.data?.length || 0} provider add-ons`,
-        );
         const addonsData = result.data || [];
         setProviderAddons(addonsData);
         cache.setCachedData('providerAddons', addonsData);
       }
     } catch (err) {
-      console.error("Unexpected error fetching provider add-ons:", err);
       const errorMessage =
         err instanceof Error ? err.message : "Unknown error occurred";
       setError(`Provider Add-ons Connection Error: ${errorMessage}`);
@@ -874,7 +846,6 @@ export default function AdminProviders() {
       if (!forceRefresh && !cache.shouldRefetch('businesses')) {
         const cached = cache.getCachedData('businesses');
         if (cached) {
-          console.log("Using cached businesses data");
           setBusinesses(cached);
           return;
         }
@@ -883,19 +854,17 @@ export default function AdminProviders() {
       const response = await fetch('/api/businesses');
       const result = await response.json();
 
-      if (!response.ok) {
-        console.error("Error fetching businesses:", result.error);
-      } else {
+      if (response.ok) {
         // Extract just id and business_name from the businesses
         const businessList = (result.data || []).map((b: any) => ({
           id: b.id,
           business_name: b.business_name
-        })).filter((b: any) => b.business_name); // Filter active businesses
+        })).filter((b: any) => b.business_name);
         setBusinesses(businessList);
         cache.setCachedData('businesses', businessList);
       }
     } catch (err) {
-      console.error("Error fetching businesses:", err);
+      // Silent fail - non-critical data
     }
   };
 
@@ -949,12 +918,10 @@ export default function AdminProviders() {
       const result = await response.json();
 
       if (!response.ok) {
-        console.error("Error creating provider:", result.error);
         alert(
           `Error creating provider: ${result.error || 'Failed to create provider'}`,
         );
       } else {
-        console.log("Provider created successfully:", result.data);
         setIsAddProviderOpen(false);
         setNewProvider({
           first_name: "",
@@ -975,7 +942,6 @@ export default function AdminProviders() {
         await fetchProviders(true); // Refresh the providers list
       }
     } catch (err) {
-      console.error("Unexpected error:", err);
       alert(`Unexpected error: ${err}`);
     } finally {
       setSaving(false);
@@ -1002,19 +968,14 @@ export default function AdminProviders() {
       const result = await response.json();
 
       if (!response.ok) {
-        console.error("Error updating provider status:", result.error);
         alert(
           `Error updating provider status: ${result.error || 'Update failed'}`,
         );
       } else {
-        console.log(
-          `Provider ${providerId} status updated to ${newStatus ? "active" : "inactive"}`,
-        );
-        cache.clearCache('providers'); // Invalidate cache
-        await fetchProviders(true); // Refresh the providers list
+        cache.clearCache('providers');
+        await fetchProviders(true);
       }
     } catch (err) {
-      console.error("Unexpected error:", err);
       alert(`Unexpected error: ${err}`);
     }
   };
@@ -1039,60 +1000,55 @@ export default function AdminProviders() {
       const result = await response.json();
 
       if (!response.ok) {
-        console.error("Error updating verification status:", result.error);
         alert(
           `Error updating verification status: ${result.error || 'Update failed'}`,
         );
       } else {
-        console.log(
-          `Provider ${providerId} verification status updated to ${newStatus}`,
-        );
-        cache.clearCache('providers'); // Invalidate cache
-        await fetchProviders(true); // Refresh the providers list
+        cache.clearCache('providers');
+        await fetchProviders(true);
       }
     } catch (err) {
-      console.error("Unexpected error:", err);
       alert(`Unexpected error: ${err}`);
     }
   };
 
-  // Filter providers based on selected filters
-  const filteredProviders = providers.filter((provider) => {
-    const verificationMatch =
-      verificationFilter === "all" ||
-      provider.verification_status === verificationFilter;
+  // Filter providers based on selected filters - memoized for performance
+  const filteredProviders = useMemo(() => 
+    providers.filter((provider) => {
+      const verificationMatch =
+        verificationFilter === "all" ||
+        provider.verification_status === verificationFilter;
 
-    const statusMatch =
-      statusFilter === "all" ||
-      (statusFilter === "active" && provider.is_active) ||
-      (statusFilter === "inactive" && !provider.is_active);
+      const statusMatch =
+        statusFilter === "all" ||
+        (statusFilter === "active" && provider.is_active) ||
+        (statusFilter === "inactive" && !provider.is_active);
 
-    const roleMatch =
-      roleFilter === "all" || provider.provider_role === roleFilter;
+      const roleMatch =
+        roleFilter === "all" || provider.provider_role === roleFilter;
 
-    return verificationMatch && statusMatch && roleMatch;
-  });
+      return verificationMatch && statusMatch && roleMatch;
+    }), [providers, verificationFilter, statusFilter, roleFilter]
+  );
 
-  const providerStats = {
+  // Provider statistics - memoized for performance
+  const providerStats = useMemo(() => ({
     total: providers.length,
     active: providers.filter((p) => p.is_active).length,
-    verified: providers.filter((p) => p.verification_status === "approved")
-      .length,
+    verified: providers.filter((p) => p.verification_status === "approved").length,
     backgroundApproved: providers.filter(
       (p) => p.background_check_status === "approved",
     ).length,
     avgRating:
       providers.length > 0
-        ? providers.reduce((sum, p) => sum + p.average_rating, 0) /
-          providers.length
+        ? providers.reduce((sum, p) => sum + p.average_rating, 0) / providers.length
         : 0,
     totalBookings: providers.reduce((sum, p) => sum + p.total_bookings, 0),
     avgExperience:
       providers.length > 0
-        ? providers.reduce((sum, p) => sum + (p.experience_years || 0), 0) /
-          providers.length
+        ? providers.reduce((sum, p) => sum + (p.experience_years || 0), 0) / providers.length
         : 0,
-  };
+  }), [providers]);
 
   const businessDocumentStats = {
     total: sampleBusinessDocuments.length,
@@ -1597,7 +1553,7 @@ export default function AdminProviders() {
             searchable={true}
             filterable={false}
             addable={false}
-            onRowClick={(provider) => console.log("View provider:", provider)}
+            onRowClick={() => {}}
             pageSize={10}
           />
         </div>

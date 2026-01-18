@@ -13,6 +13,7 @@ import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { Footer } from '@/components/Footer';
 import { NotificationPreferences } from '@/components/NotificationPreferences';
+import { logger } from '@/utils/logger';
 
 export default function CustomerProfile() {
   const { customer } = useAuth();
@@ -76,7 +77,7 @@ export default function CustomerProfile() {
       setOriginalData(profile);
       setHasChanges(false);
     } catch (error) {
-      console.error('Error loading profile:', error);
+      logger.error('Error loading profile:', error);
       toast({
         title: 'Error',
         description: 'Failed to load profile',
@@ -116,7 +117,7 @@ export default function CustomerProfile() {
         description: 'Profile updated successfully',
       });
     } catch (error) {
-      console.error('Error updating profile:', error);
+      logger.error('Error updating profile:', error);
       toast({
         title: 'Error',
         description: 'Failed to update profile',
@@ -186,7 +187,7 @@ export default function CustomerProfile() {
         description: 'Profile photo updated successfully',
       });
     } catch (error) {
-      console.error('Error uploading image:', error);
+      logger.error('Error uploading image:', error);
       toast({
         title: 'Error',
         description: 'Failed to upload profile photo',

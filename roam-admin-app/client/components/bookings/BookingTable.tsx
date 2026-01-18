@@ -79,30 +79,65 @@ interface Booking {
   };
 }
 
+type BadgeVariant = "default" | "secondary" | "success" | "warning" | "danger" | "neutral" | "outline";
+
 interface BookingTableProps {
   bookings: Booking[];
   onBookingClick: (booking: Booking) => void;
+  onViewBooking?: (booking: Booking) => void;
   formatDate: (date: string) => string;
   formatTime: (time: string) => string;
+  formatDateTime?: (dateStr: string) => string;
   formatPrice: (amount: number) => string;
   formatEnumDisplay: (value: string) => string;
+  formatTipStatus?: (status: TipStatus) => string;
   getCustomerName: (booking: Booking) => string;
   getProviderName: (booking: Booking) => string;
-  getBookingStatusBadgeVariant: (status: BookingStatus) => "default" | "secondary" | "success" | "warning" | "danger" | "neutral" | "outline";
-  getPaymentStatusBadgeVariant: (status: PaymentStatus) => "default" | "secondary" | "success" | "warning" | "danger" | "neutral" | "outline";
+  getServiceName?: (booking: Booking) => string;
+  getBusinessName?: (booking: Booking) => string;
+  getBookingStatusBadgeVariant: (status: BookingStatus) => BadgeVariant;
+  getBookingStatusVariant?: (status: BookingStatus) => BadgeVariant;
+  getPaymentStatusBadgeVariant: (status: PaymentStatus) => BadgeVariant;
+  getPaymentStatusVariant?: (status: PaymentStatus) => BadgeVariant;
+  getTipStatusVariant?: (status: TipStatus) => BadgeVariant;
+  // Filters
+  bookingStatusFilter?: BookingStatus | 'all';
+  onBookingStatusFilterChange?: (status: BookingStatus | 'all') => void;
+  paymentStatusFilter?: PaymentStatus | 'all';
+  onPaymentStatusFilterChange?: (status: PaymentStatus | 'all') => void;
+  startDate?: string;
+  endDate?: string;
+  onStartDateChange?: (date: string) => void;
+  onEndDateChange?: (date: string) => void;
 }
 
 export function BookingTable({
   bookings,
   onBookingClick,
+  onViewBooking,
   formatDate,
   formatTime,
+  formatDateTime = (d) => formatDate(d),
   formatPrice,
   formatEnumDisplay,
+  formatTipStatus = (s) => formatEnumDisplay(s),
   getCustomerName,
   getProviderName,
+  getServiceName = (b) => b.services?.name || 'N/A',
+  getBusinessName = (b) => b.providers?.business_profiles?.business_name || 'N/A',
   getBookingStatusBadgeVariant,
+  getBookingStatusVariant = getBookingStatusBadgeVariant,
   getPaymentStatusBadgeVariant,
+  getPaymentStatusVariant = getPaymentStatusBadgeVariant,
+  getTipStatusVariant = () => 'secondary',
+  bookingStatusFilter = 'all',
+  onBookingStatusFilterChange,
+  paymentStatusFilter = 'all',
+  onPaymentStatusFilterChange,
+  startDate = '',
+  endDate = '',
+  onStartDateChange = () => {},
+  onEndDateChange = () => {},
 }: BookingTableProps) {
   
   const bookingColumns: Column[] = [

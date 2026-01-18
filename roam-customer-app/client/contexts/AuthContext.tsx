@@ -66,12 +66,35 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     localStorage.removeItem("roam_user_type");
   };
 
+  // Helper function to fetch/update customer profile from Supabase user
+  const fetchCustomerProfile = async (userId: string): Promise<AuthCustomer | null> => {
+    const { data: customerProfile, error: customerError } = await supabase
+      .from("customer_profiles")
+      .select("id, user_id, email, first_name, last_name, phone, image_url")
+      .eq("user_id", userId)
+      .single();
+
+    if (customerError || !customerProfile) {
+      logger.debug('Customer profile not found:', { userId, error: customerError });
+      return null;
+    }
+
+    return {
+      id: customerProfile.id,
+      user_id: customerProfile.user_id,
+      email: customerProfile.email,
+      customer_id: customerProfile.id,
+      first_name: customerProfile.first_name,
+      last_name: customerProfile.last_name,
+      phone: customerProfile.phone,
+      image_url: customerProfile.image_url,
+    };
+  };
+
   useEffect(() => {
     // Try to restore session from localStorage first
     const initializeAuth = async () => {
       try {
-        // Initializing with session restoration
-
         // Check if we have stored session data
         const storedCustomer = localStorage.getItem("roam_customer");
         const storedToken = localStorage.getItem("roam_access_token");
@@ -79,17 +102,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         if (storedCustomer && storedToken) {
           logger.debug("AuthContext: Found stored session and token");
 
-          // Restore the access token to the directSupabaseAPI
-          // Note: We'll handle this differently to avoid dynamic import issues
-          // const { directSupabaseAPI } = await import("../lib/directSupabase");
-          // directSupabaseAPI.currentAccessToken = storedToken;
-
           const customerData = JSON.parse(storedCustomer);
-          logger.debug("🔐 AuthContext: Customer session restored from localStorage", customerData);
+          logger.debug("AuthContext: Customer session restored from localStorage", customerData);
           
           // If user_id is missing from stored data, clear localStorage and fetch fresh data
           if (!customerData.user_id) {
-            logger.debug("🔐 AuthContext: user_id missing from localStorage, clearing and fetching fresh data...");
+            logger.debug("AuthContext: user_id missing from localStorage, clearing and fetching fresh data...");
             clearStoredData();
             // Continue to fresh session fetch below
           } else {
@@ -107,26 +125,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           if (session?.user) {
             logger.debug("Session user found, checking for customer profile", session.user.id);
 
-            const { data: customerProfile, error: customerError } = await supabase
-              .from("customer_profiles")
-              .select("id, user_id, email, first_name, last_name, phone, image_url")
-              .eq("user_id", session.user.id)
-              .single();
+            const customerData = await fetchCustomerProfile(session.user.id);
 
-            logger.debug('Customer profile query result:', { customerProfile, customerError });
-
-            if (customerProfile) {
-              const customerData = {
-                id: customerProfile.id,
-                user_id: customerProfile.user_id, // Add user_id for foreign key relationships
-                email: customerProfile.email,
-                customer_id: customerProfile.id,
-                first_name: customerProfile.first_name,
-                last_name: customerProfile.last_name,
-                phone: customerProfile.phone,
-                image_url: customerProfile.image_url,
-              };
-              
+            if (customerData) {
               logger.debug('Customer data structure:', customerData);
 
               setCustomer(customerData);
@@ -173,8 +174,71 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
     };
     
-    logger.debug('🔐 AuthContext: useEffect triggered, initializing auth...');
+    logger.debug('AuthContext: useEffect triggered, initializing auth...');
     initializeAuth();
+
+    // Subscribe to auth state changes (handles OAuth redirects, token refresh, sign out)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        logger.debug('AuthContext: Auth state changed:', { event, hasSession: !!session });
+
+        switch (event) {
+          case 'SIGNED_IN':
+            // User signed in (including OAuth redirect)
+            if (session?.user) {
+              logger.debug('AuthContext: User signed in, fetching customer profile...');
+              const customerData = await fetchCustomerProfile(session.user.id);
+              
+              if (customerData) {
+                setCustomer(customerData);
+                localStorage.setItem("roam_customer", JSON.stringify(customerData));
+                localStorage.setItem("roam_access_token", session.access_token);
+                localStorage.setItem("roam_user_type", "customer");
+              } else if (session.user.app_metadata?.provider) {
+                // OAuth user without profile - create one
+                logger.debug('AuthContext: OAuth user without profile, creating...');
+                await createCustomerProfileFromOAuth(session.user);
+              }
+            }
+            break;
+
+          case 'SIGNED_OUT':
+            // User signed out
+            logger.debug('AuthContext: User signed out');
+            setCustomer(null);
+            clearStoredData();
+            break;
+
+          case 'TOKEN_REFRESHED':
+            // Token was refreshed - update stored token
+            if (session?.access_token) {
+              logger.debug('AuthContext: Token refreshed');
+              localStorage.setItem("roam_access_token", session.access_token);
+            }
+            break;
+
+          case 'USER_UPDATED':
+            // User profile was updated
+            if (session?.user) {
+              logger.debug('AuthContext: User updated, refreshing customer profile...');
+              const customerData = await fetchCustomerProfile(session.user.id);
+              if (customerData) {
+                setCustomer(customerData);
+                localStorage.setItem("roam_customer", JSON.stringify(customerData));
+              }
+            }
+            break;
+
+          default:
+            break;
+        }
+      }
+    );
+
+    // Cleanup subscription on unmount
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signInCustomer = useCallback(async (email: string, password: string) => {
