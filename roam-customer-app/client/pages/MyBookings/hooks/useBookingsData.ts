@@ -5,6 +5,84 @@ import type { BookingWithDetails } from "@/types/index";
 import useRealtimeBookings from "@/hooks/useRealtimeBookings";
 import { PAGINATION_CONFIG, getDateRange } from "../config/pagination.config";
 
+// Helper function to transform booking data
+const transformBooking = (booking: any): BookingWithDetails => ({
+  ...booking,
+  id: booking.id || '',
+  booking_status: booking.booking_status || 'pending',
+  booking_date: booking.booking_date || '',
+  start_time: booking.start_time || '',
+  total_amount: booking.total_amount || 0,
+  service_name: booking.services?.name || "Service",
+  service: booking.services?.name || "Service",
+  service_image: booking.services?.image_url,
+  serviceId: booking.service_id,
+  provider: {
+    id: booking.providers?.id || '',
+    name: `${booking.providers?.first_name || ""} ${booking.providers?.last_name || ""}`.trim() || 'Provider TBD',
+    firstName: booking.providers?.first_name || '',
+    lastName: booking.providers?.last_name || '',
+    email: booking.providers?.email || '',
+    phone: booking.providers?.phone || '',
+    image: booking.providers?.image_url,
+    rating: booking.providers?.average_rating || 0,
+  },
+  providers: booking.providers,
+  customer_profiles: booking.customer_profiles,
+  date: booking.booking_date || '',
+  time: booking.start_time || '',
+  status: booking.booking_status || 'pending',
+  deliveryType: booking.delivery_type || 'customer_location',
+  location: "Location TBD",
+  locationDetails: null,
+  price: booking.total_amount ? `$${booking.total_amount}` : "Price TBD",
+  duration: booking.services?.duration_minutes 
+    ? `${booking.services.duration_minutes} min` 
+    : "60 min",
+  notes: booking.admin_notes || '',
+  bookingReference: booking.booking_reference || '',
+  reschedule_count: booking.reschedule_count || 0,
+  original_booking_date: booking.original_booking_date,
+  original_start_time: booking.original_start_time,
+  reschedule_reason: booking.reschedule_reason,
+  booking_time: booking.start_time || '',
+  updated_at: booking.created_at || new Date().toISOString(),
+});
+
+// Helper function to fetch bookings via API
+const fetchBookingsFromAPI = async (customerId: string, dateStart: string, dateEnd: string): Promise<any[]> => {
+  logger.debug("Fetching bookings via API...");
+  
+  // Get auth token
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) {
+    throw new Error("Not authenticated");
+  }
+
+  const params = new URLSearchParams({
+    customer_id: customerId,
+    date_start: dateStart,
+    date_end: dateEnd,
+  });
+
+  const response = await fetch(`/api/bookings/list?${params}`, {
+    headers: {
+      'Authorization': `Bearer ${session.access_token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  const json = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    const errorMsg = json?.error || 'Failed to fetch bookings';
+    logger.error("API error fetching bookings:", errorMsg);
+    throw new Error(errorMsg);
+  }
+
+  return json.data || [];
+};
+
 export const useBookingsData = (currentUser: any) => {
   const [bookings, setBookings] = useState<BookingWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
@@ -45,141 +123,9 @@ export const useBookingsData = (currentUser: any) => {
       const dateStartStr = dateStart.toISOString().split('T')[0];
       const dateEndStr = dateEnd.toISOString().split('T')[0];
       
-      const { data, error } = await supabase
-        .from("bookings")
-        .select(`
-          *,
-          providers!left (
-            id,
-            user_id,
-            first_name,
-            last_name,
-            email,
-            phone,
-            image_url,
-            business_id,
-            average_rating
-          ),
-          services!left (
-            id,
-            name,
-            description,
-            min_price,
-            duration_minutes,
-            image_url
-          ),
-          customer_profiles!left (
-            id,
-            first_name,
-            last_name,
-            email,
-            phone
-          ),
-          business_locations!left (
-            id,
-            business_id,
-            location_name,
-            address_line1,
-            address_line2,
-            city,
-            state,
-            postal_code,
-            country,
-            is_primary,
-            offers_mobile_services
-          ),
-          business_profiles!left (
-            id,
-            business_name,
-            business_type,
-            business_description,
-            image_url,
-            logo_url
-          ),
-          customer_locations!left (
-            id,
-            customer_id,
-            location_name,
-            street_address,
-            unit_number,
-            city,
-            state,
-            zip_code,
-            is_primary,
-            access_instructions
-          ),
-          reviews!left (
-            id,
-            overall_rating,
-            service_rating,
-            communication_rating,
-            punctuality_rating,
-            review_text,
-            created_at
-          ),
-          tips!left (
-            id,
-            tip_amount,
-            tip_percentage,
-            customer_message,
-            payment_status,
-            created_at
-          )
-        `)
-        .eq("customer_id", currentUser.id)
-        .gte("booking_date", dateStartStr)
-        .lte("booking_date", dateEndStr)
-        .order("booking_date", { ascending: false })
-        .limit(PAGINATION_CONFIG.databaseQueryLimit);
-
-      if (error) {
-        logger.error("Error refreshing bookings:", error);
-        throw error;
-      }
-
-      // Transform the data to match the expected format
-      const transformedBookings: BookingWithDetails[] = (data || []).map((booking) => ({
-        ...booking,
-        id: booking.id || '',
-        booking_status: booking.booking_status || 'pending',
-        booking_date: booking.booking_date || '',
-        start_time: booking.start_time || '',
-        total_amount: booking.total_amount || 0,
-        service_name: booking.services?.name || "Service",
-        service: booking.services?.name || "Service",
-        service_image: booking.services?.image_url,
-        serviceId: booking.service_id,
-        provider: {
-          id: booking.providers?.id || '',
-          name: `${booking.providers?.first_name || ""} ${booking.providers?.last_name || ""}`.trim() || 'Provider TBD',
-          firstName: booking.providers?.first_name || '',
-          lastName: booking.providers?.last_name || '',
-          email: booking.providers?.email || '',
-          phone: booking.providers?.phone || '',
-          image: booking.providers?.image_url,
-          rating: booking.providers?.average_rating || 0,
-        },
-        providers: booking.providers,
-        customer_profiles: booking.customer_profiles,
-        date: booking.booking_date || '',
-        time: booking.start_time || '',
-        status: booking.booking_status || 'pending',
-        deliveryType: booking.delivery_type || 'customer_location',
-        location: "Location TBD",
-        locationDetails: null,
-        price: booking.total_amount ? `$${booking.total_amount}` : "Price TBD",
-        duration: booking.services?.duration_minutes 
-          ? `${booking.services.duration_minutes} min` 
-          : "60 min",
-        notes: booking.admin_notes || '',
-        bookingReference: booking.booking_reference || '',
-        reschedule_count: booking.reschedule_count || 0,
-        original_booking_date: booking.original_booking_date,
-        original_start_time: booking.original_start_time,
-        reschedule_reason: booking.reschedule_reason,
-        booking_time: booking.start_time || '',
-        updated_at: booking.created_at || new Date().toISOString(),
-      }));
+      const data = await fetchBookingsFromAPI(currentUser.id, dateStartStr, dateEndStr);
+      
+      const transformedBookings = (data || []).map(transformBooking);
       
       logger.debug("Successfully refreshed bookings:", { count: transformedBookings.length });
       
@@ -217,101 +163,9 @@ export const useBookingsData = (currentUser: any) => {
         const dateStartStr = dateStart.toISOString().split('T')[0];
         const dateEndStr = dateEnd.toISOString().split('T')[0];
         
-        // Fetch bookings with all related data in a single query
-        // Apply date range filter and limit for performance
-        const { data, error } = await supabase
-          .from("bookings")
-          .select(`
-            *,
-            providers!left (
-              id,
-              user_id,
-              first_name,
-              last_name,
-              email,
-              phone,
-              image_url,
-              business_id,
-              average_rating
-            ),
-            services!left (
-              id,
-              name,
-              description,
-              min_price,
-              duration_minutes,
-              image_url
-            ),
-            customer_profiles!left (
-              id,
-              first_name,
-              last_name,
-              email,
-              phone
-            ),
-            business_locations!left (
-              id,
-              business_id,
-              location_name,
-              address_line1,
-              address_line2,
-              city,
-              state,
-              postal_code,
-              country,
-              is_primary,
-              offers_mobile_services
-            ),
-            business_profiles!left (
-              id,
-              business_name,
-              business_type,
-              business_description,
-              image_url,
-              logo_url
-            ),
-            customer_locations!left (
-              id,
-              customer_id,
-              location_name,
-              street_address,
-              unit_number,
-              city,
-              state,
-              zip_code,
-              is_primary,
-              access_instructions
-            ),
-            reviews!left (
-              id,
-              overall_rating,
-              service_rating,
-              communication_rating,
-              punctuality_rating,
-              review_text,
-              created_at
-            ),
-            tips!left (
-              id,
-              tip_amount,
-              tip_percentage,
-              customer_message,
-              payment_status,
-              created_at
-            )
-          `)
-          .eq("customer_id", currentUser.id)
-          .gte("booking_date", dateStartStr)
-          .lte("booking_date", dateEndStr)
-          .order("booking_date", { ascending: false })
-          .limit(PAGINATION_CONFIG.databaseQueryLimit);
+        const data = await fetchBookingsFromAPI(currentUser.id, dateStartStr, dateEndStr);
 
         logger.debug("Bookings query result:", { count: data?.length || 0 });
-
-        if (error) {
-          logger.error("Error fetching bookings:", { message: error.message, code: error.code });
-          throw error;
-        }
 
         // Handle empty bookings
         if (!data || data.length === 0) {
@@ -321,50 +175,7 @@ export const useBookingsData = (currentUser: any) => {
         }
 
         // Transform the data to match the expected format
-        const transformedBookings: BookingWithDetails[] = (data || []).map((booking) => ({
-          ...booking,
-          // Ensure all required fields are present with fallbacks
-          id: booking.id || '',
-          booking_status: booking.booking_status || 'pending',
-          booking_date: booking.booking_date || '',
-          start_time: booking.start_time || '',
-          total_amount: booking.total_amount || 0,
-          service_name: booking.services?.name || "Service",
-          service: booking.services?.name || "Service",
-          service_image: booking.services?.image_url,
-          serviceId: booking.service_id,
-          provider: {
-            id: booking.providers?.id || '',
-            name: `${booking.providers?.first_name || ""} ${booking.providers?.last_name || ""}`.trim() || 'Provider TBD',
-            firstName: booking.providers?.first_name || '',
-            lastName: booking.providers?.last_name || '',
-            email: booking.providers?.email || '',
-            phone: booking.providers?.phone || '',
-            image: booking.providers?.image_url,
-            rating: booking.providers?.average_rating || 0,
-          },
-          providers: booking.providers,
-          customer_profiles: booking.customer_profiles,
-          date: booking.booking_date || '',
-          time: booking.start_time || '',
-          status: booking.booking_status || 'pending',
-          deliveryType: booking.delivery_type || 'customer_location',
-          location: "Location TBD", // Simplified since location data isn't in bookings table
-          locationDetails: null,
-          price: booking.total_amount ? `$${booking.total_amount}` : "Price TBD",
-          duration: booking.services?.duration_minutes 
-            ? `${booking.services.duration_minutes} min` 
-            : "60 min",
-          notes: booking.admin_notes || '',
-          bookingReference: booking.booking_reference || '',
-          reschedule_count: booking.reschedule_count || 0,
-          original_booking_date: booking.original_booking_date,
-          original_start_time: booking.original_start_time,
-          reschedule_reason: booking.reschedule_reason,
-          // Add missing fields that might be expected
-          booking_time: booking.start_time || '', // For backward compatibility
-          updated_at: booking.created_at || new Date().toISOString(), // Use created_at as fallback since updated_at doesn't exist
-        }));
+        const transformedBookings = (data || []).map(transformBooking);
         
         logger.debug("Successfully transformed bookings:", { count: transformedBookings.length });
         setBookings(transformedBookings);
