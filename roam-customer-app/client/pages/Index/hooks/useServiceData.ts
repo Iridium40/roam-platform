@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import type { FeaturedService, PopularService } from "@/types/index";
-import { logger } from '@/utils/logger';
 
 interface ServiceAPIResult {
   id: string;
@@ -16,19 +15,14 @@ interface ServiceAPIResult {
 
 // Fetch featured services via API
 const fetchFeaturedServices = async (): Promise<FeaturedService[]> => {
-  logger.debug("useServiceData: Fetching featured services via API...");
-  
   const response = await fetch("/api/services/featured?type=featured");
   const json = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    const error = json?.error || "Failed to fetch featured services";
-    logger.error("useServiceData: Error fetching featured services:", error);
-    throw new Error(error);
+    throw new Error(json?.error || "Failed to fetch featured services");
   }
 
   const data = json?.data || [];
-  logger.debug("useServiceData: Featured services fetched:", data.length);
 
   return (data as ServiceAPIResult[]).map((service) => ({
     id: service.id,
@@ -44,19 +38,14 @@ const fetchFeaturedServices = async (): Promise<FeaturedService[]> => {
 
 // Fetch popular services via API
 const fetchPopularServices = async (): Promise<PopularService[]> => {
-  logger.debug("useServiceData: Fetching popular services via API...");
-  
   const response = await fetch("/api/services/featured?type=popular");
   const json = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    const error = json?.error || "Failed to fetch popular services";
-    logger.error("useServiceData: Error fetching popular services:", error);
-    throw new Error(error);
+    throw new Error(json?.error || "Failed to fetch popular services");
   }
 
   const data = json?.data || [];
-  logger.debug("useServiceData: Popular services fetched:", data.length);
 
   return (data as ServiceAPIResult[]).map((service) => ({
     id: service.id,

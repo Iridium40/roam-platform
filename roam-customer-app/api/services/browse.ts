@@ -16,8 +16,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "GET") return res.status(405).json({ error: "Method not allowed" });
 
   try {
-    console.log("DEBUG - Fetching browse services...");
-
     // Fetch all active services
     const { data: servicesData, error: servicesError } = await supabase
       .from("services")
@@ -35,11 +33,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .order("created_at", { ascending: false });
 
     if (servicesError) {
-      console.error("Error fetching services:", servicesError);
       return res.status(500).json({ error: "Failed to fetch services", details: servicesError.message });
     }
-
-    console.log(`DEBUG - Services fetched: ${servicesData?.length || 0}`);
 
     // Fetch subcategories with their categories
     const { data: subcategoriesData, error: subcategoriesError } = await supabase
@@ -55,11 +50,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       `);
 
     if (subcategoriesError) {
-      console.error("Error fetching subcategories:", subcategoriesError);
       return res.status(500).json({ error: "Failed to fetch subcategories", details: subcategoriesError.message });
     }
-
-    console.log(`DEBUG - Subcategories fetched: ${subcategoriesData?.length || 0}`);
 
     // Create a lookup map for subcategories
     const subcategoryMap = new Map(
@@ -98,11 +90,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .eq("is_active", true);
 
     if (categoriesError) {
-      console.error("Error fetching categories:", categoriesError);
       return res.status(500).json({ error: "Failed to fetch categories", details: categoriesError.message });
     }
-
-    console.log(`DEBUG - Categories fetched: ${categoriesData?.length || 0}`);
 
     return res.status(200).json({
       data: {
@@ -111,7 +100,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       },
     });
   } catch (err) {
-    console.error("Unexpected error fetching services:", err);
     return res.status(500).json({
       error: "Internal server error",
       details: err instanceof Error ? err.message : "Unknown error",

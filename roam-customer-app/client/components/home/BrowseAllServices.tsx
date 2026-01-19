@@ -27,7 +27,6 @@ import {
 } from 'lucide-react';
 import { FavoriteButton } from '@/components/FavoriteButton';
 import { cn } from '@/lib/utils';
-import { logger } from '@/utils/logger';
 
 interface Service {
   id: string;
@@ -106,10 +105,7 @@ export function BrowseAllServices() {
         timeoutId = setTimeout(() => {
           setLoading(false);
           setError('Loading took too long. Please refresh the page.');
-          logger.error('BrowseAllServices: Timeout - query took too long');
         }, 15000); // 15 second timeout
-
-        logger.debug('BrowseAllServices: Fetching services via API...');
 
         // Fetch services via server API (bypasses RLS)
         const response = await fetch('/api/services/browse');
@@ -117,14 +113,10 @@ export function BrowseAllServices() {
 
         if (!response.ok) {
           const errorMsg = json?.error || 'Failed to fetch services';
-          logger.error('BrowseAllServices: API error:', errorMsg);
           throw new Error(errorMsg);
         }
 
         const { services: servicesData, categories: categoriesData } = json.data || {};
-
-        logger.debug('BrowseAllServices: Services fetched:', servicesData?.length || 0);
-        logger.debug('BrowseAllServices: Categories fetched:', categoriesData?.length || 0);
 
         // Transform services
         const transformedServices: Service[] = (servicesData || []).map((service: any) => ({
@@ -153,7 +145,6 @@ export function BrowseAllServices() {
         setServices(transformedServices);
         setCategories(transformedCategories);
         clearTimeout(timeoutId);
-        logger.debug('BrowseAllServices: Data loaded successfully');
       } catch (err: any) {
         clearTimeout(timeoutId);
         logger.error('BrowseAllServices: Error fetching services:', err);

@@ -33,8 +33,6 @@ interface PromotionQueryResult {
 
 // Fetch active promotions
 const fetchPromotions = async (): Promise<TransformedPromotion[]> => {
-  logger.debug("usePromotions: Fetching promotions...");
-  
   const { data, error } = await supabase
     .from("promotions")
     .select(`

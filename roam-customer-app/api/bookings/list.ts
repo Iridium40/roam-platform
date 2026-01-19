@@ -35,11 +35,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(token);
 
     if (authError || !user) {
-      console.error("Auth error:", authError);
       return res.status(401).json({ error: "Invalid or expired token" });
     }
-
-    console.log("DEBUG - Fetching bookings for user:", user.id);
 
     // Get customer_id from query params or look it up
     let customerId = req.query.customer_id as string;
@@ -53,14 +50,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .single();
 
       if (customerError || !customerProfile) {
-        console.error("Customer lookup error:", customerError);
         return res.status(404).json({ error: "Customer profile not found" });
       }
 
       customerId = customerProfile.id;
     }
-
-    console.log("DEBUG - Customer ID:", customerId);
 
     // Parse date range from query params
     const dateStart = req.query.date_start as string;
@@ -165,15 +159,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { data, error } = await query;
 
     if (error) {
-      console.error("Error fetching bookings:", error);
       return res.status(500).json({ error: "Failed to fetch bookings", details: error.message });
     }
 
-    console.log(`DEBUG - Bookings fetched: ${data?.length || 0}`);
-
     return res.status(200).json({ data: data || [] });
   } catch (err) {
-    console.error("Unexpected error fetching bookings:", err);
     return res.status(500).json({
       error: "Internal server error",
       details: err instanceof Error ? err.message : "Unknown error",

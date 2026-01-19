@@ -17,8 +17,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const type = req.query.type as string; // 'featured' or 'popular'
-    
-    console.log(`DEBUG - Fetching ${type || 'featured'} services...`);
 
     // Build the query
     let query = supabase
@@ -46,11 +44,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { data: servicesData, error: servicesError } = await query;
 
     if (servicesError) {
-      console.error("Error fetching services:", servicesError);
       return res.status(500).json({ error: "Failed to fetch services", details: servicesError.message });
     }
-
-    console.log(`DEBUG - ${type || 'featured'} services fetched: ${servicesData?.length || 0}`);
 
     // Fetch subcategories for category info
     const { data: subcategoriesData, error: subcategoriesError } = await supabase
@@ -65,7 +60,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       `);
 
     if (subcategoriesError) {
-      console.error("Error fetching subcategories:", subcategoriesError);
       return res.status(500).json({ error: "Failed to fetch subcategories", details: subcategoriesError.message });
     }
 
@@ -92,7 +86,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     return res.status(200).json({ data: transformedServices });
   } catch (err) {
-    console.error("Unexpected error fetching services:", err);
     return res.status(500).json({
       error: "Internal server error",
       details: err instanceof Error ? err.message : "Unknown error",
