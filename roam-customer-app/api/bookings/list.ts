@@ -34,6 +34,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const token = authHeader.replace("Bearer ", "");
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
 
+    console.log("[bookings/list] Auth check:", { userId: user?.id, authError: authError?.message });
+
     if (authError || !user) {
       return res.status(401).json({ error: "Invalid or expired token" });
     }
@@ -44,6 +46,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .select("id")
       .eq("user_id", user.id)
       .single();
+
+    console.log("[bookings/list] Customer lookup:", { 
+      userId: user.id, 
+      customerId: customerProfile?.id, 
+      error: customerError?.message 
+    });
 
     if (customerError || !customerProfile) {
       return res.status(404).json({ error: "Customer profile not found" });
@@ -75,6 +83,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const { data: bookings, error: bookingsError } = await query;
+
+    console.log("[bookings/list] Query result:", { 
+      customerId: customerProfile.id,
+      dateStart: date_start,
+      dateEnd: date_end,
+      bookingsCount: bookings?.length || 0,
+      error: bookingsError?.message 
+    });
 
     if (bookingsError) {
       console.error("Error fetching bookings:", bookingsError);

@@ -83,6 +83,7 @@ export const useBookingsData = (currentUser: any) => {
 
   // Load bookings (same pattern as provider app)
   const loadBookings = useCallback(async () => {
+    console.log("[useBookingsData] loadBookings called, currentUser:", currentUser?.id);
     if (!currentUser?.id) return;
 
     setLoading(true);
@@ -104,6 +105,11 @@ export const useBookingsData = (currentUser: any) => {
         date_end: endDateStr,
       });
 
+      console.log("[useBookingsData] Fetching bookings:", { 
+        url: `/api/bookings/list?${queryParams}`,
+        dateRange: { startDateStr, endDateStr }
+      });
+
       // Fetch from API (same pattern as provider app)
       const response = await fetch(`/api/bookings/list?${queryParams}`, {
         headers,
@@ -116,6 +122,11 @@ export const useBookingsData = (currentUser: any) => {
 
       const data = await response.json();
       const bookingsData = data.data || [];
+      
+      console.log("[useBookingsData] API response:", { 
+        bookingsCount: bookingsData.length,
+        rawData: bookingsData.slice(0, 2) // Log first 2 for debugging
+      });
       
       // Transform bookings
       const transformedBookings = bookingsData.map(transformBooking);
