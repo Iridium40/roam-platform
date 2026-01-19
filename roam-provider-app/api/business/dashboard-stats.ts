@@ -85,6 +85,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const [statsResult, recentBookingsResult, additionalStatsResult] = await Promise.all([
       supabase.rpc('get_provider_dashboard_stats', { p_business_id: business_id }).single(),
       // Fetch recent bookings using the enriched view which has pre-joined data
+      // Increased limit from 5 to 10 to show more recent activity
       supabase
         .from('provider_bookings_enriched')
         .select(`
@@ -95,7 +96,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         `)
         .eq('business_id', business_id)
         .order('created_at', { ascending: false })
-        .limit(5),
+        .limit(10),
       // Fetch additional stats (unassigned count and today's confirmed)
       supabase
         .from('bookings')
@@ -195,6 +196,7 @@ async function fallbackStats(supabase: any, businessId: string, res: VercelRespo
       .select('booking_status, total_amount, created_at, provider_id, booking_date')
       .eq('business_id', businessId),
     // Fetch recent bookings using the enriched view which has pre-joined data
+    // Increased limit from 5 to 10 to show more recent activity
     supabase
       .from('provider_bookings_enriched')
       .select(`
@@ -205,7 +207,7 @@ async function fallbackStats(supabase: any, businessId: string, res: VercelRespo
       `)
       .eq('business_id', businessId)
       .order('created_at', { ascending: false })
-      .limit(5),
+      .limit(10),
     supabase
       .from('providers')
       .select('id, is_active')

@@ -15,7 +15,7 @@ import { createClient } from '@supabase/supabase-js';
  * - date_from: YYYY-MM-DD (optional)
  * - date_to: YYYY-MM-DD (optional)
  * - search: string (optional) - search customer name, service name, reference
- * - limit: number (default 25, max 100)
+ * - limit: number (default 25, max 500)
  * - offset: number (default 0)
  * - counts_only: boolean (optional) - return only counts, no booking data
  * 
@@ -107,7 +107,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       effectiveProviderId = provider_id;
     }
 
-    const limitNum = Math.min(Math.max(parseInt(limit as string, 10) || 25, 1), 100);
+    const limitNum = Math.min(Math.max(parseInt(limit as string, 10) || 25, 1), 500);
     const offsetNum = Math.max(parseInt(offset as string, 10) || 0, 0);
 
     // If counts_only, just return the counts
@@ -355,7 +355,7 @@ async function fallbackBookings(
   startTime: number
 ) {
   const { status, limit = '25', offset = '0' } = query;
-  const limitNum = Math.min(parseInt(limit, 10) || 25, 100);
+  const limitNum = Math.min(parseInt(limit, 10) || 25, 500);
   const offsetNum = parseInt(offset, 10) || 0;
 
   let bookingsQuery = supabase

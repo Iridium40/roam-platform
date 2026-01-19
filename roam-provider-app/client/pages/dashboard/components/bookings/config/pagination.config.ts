@@ -6,7 +6,7 @@ export const PAGINATION_CONFIG = {
   mobilePageSize: 20,                // Smaller for mobile
   
   // Date range defaults
-  defaultDateRangePast: 30,          // Last 30 days on initial load
+  defaultDateRangePast: 60,          // Last 60 days on initial load
   defaultDateRangeFuture: 90,        // Next 90 days for future bookings
   maxDateRange: 365,                 // Max 1 year at a time
   
