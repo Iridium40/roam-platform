@@ -11,7 +11,7 @@ const ROAM_EMAIL_CONFIG = {
   brandColor: "#4F46E5", // roam-blue
   fromEmail: "providersupport@roamyourbestlife.com",
   fromName: "ROAM Provider Support",
-  supportEmail: "contactus@roamyourbestlife.com",
+  supportEmail: "providersupport@roamyourbestlife.com",
 };
 
 // Email template for contact form submission

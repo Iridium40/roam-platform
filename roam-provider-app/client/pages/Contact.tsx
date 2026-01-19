@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Mail, Clock, ShieldCheck, HelpCircle, MessageSquare, Book, Phone } from "lucide-react";
 import { Link } from "react-router-dom";
-import { ServiceIconPattern } from "@/components/ServiceIconPattern";
 
 export default function Contact() {
   const [loading, setLoading] = useState(false);
@@ -48,7 +47,7 @@ export default function Contact() {
 
 function Hero() {
   return (
-    <div className="relative overflow-hidden bg-gradient-to-br from-roam-blue to-roam-light-blue text-white">
+    <div className="relative overflow-hidden bg-gradient-to-br from-roam-blue to-roam-light-blue text-white min-h-[500px] md:min-h-[600px] flex items-center">
       {/* YouTube Video Background */}
       <div className="absolute inset-0 w-full h-full overflow-hidden">
         <iframe
@@ -62,9 +61,6 @@ function Hero() {
         {/* Dark overlay for text readability */}
         <div className="absolute inset-0 bg-gradient-to-br from-roam-blue/80 to-roam-light-blue/80" />
       </div>
-
-      {/* Service icon pattern overlay */}
-      <ServiceIconPattern />
       
       <div className="container py-20 md:py-28 relative">
         <div className="max-w-3xl mx-auto text-center animate-fade-in">
@@ -89,9 +85,9 @@ function ContactSection({ onSubmit, loading }: { onSubmit: (e: React.FormEvent<H
     {
       icon: Mail,
       title: "Email",
-      detail: "contactus@roamyourbestlife.com",
+      detail: "providersupport@roamyourbestlife.com",
       description: "Best for detailed inquiries",
-      link: "mailto:contactus@roamyourbestlife.com",
+      link: "mailto:providersupport@roamyourbestlife.com",
     },
     {
       icon: Clock,
@@ -361,7 +357,7 @@ function FAQ() {
       <div className="mt-12 text-center">
         <p className="text-muted-foreground mb-4">Still have questions?</p>
         <Button asChild size="lg" className="bg-roam-blue text-white hover:bg-roam-blue/90 button-shine">
-          <a href="mailto:contactus@roamyourbestlife.com">Email Our Team</a>
+          <a href="mailto:providersupport@roamyourbestlife.com">Email Our Team</a>
         </Button>
       </div>
     </div>

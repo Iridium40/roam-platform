@@ -32,7 +32,7 @@ export default function Services() {
 
 function Hero() {
   return (
-    <div className="relative overflow-hidden bg-gradient-to-br from-roam-blue to-roam-light-blue text-white">
+    <div className="relative overflow-hidden bg-gradient-to-br from-roam-blue to-roam-light-blue text-white min-h-[500px] md:min-h-[600px] flex items-center">
       {/* YouTube Video Background */}
       <div className="absolute inset-0 w-full h-full overflow-hidden">
         <iframe
@@ -46,9 +46,6 @@ function Hero() {
         {/* Dark overlay for text readability */}
         <div className="absolute inset-0 bg-gradient-to-br from-roam-blue/80 to-roam-light-blue/80" />
       </div>
-
-      {/* Service icon pattern overlay */}
-      <ServiceIconPattern />
       
       <div className="container py-20 md:py-28 relative">
         <div className="max-w-4xl mx-auto text-center animate-fade-in">
