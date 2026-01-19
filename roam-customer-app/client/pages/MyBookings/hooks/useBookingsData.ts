@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
-import { logger } from "@/utils/logger";
 import type { BookingWithDetails } from "@/types/index";
 import useRealtimeBookings from "@/hooks/useRealtimeBookings";
 import { PAGINATION_CONFIG, getDateRange } from "../config/pagination.config";
@@ -49,95 +48,34 @@ const transformBooking = (booking: any): BookingWithDetails => ({
   updated_at: booking.created_at || new Date().toISOString(),
 });
 
-// Helper function to fetch bookings via direct Supabase query
-// Uses the simplest possible query - just the bookings table, no joins
-const fetchBookingsDirectly = async (customerId: string, dateStart: string, dateEnd: string): Promise<any[]> => {
-  // Fetch just the base booking data - no joins at all
-  const { data: bookingsData, error: bookingsError } = await supabase
-    .from("bookings")
-    .select("*")
-    .eq("customer_id", customerId)
-    .gte("booking_date", dateStart)
-    .lte("booking_date", dateEnd)
-    .order("booking_date", { ascending: false })
-    .limit(50);
-
-  if (bookingsError) {
-    throw bookingsError;
-  }
-
-  // If we got bookings, fetch related data separately
-  if (bookingsData && bookingsData.length > 0) {
-    // Get unique provider and service IDs
-    const providerIds = [...new Set(bookingsData.map(b => b.provider_id).filter(Boolean))];
-    const serviceIds = [...new Set(bookingsData.map(b => b.service_id).filter(Boolean))];
-
-    // Fetch providers and services in parallel
-    const [providersResult, servicesResult] = await Promise.all([
-      providerIds.length > 0 
-        ? supabase.from("providers").select("id, first_name, last_name, image_url, average_rating").in("id", providerIds)
-        : { data: [], error: null },
-      serviceIds.length > 0
-        ? supabase.from("services").select("id, name, duration_minutes, image_url").in("id", serviceIds)
-        : { data: [], error: null },
-    ]);
-
-    // Create lookup maps
-    const providersMap = new Map((providersResult.data || []).map(p => [p.id, p]));
-    const servicesMap = new Map((servicesResult.data || []).map(s => [s.id, s]));
-
-    // Attach related data to bookings
-    return bookingsData.map(booking => ({
-      ...booking,
-      providers: booking.provider_id ? providersMap.get(booking.provider_id) : null,
-      services: booking.service_id ? servicesMap.get(booking.service_id) : null,
-    }));
-  }
-
-  return bookingsData || [];
-};
-
-// Helper function to fetch bookings via API with fallback to direct query
+// Helper function to fetch bookings via API (uses service role key on server)
 const fetchBookingsFromAPI = async (customerId: string, dateStart: string, dateEnd: string): Promise<any[]> => {
   // Get auth token
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.access_token) {
-    throw new Error("Not authenticated");
+    throw new Error("Not authenticated. Please sign in again.");
   }
 
-  try {
-    // Try API first
-    const params = new URLSearchParams({
-      customer_id: customerId,
-      date_start: dateStart,
-      date_end: dateEnd,
-    });
+  const params = new URLSearchParams({
+    customer_id: customerId,
+    date_start: dateStart,
+    date_end: dateEnd,
+  });
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+  const response = await fetch(`/api/bookings/list?${params}`, {
+    headers: {
+      'Authorization': `Bearer ${session.access_token}`,
+      'Content-Type': 'application/json',
+    },
+  });
 
-    const response = await fetch(`/api/bookings/list?${params}`, {
-      headers: {
-        'Authorization': `Bearer ${session.access_token}`,
-        'Content-Type': 'application/json',
-      },
-      signal: controller.signal,
-    });
+  const json = await response.json().catch(() => ({}));
 
-    clearTimeout(timeoutId);
-
-    const json = await response.json().catch(() => ({}));
-
-    if (!response.ok) {
-      throw new Error(json?.error || 'API returned error');
-    }
-
-    return json.data || [];
-  } catch (apiError: any) {
-    // If API fails (not deployed, timeout, etc.), fall back to direct query
-    logger.warn("API fetch failed, falling back to direct query:", apiError.message);
-    return fetchBookingsDirectly(customerId, dateStart, dateEnd);
+  if (!response.ok) {
+    throw new Error(json?.error || `Failed to load bookings (${response.status})`);
   }
+
+  return json.data || [];
 };
 
 export const useBookingsData = (currentUser: any) => {
@@ -172,8 +110,6 @@ export const useBookingsData = (currentUser: any) => {
     try {
       setLoading(true);
       setError(null);
-
-      logger.debug("Refreshing bookings for user:", currentUser.id);
       
       // Calculate date range for refresh
       const { start: dateStart, end: dateEnd } = getDateRange(PAGINATION_CONFIG.defaultDateRange);
@@ -181,18 +117,11 @@ export const useBookingsData = (currentUser: any) => {
       const dateEndStr = dateEnd.toISOString().split('T')[0];
       
       const data = await fetchBookingsFromAPI(currentUser.id, dateStartStr, dateEndStr);
-      
       const transformedBookings = (data || []).map(transformBooking);
-      
-      logger.debug("Successfully refreshed bookings:", { count: transformedBookings.length });
-      
       setBookings(transformedBookings);
     } catch (err: any) {
-      logger.error("Error refreshing bookings:", err);
       setError(
         err.message || 
-        err.details || 
-        err.hint || 
         "Failed to refresh bookings. Please try again."
       );
     } finally {
@@ -207,21 +136,12 @@ export const useBookingsData = (currentUser: any) => {
       return;
     }
 
-    let timeoutId: NodeJS.Timeout;
     let isMounted = true;
 
     const fetchBookings = async () => {
       try {
         setLoading(true);
         setError(null);
-
-        // Set a global timeout to prevent infinite loading
-        timeoutId = setTimeout(() => {
-          if (isMounted) {
-            setLoading(false);
-            setError("Loading took too long. Please refresh the page.");
-          }
-        }, 15000); // 15 second global timeout
         
         // Calculate date range for initial load
         const { start: dateStart, end: dateEnd } = getDateRange(PAGINATION_CONFIG.defaultDateRange);
@@ -231,7 +151,6 @@ export const useBookingsData = (currentUser: any) => {
         const data = await fetchBookingsFromAPI(currentUser.id, dateStartStr, dateEndStr);
 
         if (!isMounted) return;
-        clearTimeout(timeoutId);
 
         // Handle empty bookings
         if (!data || data.length === 0) {
@@ -244,12 +163,9 @@ export const useBookingsData = (currentUser: any) => {
         setBookings(transformedBookings);
       } catch (err: any) {
         if (!isMounted) return;
-        clearTimeout(timeoutId);
         
         setError(
           err.message || 
-          err.details || 
-          err.hint || 
           "Failed to load bookings. Please try again."
         );
       } finally {
@@ -263,7 +179,6 @@ export const useBookingsData = (currentUser: any) => {
 
     return () => {
       isMounted = false;
-      if (timeoutId) clearTimeout(timeoutId);
     };
   }, [currentUser]);
 
