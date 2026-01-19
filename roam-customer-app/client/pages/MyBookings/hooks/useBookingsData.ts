@@ -50,8 +50,14 @@ const transformBooking = (booking: any): BookingWithDetails => ({
 
 // Helper function to fetch bookings via API (uses service role key on server)
 const fetchBookingsFromAPI = async (customerId: string, dateStart: string, dateEnd: string): Promise<any[]> => {
-  // Get auth token
-  const { data: { session } } = await supabase.auth.getSession();
+  // Get auth token with timeout
+  const sessionPromise = supabase.auth.getSession();
+  const timeoutPromise = new Promise((_, reject) => 
+    setTimeout(() => reject(new Error("Session check timed out")), 5000)
+  );
+  
+  const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]) as any;
+  
   if (!session?.access_token) {
     throw new Error("Not authenticated. Please sign in again.");
   }
@@ -62,20 +68,35 @@ const fetchBookingsFromAPI = async (customerId: string, dateStart: string, dateE
     date_end: dateEnd,
   });
 
-  const response = await fetch(`/api/bookings/list?${params}`, {
-    headers: {
-      'Authorization': `Bearer ${session.access_token}`,
-      'Content-Type': 'application/json',
-    },
-  });
+  // Add timeout to fetch
+  const controller = new AbortController();
+  const fetchTimeout = setTimeout(() => controller.abort(), 15000);
 
-  const json = await response.json().catch(() => ({}));
+  try {
+    const response = await fetch(`/api/bookings/list?${params}`, {
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json',
+      },
+      signal: controller.signal,
+    });
 
-  if (!response.ok) {
-    throw new Error(json?.error || `Failed to load bookings (${response.status})`);
+    clearTimeout(fetchTimeout);
+
+    const json = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(json?.error || `Failed to load bookings (${response.status})`);
+    }
+
+    return json.data || [];
+  } catch (err: any) {
+    clearTimeout(fetchTimeout);
+    if (err.name === 'AbortError') {
+      throw new Error("Request timed out. Please try again.");
+    }
+    throw err;
   }
-
-  return json.data || [];
 };
 
 export const useBookingsData = (currentUser: any) => {
