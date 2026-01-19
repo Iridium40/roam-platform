@@ -290,12 +290,25 @@ function WhyChooseROAM() {
 
   return (
     <div className="relative overflow-hidden">
-      {/* Gradient header with page title */}
-      <div className="bg-gradient-to-br from-roam-blue to-roam-light-blue text-white py-12 md:py-16">
-        <ServiceIconPattern />
-        <div className="container relative">
-          <div className="max-w-3xl mx-auto text-center">
-            <h1 className="text-3xl md:text-5xl font-bold mb-3">
+      {/* Hero header with video background */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-roam-blue to-roam-light-blue text-white min-h-[500px] md:min-h-[600px] flex items-center">
+        {/* YouTube Video Background */}
+        <div className="absolute inset-0 w-full h-full overflow-hidden">
+          <iframe
+            className="absolute top-1/2 left-1/2 w-[300%] h-[300%] -translate-x-1/2 -translate-y-1/2 pointer-events-none"
+            src="https://www.youtube.com/embed/-g5P96JAif0?autoplay=1&mute=1&loop=1&controls=0&showinfo=0&modestbranding=1&playlist=-g5P96JAif0&rel=0&enablejsapi=1"
+            title="ROAM Background Video"
+            frameBorder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          />
+          {/* Dark overlay for text readability */}
+          <div className="absolute inset-0 bg-gradient-to-br from-roam-blue/80 to-roam-light-blue/80" />
+        </div>
+        
+        <div className="container py-20 md:py-28 relative">
+          <div className="max-w-3xl mx-auto text-center animate-fade-in">
+            <h1 className="text-4xl md:text-5xl font-bold mb-4">
               Why Choose ROAM?
             </h1>
             <p className="text-lg md:text-xl text-white/90">
