@@ -50,35 +50,48 @@ const transformBooking = (booking: any): BookingWithDetails => ({
 });
 
 // Helper function to fetch bookings via direct Supabase query
-// Uses a simplified query to avoid RLS timeout issues
+// Uses the simplest possible query - just the bookings table, no joins
 const fetchBookingsDirectly = async (customerId: string, dateStart: string, dateEnd: string): Promise<any[]> => {
-  // First, fetch just the bookings with minimal joins
+  // Fetch just the base booking data - no joins at all
   const { data: bookingsData, error: bookingsError } = await supabase
     .from("bookings")
-    .select(`
-      *,
-      providers (
-        id,
-        first_name,
-        last_name,
-        image_url,
-        average_rating
-      ),
-      services (
-        id,
-        name,
-        duration_minutes,
-        image_url
-      )
-    `)
+    .select("*")
     .eq("customer_id", customerId)
     .gte("booking_date", dateStart)
     .lte("booking_date", dateEnd)
     .order("booking_date", { ascending: false })
-    .limit(100);
+    .limit(50);
 
   if (bookingsError) {
     throw bookingsError;
+  }
+
+  // If we got bookings, fetch related data separately
+  if (bookingsData && bookingsData.length > 0) {
+    // Get unique provider and service IDs
+    const providerIds = [...new Set(bookingsData.map(b => b.provider_id).filter(Boolean))];
+    const serviceIds = [...new Set(bookingsData.map(b => b.service_id).filter(Boolean))];
+
+    // Fetch providers and services in parallel
+    const [providersResult, servicesResult] = await Promise.all([
+      providerIds.length > 0 
+        ? supabase.from("providers").select("id, first_name, last_name, image_url, average_rating").in("id", providerIds)
+        : { data: [], error: null },
+      serviceIds.length > 0
+        ? supabase.from("services").select("id, name, duration_minutes, image_url").in("id", serviceIds)
+        : { data: [], error: null },
+    ]);
+
+    // Create lookup maps
+    const providersMap = new Map((providersResult.data || []).map(p => [p.id, p]));
+    const servicesMap = new Map((servicesResult.data || []).map(s => [s.id, s]));
+
+    // Attach related data to bookings
+    return bookingsData.map(booking => ({
+      ...booking,
+      providers: booking.provider_id ? providersMap.get(booking.provider_id) : null,
+      services: booking.service_id ? servicesMap.get(booking.service_id) : null,
+    }));
   }
 
   return bookingsData || [];
@@ -208,7 +221,7 @@ export const useBookingsData = (currentUser: any) => {
             setLoading(false);
             setError("Loading took too long. Please refresh the page.");
           }
-        }, 20000); // 20 second global timeout
+        }, 15000); // 15 second global timeout
         
         // Calculate date range for initial load
         const { start: dateStart, end: dateEnd } = getDateRange(PAGINATION_CONFIG.defaultDateRange);
