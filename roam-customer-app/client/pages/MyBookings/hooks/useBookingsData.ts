@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import type { BookingWithDetails } from "@/types/index";
 import useRealtimeBookings from "@/hooks/useRealtimeBookings";
@@ -48,55 +48,13 @@ const transformBooking = (booking: any): BookingWithDetails => ({
   updated_at: booking.created_at || new Date().toISOString(),
 });
 
-// Helper function to fetch bookings via API (uses service role key on server)
-const fetchBookingsFromAPI = async (customerId: string, dateStart: string, dateEnd: string): Promise<any[]> => {
-  // Get auth token with timeout
-  const sessionPromise = supabase.auth.getSession();
-  const timeoutPromise = new Promise((_, reject) => 
-    setTimeout(() => reject(new Error("Session check timed out")), 5000)
-  );
-  
-  const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]) as any;
-  
-  if (!session?.access_token) {
-    throw new Error("Not authenticated. Please sign in again.");
-  }
-
-  const params = new URLSearchParams({
-    customer_id: customerId,
-    date_start: dateStart,
-    date_end: dateEnd,
-  });
-
-  // Add timeout to fetch
-  const controller = new AbortController();
-  const fetchTimeout = setTimeout(() => controller.abort(), 15000);
-
-  try {
-    const response = await fetch(`/api/bookings/list?${params}`, {
-      headers: {
-        'Authorization': `Bearer ${session.access_token}`,
-        'Content-Type': 'application/json',
-      },
-      signal: controller.signal,
-    });
-
-    clearTimeout(fetchTimeout);
-
-    const json = await response.json().catch(() => ({}));
-
-    if (!response.ok) {
-      throw new Error(json?.error || `Failed to load bookings (${response.status})`);
-    }
-
-    return json.data || [];
-  } catch (err: any) {
-    clearTimeout(fetchTimeout);
-    if (err.name === 'AbortError') {
-      throw new Error("Request timed out. Please try again.");
-    }
-    throw err;
-  }
+// Get auth headers (same pattern as provider app)
+const getAuthHeaders = async (): Promise<HeadersInit> => {
+  const { data: { session } } = await supabase.auth.getSession();
+  return {
+    'Authorization': `Bearer ${session?.access_token || ''}`,
+    'Content-Type': 'application/json',
+  };
 };
 
 export const useBookingsData = (currentUser: any) => {
@@ -109,7 +67,6 @@ export const useBookingsData = (currentUser: any) => {
     userId: currentUser?.id,
     userType: "customer",
     onStatusChange: (bookingUpdate) => {
-      // Update the specific booking in our local state
       setBookings((prev) =>
         prev.map((booking) =>
           booking.id === bookingUpdate.id
@@ -124,84 +81,63 @@ export const useBookingsData = (currentUser: any) => {
     },
   });
 
-  // Manual refresh function that re-fetches all bookings
-  const refreshBookings = async () => {
-    if (!currentUser) return;
-    
+  // Load bookings (same pattern as provider app)
+  const loadBookings = useCallback(async () => {
+    if (!currentUser?.id) return;
+
+    setLoading(true);
+    setError(null);
+
     try {
-      setLoading(true);
-      setError(null);
+      // Calculate date range
+      const { start, end } = getDateRange(PAGINATION_CONFIG.defaultDateRange);
+      const startDateStr = start.toISOString().split('T')[0];
+      const endDateStr = end.toISOString().split('T')[0];
+
+      // Get auth headers
+      const headers = await getAuthHeaders();
+
+      // Build query params
+      const queryParams = new URLSearchParams({
+        customer_id: currentUser.id,
+        date_start: startDateStr,
+        date_end: endDateStr,
+      });
+
+      // Fetch from API (same pattern as provider app)
+      const response = await fetch(`/api/bookings/list?${queryParams}`, {
+        headers,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to load bookings: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const bookingsData = data.data || [];
       
-      // Calculate date range for refresh
-      const { start: dateStart, end: dateEnd } = getDateRange(PAGINATION_CONFIG.defaultDateRange);
-      const dateStartStr = dateStart.toISOString().split('T')[0];
-      const dateEndStr = dateEnd.toISOString().split('T')[0];
-      
-      const data = await fetchBookingsFromAPI(currentUser.id, dateStartStr, dateEndStr);
-      const transformedBookings = (data || []).map(transformBooking);
+      // Transform bookings
+      const transformedBookings = bookingsData.map(transformBooking);
       setBookings(transformedBookings);
+
     } catch (err: any) {
-      setError(
-        err.message || 
-        "Failed to refresh bookings. Please try again."
-      );
+      console.error("Error loading bookings:", err);
+      setError(err?.message || "Failed to load bookings. Please try again.");
+      setBookings([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentUser?.id]);
 
-  // Fetch bookings data on component mount
+  // Load on mount and when user changes
   useEffect(() => {
-    if (!currentUser) {
+    if (currentUser?.id) {
+      loadBookings();
+    } else {
       setLoading(false);
-      return;
     }
-
-    let isMounted = true;
-
-    const fetchBookings = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        // Calculate date range for initial load
-        const { start: dateStart, end: dateEnd } = getDateRange(PAGINATION_CONFIG.defaultDateRange);
-        const dateStartStr = dateStart.toISOString().split('T')[0];
-        const dateEndStr = dateEnd.toISOString().split('T')[0];
-        
-        const data = await fetchBookingsFromAPI(currentUser.id, dateStartStr, dateEndStr);
-
-        if (!isMounted) return;
-
-        // Handle empty bookings
-        if (!data || data.length === 0) {
-          setBookings([]);
-          return;
-        }
-
-        // Transform the data to match the expected format
-        const transformedBookings = (data || []).map(transformBooking);
-        setBookings(transformedBookings);
-      } catch (err: any) {
-        if (!isMounted) return;
-        
-        setError(
-          err.message || 
-          "Failed to load bookings. Please try again."
-        );
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    fetchBookings();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [currentUser]);
+  }, [currentUser?.id, loadBookings]);
 
   return {
     bookings,
@@ -209,6 +145,6 @@ export const useBookingsData = (currentUser: any) => {
     loading,
     error,
     isConnected,
-    refreshBookings,
+    refreshBookings: loadBookings,
   };
 };
