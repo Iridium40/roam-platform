@@ -50,61 +50,25 @@ const transformBooking = (booking: any): BookingWithDetails => ({
 });
 
 // Helper function to fetch bookings via direct Supabase query
+// Uses a simplified query to avoid RLS timeout issues
 const fetchBookingsDirectly = async (customerId: string, dateStart: string, dateEnd: string): Promise<any[]> => {
-  const { data, error } = await supabase
+  // First, fetch just the bookings with minimal joins
+  const { data: bookingsData, error: bookingsError } = await supabase
     .from("bookings")
     .select(`
       *,
       providers (
         id,
-        user_id,
         first_name,
         last_name,
-        email,
-        phone,
         image_url,
-        business_id,
         average_rating
       ),
       services (
         id,
         name,
-        description,
-        min_price,
         duration_minutes,
         image_url
-      ),
-      customer_profiles (
-        id,
-        first_name,
-        last_name,
-        email,
-        phone
-      ),
-      business_profiles (
-        id,
-        business_name,
-        business_type,
-        business_description,
-        image_url,
-        logo_url
-      ),
-      reviews (
-        id,
-        overall_rating,
-        service_rating,
-        communication_rating,
-        punctuality_rating,
-        review_text,
-        created_at
-      ),
-      tips (
-        id,
-        tip_amount,
-        tip_percentage,
-        customer_message,
-        payment_status,
-        created_at
       )
     `)
     .eq("customer_id", customerId)
@@ -113,11 +77,11 @@ const fetchBookingsDirectly = async (customerId: string, dateStart: string, date
     .order("booking_date", { ascending: false })
     .limit(100);
 
-  if (error) {
-    throw error;
+  if (bookingsError) {
+    throw bookingsError;
   }
 
-  return data || [];
+  return bookingsData || [];
 };
 
 // Helper function to fetch bookings via API with fallback to direct query
