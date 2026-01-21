@@ -324,6 +324,33 @@ export function NotificationPreferences() {
             </div>
           )}
 
+          {/* Admin Notifications - Always show for admin app users */}
+          <div className="space-y-4 pt-6 border-t">
+            <h3 className="text-lg font-medium">Admin Notifications</h3>
+            <p className="text-sm text-gray-500">
+              Get notified when new businesses apply to join the platform
+            </p>
+            
+            <NotificationToggle
+              label="New Business Application"
+              description="When a new business submits an application for verification"
+              emailValue={settings?.admin_business_verification_email ?? true}
+              smsValue={settings?.admin_business_verification_sms ?? false}
+              onEmailChange={(checked) =>
+                setSettings({
+                  ...settings,
+                  admin_business_verification_email: checked,
+                })
+              }
+              onSmsChange={(checked) =>
+                setSettings({
+                  ...settings,
+                  admin_business_verification_sms: checked,
+                })
+              }
+            />
+          </div>
+
           <Button 
             onClick={saveSettings} 
             disabled={saving}
