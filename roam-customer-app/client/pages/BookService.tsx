@@ -2160,37 +2160,41 @@ function BookServiceContent() {
                   Select Business
                 </h2>
 
-                {/* Sorting Controls */}
-                <div className="mb-6 flex flex-wrap items-center gap-4 p-4 bg-gray-50 rounded-lg">
-                  <span className="text-sm font-medium text-gray-700">Sort by:</span>
+                {/* Sorting Controls - Mobile Responsive */}
+                <div className="mb-6 p-3 sm:p-4 bg-gray-50 rounded-lg">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+                    <span className="text-sm font-medium text-gray-700">Sort by:</span>
 
-                  <div className="flex items-center gap-2">
-                    <Select value={sortBy} onValueChange={(value: 'price' | 'rating' | 'delivery_type') => setSortBy(value)}>
-                      <SelectTrigger className="w-40">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="price">Price</SelectItem>
-                        <SelectItem value="rating">Rating</SelectItem>
-                        <SelectItem value="delivery_type">Delivery Type</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div className="flex items-center gap-2">
+                      <Select value={sortBy} onValueChange={(value: 'price' | 'rating' | 'delivery_type') => setSortBy(value)}>
+                        <SelectTrigger className="w-28 sm:w-40">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="price">Price</SelectItem>
+                          <SelectItem value="rating">Rating</SelectItem>
+                          <SelectItem value="delivery_type">Delivery Type</SelectItem>
+                        </SelectContent>
+                      </Select>
 
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                      className="px-3"
-                    >
-                      {sortOrder === 'asc' ? '↑' : '↓'}
-                    </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                        className="px-3"
+                      >
+                        {sortOrder === 'asc' ? '↑' : '↓'}
+                      </Button>
+                    </div>
                   </div>
 
-                  <div className="text-sm text-gray-600">
+                  <div className="text-xs sm:text-sm text-gray-600 mt-2">
                     {filteredAndSortedBusinesses.length} business{filteredAndSortedBusinesses.length !== 1 ? 'es' : ''} available
-                    {sortBy === 'price' && ` • Sorted by price (${sortOrder === 'asc' ? 'low to high' : 'high to low'})`}
-                    {sortBy === 'rating' && ` • Sorted by rating (${sortOrder === 'asc' ? 'low to high' : 'high to low'})`}
-                    {sortBy === 'delivery_type' && ` • Sorted by delivery type`}
+                    <span className="hidden sm:inline">
+                      {sortBy === 'price' && ` • Sorted by price (${sortOrder === 'asc' ? 'low to high' : 'high to low'})`}
+                      {sortBy === 'rating' && ` • Sorted by rating (${sortOrder === 'asc' ? 'low to high' : 'high to low'})`}
+                      {sortBy === 'delivery_type' && ` • Sorted by delivery type`}
+                    </span>
                   </div>
                 </div>
 
@@ -2221,10 +2225,11 @@ function BookServiceContent() {
                       }`}
                       onClick={() => setSelectedBusiness(business)}
                     >
-                      <CardContent className="p-6">
-                        <div className="flex items-start space-x-4">
+                      <CardContent className="p-4 sm:p-6">
+                        {/* Mobile: Stack vertically, Desktop: Side by side */}
+                        <div className="flex flex-col sm:flex-row sm:items-start gap-4">
                           {/* Enhanced Business Logo */}
-                          <div className="w-20 h-20 bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm overflow-hidden">
+                          <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm overflow-hidden">
                             {(business.logo_url || business.image_url) ? (
                               <img
                                 src={business.logo_url || business.image_url}
@@ -2244,20 +2249,20 @@ function BookServiceContent() {
                                 }}
                               />
                             ) : (
-                              <Building className="w-10 h-10 text-gray-400" />
+                              <Building className="w-8 h-8 sm:w-10 sm:h-10 text-gray-400" />
                             )}
                           </div>
 
                           <div className="flex-1 min-w-0">
-                            {/* Business Header */}
-                            <div className="flex items-start justify-between mb-3">
-                              <div>
-                                <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                            {/* Business Header - Stack on mobile */}
+                            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4 mb-3">
+                              <div className="flex-1 min-w-0">
+                                <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1 break-words">
                                   {business.business_name}
                                 </h3>
-                                <div className="flex items-center space-x-4 text-sm text-gray-600">
+                                <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-sm text-gray-600">
                                   <div className="flex items-center">
-                                    <Star className="w-4 h-4 text-yellow-500 mr-1" />
+                                    <Star className="w-4 h-4 text-yellow-500 mr-1 flex-shrink-0" />
                                     {business.review_count > 0 ? (
                                       <>
                                         <span className="font-medium">{business.rating.toFixed(1)}</span>
@@ -2269,34 +2274,34 @@ function BookServiceContent() {
                                   </div>
                                   {business.city && business.state && (
                                     <div className="flex items-center">
-                                      <MapPin className="w-4 h-4 mr-1" />
-                                      <span>{business.city}, {business.state}</span>
+                                      <MapPin className="w-4 h-4 mr-1 flex-shrink-0" />
+                                      <span className="truncate">{business.city}, {business.state}</span>
                                     </div>
                                   )}
                                 </div>
 
                                 {/* Service Pricing */}
                                 <div className="mt-2">
-                                  <div className="inline-flex items-center px-3 py-1 bg-roam-blue/10 rounded-full">
-                                    <CreditCard className="w-4 h-4 text-roam-blue mr-2" />
+                                  <div className="inline-flex items-center px-3 py-1 bg-roam-blue/10 rounded-full text-sm">
+                                    <CreditCard className="w-4 h-4 text-roam-blue mr-2 flex-shrink-0" />
                                     <span className="text-roam-blue font-semibold">
                                       ${Number(business.service_price || service?.min_price || 0).toFixed(2)}
                                     </span>
-                                    <span className="text-gray-600 text-sm ml-1">for this service</span>
+                                    <span className="text-gray-600 ml-1 hidden xs:inline">for this service</span>
                                   </div>
                                 </div>
                               </div>
 
-                              {/* More Info Button */}
+                              {/* More Info Button - Responsive positioning */}
                               <div
                                 onClick={(e) => e.stopPropagation()}
-                                className="ml-4 flex-shrink-0"
+                                className="flex-shrink-0"
                               >
                                 <Button
                                   variant="outline"
                                   size="sm"
                                   asChild
-                                  className="hover:bg-roam-blue hover:text-white"
+                                  className="hover:bg-roam-blue hover:text-white text-xs sm:text-sm"
                                 >
                                   <Link to={`/business/${business.id}`} target="_blank">
                                     <Info className="w-4 h-4 mr-1" />
