@@ -1310,7 +1310,7 @@ INSERT INTO public.notification_templates (
       </div>
       
       <p style="text-align: center;">
-        <a href="https://roamadmin.app/admin/providers" class="button">Review Application</a>
+        <a href="https://roamyoubestlifeops.com/admin/providers" class="button">Review Application</a>
       </p>
 
       <p>ROAM Admin Team</p>
@@ -1338,13 +1338,13 @@ Submitted: {{submission_date}}
 
 ⏰ Action Required: Please review the business application, verify documents, and approve or reject within 48 hours.
 
-Review application: https://roamadmin.app/admin/providers
+Review application: https://roamyoubestlifeops.com/admin/providers
 
 Business ID: {{business_id}}
 
 ROAM Admin Team
-https://roamadmin.app',
-  '🔔 New business application: {{business_name}} - {{business_category}}. Review now: roamadmin.app/admin/providers',
+https://roamyoubestlifeops.com',
+  '🔔 New business application: {{business_name}} - {{business_category}}. Review now: roamyoubestlifeops.com/admin/providers',
   '["business_name", "owner_name", "contact_email", "contact_phone", "business_category", "business_location", "submission_date", "business_id"]',
   true
 );

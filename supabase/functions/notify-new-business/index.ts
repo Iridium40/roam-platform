@@ -313,8 +313,40 @@ Deno.serve(async (req) => {
       sendResults.push(result);
     }
 
+    // Send to additional phone numbers (comma-separated in env var)
+    const additionalPhones = Deno.env.get('ADDITIONAL_ADMIN_PHONES');
+    const additionalSmsResults: Array<{ phone: string; ok: boolean }> = [];
+    
+    if (additionalPhones && smsBody) {
+      const phoneList = additionalPhones.split(',').map(p => p.trim()).filter(p => p);
+      console.log(`📱 Sending to ${phoneList.length} additional phone number(s)`);
+      
+      for (const phone of phoneList) {
+        const formattedPhone = formatPhoneNumber(phone);
+        const sms = await sendSmsViaTwilio(formattedPhone, smsBody);
+        additionalSmsResults.push({ phone: formattedPhone, ok: sms.ok });
+        
+        // Log the notification
+        await supabase.from('notification_logs').insert({
+          user_id: null, // No specific user for additional numbers
+          recipient_phone: formattedPhone,
+          notification_type: 'admin_business_verification',
+          channel: 'sms',
+          status: sms.ok ? 'sent' : 'failed',
+          twilio_sid: sms.sid,
+          body: smsBody,
+          sent_at: sms.ok ? new Date().toISOString() : null,
+          error_message: sms.ok ? null : sms.error,
+          metadata: { source: 'edge_function_notify_new_business', business_id: business.id, additional_recipient: true },
+        });
+        
+        console.log(`${sms.ok ? '✅' : '❌'} SMS to additional number ${formattedPhone}: ${sms.ok ? 'sent' : sms.error}`);
+      }
+    }
+
     console.log(`✅ New business notification complete for ${business.business_name}`, {
       adminsNotified: sendResults.length,
+      additionalSms: additionalSmsResults.length,
     });
 
     return new Response(
@@ -323,6 +355,7 @@ Deno.serve(async (req) => {
         businessId: business.id,
         businessName: business.business_name,
         results: sendResults,
+        additionalSms: additionalSmsResults,
       }),
       { headers: { 'Content-Type': 'application/json' } }
     );

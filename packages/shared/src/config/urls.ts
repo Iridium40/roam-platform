@@ -20,7 +20,7 @@ const URL_CONFIG: Record<Environment, AppUrls> = {
   development: {
     customer: 'https://roamservices.app',
     provider: 'https://roamproviders.app',
-    admin: 'https://roamadmin.app',
+    admin: 'https://roamyoubestlifeops.com',
   },
   production: {
     customer: 'https://roamyourbestlife.com',
