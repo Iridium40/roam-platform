@@ -32,6 +32,8 @@ interface AdminUser {
   first_name: string | null;
   last_name: string | null;
   is_active: boolean;
+  notification_email: string | null;
+  notification_phone: string | null;
 }
 
 interface UserSettings {
@@ -209,10 +211,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get active admin users
+    // Get active admin users (including their notification contact info)
     const { data: admins, error: adminsError } = await supabase
       .from('admin_users')
-      .select('user_id, email, first_name, last_name, is_active')
+      .select('user_id, email, first_name, last_name, is_active, notification_email, notification_phone')
       .eq('is_active', true)
       .returns<AdminUser[]>();
 
@@ -263,8 +265,10 @@ Deno.serve(async (req) => {
       const emailAllowed = emailEnabled && (settings?.admin_business_verification_email ?? true);
       const smsAllowed = smsEnabled && (settings?.admin_business_verification_sms ?? false);
 
-      const recipientEmail = (settings?.notification_email || admin.email || '').trim();
-      const recipientPhone = (settings?.notification_phone || '').trim();
+      // Priority: admin_users.notification_email > user_settings.notification_email > admin_users.email
+      const recipientEmail = (admin.notification_email || settings?.notification_email || admin.email || '').trim();
+      // Priority: admin_users.notification_phone > user_settings.notification_phone
+      const recipientPhone = (admin.notification_phone || settings?.notification_phone || '').trim();
 
       const result: { userId: string; email?: { ok: boolean }; sms?: { ok: boolean } } = { userId: admin.user_id };
 
