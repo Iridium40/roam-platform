@@ -30,9 +30,9 @@ BEGIN
     FROM public.app_config
     WHERE key = 'supabase_anon_key';
     
-    -- Fallback to dev URL if not configured
+    -- Fallback to production URL if not configured
     IF supabase_base_url IS NULL THEN
-      supabase_base_url := 'https://vssomyuyhicaxsgiaupo.supabase.co';
+      supabase_base_url := 'https://nfvlyvdbzvvpcjaxtuip.supabase.co';
     END IF;
     
     -- Check if anon key is configured
