@@ -1757,8 +1757,19 @@ export default function FinancialsTab({
                                 Fee: ${parseFloat(transaction.platform_fee || 0).toFixed(2)}
                               </p>
                               {transaction.transaction_type && (
-                                <Badge variant="outline" className="text-xs mt-1">
-                                  {transaction.transaction_type === 'initial_booking' ? 'Initial' : 'Additional'}
+                                <Badge 
+                                  variant="outline" 
+                                  className={`text-xs mt-1 ${
+                                    transaction.transaction_type === 'initial_booking' && 
+                                    booking && 
+                                    parseFloat(booking.remaining_balance || '0') > 0 
+                                      ? 'border-amber-500 text-amber-700' 
+                                      : ''
+                                  }`}
+                                >
+                                  {transaction.transaction_type === 'initial_booking' 
+                                    ? (booking && parseFloat(booking.remaining_balance || '0') > 0 ? 'Deposit' : 'Initial')
+                                    : 'Additional'}
                                 </Badge>
                               )}
                             </>

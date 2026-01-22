@@ -413,6 +413,8 @@ function BookingCard({
                   const totalAmount = parseFloat(booking.total_amount || '0');
                   const serviceFee = parseFloat(booking.service_fee || '0');
                   const businessEarnings = totalAmount - serviceFee;
+                  const remainingBalance = parseFloat(booking.remaining_balance || '0');
+                  const isRemainingBalanceCharged = booking.remaining_balance_charged === true;
                   
                   return (
                     <div>
@@ -426,6 +428,13 @@ function BookingCard({
                         <p className="text-xs text-gray-400">
                           (${totalAmount.toFixed(2)} - ${serviceFee.toFixed(2)} fee)
                         </p>
+                      )}
+                      {/* Balance to Collect - for deposit bookings */}
+                      {remainingBalance > 0 && !isRemainingBalanceCharged && (
+                        <div className="mt-2 px-2 py-1 bg-amber-100 border border-amber-300 rounded text-amber-800">
+                          <p className="text-xs font-semibold">Balance to Collect</p>
+                          <p className="text-sm font-bold">${remainingBalance.toFixed(2)}</p>
+                        </div>
                       )}
                     </div>
                   );
@@ -703,9 +712,25 @@ function BookingCard({
                   }
                 </p>
               </div>
-              <span className="text-lg font-bold text-blue-600 flex-shrink-0">
-                ${parseFloat(booking.total_amount || '0').toFixed(2)}
-              </span>
+              <div className="text-right flex-shrink-0">
+                <span className="text-lg font-bold text-blue-600">
+                  ${parseFloat(booking.total_amount || '0').toFixed(2)}
+                </span>
+                {/* Balance to Collect - for deposit bookings (mobile) */}
+                {(() => {
+                  const remainingBalance = parseFloat(booking.remaining_balance || '0');
+                  const isRemainingBalanceCharged = booking.remaining_balance_charged === true;
+                  if (remainingBalance > 0 && !isRemainingBalanceCharged) {
+                    return (
+                      <div className="mt-1 px-1.5 py-0.5 bg-amber-100 border border-amber-300 rounded text-amber-800">
+                        <p className="text-[10px] font-semibold">Balance Due</p>
+                        <p className="text-xs font-bold">${remainingBalance.toFixed(2)}</p>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
+              </div>
             </div>
             
             {/* Payment Badge */}

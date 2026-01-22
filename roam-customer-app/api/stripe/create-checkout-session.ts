@@ -58,6 +58,40 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
+    // Get service details to check pricing_type
+    const { data: service, error: serviceError } = await supabase
+      .from('services')
+      .select('id, name, min_price, pricing_type')
+      .eq('id', service_id)
+      .single();
+
+    if (serviceError) {
+      console.warn('Could not fetch service details:', serviceError);
+    }
+
+    // Determine if this is a deposit-type service
+    const isDepositService = service?.pricing_type === 'deposit';
+    const depositAmount = service?.min_price || 0;
+    
+    // Calculate service_fee and remaining_balance based on pricing_type
+    let serviceFee: number;
+    let remainingBalance: number;
+    
+    if (isDepositService && depositAmount > 0 && depositAmount < total_amount) {
+      // Deposit service: charge deposit now, remaining balance later
+      serviceFee = depositAmount;
+      remainingBalance = total_amount - depositAmount;
+      console.log('💰 Deposit service detected:', { 
+        depositAmount, 
+        totalAmount: total_amount, 
+        remainingBalance 
+      });
+    } else {
+      // Fixed price service: charge full amount now
+      serviceFee = total_amount;
+      remainingBalance = 0;
+    }
+
     // Get customer details from Supabase
     const { data: customer, error: customerError} = await supabase
       .from('customer_profiles')
@@ -129,17 +163,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
     }
 
-    // Calculate platform fee (2.9% + 30 cents)
+    // Calculate platform fee (2.9% + 30 cents) - based on amount charged now (serviceFee)
     const platformFeePercentage = 0.029;
-    const platformFee = Math.round(total_amount * platformFeePercentage * 100); // in cents
+    const platformFee = Math.round(serviceFee * platformFeePercentage * 100); // in cents
     const processingFee = 30; // Stripe processing fee in cents
-    const totalAmountCents = Math.round(total_amount * 100);
+    const serviceFeeAmountCents = Math.round(serviceFee * 100);
 
     // Determine domain for redirect URLs
     const isProd = process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production';
     const DOMAIN = isProd
       ? 'https://roamservices.app'
       : (process.env.VITE_APP_URL || 'http://localhost:5174');
+
+    // Build product description based on pricing type
+    const productDescription = isDepositService
+      ? `Deposit for ${businessName || 'Business'} - ${delivery_type || 'Service'} (Balance: $${remainingBalance.toFixed(2)} due at service)`
+      : `Booking for ${businessName || 'Business'} - ${delivery_type || 'Service'}`;
 
     // Create Checkout Session with all booking data in metadata
     // Payment is AUTHORIZED at checkout but NOT CHARGED until booking is accepted
@@ -152,15 +191,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           price_data: {
             currency: 'usd',
             product_data: {
-              name: serviceName || 'Service Booking',
-              description: `Booking for ${businessName || 'Business'} - ${delivery_type || 'Service'}`,
+              name: isDepositService ? `${serviceName || 'Service'} - Deposit` : (serviceName || 'Service Booking'),
+              description: productDescription,
               metadata: {
                 service_id,
                 business_id,
-                delivery_type: delivery_type || ''
+                delivery_type: delivery_type || '',
+                pricing_type: isDepositService ? 'deposit' : 'fixed'
               }
             },
-            unit_amount: totalAmountCents,
+            unit_amount: serviceFeeAmountCents, // Charge serviceFee (deposit or full amount)
           },
           quantity: 1,
         },
@@ -179,6 +219,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         business_id,
         provider_id: provider_id || '',
         total_amount: total_amount.toString(),
+        service_fee: serviceFee.toString(), // Amount charged at checkout
+        remaining_balance: remainingBalance.toString(), // Amount due at service
+        pricing_type: isDepositService ? 'deposit' : 'fixed',
         platform_fee: (platformFee / 100).toString(),
         booking_date: booking_date || '',
         start_time: start_time || '',
@@ -213,17 +256,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     console.log('✅ Checkout session created:', session.id);
     console.log('📋 Booking data stored in metadata - webhook will create booking after payment');
+    if (isDepositService) {
+      console.log('💰 Deposit service - charging deposit:', serviceFee, 'remaining balance:', remainingBalance);
+    }
 
     // Return checkout session details to frontend
     return res.status(200).json({
       sessionId: session.id,
       url: session.url,
-      amount: total_amount,
+      amount: serviceFee, // Amount being charged now
+      totalAmount: total_amount, // Full service price
+      isDeposit: isDepositService,
       breakdown: {
+        depositAmount: isDepositService ? serviceFee : null,
+        remainingBalance: remainingBalance,
         serviceAmount: total_amount,
         platformFee: platformFee / 100,
         processingFee: processingFee / 100,
-        total: total_amount
+        chargedNow: serviceFee
       }
     });
 

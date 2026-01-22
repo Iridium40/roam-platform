@@ -100,6 +100,7 @@ interface Service {
   created_at: string;
   is_featured: boolean;
   is_popular: boolean;
+  pricing_type: 'fixed' | 'deposit';
   service_subcategories?: {
     service_subcategory_type: ServiceSubcategoryType;
     service_categories?: {
@@ -723,6 +724,7 @@ export default function AdminServices() {
     is_active: true,
     is_featured: false,
     is_popular: false,
+    pricing_type: "fixed" as "fixed" | "deposit",
   });
 
   const [newCategory, setNewCategory] = useState({
@@ -1457,6 +1459,7 @@ export default function AdminServices() {
         is_active: true,
         is_featured: false,
         is_popular: false,
+        pricing_type: "fixed" as "fixed" | "deposit",
       });
       setImagePreview(null);
       setIsAddServiceOpen(false);
@@ -1490,6 +1493,7 @@ export default function AdminServices() {
           is_active: editingService.is_active,
           is_featured: editingService.is_featured,
           is_popular: editingService.is_popular,
+          pricing_type: editingService.pricing_type,
         }),
       });
 
@@ -4250,7 +4254,9 @@ ALTER TYPE service_subcategory_types ADD VALUE '${subcategoryType}';`);
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="service_price">Minimum Price *</Label>
+                <Label htmlFor="service_price">
+                  {newService.pricing_type === 'deposit' ? 'Deposit Amount *' : 'Minimum Price *'}
+                </Label>
                 <Input
                   id="service_price"
                   type="number"
@@ -4261,6 +4267,11 @@ ALTER TYPE service_subcategory_types ADD VALUE '${subcategoryType}';`);
                   }
                   placeholder="0.00"
                 />
+                {newService.pricing_type === 'deposit' && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    This amount will be collected at booking. Remaining balance collected via Add More Services.
+                  </p>
+                )}
               </div>
 
               <div>
@@ -4278,6 +4289,35 @@ ALTER TYPE service_subcategory_types ADD VALUE '${subcategoryType}';`);
                   placeholder="60"
                 />
               </div>
+            </div>
+
+            {/* Pricing Type Selector */}
+            <div>
+              <Label htmlFor="service_pricing_type">Pricing Type *</Label>
+              <Select
+                value={newService.pricing_type}
+                onValueChange={(value: "fixed" | "deposit") =>
+                  setNewService({ ...newService, pricing_type: value })
+                }
+              >
+                <SelectTrigger id="service_pricing_type">
+                  <SelectValue placeholder="Select pricing type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="fixed">
+                    <div className="flex flex-col">
+                      <span>Fixed Price</span>
+                      <span className="text-xs text-muted-foreground">Full amount charged at booking</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="deposit">
+                    <div className="flex flex-col">
+                      <span>Deposit</span>
+                      <span className="text-xs text-muted-foreground">Deposit at booking, balance collected later</span>
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-3">
@@ -4329,6 +4369,7 @@ ALTER TYPE service_subcategory_types ADD VALUE '${subcategoryType}';`);
                     is_active: true,
                     is_featured: false,
                     is_popular: false,
+                    pricing_type: "fixed" as "fixed" | "deposit",
                   });
                 }}
               >
@@ -4508,7 +4549,9 @@ ALTER TYPE service_subcategory_types ADD VALUE '${subcategoryType}';`);
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="edit_min_price">Minimum Price *</Label>
+                  <Label htmlFor="edit_min_price">
+                    {editingService.pricing_type === 'deposit' ? 'Deposit Amount *' : 'Minimum Price *'}
+                  </Label>
                   <Input
                     id="edit_min_price"
                     type="number"
@@ -4522,6 +4565,11 @@ ALTER TYPE service_subcategory_types ADD VALUE '${subcategoryType}';`);
                     }
                     placeholder="0.00"
                   />
+                  {editingService.pricing_type === 'deposit' && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      This amount will be collected at booking.
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -4541,6 +4589,35 @@ ALTER TYPE service_subcategory_types ADD VALUE '${subcategoryType}';`);
                     placeholder="60"
                   />
                 </div>
+              </div>
+
+              {/* Pricing Type Selector */}
+              <div>
+                <Label htmlFor="edit_pricing_type">Pricing Type *</Label>
+                <Select
+                  value={editingService.pricing_type || 'fixed'}
+                  onValueChange={(value: "fixed" | "deposit") =>
+                    setEditingService({ ...editingService, pricing_type: value })
+                  }
+                >
+                  <SelectTrigger id="edit_pricing_type">
+                    <SelectValue placeholder="Select pricing type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="fixed">
+                      <div className="flex flex-col">
+                        <span>Fixed Price</span>
+                        <span className="text-xs text-muted-foreground">Full amount charged at booking</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="deposit">
+                      <div className="flex flex-col">
+                        <span>Deposit</span>
+                        <span className="text-xs text-muted-foreground">Deposit at booking, balance collected later</span>
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-3">

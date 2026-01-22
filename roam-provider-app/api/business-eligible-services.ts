@@ -158,6 +158,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         duration_minutes, 
         image_url,
         subcategory_id,
+        pricing_type,
         service_subcategories (
           id,
           service_subcategory_type,
@@ -209,6 +210,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         duration_minutes: service.duration_minutes,
         image_url: service.image_url,
         subcategory_id: service.subcategory_id,
+        pricing_type: service.pricing_type || 'fixed', // Default to 'fixed' if not set
         subcategory_name: subcategoryName,
         category_name: categoryName,
         is_configured: configuredIds.has(service.id),

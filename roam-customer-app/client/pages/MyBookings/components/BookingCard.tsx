@@ -204,9 +204,43 @@ export const BookingCard: React.FC<BookingCardProps> = ({
                 
                 {/* Price */}
                 <div className="text-right flex-shrink-0">
-                  <div className="text-2xl font-bold text-roam-blue">
-                    ${parseFloat(booking.total_amount || '0').toFixed(2)}
-                  </div>
+                  {(() => {
+                    const totalAmount = parseFloat(booking.total_amount || '0');
+                    const remainingBalance = parseFloat(booking.remaining_balance || '0');
+                    const isRemainingBalanceCharged = booking.remaining_balance_charged === true;
+                    const depositPaid = totalAmount - remainingBalance;
+                    
+                    // Check if this is a deposit booking (remaining_balance > 0)
+                    if (remainingBalance > 0) {
+                      return (
+                        <div>
+                          <div className="text-2xl font-bold text-roam-blue">
+                            ${totalAmount.toFixed(2)}
+                          </div>
+                          <p className="text-xs text-green-600 font-medium">
+                            Deposit Paid: ${depositPaid.toFixed(2)}
+                          </p>
+                          {!isRemainingBalanceCharged && (
+                            <p className="text-xs text-amber-600 font-medium">
+                              Balance Due: ${remainingBalance.toFixed(2)}
+                            </p>
+                          )}
+                          {isRemainingBalanceCharged && (
+                            <p className="text-xs text-green-600 font-medium">
+                              Fully Paid
+                            </p>
+                          )}
+                        </div>
+                      );
+                    }
+                    
+                    // Regular booking - show just total
+                    return (
+                      <div className="text-2xl font-bold text-roam-blue">
+                        ${totalAmount.toFixed(2)}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             </div>
@@ -564,9 +598,36 @@ export const BookingCard: React.FC<BookingCardProps> = ({
                     with {booking.providers?.first_name} {booking.providers?.last_name}
                   </p>
                 </div>
-                <span className="text-xl font-bold text-roam-blue flex-shrink-0">
-                  ${parseFloat(booking.total_amount || '0').toFixed(2)}
-                </span>
+                {/* Price with deposit info for mobile */}
+                <div className="text-right flex-shrink-0">
+                  {(() => {
+                    const totalAmount = parseFloat(booking.total_amount || '0');
+                    const remainingBalance = parseFloat(booking.remaining_balance || '0');
+                    const isRemainingBalanceCharged = booking.remaining_balance_charged === true;
+                    const depositPaid = totalAmount - remainingBalance;
+                    
+                    if (remainingBalance > 0) {
+                      return (
+                        <div>
+                          <span className="text-xl font-bold text-roam-blue">
+                            ${totalAmount.toFixed(2)}
+                          </span>
+                          {!isRemainingBalanceCharged && (
+                            <p className="text-[10px] text-amber-600 font-medium">
+                              ${remainingBalance.toFixed(2)} due
+                            </p>
+                          )}
+                        </div>
+                      );
+                    }
+                    
+                    return (
+                      <span className="text-xl font-bold text-roam-blue">
+                        ${totalAmount.toFixed(2)}
+                      </span>
+                    );
+                  })()}
+                </div>
               </div>
               
               {/* Rating */}

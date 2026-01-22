@@ -58,6 +58,7 @@ interface EligibleService {
   image_url?: string;
   is_active: boolean;
   subcategory_id: string;
+  pricing_type?: 'fixed' | 'deposit'; // 'fixed' = min_price is minimum total, 'deposit' = min_price is deposit amount
   service_subcategories?: {
     service_subcategory_type: string;
     service_categories?: {
@@ -809,7 +810,7 @@ export default function ServicePricingSetup({
                             <>
                               <span className="flex items-center gap-1">
                                 <DollarSign className="w-4 h-4" />
-                                ${eligibleService.min_price} (min)
+                                ${eligibleService.min_price} {eligibleService.pricing_type === 'deposit' ? '(deposit)' : '(min)'}
                               </span>
                               <span className="flex items-center gap-1">
                                 <Clock className="w-4 h-4" />
@@ -908,6 +909,7 @@ export default function ServicePricingSetup({
         currentPrice={selectedServiceForPricing?.business_price}
         currentDeliveryType={selectedServiceForPricing?.delivery_type}
         currency={pricingData.currency}
+        pricingType={selectedServiceForPricing?.pricing_type}
       />
     </div>
   );

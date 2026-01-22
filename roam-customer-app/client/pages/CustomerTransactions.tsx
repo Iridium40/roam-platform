@@ -35,9 +35,14 @@ interface Transaction {
   created_at: string;
   processed_at: string | null;
   stripe_transaction_id?: string | null;
+  metadata?: {
+    payment_type?: string;
+    is_deposit?: boolean;
+  } | null;
   bookings?: {
     booking_date: string;
     booking_reference: string | null;
+    remaining_balance?: number;
     services: {
       name: string;
     };
@@ -93,6 +98,7 @@ export default function CustomerTransactions() {
           bookings!inner (
             booking_date,
             booking_reference,
+            remaining_balance,
             service_id,
             business_id,
             services!left (
@@ -191,11 +197,16 @@ export default function CustomerTransactions() {
     }).format(amount);
   };
 
-  const formatTransactionType = (type: string | null) => {
+  const formatTransactionType = (type: string | null, transaction?: Transaction) => {
     switch (type?.toLowerCase()) {
       case 'service_payment':
       case 'booking_payment':
       case 'payment':
+        // Check if this is a deposit payment (booking has remaining_balance > 0)
+        const remainingBalance = transaction?.bookings?.remaining_balance || 0;
+        if (remainingBalance > 0) {
+          return 'Deposit';
+        }
         return 'Payment';
       case 'refund':
         return 'Refund';
@@ -372,7 +383,7 @@ export default function CustomerTransactions() {
                                   </span>
                                 )}
                                 <span>
-                                  {formatTransactionType(transaction.transaction_type)}
+                                  {formatTransactionType(transaction.transaction_type, transaction)}
                                 </span>
                                 {(transaction.transaction_type?.toLowerCase() === 'payment' || 
                                   transaction.transaction_type?.toLowerCase() === 'service_payment' ||
@@ -480,7 +491,7 @@ export default function CustomerTransactions() {
                     )}
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Transaction Type:</span>
-                      <span>{formatTransactionType(selectedTransaction.transaction_type)}</span>
+                      <span>{formatTransactionType(selectedTransaction.transaction_type, selectedTransaction)}</span>
                     </div>
                     {selectedTransaction.payment_method && (
                       <div className="flex justify-between">

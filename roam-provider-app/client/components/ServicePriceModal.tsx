@@ -29,6 +29,7 @@ interface ServicePriceModalProps {
   currentPrice?: number;
   currentDeliveryType?: string;
   currency?: string;
+  pricingType?: 'fixed' | 'deposit'; // 'fixed' = min_price is minimum total, 'deposit' = min_price is deposit amount
 }
 
 export default function ServicePriceModal({
@@ -39,8 +40,10 @@ export default function ServicePriceModal({
   minPrice = 0,
   currentPrice,
   currentDeliveryType,
-  currency = 'USD'
+  currency = 'USD',
+  pricingType = 'fixed'
 }: ServicePriceModalProps) {
+  const isDepositService = pricingType === 'deposit';
   const [price, setPrice] = useState<string>(currentPrice?.toString() || '');
   const [deliveryType, setDeliveryType] = useState<string>(currentDeliveryType || '');
   const [error, setError] = useState<string | null>(null);
@@ -220,12 +223,23 @@ export default function ServicePriceModal({
             </Select>
           </div>
 
-          {/* Minimum Price Info */}
+          {/* Minimum Price / Deposit Info */}
           {minPrice > 0 && (
-            <Alert className="border-blue-200 bg-blue-50">
-              <Info className="h-4 w-4 text-blue-600" />
-              <AlertDescription className="text-blue-800">
-                <strong>Minimum price:</strong> {formatCurrency(minPrice)}
+            <Alert className={isDepositService ? "border-amber-200 bg-amber-50" : "border-blue-200 bg-blue-50"}>
+              <Info className={`h-4 w-4 ${isDepositService ? "text-amber-600" : "text-blue-600"}`} />
+              <AlertDescription className={isDepositService ? "text-amber-800" : "text-blue-800"}>
+                {isDepositService ? (
+                  <>
+                    <strong>Required Deposit:</strong> {formatCurrency(minPrice)}
+                    <p className="text-xs mt-1">
+                      This deposit amount will be collected at booking. Your price is the total service cost - the remaining balance will be collected via Add More Services.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <strong>Minimum price:</strong> {formatCurrency(minPrice)}
+                  </>
+                )}
               </AlertDescription>
             </Alert>
           )}

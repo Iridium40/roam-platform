@@ -275,6 +275,12 @@ export async function processBookingAcceptance(
             })
             .eq('id', bookingId);
 
+          // Check if this is a deposit payment (remaining_balance > 0 means deposit was charged)
+          const isDepositPayment = (booking.remaining_balance || 0) > 0;
+          const paymentDescription = isDepositPayment 
+            ? `Deposit payment captured - Balance $${(booking.remaining_balance || 0).toFixed(2)} due at service`
+            : 'Service booking payment - captured on acceptance';
+          
           // Record financial transactions
           const { data: financialTransaction, error: financialError } = await supabase
             .from('financial_transactions')
@@ -284,12 +290,14 @@ export async function processBookingAcceptance(
               currency: 'USD',
               stripe_transaction_id: capturedPaymentIntent.id,
               payment_method: 'card',
-              description: 'Service booking payment - captured on acceptance',
+              description: paymentDescription,
               transaction_type: 'booking_payment',
               status: 'completed',
               processed_at: new Date().toISOString(),
               metadata: {
-                payment_type: 'full_payment',
+                payment_type: isDepositPayment ? 'deposit' : 'full_payment',
+                is_deposit: isDepositPayment,
+                remaining_balance: booking.remaining_balance || 0,
                 captured_on_acceptance: true,
               },
             })
@@ -369,6 +377,10 @@ export async function processBookingAcceptance(
                   sourceTransaction: chargeId,
                 });
                 
+                const transferDescription = isDepositPayment
+                  ? `Deposit payment for booking ${booking.booking_reference || bookingId}`
+                  : `Service payment for booking ${booking.booking_reference || bookingId}`;
+                
                 const transfer = await stripe.transfers.create({
                   amount: Math.round(netPaymentAmount * 100), // Service amount in cents
                   currency: 'usd',
@@ -377,11 +389,13 @@ export async function processBookingAcceptance(
                   metadata: {
                     booking_id: bookingId,
                     payment_intent_id: capturedPaymentIntent.id,
-                    transfer_type: 'booking_service_payment',
+                    transfer_type: isDepositPayment ? 'deposit_payment' : 'booking_service_payment',
+                    is_deposit: isDepositPayment.toString(),
                     service_amount: netPaymentAmount.toString(),
                     platform_fee: platformFee.toString(),
+                    remaining_balance: (booking.remaining_balance || 0).toString(),
                   },
-                  description: `Service payment for booking ${booking.booking_reference || bookingId}`,
+                  description: transferDescription,
                 });
                 
                 stripeTransferId = transfer.id;
@@ -421,6 +435,10 @@ export async function processBookingAcceptance(
               console.log('✅ Updated existing business_payment_transaction with transfer ID');
             }
           } else {
+            const businessTransactionDescription = isDepositPayment
+              ? `Deposit payment for booking ${booking.booking_reference || bookingId}`
+              : 'Platform service payment';
+            
             const { data: businessTransaction, error: businessError } = await supabase
               .from('business_payment_transactions')
               .insert({
@@ -434,7 +452,7 @@ export async function processBookingAcceptance(
                 stripe_payment_intent_id: capturedPaymentIntent.id,
                 stripe_connect_account_id: stripeConnectAccountId,
                 stripe_transfer_id: stripeTransferId, // Include transfer ID
-                transaction_description: 'Platform service payment',
+                transaction_description: businessTransactionDescription,
                 booking_reference: booking.booking_reference || null,
                 transaction_type: 'initial_booking',
               } as any)

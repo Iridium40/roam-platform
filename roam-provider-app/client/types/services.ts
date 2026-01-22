@@ -32,6 +32,7 @@ export interface EligibleService {
   image_url?: string;
   is_active: boolean;
   subcategory_id: string;
+  pricing_type?: 'fixed' | 'deposit'; // 'fixed' = min_price is minimum total, 'deposit' = min_price is deposit amount
   service_subcategories?: {
     service_subcategory_type: string;
     service_categories?: {

@@ -41,6 +41,7 @@ export function EditServiceModal({
   onClose,
   loading,
 }: EditServiceModalProps) {
+  const isDepositService = service.pricing_type === 'deposit';
   const [businessPrice, setBusinessPrice] = useState<string>(
     service.business_price?.toString() || service.min_price.toString()
   );
@@ -150,8 +151,8 @@ export function EditServiceModal({
                     {service.description}
                   </p>
                   <div className="flex items-center gap-2 mt-2">
-                    <Badge variant="secondary" className="text-xs">
-                      Base: ${service.min_price}
+                    <Badge variant={isDepositService ? "outline" : "secondary"} className={`text-xs ${isDepositService ? "border-amber-500 text-amber-700" : ""}`}>
+                      {isDepositService ? `Deposit: $${service.min_price}` : `Base: $${service.min_price}`}
                     </Badge>
                     <Badge variant="secondary" className="text-xs">
                       {service.duration_minutes} min
@@ -181,9 +182,15 @@ export function EditServiceModal({
                   required
                 />
               </div>
-              <p className="text-xs text-muted-foreground">
-                Minimum price: ${service.min_price}
-              </p>
+              {isDepositService ? (
+                <p className="text-xs text-amber-700">
+                  Required deposit: ${service.min_price} (collected at booking, remaining balance collected via Add More Services)
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Minimum price: ${service.min_price}
+                </p>
+              )}
             </div>
 
             {/* Business Duration */}

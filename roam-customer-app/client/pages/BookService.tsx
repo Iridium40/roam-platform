@@ -45,6 +45,7 @@ interface Service {
   duration_minutes: number;
   image_url?: string;
   delivery_type?: string;
+  pricing_type?: 'fixed' | 'deposit';
 }
 
 interface Business {
@@ -2901,12 +2902,44 @@ function BookServiceContent() {
                         </div>
                       )}
                     </div>
-                    <div className="flex justify-between border-t-2 border-roam-blue/20 pt-3 mt-3">
-                      <span className="text-xl font-bold">Total:</span>
-                      <span className="text-xl font-bold text-roam-blue">
-                        ${calculateTotalWithFees().toFixed(2)}
-                      </span>
-                    </div>
+                    {/* Show deposit vs balance for deposit-type services */}
+                    {service.pricing_type === 'deposit' && service.min_price < calculateTotalWithFees() && (
+                      <>
+                        <div className="flex justify-between border-t-2 border-roam-blue/20 pt-3 mt-3">
+                          <span className="text-xl font-bold">Total Service Price:</span>
+                          <span className="text-xl font-bold text-gray-700">
+                            ${calculateTotalWithFees().toFixed(2)}
+                          </span>
+                        </div>
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-3">
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <span className="text-lg font-bold text-blue-900">Due Today (Deposit):</span>
+                              <p className="text-xs text-blue-700 mt-1">Remaining balance collected at service</p>
+                            </div>
+                            <span className="text-xl font-bold text-blue-600">
+                              ${service.min_price.toFixed(2)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between mt-2 pt-2 border-t border-blue-200">
+                            <span className="text-sm text-blue-700">Balance Due at Service:</span>
+                            <span className="text-sm font-medium text-blue-700">
+                              ${(calculateTotalWithFees() - service.min_price).toFixed(2)}
+                            </span>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                    
+                    {/* Standard total display for fixed-price services */}
+                    {(service.pricing_type !== 'deposit' || service.min_price >= calculateTotalWithFees()) && (
+                      <div className="flex justify-between border-t-2 border-roam-blue/20 pt-3 mt-3">
+                        <span className="text-xl font-bold">Total:</span>
+                        <span className="text-xl font-bold text-roam-blue">
+                          ${calculateTotalWithFees().toFixed(2)}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
