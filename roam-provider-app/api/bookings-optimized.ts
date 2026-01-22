@@ -373,8 +373,7 @@ async function fallbackBookings(
   }
 
   if (status) {
-    // Cast to booking_status enum type to avoid PostgreSQL type mismatch error
-    bookingsQuery = bookingsQuery.filter('booking_status', 'eq', status);
+    bookingsQuery = bookingsQuery.eq('booking_status', status);
   }
 
   const { data: bookings, error, count } = await bookingsQuery
