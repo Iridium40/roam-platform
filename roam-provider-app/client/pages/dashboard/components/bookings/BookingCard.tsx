@@ -2,6 +2,8 @@ import React, { useState, useEffect, memo } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -12,6 +14,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import BookingStatusIndicator from "@/components/BookingStatusIndicator";
 import ConversationChat from "@/components/ConversationChat";
 import DeclineBookingModal from "./DeclineBookingModal";
@@ -91,6 +101,11 @@ function BookingCard({
   const [isProcessing, setIsProcessing] = useState(false);
   const [fetchedUnreadCount, setFetchedUnreadCount] = useState(0);
   const { provider } = useProviderAuth();
+  
+  // Final balance modal state (for deposit services)
+  const [showFinalBalanceModal, setShowFinalBalanceModal] = useState(false);
+  const [finalBalanceAmount, setFinalBalanceAmount] = useState<string>("");
+  const [finalBalanceError, setFinalBalanceError] = useState<string | null>(null);
 
   // Fetch unread message count for this booking (same approach as customer app)
   useEffect(() => {
@@ -152,6 +167,10 @@ function BookingCard({
     setIsChatOpen(true);
   };
 
+  // Check if this is a deposit booking (has remaining balance that hasn't been charged)
+  const isDepositBooking = parseFloat(booking.remaining_balance || '0') > 0 && !booking.remaining_balance_charged;
+  const depositAmount = parseFloat(booking.total_amount || '0') - parseFloat(booking.remaining_balance || '0');
+
   // Handle status action with confirmation
   const handleStatusAction = (status: string) => {
     // Decline has its own modal with reason input
@@ -159,8 +178,58 @@ function BookingCard({
       setIsDeclineModalOpen(true);
       return;
     }
+    
+    // For completing a deposit booking, show the final balance modal
+    if (status === "completed" && isDepositBooking) {
+      // Pre-fill with current remaining balance
+      setFinalBalanceAmount(parseFloat(booking.remaining_balance || '0').toFixed(2));
+      setFinalBalanceError(null);
+      setShowFinalBalanceModal(true);
+      return;
+    }
+    
     // Show confirmation dialog for other actions
     setConfirmationDialog({ isOpen: true, status });
+  };
+  
+  // Handle final balance submission for deposit services
+  const handleFinalBalanceSubmit = async () => {
+    const amount = parseFloat(finalBalanceAmount);
+    
+    if (isNaN(amount) || amount < 0) {
+      setFinalBalanceError("Please enter a valid amount (0 or greater)");
+      return;
+    }
+    
+    setIsProcessing(true);
+    setFinalBalanceError(null);
+    
+    try {
+      // Update the remaining balance in the database
+      const { error: updateError } = await supabase
+        .from('bookings')
+        .update({
+          remaining_balance: amount,
+          remaining_balance_charged: false, // Customer needs to pay this
+        })
+        .eq('id', booking.id);
+      
+      if (updateError) {
+        console.error('Error updating remaining balance:', updateError);
+        setFinalBalanceError("Failed to update balance. Please try again.");
+        return;
+      }
+      
+      // Now complete the booking
+      await onUpdateStatus(booking.id, "completed");
+      setShowFinalBalanceModal(false);
+      setFinalBalanceAmount("");
+    } catch (error) {
+      console.error('Error completing booking:', error);
+      setFinalBalanceError("Failed to complete booking. Please try again.");
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   // Confirm the status change
@@ -1043,6 +1112,114 @@ function BookingCard({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Final Balance Modal (for deposit services) */}
+      <Dialog open={showFinalBalanceModal} onOpenChange={(open) => !open && setShowFinalBalanceModal(false)}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
+                <DollarSign className="w-5 h-5 text-amber-600" />
+              </div>
+              <div>
+                <DialogTitle>Set Final Balance</DialogTitle>
+                <DialogDescription>
+                  Complete service and set the amount due
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            {/* Booking Info */}
+            <div className="bg-gray-50 rounded-lg p-3">
+              <p className="text-sm font-medium text-gray-900">{booking.services?.name}</p>
+              <p className="text-sm text-gray-600">
+                {booking.guest_name 
+                  ? booking.guest_name
+                  : booking.customer_profiles 
+                    ? `${booking.customer_profiles.first_name || ""} ${booking.customer_profiles.last_name || ""}`.trim()
+                    : "Customer"
+                }
+              </p>
+            </div>
+            
+            {/* Deposit Info */}
+            <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-green-800">Deposit Paid</span>
+                <span className="font-semibold text-green-700">${depositAmount.toFixed(2)}</span>
+              </div>
+            </div>
+            
+            {/* Final Balance Input */}
+            <div className="space-y-2">
+              <Label htmlFor="final-balance" className="text-sm font-medium">
+                Final Balance Due from Customer
+              </Label>
+              <div className="relative">
+                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Input
+                  id="final-balance"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={finalBalanceAmount}
+                  onChange={(e) => {
+                    setFinalBalanceAmount(e.target.value);
+                    setFinalBalanceError(null);
+                  }}
+                  className="pl-9"
+                  placeholder="0.00"
+                />
+              </div>
+              <p className="text-xs text-gray-500">
+                Enter the remaining amount the customer needs to pay based on actual time/materials used. Enter 0 if no additional payment is needed.
+              </p>
+            </div>
+            
+            {/* Total Summary */}
+            {finalBalanceAmount && !isNaN(parseFloat(finalBalanceAmount)) && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-blue-800">Total Service Cost</span>
+                  <span className="font-bold text-blue-700">
+                    ${(depositAmount + parseFloat(finalBalanceAmount || '0')).toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            )}
+            
+            {/* Error Message */}
+            {finalBalanceError && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                <p className="text-sm text-red-700">{finalBalanceError}</p>
+              </div>
+            )}
+          </div>
+          
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowFinalBalanceModal(false);
+                setFinalBalanceAmount("");
+                setFinalBalanceError(null);
+              }}
+              disabled={isProcessing}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleFinalBalanceSubmit}
+              disabled={isProcessing || !finalBalanceAmount}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {isProcessing ? 'Processing...' : 'Complete Service'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
