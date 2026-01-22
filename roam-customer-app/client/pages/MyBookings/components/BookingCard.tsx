@@ -507,6 +507,27 @@ export const BookingCard: React.FC<BookingCardProps> = ({
             {/* Completed Booking Actions */}
             {booking.booking_status === "completed" && (
               <div className="space-y-2">
+                {/* Pay Balance Button - Show for deposit bookings with unpaid remaining balance */}
+                {(() => {
+                  const remainingBalance = parseFloat(booking.remaining_balance || '0');
+                  const isRemainingBalanceCharged = booking.remaining_balance_charged === true;
+                  const hasUnpaidBalance = remainingBalance > 0 && !isRemainingBalanceCharged;
+                  
+                  if (hasUnpaidBalance) {
+                    return (
+                      <Button
+                        size="sm"
+                        className="w-full bg-amber-500 hover:bg-amber-600 text-white font-medium"
+                        onClick={() => navigate(`/my-bookings/${booking.id}/pay-balance`)}
+                      >
+                        <CreditCard className="w-4 h-4 mr-2" />
+                        Pay Balance (${remainingBalance.toFixed(2)})
+                      </Button>
+                    );
+                  }
+                  return null;
+                })()}
+                
                 {/* Message Button for completed bookings within 1 day */}
                 {!shouldHideMessageButton && booking.providers && (
                   <Button
@@ -903,6 +924,27 @@ export const BookingCard: React.FC<BookingCardProps> = ({
             {/* Completed Booking Actions */}
             {booking.booking_status === "completed" && (
               <div className="space-y-2">
+                {/* Pay Balance Button - Show for deposit bookings with unpaid remaining balance */}
+                {(() => {
+                  const remainingBalance = parseFloat(booking.remaining_balance || '0');
+                  const isRemainingBalanceCharged = booking.remaining_balance_charged === true;
+                  const hasUnpaidBalance = remainingBalance > 0 && !isRemainingBalanceCharged;
+                  
+                  if (hasUnpaidBalance) {
+                    return (
+                      <Button
+                        size="sm"
+                        className="w-full bg-amber-500 hover:bg-amber-600 text-white font-medium"
+                        onClick={() => navigate(`/my-bookings/${booking.id}/pay-balance`)}
+                      >
+                        <CreditCard className="w-4 h-4 mr-2" />
+                        <span className="text-xs">Pay Balance (${remainingBalance.toFixed(2)})</span>
+                      </Button>
+                    );
+                  }
+                  return null;
+                })()}
+                
                 {/* Message Button for completed bookings within 1 day */}
                 {!shouldHideMessageButton && booking.providers && (
                   <Button

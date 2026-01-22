@@ -568,6 +568,38 @@ function BookingDetailsContent() {
 
             {/* Main Content Grid */}
             <div className="grid gap-6">
+              {/* Pay Balance Call-to-Action Banner for Completed Deposit Bookings */}
+              {booking.booking_status === "completed" && 
+               parseFloat(booking.remaining_balance || '0') > 0 && 
+               !booking.remaining_balance_charged && (
+                <Card className="bg-gradient-to-r from-amber-50 to-orange-100 border-amber-300">
+                  <CardContent className="py-4">
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-white rounded-full">
+                          <CreditCard className="w-6 h-6 text-amber-600" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-gray-900">
+                            Balance Due: {formatCurrency(booking.remaining_balance)}
+                          </h3>
+                          <p className="text-sm text-foreground/70">
+                            Your provider has completed the service. Please pay the remaining balance to close this booking.
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        onClick={() => navigate(`/my-bookings/${booking.id}/pay-balance`)}
+                        className="bg-amber-500 hover:bg-amber-600 text-white"
+                      >
+                        <CreditCard className="w-4 h-4 mr-2" />
+                        Pay Balance
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Review & Tip Call-to-Action Banner for Completed Bookings */}
               {booking.booking_status === "completed" && (!hasReview || !hasTip) && (
                 <Card className="bg-gradient-to-r from-roam-blue/10 to-purple-100 border-roam-blue/20">

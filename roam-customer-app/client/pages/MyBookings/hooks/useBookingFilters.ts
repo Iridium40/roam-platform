@@ -82,8 +82,19 @@ export const useBookingFilters = (bookings: BookingWithDetails[]) => {
       // ACTIVE TAB:
       // - All bookings that are NOT in a final state (completed, cancelled, no_show, declined)
       // - Includes pending, confirmed, in_progress regardless of date
+      // - ALSO includes completed bookings with unpaid remaining balance (deposit services)
       active: filtered.filter((booking) => {
         const status = booking.booking_status || 'pending';
+        
+        // Check if this is a completed deposit booking with unpaid remaining balance
+        const remainingBalance = parseFloat(booking.remaining_balance || '0');
+        const isRemainingBalanceCharged = booking.remaining_balance_charged === true;
+        const hasUnpaidBalance = remainingBalance > 0 && !isRemainingBalanceCharged;
+        
+        // Keep completed bookings with unpaid balance in active tab
+        if (status === 'completed' && hasUnpaidBalance) {
+          return true;
+        }
         
         // Exclude final states: completed, cancelled, no_show, declined
         const excludedStatuses = new Set(['completed', 'cancelled', 'no_show', 'declined']);
@@ -100,8 +111,19 @@ export const useBookingFilters = (bookings: BookingWithDetails[]) => {
       
       // CLOSED TAB:
       // - All bookings in final states (completed, cancelled, no_show, declined) regardless of date
+      // - EXCLUDES completed bookings with unpaid remaining balance (those stay in active)
       closed: filtered.filter((booking) => {
         const status = booking.booking_status || 'pending';
+        
+        // Check if this is a completed deposit booking with unpaid remaining balance
+        const remainingBalance = parseFloat(booking.remaining_balance || '0');
+        const isRemainingBalanceCharged = booking.remaining_balance_charged === true;
+        const hasUnpaidBalance = remainingBalance > 0 && !isRemainingBalanceCharged;
+        
+        // Keep completed bookings with unpaid balance OUT of closed tab (they're in active)
+        if (status === 'completed' && hasUnpaidBalance) {
+          return false;
+        }
         
         // Show all final state bookings regardless of date
         const finalStates = new Set(['completed', 'cancelled', 'no_show', 'declined']);

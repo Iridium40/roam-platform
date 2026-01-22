@@ -305,6 +305,17 @@ export function useBookings(providerData: any, business: any) {
     filteredBookings.forEach((b: any) => {
       const status = b.booking_status;
       
+      // Check if this is a completed deposit booking with unpaid remaining balance
+      const remainingBalance = parseFloat(b.remaining_balance || '0');
+      const isRemainingBalanceCharged = b.remaining_balance_charged === true;
+      const hasUnpaidBalance = remainingBalance > 0 && !isRemainingBalanceCharged;
+      
+      // Keep completed bookings with unpaid balance in ACTIVE tab
+      if (status === 'completed' && hasUnpaidBalance) {
+        active.push(b);
+        return;
+      }
+      
       // CLOSED = Final status states (completed, cancelled, declined, no_show)
       if (finalStatuses.has(status)) {
         closed.push(b);
