@@ -2856,7 +2856,9 @@ function BookServiceContent() {
                       <span className="font-medium">{selectedBusiness?.service_duration_minutes || service.duration_minutes} minutes</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Service Price:</span>
+                      <span className="text-gray-600">
+                        {service.pricing_type === 'deposit' ? 'Deposit Amount:' : 'Service Price:'}
+                      </span>
                       <span className="font-medium">${selectedBusiness?.service_price || service.min_price}</span>
                     </div>
                     {promotion && (
@@ -2884,10 +2886,12 @@ function BookServiceContent() {
                     )}
                     <div className="border-t border-gray-200 pt-3 mt-3">
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Subtotal:</span>
+                        <span className="text-gray-600">
+                          {service.pricing_type === 'deposit' ? 'Deposit Subtotal:' : 'Subtotal:'}
+                        </span>
                         <span className="font-medium">${(calculateDiscountedPrice() + calculateAddonsTotal()).toFixed(2)}</span>
                       </div>
-                      {platformFeePercentage > 0 && (
+                      {platformFeePercentage > 0 && service.pricing_type !== 'deposit' && (
                         <div className="flex justify-between items-center">
                           <div className="flex items-center">
                             <span className="text-gray-600">Platform Fee ({platformFeePercentage}%):</span>
@@ -2902,37 +2906,39 @@ function BookServiceContent() {
                         </div>
                       )}
                     </div>
-                    {/* Show deposit vs balance for deposit-type services */}
-                    {service.pricing_type === 'deposit' && service.min_price < calculateTotalWithFees() && (
+                    {/* Show deposit notice for deposit-type services */}
+                    {service.pricing_type === 'deposit' && (
                       <>
-                        <div className="flex justify-between border-t-2 border-roam-blue/20 pt-3 mt-3">
-                          <span className="text-xl font-bold">Total Service Price:</span>
-                          <span className="text-xl font-bold text-gray-700">
-                            ${calculateTotalWithFees().toFixed(2)}
+                        {/* Deposit Info Banner */}
+                        <div className="bg-amber-50 border border-amber-300 rounded-lg p-4 mt-4">
+                          <div className="flex items-start gap-3">
+                            <div className="rounded-full bg-amber-100 p-2 flex-shrink-0">
+                              <Info className="w-4 h-4 text-amber-700" />
+                            </div>
+                            <div className="flex-1">
+                              <h4 className="font-semibold text-amber-900">Deposit-Based Service</h4>
+                              <p className="text-sm text-amber-700 mt-1">
+                                This service requires a deposit to secure your booking. The provider will determine the final price based on your specific needs, and you'll pay any remaining balance after the service is completed.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="flex justify-between border-t-2 border-amber-300 pt-3 mt-4">
+                          <span className="text-xl font-bold text-amber-900">Deposit Due Today:</span>
+                          <span className="text-xl font-bold text-amber-700">
+                            ${(selectedBusiness?.service_price || service.min_price).toFixed(2)}
                           </span>
                         </div>
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-3">
-                          <div className="flex justify-between items-center">
-                            <div>
-                              <span className="text-lg font-bold text-blue-900">Due Today (Deposit):</span>
-                              <p className="text-xs text-blue-700 mt-1">Remaining balance collected at service</p>
-                            </div>
-                            <span className="text-xl font-bold text-blue-600">
-                              ${service.min_price.toFixed(2)}
-                            </span>
-                          </div>
-                          <div className="flex justify-between mt-2 pt-2 border-t border-blue-200">
-                            <span className="text-sm text-blue-700">Balance Due at Service:</span>
-                            <span className="text-sm font-medium text-blue-700">
-                              ${(calculateTotalWithFees() - service.min_price).toFixed(2)}
-                            </span>
-                          </div>
-                        </div>
+                        
+                        <p className="text-sm text-amber-700 mt-2">
+                          Your provider will send you the final balance after completing the service. This is <strong>not</strong> the final price.
+                        </p>
                       </>
                     )}
                     
                     {/* Standard total display for fixed-price services */}
-                    {(service.pricing_type !== 'deposit' || service.min_price >= calculateTotalWithFees()) && (
+                    {service.pricing_type !== 'deposit' && (
                       <div className="flex justify-between border-t-2 border-roam-blue/20 pt-3 mt-3">
                         <span className="text-xl font-bold">Total:</span>
                         <span className="text-xl font-bold text-roam-blue">
