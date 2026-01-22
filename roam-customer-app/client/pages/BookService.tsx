@@ -250,7 +250,7 @@ function BookServiceContent() {
   const [clientSecret, setClientSecret] = useState<string>('');
   const [paymentBreakdown, setPaymentBreakdown] = useState<any>(null);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
-  const [saveLocationForFuture, setSaveLocationForFuture] = useState(true); // Default to true to save locations
+  const [saveLocationForFuture, setSaveLocationForFuture] = useState(false); // Default to false, will be set to true for logged-in users
   const [createdBookingId, setCreatedBookingId] = useState<string | null>(null);
   
   // Auth modal state
@@ -288,6 +288,19 @@ function BookServiceContent() {
         state: selectedBusinessLocation.state,
         postal_code: selectedBusinessLocation.postal_code,
       } : null,
+      // Save customer location data for customer_location delivery types
+      selectedCustomerLocation: selectedCustomerLocation ? {
+        id: selectedCustomerLocation.id,
+        location_name: selectedCustomerLocation.location_name,
+        street_address: selectedCustomerLocation.street_address,
+        unit_number: selectedCustomerLocation.unit_number,
+        city: selectedCustomerLocation.city,
+        state: selectedCustomerLocation.state,
+        zip_code: selectedCustomerLocation.zip_code,
+        location_type: selectedCustomerLocation.location_type,
+      } : null,
+      // Save new location data if user entered a new address (not yet saved to DB)
+      newCustomerLocation: newCustomerLocation.street_address ? newCustomerLocation : null,
       selectedAddons,
       currentStep,
       pendingCheckout: true, // Mark that we need to resume checkout
@@ -479,6 +492,12 @@ function BookServiceContent() {
     return acc;
   }, {} as Record<string, typeof timeSlots>);
 
+  // Set saveLocationForFuture based on login status
+  // Only logged-in users can save locations to their account
+  useEffect(() => {
+    setSaveLocationForFuture(!!customer);
+  }, [customer]);
+
   // Restore booking state from sessionStorage (for OAuth redirects)
   useEffect(() => {
     const restoreBookingState = async () => {
@@ -532,6 +551,75 @@ function BookServiceContent() {
           setCurrentStep(savedState.currentStep);
         }
         
+        // Handle customer location restoration
+        // If there's a new location that was entered before login, save it to database now
+        if (savedState.newCustomerLocation && savedState.selectedDeliveryType === 'customer_location') {
+          logger.debug('Saving new customer location after OAuth login');
+          try {
+            const { data: savedLocation, error: saveError } = await supabase
+              .from('customer_locations')
+              .insert({
+                customer_id: customer.user_id,
+                location_name: savedState.newCustomerLocation.location_name || 'My Location',
+                street_address: savedState.newCustomerLocation.street_address,
+                unit_number: savedState.newCustomerLocation.unit_number || null,
+                city: savedState.newCustomerLocation.city,
+                state: savedState.newCustomerLocation.state,
+                zip_code: savedState.newCustomerLocation.zip_code,
+                location_type: savedState.newCustomerLocation.location_type || 'Home',
+                is_primary: false,
+                is_active: true,
+              })
+              .select()
+              .single();
+            
+            if (saveError) {
+              logger.error('Error saving customer location after OAuth:', saveError);
+            } else if (savedLocation) {
+              logger.debug('Customer location saved after OAuth:', savedLocation.id);
+              setSelectedCustomerLocation(savedLocation as CustomerLocation);
+            }
+          } catch (locationError) {
+            logger.error('Failed to save customer location after OAuth:', locationError);
+          }
+        } else if (savedState.selectedCustomerLocation) {
+          // Restore existing selected customer location
+          // But only if it's not a temp location (temp locations start with 'temp-')
+          if (!savedState.selectedCustomerLocation.id?.startsWith('temp-')) {
+            setSelectedCustomerLocation(savedState.selectedCustomerLocation as CustomerLocation);
+          } else {
+            // It was a temp location, need to save it now that user is logged in
+            logger.debug('Converting temp customer location to saved location after OAuth');
+            try {
+              const { data: savedLocation, error: saveError } = await supabase
+                .from('customer_locations')
+                .insert({
+                  customer_id: customer.user_id,
+                  location_name: savedState.selectedCustomerLocation.location_name || 'My Location',
+                  street_address: savedState.selectedCustomerLocation.street_address,
+                  unit_number: savedState.selectedCustomerLocation.unit_number || null,
+                  city: savedState.selectedCustomerLocation.city,
+                  state: savedState.selectedCustomerLocation.state,
+                  zip_code: savedState.selectedCustomerLocation.zip_code,
+                  location_type: savedState.selectedCustomerLocation.location_type || 'Home',
+                  is_primary: false,
+                  is_active: true,
+                })
+                .select()
+                .single();
+              
+              if (saveError) {
+                logger.error('Error saving temp location after OAuth:', saveError);
+              } else if (savedLocation) {
+                logger.debug('Temp location saved after OAuth:', savedLocation.id);
+                setSelectedCustomerLocation(savedLocation as CustomerLocation);
+              }
+            } catch (locationError) {
+              logger.error('Failed to save temp location after OAuth:', locationError);
+            }
+          }
+        }
+        
         // Clear saved state
         clearSavedBookingState();
         
@@ -568,6 +656,19 @@ function BookServiceContent() {
         return;
       }
       
+      // If delivery type is customer_location, wait for customer location to be set
+      // (it may be getting saved to DB after OAuth login)
+      if (selectedDeliveryType === 'customer_location' && !selectedCustomerLocation) {
+        logger.debug('Waiting for customer location to be set before checkout...');
+        return;
+      }
+      
+      // If customer location is a temp location (shouldn't happen after OAuth restore, but safety check)
+      if (selectedDeliveryType === 'customer_location' && selectedCustomerLocation?.id?.startsWith('temp-')) {
+        logger.debug('Customer location is still temp, waiting for it to be saved...');
+        return;
+      }
+      
       setPendingCheckout(false);
       setShowAuthModal(false);
       // Small delay to ensure modal closes before checkout
@@ -577,7 +678,7 @@ function BookServiceContent() {
         });
       }, 300);
     }
-  }, [customer, pendingCheckout, selectedAddons, availableAddons, addonsLoading]);
+  }, [customer, pendingCheckout, selectedAddons, availableAddons, addonsLoading, selectedDeliveryType, selectedCustomerLocation]);
 
   // Load service details and promotion if applicable
   useEffect(() => {
@@ -2661,22 +2762,24 @@ function BookServiceContent() {
                                   </select>
                                 </div>
                                 
-                                {/* Save Location Checkbox */}
-                                <div className="flex items-start space-x-3 p-4 bg-blue-50 border border-blue-200 rounded-md">
-                                  <input
-                                    type="checkbox"
-                                    id="saveLocation"
-                                    checked={saveLocationForFuture}
-                                    onChange={(e) => setSaveLocationForFuture(e.target.checked)}
-                                    className="mt-1 w-4 h-4 text-roam-blue border-gray-300 rounded focus:ring-roam-blue"
-                                  />
-                                  <label htmlFor="saveLocation" className="text-sm cursor-pointer">
-                                    <span className="font-medium text-gray-900">Save this location for future bookings</span>
-                                    <p className="text-gray-600 mt-1">
-                                      You'll be able to quickly select this address for your next service.
-                                    </p>
-                                  </label>
-                                </div>
+                                {/* Save Location Checkbox - Only show for logged-in users */}
+                                {customer && (
+                                  <div className="flex items-start space-x-3 p-4 bg-blue-50 border border-blue-200 rounded-md">
+                                    <input
+                                      type="checkbox"
+                                      id="saveLocation"
+                                      checked={saveLocationForFuture}
+                                      onChange={(e) => setSaveLocationForFuture(e.target.checked)}
+                                      className="mt-1 w-4 h-4 text-roam-blue border-gray-300 rounded focus:ring-roam-blue"
+                                    />
+                                    <label htmlFor="saveLocation" className="text-sm cursor-pointer">
+                                      <span className="font-medium text-gray-900">Save this location for future bookings</span>
+                                      <p className="text-gray-600 mt-1">
+                                        You'll be able to quickly select this address for your next service.
+                                      </p>
+                                    </label>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </div>
