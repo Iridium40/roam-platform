@@ -454,6 +454,8 @@ async function handleTipPayment(session: Stripe.Checkout.Session) {
         platform_fee_amount: parseFloat(stripe_fee || '0'),
         provider_net_amount: parseFloat(provider_net || tip_amount || '0'),
         customer_message: customer_message || '',
+        tip_given_at: new Date().toISOString(), // Set when tip is completed
+        payment_processed_at: new Date().toISOString(),
       })
       .select()
         .single();
@@ -1759,6 +1761,7 @@ async function handleTipPaymentIntent(paymentIntent: Stripe.PaymentIntent) {
           provider_net_amount: providerNetAmount, // 95% to provider
           stripe_transfer_id: stripeTransferId, // Transfer ID if created
           customer_message: customer_message || null,
+          tip_given_at: new Date().toISOString(), // Set when tip is processed
           payment_processed_at: new Date().toISOString(),
         })
         .select()

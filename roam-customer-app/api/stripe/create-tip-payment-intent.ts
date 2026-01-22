@@ -238,6 +238,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         platform_fee_amount: platformFeeAmount / 100, // 5% platform fee
         provider_net_amount: providerNetAmount / 100, // 95% to provider
         customer_message: customer_message || null,
+        tip_given_at: new Date().toISOString(), // Set when tip is initiated
       })
       .select()
       .single();
