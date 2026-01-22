@@ -2949,6 +2949,71 @@ function BookServiceContent() {
                   </div>
                 </div>
 
+                {/* Addon Selection Section - shown before guest checkout */}
+                {availableAddons.length > 0 && (
+                  <div className="bg-gray-50 rounded-lg p-6 mb-6">
+                    <h3 className="font-semibold mb-2 flex items-center">
+                      <span className="mr-2">✨</span>
+                      Enhance Your Service
+                    </h3>
+                    <p className="text-sm text-gray-600 mb-4">
+                      Add extras to customize your experience
+                    </p>
+                    
+                    <div className="space-y-3">
+                      {availableAddons.map((addon) => (
+                        <div
+                          key={addon.id}
+                          className={`border rounded-lg p-4 cursor-pointer transition-all ${
+                            selectedAddons.includes(addon.id)
+                              ? 'border-roam-blue bg-blue-50'
+                              : 'border-gray-200 hover:border-gray-300 bg-white'
+                          }`}
+                          onClick={() => {
+                            setSelectedAddons(prev =>
+                              prev.includes(addon.id)
+                                ? prev.filter(id => id !== addon.id)
+                                : [...prev, addon.id]
+                            );
+                          }}
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-3">
+                              <div className={`w-5 h-5 rounded border-2 flex items-center justify-center mt-0.5 flex-shrink-0 ${
+                                selectedAddons.includes(addon.id)
+                                  ? 'border-roam-blue bg-roam-blue'
+                                  : 'border-gray-300'
+                              }`}>
+                                {selectedAddons.includes(addon.id) && (
+                                  <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                  </svg>
+                                )}
+                              </div>
+                              <div>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="font-medium">{addon.name}</span>
+                                  {addon.is_recommended && (
+                                    <Badge variant="secondary" className="text-xs bg-green-100 text-green-700">
+                                      Recommended
+                                    </Badge>
+                                  )}
+                                </div>
+                                {addon.description && (
+                                  <p className="text-sm text-gray-500 mt-1">{addon.description}</p>
+                                )}
+                              </div>
+                            </div>
+                            <span className="font-semibold text-roam-blue whitespace-nowrap ml-4">
+                              +${addon.price.toFixed(2)}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Guest Checkout Section (only show if not logged in) */}
                 {!customer && (
                   <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6 mb-6">
@@ -3099,71 +3164,6 @@ function BookServiceContent() {
                         </div>
                       </div>
                     )}
-                  </div>
-                )}
-
-                {/* Addon Selection Section */}
-                {availableAddons.length > 0 && (
-                  <div className="bg-gray-50 rounded-lg p-6 mb-6">
-                    <h3 className="font-semibold mb-2 flex items-center">
-                      <span className="mr-2">✨</span>
-                      Enhance Your Service
-                    </h3>
-                    <p className="text-sm text-gray-600 mb-4">
-                      Add extras to customize your experience
-                    </p>
-                    
-                    <div className="space-y-3">
-                      {availableAddons.map((addon) => (
-                        <div
-                          key={addon.id}
-                          className={`border rounded-lg p-4 cursor-pointer transition-all ${
-                            selectedAddons.includes(addon.id)
-                              ? 'border-roam-blue bg-blue-50'
-                              : 'border-gray-200 hover:border-gray-300 bg-white'
-                          }`}
-                          onClick={() => {
-                            setSelectedAddons(prev =>
-                              prev.includes(addon.id)
-                                ? prev.filter(id => id !== addon.id)
-                                : [...prev, addon.id]
-                            );
-                          }}
-                        >
-                          <div className="flex items-start justify-between">
-                            <div className="flex items-start gap-3">
-                              <div className={`w-5 h-5 rounded border-2 flex items-center justify-center mt-0.5 flex-shrink-0 ${
-                                selectedAddons.includes(addon.id)
-                                  ? 'border-roam-blue bg-roam-blue'
-                                  : 'border-gray-300'
-                              }`}>
-                                {selectedAddons.includes(addon.id) && (
-                                  <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                  </svg>
-                                )}
-                              </div>
-                              <div>
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="font-medium">{addon.name}</span>
-                                  {addon.is_recommended && (
-                                    <Badge variant="secondary" className="text-xs bg-green-100 text-green-700">
-                                      Recommended
-                                    </Badge>
-                                  )}
-                                </div>
-                                {addon.description && (
-                                  <p className="text-sm text-gray-500 mt-1">{addon.description}</p>
-                                )}
-                              </div>
-                            </div>
-                            <span className="font-semibold text-roam-blue whitespace-nowrap ml-4">
-                              +${addon.price.toFixed(2)}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
                   </div>
                 )}
               </div>
