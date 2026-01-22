@@ -83,6 +83,7 @@ export function SimplifiedServiceListSection({
             <TableHeader>
               <TableRow>
                 <TableHead>Service</TableHead>
+                <TableHead className="hidden md:table-cell">Pricing</TableHead>
                 <TableHead className="hidden md:table-cell">Base Price</TableHead>
                 <TableHead className="hidden md:table-cell">Your Price</TableHead>
                 <TableHead className="hidden md:table-cell">Duration</TableHead>
@@ -110,18 +111,21 @@ export function SimplifiedServiceListSection({
                         )}
                         <div>
                           <p className="font-medium">{service.name}</p>
-                          {isDepositService && (
-                            <span className="text-xs text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded">
-                              Deposit
-                            </span>
-                          )}
                         </div>
                       </div>
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
+                      <Badge
+                        variant={isDepositService ? 'outline' : 'secondary'}
+                        className={isDepositService ? 'border-amber-500 bg-amber-100 text-amber-800' : ''}
+                      >
+                        {isDepositService ? 'Deposit' : 'Fixed'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">
                       <p className={`text-sm ${isDepositService ? 'text-amber-700' : 'text-muted-foreground'}`}>
                         ${service.min_price}
-                        {isDepositService && <span className="text-xs ml-1">(min deposit)</span>}
+                        {isDepositService && <span className="text-xs ml-1">(min)</span>}
                       </p>
                     </TableCell>
                     <TableCell className="hidden md:table-cell">

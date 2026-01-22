@@ -228,6 +228,7 @@ async function fallbackServices(
         duration_minutes,
         image_url,
         subcategory_id,
+        pricing_type,
         service_subcategories (
           id,
           service_subcategory_type,
@@ -284,6 +285,7 @@ async function fallbackServices(
         duration_minutes: service.duration_minutes,
         image_url: service.image_url,
         subcategory_id: service.subcategory_id,
+        pricing_type: service.pricing_type || 'fixed',
         subcategory_name: subcategory?.service_subcategory_type,
         category_id: category?.id,
         category_name: category?.service_category_type,
