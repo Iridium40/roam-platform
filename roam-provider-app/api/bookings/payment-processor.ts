@@ -225,6 +225,27 @@ export async function processBookingAcceptance(
       };
     }
 
+    // Handle expired or canceled authorization
+    if (paymentIntent.status === 'canceled') {
+      console.error('❌ PAYMENT AUTHORIZATION EXPIRED OR CANCELED');
+      console.error('❌ The payment authorization has expired (typically after 7 days)');
+      console.error('❌ Customer will need to complete a new payment to confirm this booking');
+      return {
+        success: false,
+        error: 'Payment authorization has expired. The customer will need to complete a new payment to confirm this booking. Please contact the customer to request new payment.',
+      };
+    }
+
+    // Handle case where payment requires new payment method
+    if (paymentIntent.status === 'requires_payment_method') {
+      console.error('❌ PAYMENT REQUIRES NEW PAYMENT METHOD');
+      console.error('❌ The original payment method failed or was removed');
+      return {
+        success: false,
+        error: 'Payment method issue. The customer will need to provide a new payment method to confirm this booking.',
+      };
+    }
+
     // Check if payment intent requires capture (authorized but not charged)
     // This happens when checkout uses manual capture
     if (paymentIntent.status === 'requires_capture') {

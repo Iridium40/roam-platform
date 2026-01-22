@@ -175,7 +175,12 @@ function BookingCard({
 
   // Check if this is a deposit booking (has remaining balance that hasn't been charged)
   const isDepositBooking = parseFloat(booking.remaining_balance || '0') > 0 && !booking.remaining_balance_charged;
-  const depositAmount = parseFloat(booking.total_amount || '0') - parseFloat(booking.remaining_balance || '0');
+  // Deposit paid shows what the business earned from the initial deposit
+  // This is the total_amount minus the platform fee (service_fee)
+  // total_amount = service_amount + platform_fee, so deposit_paid = total_amount - service_fee
+  const totalAmount = parseFloat(booking.total_amount || '0');
+  const serviceFee = parseFloat(booking.service_fee || '0');
+  const depositAmount = totalAmount - serviceFee; // What business receives from deposit
 
   // Handle status action with confirmation
   const handleStatusAction = (status: string) => {
