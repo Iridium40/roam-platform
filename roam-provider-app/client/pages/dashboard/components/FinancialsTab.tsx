@@ -121,9 +121,8 @@ export default function FinancialsTab({
   const [tipsData, setTipsData] = useState<any[]>([]);
   const [tipsLoading, setTipsLoading] = useState(false);
 
-  // Get default date range (last 30 days for transactions, 14 days for payouts)
+  // Get default date range (last 30 days)
   const defaultDateRange = getDefaultDateRange(FINANCIALS_PAGINATION_CONFIG.defaultDateRangeDays);
-  const payoutDateRange = getDefaultDateRange(14); // 14 days for payouts
 
   // Filter state for transactions and tips - with default date range
   const [transactionFilters, setTransactionFilters] = useState({
@@ -138,20 +137,14 @@ export default function FinancialsTab({
     endDate: defaultDateRange.endDate,
     providerId: 'all',
   });
-  const [payoutFilters, setPayoutFilters] = useState({
-    startDate: payoutDateRange.startDate,
-    endDate: payoutDateRange.endDate,
-    providerId: 'all',
-  });
   const [stripePayoutFilters, setStripePayoutFilters] = useState({
-    startDate: payoutDateRange.startDate,
-    endDate: payoutDateRange.endDate,
+    startDate: defaultDateRange.startDate,
+    endDate: defaultDateRange.endDate,
   });
 
   // Pagination state
   const [transactionPage, setTransactionPage] = useState(1);
   const [tipPage, setTipPage] = useState(1);
-  const [payoutPage, setPayoutPage] = useState(1);
   const [pageSize] = useState(getPageSize());
 
   // Date preset for quick selection
@@ -189,7 +182,7 @@ export default function FinancialsTab({
       startDate: newRange.startDate,
       endDate: newRange.endDate,
     }));
-    setPayoutFilters(prev => ({
+    setStripePayoutFilters(prev => ({
       ...prev,
       startDate: newRange.startDate,
       endDate: newRange.endDate,
@@ -197,7 +190,6 @@ export default function FinancialsTab({
     // Reset to page 1 when filter changes
     setTransactionPage(1);
     setTipPage(1);
-    setPayoutPage(1);
   }, []);
 
   // Pagination controls component
@@ -420,95 +412,6 @@ export default function FinancialsTab({
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
     link.setAttribute('download', `transactions_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  // CSV Export function for provider payouts
-  const exportPayoutsToCSV = () => {
-    // Apply filters to businessPaymentTransactions
-    let filtered = businessPaymentTransactions.filter((payout: any) => {
-      if (payoutFilters.startDate) {
-        const payoutDate = new Date(payout.payment_date || payout.created_at);
-        if (payoutDate < new Date(payoutFilters.startDate)) return false;
-      }
-      if (payoutFilters.endDate) {
-        const payoutDate = new Date(payout.payment_date || payout.created_at);
-        const endDate = new Date(payoutFilters.endDate);
-        endDate.setHours(23, 59, 59, 999);
-        if (payoutDate > endDate) return false;
-      }
-      if (payoutFilters.providerId !== 'all') {
-        // Check through bookings relationship
-        const booking = Array.isArray(payout.bookings) ? payout.bookings[0] : payout.bookings;
-        if (booking?.provider_id !== payoutFilters.providerId) return false;
-      }
-      return true;
-    });
-
-    // Prepare CSV data
-    const csvRows = [];
-    csvRows.push([
-      'Date',
-      'Provider',
-      'Gross Amount',
-      'Net Amount',
-      'Platform Fee',
-      'Booking Reference',
-      'Transaction Type',
-      'Tax Year',
-      'Status'
-    ].join(','));
-
-    filtered.forEach((payout: any) => {
-      const payoutDate = payout.payment_date || payout.created_at;
-      const booking = Array.isArray(payout.bookings) ? payout.bookings[0] : payout.bookings;
-      
-      // Get provider name from nested structure
-      let providerName = 'Unknown Provider';
-      if (booking?.providers) {
-        const provider = Array.isArray(booking.providers) ? booking.providers[0] : booking.providers;
-        if (provider) {
-          providerName = `${provider.first_name || ''} ${provider.last_name || ''}`.trim() || 'Unknown Provider';
-        }
-      } else if (booking?.provider_id) {
-        // Fallback: try to find provider in the providers list
-        const provider = providers.find(p => p.id === booking.provider_id);
-        if (provider) {
-          providerName = `${provider.first_name || ''} ${provider.last_name || ''}`.trim();
-        }
-      }
-      
-      const grossAmount = parseFloat(payout.gross_payment_amount || 0);
-      const netAmount = parseFloat(payout.net_payment_amount || 0);
-      const platformFee = parseFloat(payout.platform_fee || 0);
-      const bookingReference = payout.booking_reference || '';
-      const transactionType = payout.transaction_type || '';
-      const taxYear = payout.tax_year || '';
-      const status = 'completed'; // Provider payouts are always completed
-
-      csvRows.push([
-        payoutDate ? new Date(payoutDate).toLocaleDateString() : '',
-        `"${providerName}"`,
-        grossAmount.toFixed(2),
-        netAmount.toFixed(2),
-        platformFee.toFixed(2),
-        `"${bookingReference}"`,
-        `"${transactionType}"`,
-        taxYear,
-        `"${status}"`
-      ].join(','));
-    });
-
-    // Create and download CSV
-    const csvContent = csvRows.join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `payouts_${new Date().toISOString().split('T')[0]}.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
@@ -1445,18 +1348,6 @@ export default function FinancialsTab({
 
         {/* Payouts Tab */}
         <TabsContent value="payouts" className="space-y-6 mt-6">
-          {/* Info Alert explaining the relationship */}
-          <Alert className="bg-blue-50 border-blue-200">
-            <Info className="h-4 w-4 text-blue-600" />
-            <AlertTitle className="text-blue-800">How Payouts Work</AlertTitle>
-            <AlertDescription className="text-blue-700 text-sm">
-              <strong>Stripe Payouts</strong> are batched transfers sent to your bank account (typically weekly). 
-              Each payout combines multiple booking transactions from the period. 
-              <strong> Booking Earnings</strong> below shows individual transactions that feed into these payouts. 
-              New bookings may take 2-7 days to appear in a payout depending on your payout schedule.
-            </AlertDescription>
-          </Alert>
-
           {/* Stripe Payouts */}
           <Card>
             <CardHeader>
@@ -1725,189 +1616,6 @@ export default function FinancialsTab({
               </div>
             </CardContent>
           </Card>
-
-          {/* Business Payment Transactions (Booking Earnings) */}
-          {businessPaymentTransactions.length > 0 && (
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="flex items-center space-x-2">
-                      <Building2 className="w-5 h-5" />
-                      <span>Booking Earnings</span>
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Info className="w-4 h-4 text-gray-400 cursor-help" />
-                          </TooltipTrigger>
-                          <TooltipContent className="max-w-xs">
-                            <p className="text-sm">
-                              This shows all confirmed booking transactions. These earnings are accumulated and sent to your bank 
-                              in batched payouts (shown above). A booking may take 2-7 days to appear in a payout.
-                            </p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </CardTitle>
-                    <CardDescription>
-                      Individual booking transactions that contribute to your payouts
-                    </CardDescription>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={exportPayoutsToCSV}
-                    className="flex items-center space-x-2"
-                  >
-                    <Download className="w-4 h-4" />
-                    <span>Export CSV</span>
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {/* Booking Earnings Filters */}
-                <div className="mb-6 p-4 bg-gray-50 rounded-lg border">
-                  <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
-                    {/* Date Range */}
-                    <div className="md:col-span-5 space-y-2">
-                      <label className="text-xs font-medium text-gray-700">Date Range</label>
-                      <div className="flex gap-2">
-                        <div className="relative flex-1 min-w-0">
-                          <Input
-                            type="date"
-                            value={payoutFilters.startDate}
-                            onChange={(e) => setPayoutFilters(prev => ({ ...prev, startDate: e.target.value }))}
-                            className="text-xs pr-10"
-                            placeholder="From"
-                          />
-                          <Calendar className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-                        </div>
-                        <div className="relative flex-1 min-w-0">
-                          <Input
-                            type="date"
-                            value={payoutFilters.endDate}
-                            onChange={(e) => setPayoutFilters(prev => ({ ...prev, endDate: e.target.value }))}
-                            className="text-xs pr-10"
-                            placeholder="To"
-                          />
-                          <Calendar className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Provider Filter */}
-                    <div className="md:col-span-4 space-y-2">
-                      <label className="text-xs font-medium text-gray-700">Provider</label>
-                      <Select
-                        value={payoutFilters.providerId}
-                        onValueChange={(value) => setPayoutFilters(prev => ({ ...prev, providerId: value }))}
-                      >
-                        <SelectTrigger className="text-xs">
-                          <SelectValue placeholder="All Providers" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All Providers</SelectItem>
-                          {providers.map((provider) => (
-                            <SelectItem key={provider.id} value={provider.id}>
-                              {provider.first_name} {provider.last_name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {/* Clear Filters */}
-                    <div className="md:col-span-3 space-y-2">
-                      <label className="text-xs font-medium text-gray-700 opacity-0">Clear</label>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setPayoutFilters({
-                          startDate: '',
-                          endDate: '',
-                          providerId: 'all',
-                        })}
-                        className="text-xs w-full"
-                      >
-                        Clear
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  {(() => {
-                    // Apply filters to provider payouts
-                    let filtered = businessPaymentTransactions.filter((payout: any) => {
-                      if (payoutFilters.startDate) {
-                        const payoutDate = new Date(payout.payment_date || payout.created_at);
-                        if (payoutDate < new Date(payoutFilters.startDate)) return false;
-                      }
-                      if (payoutFilters.endDate) {
-                        const payoutDate = new Date(payout.payment_date || payout.created_at);
-                        const endDate = new Date(payoutFilters.endDate);
-                        endDate.setHours(23, 59, 59, 999);
-                        if (payoutDate > endDate) return false;
-                      }
-                      if (payoutFilters.providerId !== 'all') {
-                        // Check through bookings relationship
-                        const booking = Array.isArray(payout.bookings) ? payout.bookings[0] : payout.bookings;
-                        if (booking?.provider_id !== payoutFilters.providerId) return false;
-                      }
-                      return true;
-                    });
-
-                    if (filtered.length === 0) {
-                      return (
-                        <div className="text-center py-8">
-                          <Building2 className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                          <p className="text-sm text-gray-500">No provider payouts match your filters</p>
-                          <p className="text-xs text-gray-400 mt-1">Try adjusting your filter criteria</p>
-                        </div>
-                      );
-                    }
-
-                    return filtered.map((payout) => {
-                      // Get booking reference from joined bookings data
-                      const bookingRef = payout.bookings?.booking_reference || payout.booking_reference;
-                      
-                      return (
-                    <div key={payout.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-green-100">
-                          <CheckCircle className="w-5 h-5 text-green-600" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-sm">
-                            ${payout.net_payment_amount.toFixed(2)} to you
-                          </p>
-                          <p className="text-xs text-gray-600">
-                            {bookingRef ? `Ref: ${bookingRef}` : payout.booking_id && `Booking: ${payout.booking_id.slice(0, 8)}...`}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {new Date(payout.payment_date).toLocaleDateString()}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-semibold text-green-600">
-                          +${payout.net_payment_amount.toFixed(2)}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          Platform fee: ${payout.platform_fee.toFixed(2)}
-                        </p>
-                        <p className="text-xs text-gray-400">
-                          Tax Year: {payout.tax_year}
-                        </p>
-                      </div>
-                    </div>
-                      );
-                    });
-                  })()}
-                </div>
-              </CardContent>
-            </Card>
-          )}
         </TabsContent>
 
         {/* Transactions Tab */}
