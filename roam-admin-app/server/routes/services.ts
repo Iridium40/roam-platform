@@ -183,7 +183,8 @@ async function createService(req: Request, res: Response) {
       image_url,
       is_active = true,
       is_featured = false,
-      is_popular = false
+      is_popular = false,
+      pricing_type = 'fixed'
     } = req.body;
 
     // Validate required fields
@@ -205,7 +206,8 @@ async function createService(req: Request, res: Response) {
         image_url,
         is_active,
         is_featured,
-        is_popular
+        is_popular,
+        pricing_type
       }])
       .select()
       .single();
@@ -251,7 +253,8 @@ async function updateService(req: Request, res: Response) {
       image_url,
       is_active,
       is_featured,
-      is_popular
+      is_popular,
+      pricing_type
     } = req.body;
 
     const updateData: any = {};
@@ -264,6 +267,7 @@ async function updateService(req: Request, res: Response) {
     if (is_active !== undefined) updateData.is_active = is_active;
     if (is_featured !== undefined) updateData.is_featured = is_featured;
     if (is_popular !== undefined) updateData.is_popular = is_popular;
+    if (pricing_type !== undefined) updateData.pricing_type = pricing_type;
 
     const { data, error } = await supabase
       .from('services')
