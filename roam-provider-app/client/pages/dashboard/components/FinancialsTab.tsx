@@ -60,8 +60,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Info,
-  ChevronDown,
-  ChevronUp,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
@@ -73,11 +71,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import { 
   FINANCIALS_PAGINATION_CONFIG, 
   getDefaultDateRange, 
@@ -103,8 +96,6 @@ export default function FinancialsTab({
   // Stripe-specific state
   const [stripeBalance, setStripeBalance] = useState<any>(null);
   const [stripePayouts, setStripePayouts] = useState<any[]>([]);
-  const [expandedPayouts, setExpandedPayouts] = useState<Set<string>>(new Set());
-  const [payoutTransactions, setPayoutTransactions] = useState<Record<string, any>>({});
   const [stripeTransactions, setStripeTransactions] = useState<any[]>([]);
   const [stripeLoading, setStripeLoading] = useState(false);
 
@@ -725,40 +716,6 @@ export default function FinancialsTab({
     }
   };
 
-  // Load transactions for a specific payout
-  const loadPayoutTransactions = async (payoutId: string) => {
-    // Don't reload if already loaded
-    if (payoutTransactions[payoutId]) return;
-    
-    try {
-      const res = await fetch(`/api/stripe/payout-transactions?business_id=${businessId}&payout_id=${payoutId}`);
-      if (res.ok) {
-        const data = await res.json();
-        setPayoutTransactions(prev => ({
-          ...prev,
-          [payoutId]: data
-        }));
-      }
-    } catch (error) {
-      console.error('Error loading payout transactions:', error);
-    }
-  };
-
-  // Toggle payout expansion
-  const togglePayoutExpanded = (payoutId: string) => {
-    setExpandedPayouts(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(payoutId)) {
-        newSet.delete(payoutId);
-      } else {
-        newSet.add(payoutId);
-        // Load transactions when expanding
-        loadPayoutTransactions(payoutId);
-      }
-      return newSet;
-    });
-  };
-
   // Load Stripe transactions
   const loadStripeTransactions = async () => {
     try {
@@ -1371,8 +1328,7 @@ export default function FinancialsTab({
                     </TooltipProvider>
                   </CardTitle>
                   <CardDescription>
-                    Each payout represents your accumulated earnings from booking transactions over a period. 
-                    Click on a payout to see which transactions are included. Payouts are managed through Stripe Express.
+                    Payouts represent your accumulated earnings sent to your bank account. Managed through Stripe Express.
                   </CardDescription>
                 </div>
                 <div className="flex items-center space-x-2">
@@ -1474,144 +1430,51 @@ export default function FinancialsTab({
                     );
                   }
 
-                  return filtered.map((payout) => {
-                    const isExpanded = expandedPayouts.has(payout.id);
-                    const transactions = payoutTransactions[payout.id];
-                    
-                    return (
-                      <Collapsible
-                        key={payout.id}
-                        open={isExpanded}
-                        onOpenChange={() => togglePayoutExpanded(payout.id)}
-                      >
-                        <div className="bg-gray-50 rounded-lg overflow-hidden">
-                          <CollapsibleTrigger asChild>
-                            <div className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-100 transition-colors">
-                              <div className="flex items-center space-x-3">
-                                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                                  payout.status === 'paid' ? 'bg-green-100' :
-                                  payout.status === 'pending' ? 'bg-yellow-100' :
-                                  payout.status === 'in_transit' ? 'bg-blue-100' :
-                                  'bg-red-100'
-                                }`}>
-                                  {payout.status === 'paid' ? (
-                                    <CheckCircle className="w-5 h-5 text-green-600" />
-                                  ) : payout.status === 'pending' || payout.status === 'in_transit' ? (
-                                    <Clock className="w-5 h-5 text-yellow-600" />
-                                  ) : (
-                                    <XCircle className="w-5 h-5 text-red-600" />
-                                  )}
-                                </div>
-                                <div>
-                                  <p className="font-medium text-sm flex items-center gap-2">
-                                    ${payout.amount.toFixed(2)}
-                                    {payout.method === 'instant' && (
-                                      <Badge variant="outline" className="text-xs">
-                                        <Zap className="w-3 h-3 mr-1" />
-                                        Instant
-                                      </Badge>
-                                    )}
-                                  </p>
-                                  <p className="text-xs text-gray-600">
-                                    {new Date(payout.created * 1000).toLocaleDateString()} • 
-                                    Arrives {new Date(payout.arrival_date * 1000).toLocaleDateString()}
-                                  </p>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-3">
-                                <Badge variant={
-                                  payout.status === 'paid' ? 'default' :
-                                  payout.status === 'pending' || payout.status === 'in_transit' ? 'secondary' :
-                                  'destructive'
-                                }>
-                                  {payout.status === 'paid' ? 'Paid' :
-                                   payout.status === 'pending' ? 'Pending' :
-                                   payout.status === 'in_transit' ? 'In Transit' :
-                                   payout.status}
-                                </Badge>
-                                {isExpanded ? (
-                                  <ChevronUp className="w-4 h-4 text-gray-400" />
-                                ) : (
-                                  <ChevronDown className="w-4 h-4 text-gray-400" />
-                                )}
-                              </div>
-                            </div>
-                          </CollapsibleTrigger>
-                          
-                          <CollapsibleContent>
-                            <div className="px-4 pb-4 border-t border-gray-200">
-                              <div className="pt-3">
-                                <p className="text-xs font-medium text-gray-500 mb-2">
-                                  Transactions included in this payout:
-                                </p>
-                                
-                                {!transactions ? (
-                                  <div className="flex items-center justify-center py-4">
-                                    <RefreshCw className="w-4 h-4 animate-spin text-gray-400 mr-2" />
-                                    <span className="text-xs text-gray-500">Loading transactions...</span>
-                                  </div>
-                                ) : transactions.transactions?.length === 0 ? (
-                                  <p className="text-xs text-gray-500 py-2">No transaction details available</p>
-                                ) : (
-                                  <>
-                                    {/* Summary */}
-                                    <div className="bg-white rounded-md p-3 mb-3 border">
-                                      <div className="grid grid-cols-3 gap-4 text-center">
-                                        <div>
-                                          <p className="text-xs text-gray-500">Transactions</p>
-                                          <p className="font-semibold text-sm">{transactions.summary?.transaction_count || 0}</p>
-                                        </div>
-                                        <div>
-                                          <p className="text-xs text-gray-500">Gross</p>
-                                          <p className="font-semibold text-sm text-green-600">
-                                            ${(transactions.summary?.total_charges || 0).toFixed(2)}
-                                          </p>
-                                        </div>
-                                        <div>
-                                          <p className="text-xs text-gray-500">Fees</p>
-                                          <p className="font-semibold text-sm text-red-600">
-                                            -${(transactions.summary?.total_fees || 0).toFixed(2)}
-                                          </p>
-                                        </div>
-                                      </div>
-                                    </div>
-                                    
-                                    {/* Transaction list */}
-                                    <div className="space-y-2 max-h-48 overflow-y-auto">
-                                      {transactions.transactions?.map((txn: any) => (
-                                        <div key={txn.id} className="flex items-center justify-between py-2 px-3 bg-white rounded border text-xs">
-                                          <div className="flex-1">
-                                            <p className="font-medium text-gray-700">
-                                              {txn.booking_reference ? (
-                                                <span>Booking {txn.booking_reference}</span>
-                                              ) : (
-                                                <span className="capitalize">{txn.type.replace('_', ' ')}</span>
-                                              )}
-                                            </p>
-                                            <p className="text-gray-500">
-                                              {new Date(txn.created * 1000).toLocaleDateString()}
-                                            </p>
-                                          </div>
-                                          <div className="text-right">
-                                            <p className={`font-medium ${txn.amount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                              {txn.amount >= 0 ? '+' : ''}${txn.amount.toFixed(2)}
-                                            </p>
-                                            {txn.fee > 0 && (
-                                              <p className="text-gray-400">-${txn.fee.toFixed(2)} fee</p>
-                                            )}
-                                          </div>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </>
-                                )}
-                              </div>
-                            </div>
-                          </CollapsibleContent>
+                  return filtered.map((payout) => (
+                    <div key={payout.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                          payout.status === 'paid' ? 'bg-green-100' :
+                          payout.status === 'pending' ? 'bg-yellow-100' :
+                          payout.status === 'in_transit' ? 'bg-blue-100' :
+                          'bg-red-100'
+                        }`}>
+                          {payout.status === 'paid' ? (
+                            <CheckCircle className="w-5 h-5 text-green-600" />
+                          ) : payout.status === 'pending' || payout.status === 'in_transit' ? (
+                            <Clock className="w-5 h-5 text-yellow-600" />
+                          ) : (
+                            <XCircle className="w-5 h-5 text-red-600" />
+                          )}
                         </div>
-                      </Collapsible>
-                    );
-                  });
+                        <div>
+                          <p className="font-medium text-sm flex items-center gap-2">
+                            ${payout.amount.toFixed(2)}
+                            {payout.method === 'instant' && (
+                              <Badge variant="outline" className="text-xs">
+                                <Zap className="w-3 h-3 mr-1" />
+                                Instant
+                              </Badge>
+                            )}
+                          </p>
+                          <p className="text-xs text-gray-600">
+                            {new Date(payout.created * 1000).toLocaleDateString()} • 
+                            Arrives {new Date(payout.arrival_date * 1000).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+                      <Badge variant={
+                        payout.status === 'paid' ? 'default' :
+                        payout.status === 'pending' || payout.status === 'in_transit' ? 'secondary' :
+                        'destructive'
+                      }>
+                        {payout.status === 'paid' ? 'Paid' :
+                         payout.status === 'pending' ? 'Pending' :
+                         payout.status === 'in_transit' ? 'In Transit' :
+                         payout.status}
+                      </Badge>
+                    </div>
+                  ));
                 })()}
               </div>
             </CardContent>
@@ -1835,7 +1698,24 @@ export default function FinancialsTab({
                       ? parseFloat(transaction.net_payment_amount || 0)
                       : transaction.amount;
                     const currency = transaction.currency || 'USD';
-                    const status = transaction.status || transaction.payment_status;
+                    
+                    // Determine payment status based on booking state (matches BookingCard logic)
+                    const bookingStatus = booking?.booking_status;
+                    const isCancelled = bookingStatus === 'cancelled';
+                    const hasPaymentIntent = !!(booking?.stripe_service_amount_payment_intent_id || transaction.stripe_payment_intent_id);
+                    const isPaymentCaptured = booking?.service_fee_charged === true || transaction.service_fee_charged === true;
+                    
+                    let displayStatus = transaction.status || transaction.payment_status || 'pending';
+                    if (isCancelled) {
+                      displayStatus = 'refunded';
+                    } else if (isPaymentCaptured) {
+                      displayStatus = 'paid';
+                    } else if (hasPaymentIntent) {
+                      displayStatus = 'authorized';
+                    } else if (['confirmed', 'in_progress', 'completed'].includes(bookingStatus)) {
+                      // If booking is confirmed/in_progress/completed, payment should be captured
+                      displayStatus = 'paid';
+                    }
                     
                     return (
                       <div key={transaction.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -1888,16 +1768,23 @@ export default function FinancialsTab({
                                 {amount >= 0 ? '+' : ''}${Math.abs(amount).toFixed(2)}
                               </p>
                               <p className="text-xs text-gray-500">{currency}</p>
-                              {status && (
+                              {displayStatus && (
                                 <Badge 
                                   variant={
-                                    status === 'completed' ? 'default' :
-                                    status === 'pending' ? 'secondary' :
+                                    displayStatus === 'paid' || displayStatus === 'completed' ? 'default' :
+                                    displayStatus === 'authorized' ? 'secondary' :
+                                    displayStatus === 'pending' ? 'secondary' :
+                                    displayStatus === 'refunded' ? 'outline' :
                                     'destructive'
                                   }
                                   className="text-xs mt-1"
                                 >
-                                  {status}
+                                  {displayStatus === 'paid' ? 'Paid' :
+                                   displayStatus === 'authorized' ? 'Authorized' :
+                                   displayStatus === 'pending' ? 'Pending' :
+                                   displayStatus === 'refunded' ? 'Refunded' :
+                                   displayStatus === 'completed' ? 'Paid' :
+                                   displayStatus}
                                 </Badge>
                               )}
                             </>
