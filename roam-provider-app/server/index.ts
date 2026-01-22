@@ -2216,6 +2216,17 @@ export function createServer() {
     }
   });
 
+  // Stripe payout transactions (transactions included in a specific payout)
+  app.get("/api/stripe/payout-transactions", async (req, res) => {
+    try {
+      const payoutTransactionsHandler = await import("../api/stripe/payout-transactions");
+      await payoutTransactionsHandler.default(req as any, res as any);
+    } catch (error) {
+      console.error("Error importing Stripe payout transactions handler:", error);
+      res.status(500).json({ error: "Failed to load Stripe payout transactions handler" });
+    }
+  });
+
   // Stripe transactions
   app.get("/api/stripe/transactions", async (req, res) => {
     try {
