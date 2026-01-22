@@ -426,8 +426,18 @@ function BookServiceContent() {
 
       console.log('📦 Available addons loaded:', addonsWithPricing.length);
       setAvailableAddons(addonsWithPricing);
-      // Clear selected addons when available addons change
-      setSelectedAddons([]);
+      
+      // Validate and filter selected addons to only include valid addon IDs
+      // This preserves addons that were restored from OAuth redirect
+      setSelectedAddons(prev => {
+        if (prev.length === 0) return prev;
+        const validAddonIds = addonsWithPricing.map(a => a.id);
+        const validSelectedAddons = prev.filter(id => validAddonIds.includes(id));
+        if (validSelectedAddons.length !== prev.length) {
+          logger.debug('Filtered invalid addons:', prev.length - validSelectedAddons.length);
+        }
+        return validSelectedAddons;
+      });
     } catch (error) {
       logger.error('Error loading addons:', error);
       setAvailableAddons([]);
@@ -544,6 +554,20 @@ function BookServiceContent() {
   // Auto-proceed with checkout after successful login
   useEffect(() => {
     if (customer && pendingCheckout) {
+      // If there are selected addons, wait for availableAddons to be loaded
+      // so that addon prices can be calculated correctly
+      if (selectedAddons.length > 0 && availableAddons.length === 0 && !addonsLoading) {
+        // Addons not loaded yet, wait for them
+        logger.debug('Waiting for addons to load before checkout...');
+        return;
+      }
+      
+      // If addons are still loading, wait
+      if (addonsLoading) {
+        logger.debug('Addons still loading, waiting...');
+        return;
+      }
+      
       setPendingCheckout(false);
       setShowAuthModal(false);
       // Small delay to ensure modal closes before checkout
@@ -553,7 +577,7 @@ function BookServiceContent() {
         });
       }, 300);
     }
-  }, [customer, pendingCheckout]);
+  }, [customer, pendingCheckout, selectedAddons, availableAddons, addonsLoading]);
 
   // Load service details and promotion if applicable
   useEffect(() => {
@@ -693,7 +717,8 @@ function BookServiceContent() {
       loadAvailableAddons(service.id, selectedBusiness.id);
     } else {
       setAvailableAddons([]);
-      setSelectedAddons([]);
+      // Don't clear selectedAddons here - they may be restored from OAuth redirect
+      // They will be validated against availableAddons when addons are loaded
     }
   }, [service?.id, selectedBusiness?.id]);
 
