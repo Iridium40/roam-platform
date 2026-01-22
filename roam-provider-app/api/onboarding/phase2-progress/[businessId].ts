@@ -7,19 +7,12 @@ const supabase = createClient(
 );
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Comprehensive logging to debug businessId extraction
-  console.log('=== Phase2 Progress Debug ===');
-  console.log('req.url:', req.url);
-  console.log('req.query:', JSON.stringify(req.query, null, 2));
-  console.log('req.method:', req.method);
-  
   // Extract businessId - try multiple methods
   let businessId: string | undefined;
   
   // Method 1: Direct from req.query (standard Vercel file-based routing)
   if (req.query.businessId && typeof req.query.businessId === 'string') {
     businessId = req.query.businessId;
-    console.log('✓ Found businessId in req.query.businessId:', businessId);
   }
   
   // Method 2: Extract from URL path if not found
@@ -27,7 +20,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const urlMatch = req.url.match(/\/api\/onboarding\/phase2-progress\/([a-f0-9-]{36}|[^/?]+)/);
     if (urlMatch && urlMatch[1]) {
       businessId = urlMatch[1];
-      console.log('✓ Extracted businessId from URL path:', businessId);
     }
   }
   
@@ -37,7 +29,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const strValue = Array.isArray(value) ? value[0] : String(value);
       if (strValue && /^[a-f0-9-]{36}$/i.test(strValue)) {
         businessId = strValue;
-        console.log(`✓ Found businessId in req.query.${key}:`, businessId);
         break;
       }
     }

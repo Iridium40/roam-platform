@@ -75,8 +75,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           message: 'Provider profile not found or you do not have access to this business'
         });
       }
-
-      console.log('Authorization successful - Role:', providerData.provider_role);
     }
 
     // Step 1: Verify business exists

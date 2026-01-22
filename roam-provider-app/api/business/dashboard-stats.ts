@@ -120,15 +120,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const recentBookings = recentBookingsData || [];
     const activeBookings = activeBookingsData || [];
     
-    // Debug logging for recent bookings
-    console.log('Dashboard stats debug:', {
-      business_id,
-      recentBookingsCount: recentBookings.length,
-      activeBookingsCount: activeBookings.length,
-      recentBookingsError: recentBookingsError?.message,
-      statsFromRPC: stats,
-    });
-    
     // Calculate unassigned bookings and today's confirmed count
     const unassignedBookings = activeBookings.filter((b: any) => !b.provider_id).length;
     const todaysConfirmedCount = activeBookings.filter((b: any) => 

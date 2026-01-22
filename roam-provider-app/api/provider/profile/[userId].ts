@@ -7,19 +7,12 @@ const supabase = createClient(
 );
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Comprehensive logging to debug userId extraction
-  console.log('=== Provider Profile Debug ===');
-  console.log('req.url:', req.url);
-  console.log('req.query:', JSON.stringify(req.query, null, 2));
-  console.log('req.method:', req.method);
-  
   // Extract userId - try multiple methods
   let userId: string | undefined;
   
   // Method 1: Direct from req.query (standard Vercel file-based routing)
   if (req.query.userId && typeof req.query.userId === 'string') {
     userId = req.query.userId;
-    console.log('✓ Found userId in req.query.userId:', userId);
   }
   
   // Method 2: Extract from URL path if not found
@@ -27,7 +20,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const urlMatch = req.url.match(/\/api\/provider\/profile\/([a-f0-9-]{36}|[^/?]+)/);
     if (urlMatch && urlMatch[1]) {
       userId = urlMatch[1];
-      console.log('✓ Extracted userId from URL path:', userId);
     }
   }
   
@@ -37,7 +29,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const strValue = Array.isArray(value) ? value[0] : String(value);
       if (strValue && /^[a-f0-9-]{36}$/i.test(strValue)) {
         userId = strValue;
-        console.log(`✓ Found userId in req.query.${key}:`, userId);
         break;
       }
     }
@@ -59,7 +50,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
       // Handle test user IDs specially
       if (userId.startsWith('test-')) {
-        console.log('Test mode: Returning mock provider profile for', userId);
         return res.status(200).json({
           professionalTitle: 'Test Provider',
           professionalBio: 'This is a test professional bio for image upload testing. I am testing the personal profile setup component with mock data.',
@@ -138,15 +128,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // Handle test user IDs specially
       if (userId.startsWith('test-')) {
-        console.log('Test mode: Simulating provider profile save for', userId);
-        console.log('Provider data:', {
-          professionalTitle,
-          professionalBio,
-          yearsExperience,
-          specialties,
-          avatarUrl,
-          coverImageUrl
-        });
         return res.status(200).json({
           success: true,
           message: 'Test provider profile saved successfully',
