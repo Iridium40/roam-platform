@@ -489,8 +489,12 @@ const formatServiceCategoryType = (type: ServiceCategoryType): string => {
       return "Therapy";
     case "healthcare":
       return "Healthcare";
+    case "event":
+      return "Event";
     default:
-      return type;
+      return type
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, (char) => char.toUpperCase());
   }
 };
 
@@ -504,6 +508,8 @@ const getServiceCategoryTypeIcon = (type: ServiceCategoryType) => {
       return "🧘";
     case "healthcare":
       return "🏥";
+    case "event":
+      return "🎉";
     default:
       return "📋";
   }
@@ -519,6 +525,8 @@ const getServiceCategoryTypeBadgeVariant = (type: ServiceCategoryType) => {
       return "secondary" as const;
     case "healthcare":
       return "outline" as const;
+    case "event":
+      return "destructive" as const;
     default:
       return "secondary" as const;
   }
@@ -550,6 +558,10 @@ const formatServiceSubcategoryType = (type: ServiceSubcategoryType): string => {
       return "Pilates Instructor";
     case "personal_trainer":
       return "Personal Trainer";
+    case "photography":
+      return "Photography";
+    case "live_music":
+      return "Live Music";
     default:
       return type
         .replace(/_/g, " ")
@@ -562,7 +574,7 @@ const getServiceSubcategoryTypeIcon = (type: ServiceSubcategoryType) => {
     case "hair_and_makeup":
       return "💇";
     case "spray_tan":
-      return "��️";
+      return "☀️";
     case "esthetician":
       return "✨";
     case "massage_therapy":
@@ -576,13 +588,17 @@ const getServiceSubcategoryTypeIcon = (type: ServiceSubcategoryType) => {
     case "phycisian":
       return "👨‍⚕️";
     case "chiropractor":
-      return "��";
+      return "🦴";
     case "yoga_instructor":
       return "🧘";
     case "pilates_instructor":
       return "🤸";
     case "personal_trainer":
       return "💪";
+    case "photography":
+      return "📷";
+    case "live_music":
+      return "🎵";
     default:
       return "🔧";
   }
@@ -593,7 +609,7 @@ const getServiceSubcategoryTypeBadgeVariant = (
 ) => {
   const categoryMap: Record<
     string,
-    "success" | "warning" | "secondary" | "outline"
+    "success" | "warning" | "secondary" | "outline" | "destructive"
   > = {
     hair_and_makeup: "warning",
     spray_tan: "warning",
@@ -607,6 +623,8 @@ const getServiceSubcategoryTypeBadgeVariant = (
     yoga_instructor: "success",
     pilates_instructor: "success",
     personal_trainer: "success",
+    photography: "destructive",
+    live_music: "destructive",
   };
   return categoryMap[type] || "secondary";
 };
