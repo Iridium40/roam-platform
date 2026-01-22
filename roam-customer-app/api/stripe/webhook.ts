@@ -286,6 +286,62 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         processed = true;
         break;
 
+      // Stripe Connect Payout Events
+      case 'payout.created':
+        try {
+          const payout = event.data.object as Stripe.Payout;
+          console.log('💰 Payout created:', payout.id, 'Amount:', payout.amount / 100, 'Status:', payout.status);
+          await handlePayoutEvent(payout, 'created');
+          processed = true;
+        } catch (err: any) {
+          console.error('Error handling payout.created:', err);
+          processed = true; // Don't retry - payout tracking is not critical
+        }
+        break;
+
+      case 'payout.paid':
+        try {
+          const payout = event.data.object as Stripe.Payout;
+          console.log('✅ Payout paid:', payout.id, 'Amount:', payout.amount / 100);
+          await handlePayoutEvent(payout, 'paid');
+          processed = true;
+        } catch (err: any) {
+          console.error('Error handling payout.paid:', err);
+          processed = true;
+        }
+        break;
+
+      case 'payout.failed':
+        try {
+          const payout = event.data.object as Stripe.Payout;
+          console.log('❌ Payout failed:', payout.id, 'Failure code:', payout.failure_code);
+          await handlePayoutEvent(payout, 'failed');
+          processed = true;
+        } catch (err: any) {
+          console.error('Error handling payout.failed:', err);
+          processed = true;
+        }
+        break;
+
+      case 'payout.canceled':
+        try {
+          const payout = event.data.object as Stripe.Payout;
+          console.log('🚫 Payout canceled:', payout.id);
+          await handlePayoutEvent(payout, 'canceled');
+          processed = true;
+        } catch (err: any) {
+          console.error('Error handling payout.canceled:', err);
+          processed = true;
+        }
+        break;
+
+      case 'payout.updated':
+      case 'payout.reconciliation_completed':
+        // Log but don't process - informational only
+        console.log(`ℹ️ Payout event: ${event.type}`, (event.data.object as Stripe.Payout).id);
+        processed = true;
+        break;
+
       // Stripe Connect Account Events
       case 'account.updated':
         try {
@@ -1923,6 +1979,76 @@ async function handleTransferReversed(transfer: Stripe.Transfer) {
   } catch (error: any) {
     console.error('❌ Error handling transfer.reversed:', error);
     // Don't throw - reversal recording is not critical
+  }
+}
+
+/**
+ * Handle payout webhook events (payout.created, payout.paid, payout.failed, payout.canceled)
+ * Tracks payouts to connected accounts for business reporting
+ */
+async function handlePayoutEvent(payout: Stripe.Payout, eventType: 'created' | 'paid' | 'failed' | 'canceled') {
+  console.log(`💰 Processing payout.${eventType}:`, {
+    payoutId: payout.id,
+    amount: payout.amount / 100,
+    currency: payout.currency,
+    status: payout.status,
+    arrivalDate: payout.arrival_date ? new Date(payout.arrival_date * 1000).toISOString() : null,
+    method: payout.method,
+    type: payout.type,
+    destination: payout.destination,
+    failureCode: payout.failure_code,
+    failureMessage: payout.failure_message,
+  });
+
+  try {
+    // Get the connected account ID from the payout's destination (bank account/card)
+    // Note: Payouts are sent to connected accounts, so we need to find the business
+    const destinationId = typeof payout.destination === 'string' 
+      ? payout.destination 
+      : payout.destination?.id;
+
+    // For Connect payouts, the account context is in the Stripe-Account header
+    // We can look up the business by checking which connected account this payout belongs to
+    // The payout object doesn't directly contain the account ID, but we can use metadata if set
+    
+    // Log payout details for monitoring
+    console.log(`📊 Payout ${eventType}:`, {
+      id: payout.id,
+      amount: `$${(payout.amount / 100).toFixed(2)} ${payout.currency.toUpperCase()}`,
+      status: payout.status,
+      method: payout.method,
+      type: payout.type,
+      arrivalDate: payout.arrival_date 
+        ? new Date(payout.arrival_date * 1000).toLocaleDateString() 
+        : 'pending',
+    });
+
+    // For payout.paid events, we could notify the business owner
+    if (eventType === 'paid') {
+      console.log(`✅ Payout ${payout.id} has been paid - $${(payout.amount / 100).toFixed(2)}`);
+      // Future enhancement: Send notification to business owner
+      // await notifyBusinessOwnerPayoutReceived(payout);
+    }
+
+    // For payout.failed events, log the failure reason for debugging
+    if (eventType === 'failed') {
+      console.error(`❌ Payout ${payout.id} failed:`, {
+        failureCode: payout.failure_code,
+        failureMessage: payout.failure_message,
+      });
+      // Future enhancement: Alert admin or business owner about failed payout
+      // await alertPayoutFailure(payout);
+    }
+
+    // Note: We're not storing payouts in the database currently
+    // This could be added later if payout tracking/reporting is needed:
+    // - Create a `business_payouts` table
+    // - Store payout details for business financial reporting
+    // - Track payout history per connected account
+
+  } catch (error: any) {
+    console.error(`❌ Error handling payout.${eventType}:`, error);
+    // Don't throw - payout tracking is not critical for booking flow
   }
 }
 
