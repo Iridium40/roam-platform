@@ -28,6 +28,8 @@ const transformBooking = (booking: any): BookingWithDetails => ({
   },
   providers: booking.providers,
   customer_profiles: booking.customer_profiles,
+  reviews: booking.reviews || [],
+  tips: booking.tips || [],
   date: booking.booking_date || '',
   time: booking.start_time || '',
   status: booking.booking_status || 'pending',

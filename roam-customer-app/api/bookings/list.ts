@@ -67,7 +67,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         *,
         providers (id, first_name, last_name, image_url, average_rating),
         services (id, name, description, duration_minutes, min_price, image_url),
-        business_profiles (id, business_name, logo_url)
+        business_profiles (id, business_name, logo_url),
+        reviews (id, overall_rating, service_rating, communication_rating, punctuality_rating, review_text, created_at),
+        tips (id, tip_amount, tip_percentage, customer_message, payment_status, created_at)
       `)
       .eq("customer_id", customerProfile.id)
       .order("booking_date", { ascending: false })

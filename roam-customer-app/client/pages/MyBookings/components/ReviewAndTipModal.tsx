@@ -566,6 +566,27 @@ const ReviewAndTipModal: React.FC<ReviewAndTipModalProps> = ({
                   )}
                 </div>
 
+                {/* Customer Message Input */}
+                <div className="space-y-2">
+                  <Label htmlFor="tip-message" className="text-sm font-medium">
+                    Add a message (optional)
+                  </Label>
+                  <div className="relative">
+                    <MessageCircle className="absolute left-3 top-3 text-gray-400 w-4 h-4" />
+                    <Textarea
+                      id="tip-message"
+                      placeholder="Thank you for the great service!"
+                      value={tipData.customer_message}
+                      onChange={(e) => handleTipChange('customer_message', e.target.value)}
+                      className="pl-10 min-h-[80px]"
+                      maxLength={500}
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    {tipData.customer_message.length}/500 characters
+                  </p>
+                </div>
+
               </div>
 
               <div className="flex gap-3">
