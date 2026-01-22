@@ -361,33 +361,26 @@ function BookingCard({
                   )}
                   {/* Payment Badge */}
                   {(() => {
-                    const paymentTransaction = booking.business_payment_transactions && 
-                      (Array.isArray(booking.business_payment_transactions) 
-                        ? booking.business_payment_transactions[0]
-                        : booking.business_payment_transactions);
-                    
-                    const hasPayment = !!paymentTransaction;
-                    const paymentStatus = paymentTransaction?.payment_status || booking.payment_status || '';
-                    const isAuthorized = paymentStatus === 'requires_capture' || paymentStatus === 'authorized';
-                    const isCaptured = paymentStatus === 'succeeded' || paymentStatus === 'captured' || paymentStatus === 'completed';
-                    const isRefunded = paymentStatus === 'refunded' || 
-                      paymentTransaction?.transfer_reversed === true ||
-                      booking.booking_status === 'cancelled';
+                    const bookingStatus = booking.booking_status;
+                    const isCancelled = bookingStatus === 'cancelled';
+                    const hasPaymentIntent = !!booking.stripe_service_amount_payment_intent_id;
+                    const isPaymentCaptured = booking.service_fee_charged === true;
                     
                     let badgeClass = 'bg-yellow-50 text-yellow-700 border-yellow-200';
                     let badgeText = 'Payment Pending';
                     let BadgeIcon = AlertCircle;
                     
-                    // Check for refund/cancellation first
-                    if (isRefunded && booking.booking_status === 'cancelled') {
+                    if (isCancelled) {
                       badgeClass = 'bg-gray-50 text-gray-600 border-gray-200';
                       badgeText = 'Refunded';
                       BadgeIcon = RotateCcw;
-                    } else if (hasPayment && isCaptured) {
+                    } else if (isPaymentCaptured) {
+                      // Payment was captured - money retrieved from customer
                       badgeClass = 'bg-green-50 text-green-700 border-green-200';
                       badgeText = 'Paid';
                       BadgeIcon = CreditCard;
-                    } else if (hasPayment && isAuthorized) {
+                    } else if (hasPaymentIntent) {
+                      // Payment authorized but not yet captured
                       badgeClass = 'bg-blue-50 text-blue-700 border-blue-200';
                       badgeText = 'Authorized';
                       BadgeIcon = CreditCard;
@@ -717,25 +710,26 @@ function BookingCard({
             
             {/* Payment Badge */}
             {(() => {
-              const paymentTransaction = booking.business_payment_transactions && 
-                (Array.isArray(booking.business_payment_transactions) 
-                  ? booking.business_payment_transactions[0]
-                  : booking.business_payment_transactions);
-              
-              const hasPayment = !!paymentTransaction;
-              const paymentStatus = paymentTransaction?.payment_status || '';
-              const isAuthorized = paymentStatus === 'requires_capture' || paymentStatus === 'authorized';
-              const isCaptured = paymentStatus === 'succeeded' || paymentStatus === 'captured' || paymentStatus === 'completed';
+              const bookingStatus = booking.booking_status;
+              const isCancelled = bookingStatus === 'cancelled';
+              const hasPaymentIntent = !!booking.stripe_service_amount_payment_intent_id;
+              const isPaymentCaptured = booking.service_fee_charged === true;
               
               let badgeClass = 'bg-yellow-50 text-yellow-700 border-yellow-200';
               let badgeText = 'Pending';
               let BadgeIcon = AlertCircle;
               
-              if (hasPayment && isCaptured) {
+              if (isCancelled) {
+                badgeClass = 'bg-gray-50 text-gray-600 border-gray-200';
+                badgeText = 'Refunded';
+                BadgeIcon = RotateCcw;
+              } else if (isPaymentCaptured) {
+                // Payment was captured - money retrieved from customer
                 badgeClass = 'bg-green-50 text-green-700 border-green-200';
                 badgeText = 'Paid';
                 BadgeIcon = CreditCard;
-              } else if (hasPayment && isAuthorized) {
+              } else if (hasPaymentIntent) {
+                // Payment authorized but not yet captured
                 badgeClass = 'bg-blue-50 text-blue-700 border-blue-200';
                 badgeText = 'Authorized';
                 BadgeIcon = CreditCard;

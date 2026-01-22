@@ -1111,6 +1111,14 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
         payment_status: isCharged ? 'paid' : 'pending', // Only mark as paid if already charged
       };
       
+      // Mark payment as captured if charged
+      if (isCharged) {
+        updateData.service_fee_charged = true;
+        updateData.service_fee_charged_at = new Date().toISOString();
+        updateData.remaining_balance_charged = true;
+        updateData.remaining_balance_charged_at = new Date().toISOString();
+      }
+      
       // Update service_fee and remaining_balance if they weren't set
       if (!booking.service_fee || booking.service_fee === 0) {
         updateData.service_fee = serviceFee;
