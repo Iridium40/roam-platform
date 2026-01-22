@@ -130,12 +130,12 @@ export default function ServicePriceModal({
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-12 h-12 bg-gradient-to-br from-roam-blue to-blue-600 rounded-full flex items-center justify-center">
+            <div className={`w-12 h-12 rounded-full flex items-center justify-center ${isDepositService ? 'bg-gradient-to-br from-amber-500 to-amber-600' : 'bg-gradient-to-br from-roam-blue to-blue-600'}`}>
               <DollarSign className="w-6 h-6 text-white" />
             </div>
             <div>
-              <DialogTitle className="text-xl text-roam-blue">
-                Set Service Price
+              <DialogTitle className={`text-xl ${isDepositService ? 'text-amber-700' : 'text-roam-blue'}`}>
+                {isDepositService ? 'Set Deposit Price' : 'Set Service Price'}
               </DialogTitle>
               <DialogDescription className="text-foreground/70">
                 {serviceName}
@@ -145,13 +145,28 @@ export default function ServicePriceModal({
         </DialogHeader>
 
         <div className="space-y-4 py-4">
+          {/* Deposit Service Notice */}
+          {isDepositService && (
+            <div className="rounded-lg border border-amber-300 bg-amber-50 p-3">
+              <div className="flex items-start gap-2">
+                <Info className="h-4 w-4 text-amber-700 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-amber-900">Deposit-Based Pricing</p>
+                  <p className="text-xs text-amber-700 mt-0.5">
+                    Customers pay this deposit at booking. You collect the remaining balance at the time of service.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Price Input */}
           <div className="space-y-2">
             <Label htmlFor="price" className="text-base font-medium">
-              Your Price
+              {isDepositService ? 'Your Deposit Price' : 'Your Price'}
             </Label>
             <div className="relative">
-              <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-foreground/50" />
+              <DollarSign className={`absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 ${isDepositService ? 'text-amber-600' : 'text-foreground/50'}`} />
               <Input
                 id="price"
                 type="text"
@@ -160,15 +175,15 @@ export default function ServicePriceModal({
                 value={price}
                 onChange={(e) => handlePriceChange(e.target.value)}
                 onKeyDown={handleKeyDown}
-                className={`pl-10 text-lg font-semibold ${error ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+                className={`pl-10 text-lg font-semibold ${error ? 'border-red-500 focus-visible:ring-red-500' : isDepositService ? 'border-amber-300 focus-visible:ring-amber-500' : ''}`}
                 autoFocus
               />
             </div>
             
             {/* Live Preview */}
             {price && !error && !isNaN(parseFloat(price)) && (
-              <p className="text-sm text-roam-blue font-medium">
-                Price: {formatCurrency(parseFloat(price))}
+              <p className={`text-sm font-medium ${isDepositService ? 'text-amber-700' : 'text-roam-blue'}`}>
+                {isDepositService ? 'Deposit: ' : 'Price: '}{formatCurrency(parseFloat(price))}
               </p>
             )}
           </div>

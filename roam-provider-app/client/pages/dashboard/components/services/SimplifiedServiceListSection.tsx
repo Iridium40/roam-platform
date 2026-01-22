@@ -95,6 +95,7 @@ export function SimplifiedServiceListSection({
               {services.map((service) => {
                 const isConfigured = service.is_configured || service.business_price !== null;
                 const isActive = service.business_is_active === true;
+                const isDepositService = service.pricing_type === 'deposit';
 
                 return (
                   <TableRow key={service.id} className={!isConfigured ? 'bg-muted/30' : ''}>
@@ -107,15 +108,28 @@ export function SimplifiedServiceListSection({
                             className="w-10 h-10 rounded-lg object-cover"
                           />
                         )}
-                        <p className="font-medium">{service.name}</p>
+                        <div>
+                          <p className="font-medium">{service.name}</p>
+                          {isDepositService && (
+                            <span className="text-xs text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded">
+                              Deposit
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
-                      <p className="text-sm text-muted-foreground">${service.min_price}</p>
+                      <p className={`text-sm ${isDepositService ? 'text-amber-700' : 'text-muted-foreground'}`}>
+                        ${service.min_price}
+                        {isDepositService && <span className="text-xs ml-1">(min deposit)</span>}
+                      </p>
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
                       {isConfigured && service.business_price ? (
-                        <p className="font-medium">${service.business_price}</p>
+                        <p className={`font-medium ${isDepositService ? 'text-amber-700' : ''}`}>
+                          ${service.business_price}
+                          {isDepositService && <span className="text-xs font-normal ml-1">(deposit)</span>}
+                        </p>
                       ) : (
                         <p className="text-sm text-muted-foreground">Not set</p>
                       )}

@@ -129,14 +129,17 @@ export function EditServiceModal({
             {service.is_configured ? 'Edit Service' : 'Configure Service'}
           </DialogTitle>
           <DialogDescription>
-            Set your price and delivery options for {service.name}
+            {isDepositService 
+              ? `Set your deposit price and delivery options for ${service.name}`
+              : `Set your price and delivery options for ${service.name}`
+            }
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit}>
           <div className="space-y-6 py-4">
             {/* Service Info */}
-            <div className="rounded-lg border p-4 bg-muted/50">
+            <div className={`rounded-lg border p-4 ${isDepositService ? 'bg-amber-50/50 border-amber-200' : 'bg-muted/50'}`}>
               <div className="flex items-start space-x-3">
                 {service.image_url && (
                   <img
@@ -151,21 +154,41 @@ export function EditServiceModal({
                     {service.description}
                   </p>
                   <div className="flex items-center gap-2 mt-2">
-                    <Badge variant={isDepositService ? "outline" : "secondary"} className={`text-xs ${isDepositService ? "border-amber-500 text-amber-700" : ""}`}>
-                      {isDepositService ? `Deposit: $${service.min_price}` : `Base: $${service.min_price}`}
+                    <Badge 
+                      variant={isDepositService ? "outline" : "secondary"} 
+                      className={`text-xs ${isDepositService ? "border-amber-500 bg-amber-100 text-amber-800 font-medium" : ""}`}
+                    >
+                      {isDepositService ? `Min Deposit: $${service.min_price}` : `Base: $${service.min_price}`}
                     </Badge>
                     <Badge variant="secondary" className="text-xs">
-                      {service.duration_minutes} min
+                      {service.duration_minutes} Min
                     </Badge>
                   </div>
                 </div>
               </div>
             </div>
 
+            {/* Deposit Service Notice */}
+            {isDepositService && (
+              <div className="rounded-lg border border-amber-300 bg-amber-50 p-4">
+                <div className="flex items-start gap-3">
+                  <div className="rounded-full bg-amber-100 p-1.5">
+                    <DollarSign className="h-4 w-4 text-amber-700" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-medium text-amber-900">Deposit-Based Pricing</h4>
+                    <p className="text-sm text-amber-700 mt-1">
+                      This service uses deposit pricing. Customers pay a deposit at booking, and you collect the remaining balance at the time of service.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Business Price */}
             <div className="space-y-2">
               <Label htmlFor="business_price">
-                Your Price
+                {isDepositService ? 'Your Deposit Price' : 'Your Price'}
                 <span className="text-destructive ml-1">*</span>
               </Label>
               <div className="relative">
@@ -177,14 +200,14 @@ export function EditServiceModal({
                   min={service.min_price}
                   value={businessPrice}
                   onChange={(e) => setBusinessPrice(e.target.value)}
-                  className="pl-9"
+                  className={`pl-9 ${isDepositService ? 'border-amber-300 focus:border-amber-500 focus:ring-amber-500' : ''}`}
                   placeholder={`Min: ${service.min_price}`}
                   required
                 />
               </div>
               {isDepositService ? (
                 <p className="text-xs text-amber-700">
-                  Required deposit: ${service.min_price} (collected at booking, remaining balance collected via Add More Services)
+                  Minimum deposit: ${service.min_price}. This amount is collected when the customer books.
                 </p>
               ) : (
                 <p className="text-xs text-muted-foreground">

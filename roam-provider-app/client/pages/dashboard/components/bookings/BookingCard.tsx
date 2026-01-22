@@ -106,6 +106,12 @@ function BookingCard({
   const [showFinalBalanceModal, setShowFinalBalanceModal] = useState(false);
   const [finalBalanceAmount, setFinalBalanceAmount] = useState<string>("");
   const [finalBalanceError, setFinalBalanceError] = useState<string | null>(null);
+  
+  // Edit balance modal state (for editing after completion)
+  const [showEditBalanceModal, setShowEditBalanceModal] = useState(false);
+  const [editBalanceAmount, setEditBalanceAmount] = useState<string>("");
+  const [editBalanceError, setEditBalanceError] = useState<string | null>(null);
+  const [isEditingBalance, setIsEditingBalance] = useState(false);
 
   // Fetch unread message count for this booking (same approach as customer app)
   useEffect(() => {
@@ -230,6 +236,59 @@ function BookingCard({
     } finally {
       setIsProcessing(false);
     }
+  };
+  
+  // Handle edit balance submission (for correcting mistakes after completion)
+  const handleEditBalanceSubmit = async () => {
+    const amount = parseFloat(editBalanceAmount);
+    
+    if (isNaN(amount) || amount < 0) {
+      setEditBalanceError("Please enter a valid amount (0 or greater)");
+      return;
+    }
+    
+    setIsEditingBalance(true);
+    setEditBalanceError(null);
+    
+    try {
+      // Update the remaining balance in the database
+      const { error: updateError } = await supabase
+        .from('bookings')
+        .update({
+          remaining_balance: amount,
+          remaining_balance_charged: false, // Reset to unpaid so customer can pay the new amount
+        })
+        .eq('id', booking.id);
+      
+      if (updateError) {
+        console.error('Error updating remaining balance:', updateError);
+        setEditBalanceError("Failed to update balance. Please try again.");
+        return;
+      }
+      
+      // Update local booking state to reflect the change
+      booking.remaining_balance = amount.toString();
+      booking.remaining_balance_charged = false;
+      
+      setShowEditBalanceModal(false);
+      setEditBalanceAmount("");
+      
+      // Optionally trigger a refresh of the parent component
+      // This could be done through a callback prop if needed
+    } catch (error) {
+      console.error('Error updating balance:', error);
+      setEditBalanceError("Failed to update balance. Please try again.");
+    } finally {
+      setIsEditingBalance(false);
+    }
+  };
+  
+  // Open edit balance modal with current balance pre-filled
+  const openEditBalanceModal = () => {
+    const currentBalance = parseFloat(booking.remaining_balance || '0');
+    setEditBalanceAmount(currentBalance.toFixed(2));
+    setEditBalanceError(null);
+    setShowEditBalanceModal(true);
   };
 
   // Confirm the status change
@@ -503,6 +562,17 @@ function BookingCard({
                         <div className="mt-2 px-2 py-1 bg-amber-100 border border-amber-300 rounded text-amber-800">
                           <p className="text-xs font-semibold">Balance to Collect</p>
                           <p className="text-sm font-bold">${remainingBalance.toFixed(2)}</p>
+                          {booking.booking_status === 'completed' && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openEditBalanceModal();
+                              }}
+                              className="text-xs text-amber-700 hover:text-amber-900 underline mt-1"
+                            >
+                              Edit Amount
+                            </button>
+                          )}
                         </div>
                       )}
                     </div>
@@ -794,6 +864,17 @@ function BookingCard({
                       <div className="mt-1 px-1.5 py-0.5 bg-amber-100 border border-amber-300 rounded text-amber-800">
                         <p className="text-[10px] font-semibold">Balance Due</p>
                         <p className="text-xs font-bold">${remainingBalance.toFixed(2)}</p>
+                        {booking.booking_status === 'completed' && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openEditBalanceModal();
+                            }}
+                            className="text-[10px] text-amber-700 hover:text-amber-900 underline"
+                          >
+                            Edit
+                          </button>
+                        )}
                       </div>
                     );
                   }
@@ -1216,6 +1297,117 @@ function BookingCard({
               className="bg-green-600 hover:bg-green-700"
             >
               {isProcessing ? 'Processing...' : 'Complete Service'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Balance Modal (for correcting mistakes after completion) */}
+      <Dialog open={showEditBalanceModal} onOpenChange={(open) => !open && setShowEditBalanceModal(false)}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                <DollarSign className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <DialogTitle>Edit Balance Due</DialogTitle>
+                <DialogDescription>
+                  Correct the remaining balance amount
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            {/* Booking Info */}
+            <div className="bg-gray-50 rounded-lg p-3">
+              <p className="text-sm font-medium text-gray-900">{booking.services?.name}</p>
+              <p className="text-sm text-gray-600">
+                {booking.guest_name 
+                  ? booking.guest_name
+                  : booking.customer_profiles 
+                    ? `${booking.customer_profiles.first_name || ""} ${booking.customer_profiles.last_name || ""}`.trim()
+                    : "Customer"
+                }
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                Ref: {booking.booking_reference || 'N/A'}
+              </p>
+            </div>
+            
+            {/* Info Notice */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                <p className="text-sm text-blue-800">
+                  Update the balance if you need to correct the amount. The customer will be able to pay the new amount.
+                </p>
+              </div>
+            </div>
+            
+            {/* Current Balance Info */}
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-amber-800">Current Balance Due</span>
+                <span className="font-semibold text-amber-700">
+                  ${parseFloat(booking.remaining_balance || '0').toFixed(2)}
+                </span>
+              </div>
+            </div>
+            
+            {/* New Balance Input */}
+            <div className="space-y-2">
+              <Label htmlFor="edit-balance" className="text-sm font-medium">
+                New Balance Amount
+              </Label>
+              <div className="relative">
+                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Input
+                  id="edit-balance"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={editBalanceAmount}
+                  onChange={(e) => {
+                    setEditBalanceAmount(e.target.value);
+                    setEditBalanceError(null);
+                  }}
+                  className="pl-9"
+                  placeholder="0.00"
+                />
+              </div>
+              <p className="text-xs text-gray-500">
+                Enter the correct amount the customer needs to pay. Enter 0 if no payment is needed.
+              </p>
+            </div>
+            
+            {/* Error Message */}
+            {editBalanceError && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                <p className="text-sm text-red-700">{editBalanceError}</p>
+              </div>
+            )}
+          </div>
+          
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowEditBalanceModal(false);
+                setEditBalanceAmount("");
+                setEditBalanceError(null);
+              }}
+              disabled={isEditingBalance}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleEditBalanceSubmit}
+              disabled={isEditingBalance || !editBalanceAmount}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {isEditingBalance ? 'Updating...' : 'Update Balance'}
             </Button>
           </DialogFooter>
         </DialogContent>
