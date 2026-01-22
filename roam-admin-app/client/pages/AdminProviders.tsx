@@ -725,6 +725,9 @@ export default function AdminProviders() {
 
   // Initialize data cache (5 minute cache duration)
   const cache = useDataCache();
+  
+  // Local error state for related data fetching
+  const [relatedDataError, setRelatedDataError] = useState<string | null>(null);
 
   // Fetch providers with pagination using React Query
   const { 
@@ -744,8 +747,8 @@ export default function AdminProviders() {
   const totalProviders = providersResponse?.total || 0;
   const totalPages = providersResponse?.totalPages || 1;
   
-  // Error message
-  const error = queryError ? (queryError as Error).message : null;
+  // Error message - combine query error and related data error
+  const error = queryError ? (queryError as Error).message : relatedDataError;
 
   // Reset to page 1 when filters change
   useEffect(() => {
@@ -785,22 +788,23 @@ export default function AdminProviders() {
       const result = await response.json();
 
       if (!response.ok) {
-        setError(`Provider Services Error: ${result.error || 'Failed to fetch provider services'}`);
+        setRelatedDataError(`Provider Services Error: ${result.error || 'Failed to fetch provider services'}`);
         setProviderServices([]);
       } else {
         const servicesData = result.data || [];
         setProviderServices(servicesData);
         cache.setCachedData('providerServices', servicesData);
         if (servicesData.length === 0) {
-          setError("Provider services table is empty. This is normal if no provider services have been created yet.");
+          // Don't show error for empty data - it's normal
+          console.log("Provider services table is empty. This is normal if no provider services have been created yet.");
         } else {
-          setError(null);
+          setRelatedDataError(null);
         }
       }
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "Unknown error occurred";
-      setError(`Provider Services Connection Error: ${errorMessage}`);
+      setRelatedDataError(`Provider Services Connection Error: ${errorMessage}`);
       setProviderServices([]);
     }
   };
@@ -820,7 +824,7 @@ export default function AdminProviders() {
       const result = await response.json();
 
       if (!response.ok) {
-        setError(`Provider Add-ons Error: ${result.error || 'Failed to fetch provider add-ons'}`);
+        setRelatedDataError(`Provider Add-ons Error: ${result.error || 'Failed to fetch provider add-ons'}`);
         setProviderAddons([]);
       } else {
         const addonsData = result.data || [];
@@ -830,7 +834,7 @@ export default function AdminProviders() {
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "Unknown error occurred";
-      setError(`Provider Add-ons Connection Error: ${errorMessage}`);
+      setRelatedDataError(`Provider Add-ons Connection Error: ${errorMessage}`);
       setProviderAddons([]);
     }
   };

@@ -299,6 +299,10 @@
       "destination": "/api/index.ts"
     },
     {
+      "source": "/api/reports/bookability",
+      "destination": "/api/reports/bookability.ts"
+    },
+    {
       "source": "/api/reviews",
       "destination": "/api/index.ts"
     },
