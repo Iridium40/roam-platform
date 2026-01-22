@@ -121,8 +121,9 @@ export default function FinancialsTab({
   const [tipsData, setTipsData] = useState<any[]>([]);
   const [tipsLoading, setTipsLoading] = useState(false);
 
-  // Get default date range (last 30 days)
+  // Get default date range (last 30 days for transactions, 14 days for payouts)
   const defaultDateRange = getDefaultDateRange(FINANCIALS_PAGINATION_CONFIG.defaultDateRangeDays);
+  const payoutDateRange = getDefaultDateRange(14); // 14 days for payouts
 
   // Filter state for transactions and tips - with default date range
   const [transactionFilters, setTransactionFilters] = useState({
@@ -138,13 +139,13 @@ export default function FinancialsTab({
     providerId: 'all',
   });
   const [payoutFilters, setPayoutFilters] = useState({
-    startDate: defaultDateRange.startDate,
-    endDate: defaultDateRange.endDate,
+    startDate: payoutDateRange.startDate,
+    endDate: payoutDateRange.endDate,
     providerId: 'all',
   });
   const [stripePayoutFilters, setStripePayoutFilters] = useState({
-    startDate: defaultDateRange.startDate,
-    endDate: defaultDateRange.endDate,
+    startDate: payoutDateRange.startDate,
+    endDate: payoutDateRange.endDate,
   });
 
   // Pagination state
@@ -1444,6 +1445,18 @@ export default function FinancialsTab({
 
         {/* Payouts Tab */}
         <TabsContent value="payouts" className="space-y-6 mt-6">
+          {/* Info Alert explaining the relationship */}
+          <Alert className="bg-blue-50 border-blue-200">
+            <Info className="h-4 w-4 text-blue-600" />
+            <AlertTitle className="text-blue-800">How Payouts Work</AlertTitle>
+            <AlertDescription className="text-blue-700 text-sm">
+              <strong>Stripe Payouts</strong> are batched transfers sent to your bank account (typically weekly). 
+              Each payout combines multiple booking transactions from the period. 
+              <strong> Booking Earnings</strong> below shows individual transactions that feed into these payouts. 
+              New bookings may take 2-7 days to appear in a payout depending on your payout schedule.
+            </AlertDescription>
+          </Alert>
+
           {/* Stripe Payouts */}
           <Card>
             <CardHeader>
@@ -1722,8 +1735,23 @@ export default function FinancialsTab({
                     <CardTitle className="flex items-center space-x-2">
                       <Building2 className="w-5 h-5" />
                       <span>Booking Earnings</span>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className="w-4 h-4 text-gray-400 cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs">
+                            <p className="text-sm">
+                              This shows all confirmed booking transactions. These earnings are accumulated and sent to your bank 
+                              in batched payouts (shown above). A booking may take 2-7 days to appear in a payout.
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     </CardTitle>
-                    <CardDescription>Earnings from confirmed bookings</CardDescription>
+                    <CardDescription>
+                      Individual booking transactions that contribute to your payouts
+                    </CardDescription>
                   </div>
                   <Button
                     variant="outline"
