@@ -41,6 +41,8 @@ const PaymentMethods = lazy(() => import("./pages/PaymentMethods"));
 const Test = lazy(() => import("./pages/Test"));
 const TipSuccess = lazy(() => import("./pages/TipSuccess"));
 const TipCancel = lazy(() => import("./pages/TipCancel"));
+const PayBalance = lazy(() => import("./pages/PayBalance"));
+const BalancePaymentSuccess = lazy(() => import("./pages/BalancePaymentSuccess"));
 const Privacy = lazy(() => import("./pages/Privacy"));
 const TermsAndConditions = lazy(() => import("./pages/TermsAndConditions"));
 const RefundPolicy = lazy(() => import("./pages/RefundPolicy"));
@@ -120,6 +122,14 @@ const App = () => (
                   }
                 />
                 <Route
+                  path="/my-bookings/:bookingId/pay-balance"
+                  element={
+                    <ProtectedRoute>
+                      <PayBalance />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
                   path="/customer/favorites"
                   element={
                     <ProtectedRoute>
@@ -170,6 +180,7 @@ const App = () => (
                 <Route path="/test" element={<Test />} />
                 <Route path="/tip-success" element={<TipSuccess />} />
                 <Route path="/tip-cancel" element={<TipCancel />} />
+                <Route path="/balance-payment-success" element={<BalancePaymentSuccess />} />
                 <Route path="/privacy" element={<Privacy />} />
                 <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
                 <Route path="/refund-policy" element={<RefundPolicy />} />

@@ -419,6 +419,9 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
   // Check if this is a tip payment
   if (session.metadata?.type === 'tip') {
     await handleTipPayment(session);
+  } else if (session.metadata?.type === 'remaining_balance_payment') {
+    // Handle remaining balance payment for deposit-type services
+    await handleRemainingBalancePayment(session);
   } else {
     // Handle regular booking payments
     await handleBookingPayment(session);
@@ -476,6 +479,101 @@ async function handleTipPayment(session: Stripe.Checkout.Session) {
 
   } catch (error) {
     console.error('Error processing tip payment:', error);
+    throw error;
+  }
+}
+
+async function handleRemainingBalancePayment(session: Stripe.Checkout.Session) {
+  const {
+    booking_id,
+    customer_id,
+    provider_id,
+    business_id,
+    balance_amount,
+    platform_fee,
+    provider_amount,
+    booking_reference,
+  } = session.metadata!;
+
+  console.log('💰 Processing remaining balance payment for booking:', booking_id);
+
+  try {
+    // Update booking to mark remaining balance as charged
+    const { error: updateError } = await supabase
+      .from('bookings')
+      .update({
+        remaining_balance_charged: true,
+        remaining_balance_charged_at: new Date().toISOString(),
+        payment_status: 'paid', // Mark booking as fully paid
+      })
+      .eq('id', booking_id);
+
+    if (updateError) {
+      console.error('Error updating booking for balance payment:', updateError);
+      throw updateError;
+    }
+
+    console.log('✅ Updated booking remaining_balance_charged to true');
+
+    // Create a financial transaction record
+    const { error: txError } = await supabase
+      .from('financial_transactions')
+      .insert({
+        booking_id,
+        customer_id,
+        business_id,
+        amount: parseFloat(balance_amount),
+        currency: 'usd',
+        payment_method: 'card',
+        description: 'Remaining balance payment',
+        transaction_type: 'booking_payment',
+        status: 'completed',
+        processed_at: new Date().toISOString(),
+        metadata: {
+          type: 'remaining_balance_payment',
+          provider_id,
+          platform_fee: parseFloat(platform_fee || '0'),
+          provider_amount: parseFloat(provider_amount || balance_amount || '0'),
+          stripe_session_id: session.id,
+          stripe_payment_intent_id: session.payment_intent,
+          booking_reference,
+        },
+      });
+
+    if (txError) {
+      console.error('Error creating financial transaction for balance payment:', txError);
+      // Don't throw - booking update is more important
+    }
+
+    // Create business payment transaction record
+    const { error: bptError } = await supabase
+      .from('business_payment_transactions')
+      .insert({
+        business_id,
+        booking_id,
+        provider_id,
+        payment_type: 'service_payment',
+        gross_amount: parseFloat(balance_amount),
+        platform_fee: parseFloat(platform_fee || '0'),
+        net_amount: parseFloat(provider_amount || balance_amount || '0'),
+        status: 'completed',
+        stripe_payment_intent_id: typeof session.payment_intent === 'string' 
+          ? session.payment_intent 
+          : (session.payment_intent as any)?.id || null,
+        description: 'Remaining balance payment',
+        booking_reference,
+        transaction_type: 'remaining_balance_payment',
+      });
+
+    if (bptError) {
+      console.error('Error creating business payment transaction for balance:', bptError);
+      // Don't throw - booking update is more important
+    }
+
+    console.log('✅ Remaining balance payment processed successfully for booking:', booking_id);
+
+  } catch (error) {
+    console.error('Error processing remaining balance payment:', error);
     throw error;
   }
 }
