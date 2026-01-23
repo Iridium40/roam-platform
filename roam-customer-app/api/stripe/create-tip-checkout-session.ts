@@ -102,6 +102,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         },
       ],
       mode: 'payment',
+      locale: 'en',  // Explicitly set locale to prevent './en' module loading error
       success_url: success_url || `${DOMAIN}/tip-success?session_id={CHECKOUT_SESSION_ID}&booking_id=${booking_id}`,
       cancel_url: cancel_url || `${DOMAIN}/tip-cancel?booking_id=${booking_id}`,
       metadata: {

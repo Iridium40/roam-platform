@@ -206,6 +206,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         },
       ],
       mode: 'payment',
+      locale: 'en',  // Explicitly set locale to prevent './en' module loading error
       // Use manual capture - authorize payment but don't charge until booking is accepted
       payment_intent_data: {
         capture_method: 'manual', // Authorize only, capture later when booking is accepted
