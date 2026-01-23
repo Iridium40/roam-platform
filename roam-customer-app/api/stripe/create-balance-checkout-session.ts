@@ -140,8 +140,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ? `${(booking.providers as any).first_name} ${(booking.providers as any).last_name}` 
       : 'Provider';
 
+    // Get customer's Stripe customer ID to enable saved payment methods
+    let stripeCustomerId: string | undefined;
+    
+    const { data: customerProfile } = await supabase
+      .from('customer_profiles')
+      .select('user_id')
+      .eq('id', customer_id)
+      .single();
+
+    if (customerProfile?.user_id) {
+      const { data: stripeProfile } = await supabase
+        .from('customer_stripe_profiles')
+        .select('stripe_customer_id')
+        .eq('user_id', customerProfile.user_id)
+        .single();
+      
+      if (stripeProfile?.stripe_customer_id) {
+        stripeCustomerId = stripeProfile.stripe_customer_id;
+        console.log('✅ Using existing Stripe customer for balance payment:', stripeCustomerId);
+      }
+    }
+
     // Create Checkout Session for remaining balance payment
     const session = await stripe.checkout.sessions.create({
+      customer: stripeCustomerId, // Use existing Stripe customer to show saved payment methods
       payment_method_types: ['card'],
       line_items: [
         {
