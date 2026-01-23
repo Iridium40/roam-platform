@@ -49,12 +49,22 @@ const transformBooking = (booking: any): BookingWithDetails => ({
   updated_at: booking.created_at || new Date().toISOString(),
 });
 
-// Get auth headers - use cached token from localStorage instead of calling supabase.auth.getSession()
-// which can hang in some situations
-const getAuthHeaders = (): HeadersInit => {
-  const cachedToken = localStorage.getItem('roam_access_token');
+// Get auth headers - use cached token from localStorage, but validate it first
+const getAuthHeaders = async (): Promise<HeadersInit> => {
+  let token = localStorage.getItem('roam_access_token');
+  
+  // If no cached token, try to get from Supabase
+  if (!token) {
+    const { supabase } = await import('@/lib/supabase');
+    const { data: { session } } = await supabase.auth.getSession();
+    token = session?.access_token || '';
+    if (token) {
+      localStorage.setItem('roam_access_token', token);
+    }
+  }
+  
   return {
-    'Authorization': `Bearer ${cachedToken || ''}`,
+    'Authorization': `Bearer ${token}`,
     'Content-Type': 'application/json',
   };
 };
@@ -97,8 +107,8 @@ export const useBookingsData = (currentUser: any) => {
       const startDateStr = start.toISOString().split('T')[0];
       const endDateStr = end.toISOString().split('T')[0];
 
-      // Get auth headers (synchronous - uses cached token)
-      const headers = getAuthHeaders();
+      // Get auth headers (async - validates and refreshes token if needed)
+      const headers = await getAuthHeaders();
 
       // Build query params
       const queryParams = new URLSearchParams({
