@@ -18,7 +18,6 @@ import {
   Hash,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { Footer } from "@/components/Footer";
@@ -73,7 +72,7 @@ function PayBalanceContent() {
   const [error, setError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Fetch booking data
+  // Fetch booking data from API instead of direct Supabase query
   const fetchBooking = async () => {
     if (!bookingId || !customer) return;
 
@@ -81,41 +80,38 @@ function PayBalanceContent() {
       setLoading(true);
       setError(null);
 
-      const { data: bookingData, error: bookingError } = await supabase
-        .from("bookings")
-        .select(`
-          id,
-          booking_reference,
-          booking_status,
-          booking_date,
-          start_time,
-          total_amount,
-          service_fee,
-          remaining_balance,
-          remaining_balance_charged,
-          services (
-            id,
-            name,
-            image_url
-          ),
-          providers (
-            id,
-            first_name,
-            last_name,
-            image_url
-          ),
-          business_profiles (
-            id,
-            business_name,
-            logo_url
-          )
-        `)
-        .eq("id", bookingId)
-        .eq("customer_id", customer.id)
-        .single();
+      // Get auth token from localStorage
+      const token = localStorage.getItem('roam_access_token');
+      if (!token) {
+        throw new Error("Authentication required. Please sign in again.");
+      }
 
-      if (bookingError) {
-        logger.error("Error fetching booking:", bookingError);
+      // Fetch from API
+      const response = await fetch(`/api/bookings/list?customer_id=${customer.id}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          // Token is invalid, clear and redirect
+          localStorage.removeItem('roam_access_token');
+          localStorage.removeItem('roam_customer');
+          window.location.href = '/';
+          return;
+        }
+        throw new Error("Failed to load booking details.");
+      }
+
+      const data = await response.json();
+      const bookings = data.data || [];
+      
+      // Find the specific booking
+      const bookingData = bookings.find((b: any) => b.id === bookingId);
+      
+      if (!bookingData) {
         throw new Error("Booking not found or you don't have access to it.");
       }
 
