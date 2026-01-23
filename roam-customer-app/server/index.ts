@@ -205,6 +205,18 @@ export function createServer() {
     }
   );
 
+  app.post("/api/stripe/create-balance-checkout-session",
+    async (req, res) => {
+      try {
+        const balanceCheckoutHandler = await import("../api/stripe/create-balance-checkout-session");
+        await balanceCheckoutHandler.default(req, res);
+      } catch (error) {
+        console.error("Error importing balance checkout session handler:", error);
+        res.status(500).json({ error: "Failed to load balance checkout session handler" });
+      }
+    }
+  );
+
   // Webhook handler function (used by both routes)
   const handleStripeWebhook = async (req: any, res: any) => {
     console.log('🎯 [WEBHOOK] Received webhook request from Stripe');

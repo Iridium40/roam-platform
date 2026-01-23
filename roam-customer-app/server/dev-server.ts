@@ -11,6 +11,7 @@ app.listen(port, () => {
   console.log(`   POST /api/chat - AI Chatbot API`);
   console.log(`   POST /api/subscribe - Newsletter subscription`);
   console.log(`   POST /api/stripe/create-checkout-session - Create Stripe checkout`);
+  console.log(`   POST /api/stripe/create-balance-checkout-session - Create balance checkout`);
   console.log(`   POST /api/stripe/create-tip-checkout-session - Create tip checkout`);
   console.log(`   POST /api/stripe/create-tip-payment-intent - Create tip payment intent`);
   console.log(`   POST /api/stripe/webhook - Stripe webhook handler`);
