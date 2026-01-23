@@ -184,6 +184,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
         try {
           switch (event) {
+            case 'INITIAL_SESSION':
+              // Initial session check on page load - already handled by initializeAuth
+              // Just ensure loading is set to false
+              logger.debug('AuthContext: Initial session event');
+              break;
+
             case 'SIGNED_IN':
               // User signed in (including OAuth redirect)
               if (session?.user) {
@@ -231,6 +237,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               break;
 
             default:
+              // Handle any other events
+              logger.debug('AuthContext: Unhandled auth event:', event);
               break;
           }
         } catch (error) {
