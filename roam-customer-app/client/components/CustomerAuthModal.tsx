@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2, Eye, EyeOff, CheckCircle, AlertCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { logger } from '@/utils/logger';
@@ -64,6 +65,9 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
     phone: "",
   });
 
+  // SMS marketing consent state
+  const [smsConsent, setSmsConsent] = useState(false);
+
   const resetForm = () => {
     setSignInData({ email: "", password: "" });
     setSignUpData({
@@ -74,6 +78,7 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
       confirmPassword: "",
       phone: "",
     });
+    setSmsConsent(false);
     setError(null);
     setSuccess(null);
     setShowPassword(false);
@@ -695,6 +700,28 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
                       </div>
                     )}
 
+                  {/* SMS Marketing Consent Checkbox */}
+                  <div className="flex items-start space-x-3 p-3 bg-muted/50 rounded-lg">
+                    <Checkbox
+                      id="sms-consent"
+                      checked={smsConsent}
+                      onCheckedChange={(checked) => setSmsConsent(checked === true)}
+                      className="mt-0.5"
+                    />
+                    <div className="grid gap-1.5 leading-none">
+                      <label
+                        htmlFor="sms-consent"
+                        className="text-sm font-medium leading-tight cursor-pointer"
+                      >
+                        I agree to receive promotional SMS messages from ROAM
+                      </label>
+                      <p className="text-xs text-muted-foreground">
+                        Message frequency varies. Message and data rates may apply. 
+                        Reply STOP to unsubscribe at any time.
+                      </p>
+                    </div>
+                  </div>
+
                   <Button
                     type="submit"
                     className="w-full bg-roam-blue hover:bg-roam-blue/90"
@@ -721,12 +748,6 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
             <a href="/terms" className="text-roam-blue hover:underline">Terms of Service</a>
             {" "}and{" "}
             <a href="/privacy" className="text-roam-blue hover:underline">Privacy Policy</a>
-          </p>
-          <p className="text-foreground/50">
-            By providing your email and phone number, you consent to receive marketing 
-            communications from ROAM, including promotional emails and SMS text messages. 
-            Message frequency varies. Message and data rates may apply. 
-            Reply STOP to unsubscribe from SMS at any time.
           </p>
         </div>
       </DialogContent>

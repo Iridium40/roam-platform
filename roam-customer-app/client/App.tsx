@@ -182,6 +182,7 @@ const App = () => (
                 <Route path="/tip-cancel" element={<TipCancel />} />
                 <Route path="/balance-payment-success" element={<BalancePaymentSuccess />} />
                 <Route path="/privacy" element={<Privacy />} />
+                <Route path="/terms" element={<TermsAndConditions />} />
                 <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
                 <Route path="/refund-policy" element={<RefundPolicy />} />
                 <Route path="/cookie-policy" element={<CookiePolicy />} />

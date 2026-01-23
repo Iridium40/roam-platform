@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, Mail, Lock, Eye, EyeOff, Loader2, AlertCircle } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -18,6 +19,7 @@ export default function SignIn() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
+  const [smsConsent, setSmsConsent] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -72,6 +74,7 @@ export default function SignIn() {
     setFirstName("");
     setLastName("");
     setPhone("");
+    setSmsConsent(false);
   };
 
   return (
@@ -117,13 +120,6 @@ export default function SignIn() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Marketing Consent Notice for OAuth */}
-              {isSignUp && (
-                <div className="text-xs text-center text-muted-foreground">
-                  By continuing, you agree to receive marketing emails and SMS from ROAM.
-                </div>
-              )}
-
               {/* Google Sign In */}
               <Button
                 type="button"
@@ -270,21 +266,37 @@ export default function SignIn() {
                   )}
                 </div>
 
-                {/* Marketing Consent Disclosure */}
+                {/* Terms Agreement & SMS Marketing Consent */}
                 {isSignUp && (
-                  <div className="text-xs text-muted-foreground bg-muted/50 rounded-md p-3 space-y-1">
-                    <p>
+                  <div className="space-y-3">
+                    <p className="text-xs text-muted-foreground">
                       By creating an account, you agree to our{" "}
                       <Link to="/terms" className="text-roam-blue hover:underline">Terms of Service</Link>
                       {" "}and{" "}
                       <Link to="/privacy" className="text-roam-blue hover:underline">Privacy Policy</Link>.
                     </p>
-                    <p className="text-muted-foreground/80">
-                      By providing your email and phone number, you consent to receive marketing 
-                      communications from ROAM, including promotional emails and SMS text messages. 
-                      Message frequency varies. Message and data rates may apply. 
-                      Reply STOP to unsubscribe from SMS at any time.
-                    </p>
+                    
+                    {/* SMS Marketing Consent Checkbox */}
+                    <div className="flex items-start space-x-3 p-3 bg-muted/50 rounded-lg">
+                      <Checkbox
+                        id="sms-consent-page"
+                        checked={smsConsent}
+                        onCheckedChange={(checked) => setSmsConsent(checked === true)}
+                        className="mt-0.5"
+                      />
+                      <div className="grid gap-1.5 leading-none">
+                        <label
+                          htmlFor="sms-consent-page"
+                          className="text-sm font-medium leading-tight cursor-pointer"
+                        >
+                          I agree to receive promotional SMS messages from ROAM
+                        </label>
+                        <p className="text-xs text-muted-foreground">
+                          Message frequency varies. Message and data rates may apply. 
+                          Reply STOP to unsubscribe at any time.
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 )}
 
