@@ -170,6 +170,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       } catch (error) {
         logger.error("AuthContext: Error during initialization:", error);
       } finally {
+        logger.debug('AuthContext: initializeAuth finally - setting loading to false');
         setLoading(false);
       }
     };
@@ -245,6 +246,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           logger.error('AuthContext: Error in onAuthStateChange handler:', error);
         } finally {
           // Always ensure loading is set to false after auth state changes complete
+          logger.debug('AuthContext: Setting loading to false after auth state change');
           setLoading(false);
         }
       }

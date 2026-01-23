@@ -75,6 +75,18 @@ export function createServer() {
   );
 
   // Booking routes with validation
+  app.get("/api/bookings/list",
+    async (req, res) => {
+      try {
+        const listHandler = await import("../api/bookings/list");
+        await listHandler.default(req, res);
+      } catch (error) {
+        console.error("Error importing bookings list handler:", error);
+        res.status(500).json({ error: "Failed to load bookings list handler" });
+      }
+    }
+  );
+
   app.post("/api/bookings", 
     requireAuth(['customer', 'owner', 'dispatcher', 'admin']),
     validateRequest(schemas.createBooking),
