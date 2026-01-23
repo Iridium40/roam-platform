@@ -49,22 +49,11 @@ const transformBooking = (booking: any): BookingWithDetails => ({
   updated_at: booking.created_at || new Date().toISOString(),
 });
 
-// Get auth headers - use cached token from localStorage, but validate it first
-const getAuthHeaders = async (): Promise<HeadersInit> => {
-  let token = localStorage.getItem('roam_access_token');
-  
-  // If no cached token, try to get from Supabase
-  if (!token) {
-    const { supabase } = await import('@/lib/supabase');
-    const { data: { session } } = await supabase.auth.getSession();
-    token = session?.access_token || '';
-    if (token) {
-      localStorage.setItem('roam_access_token', token);
-    }
-  }
-  
+// Get auth headers - use cached token from localStorage
+const getAuthHeaders = (): HeadersInit => {
+  const cachedToken = localStorage.getItem('roam_access_token');
   return {
-    'Authorization': `Bearer ${token}`,
+    'Authorization': `Bearer ${cachedToken || ''}`,
     'Content-Type': 'application/json',
   };
 };
@@ -107,8 +96,8 @@ export const useBookingsData = (currentUser: any) => {
       const startDateStr = start.toISOString().split('T')[0];
       const endDateStr = end.toISOString().split('T')[0];
 
-      // Get auth headers (async - validates and refreshes token if needed)
-      const headers = await getAuthHeaders();
+      // Get auth headers
+      const headers = getAuthHeaders();
 
       // Build query params
       const queryParams = new URLSearchParams({
@@ -129,6 +118,16 @@ export const useBookingsData = (currentUser: any) => {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+        
+        // If 401, the token is invalid - clear it and reload to trigger re-auth
+        if (response.status === 401) {
+          console.error("[useBookingsData] Invalid token, clearing auth and reloading");
+          localStorage.removeItem('roam_access_token');
+          localStorage.removeItem('roam_customer');
+          window.location.href = '/';
+          return;
+        }
+        
         throw new Error(errorData.error || `Failed to load bookings: ${response.status}`);
       }
 
