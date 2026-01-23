@@ -1,7 +1,7 @@
 export const PRIVACY_POLICY_CONTENT = {
-  version: "1.0",
+  version: "1.1",
   effectiveDate: "October 9, 2025",
-  lastUpdated: "October 9, 2025",
+  lastUpdated: "January 23, 2026",
   summary: {
     title: "Your privacy matters to us",
     description:
@@ -72,7 +72,10 @@ By using our platform, you agree to the practices described in this Privacy Poli
 - **With service partners:** Payment processors, background check vendors, communication tools
 - **With business partners:** When collaborating on service delivery or promotions, with necessary safeguards
 - **For legal compliance:** When required by law, subpoena, or government request
-- **In case of business transfers:** If ROAM is involved in a merger, acquisition, or sale of assets`,
+- **In case of business transfers:** If ROAM is involved in a merger, acquisition, or sale of assets
+
+**Mobile Information Protection:**
+No mobile information will be shared with third parties/affiliates for marketing/promotional purposes. All the above categories exclude text messaging originator opt-in data and consent; this information will not be shared with any third parties.`,
     },
     {
       id: "cookies",

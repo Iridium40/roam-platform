@@ -182,55 +182,62 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       async (event, session) => {
         logger.debug('AuthContext: Auth state changed:', { event, hasSession: !!session });
 
-        switch (event) {
-          case 'SIGNED_IN':
-            // User signed in (including OAuth redirect)
-            if (session?.user) {
-              logger.debug('AuthContext: User signed in, fetching customer profile...');
-              const customerData = await fetchCustomerProfile(session.user.id);
-              
-              if (customerData) {
-                setCustomer(customerData);
-                localStorage.setItem("roam_customer", JSON.stringify(customerData));
+        try {
+          switch (event) {
+            case 'SIGNED_IN':
+              // User signed in (including OAuth redirect)
+              if (session?.user) {
+                logger.debug('AuthContext: User signed in, fetching customer profile...');
+                const customerData = await fetchCustomerProfile(session.user.id);
+                
+                if (customerData) {
+                  setCustomer(customerData);
+                  localStorage.setItem("roam_customer", JSON.stringify(customerData));
+                  localStorage.setItem("roam_access_token", session.access_token);
+                  localStorage.setItem("roam_user_type", "customer");
+                } else if (session.user.app_metadata?.provider) {
+                  // OAuth user without profile - create one
+                  logger.debug('AuthContext: OAuth user without profile, creating...');
+                  await createCustomerProfileFromOAuth(session.user);
+                }
+              }
+              break;
+
+            case 'SIGNED_OUT':
+              // User signed out
+              logger.debug('AuthContext: User signed out');
+              setCustomer(null);
+              clearStoredData();
+              break;
+
+            case 'TOKEN_REFRESHED':
+              // Token was refreshed - update stored token
+              if (session?.access_token) {
+                logger.debug('AuthContext: Token refreshed');
                 localStorage.setItem("roam_access_token", session.access_token);
-                localStorage.setItem("roam_user_type", "customer");
-              } else if (session.user.app_metadata?.provider) {
-                // OAuth user without profile - create one
-                logger.debug('AuthContext: OAuth user without profile, creating...');
-                await createCustomerProfileFromOAuth(session.user);
               }
-            }
-            break;
+              break;
 
-          case 'SIGNED_OUT':
-            // User signed out
-            logger.debug('AuthContext: User signed out');
-            setCustomer(null);
-            clearStoredData();
-            break;
-
-          case 'TOKEN_REFRESHED':
-            // Token was refreshed - update stored token
-            if (session?.access_token) {
-              logger.debug('AuthContext: Token refreshed');
-              localStorage.setItem("roam_access_token", session.access_token);
-            }
-            break;
-
-          case 'USER_UPDATED':
-            // User profile was updated
-            if (session?.user) {
-              logger.debug('AuthContext: User updated, refreshing customer profile...');
-              const customerData = await fetchCustomerProfile(session.user.id);
-              if (customerData) {
-                setCustomer(customerData);
-                localStorage.setItem("roam_customer", JSON.stringify(customerData));
+            case 'USER_UPDATED':
+              // User profile was updated
+              if (session?.user) {
+                logger.debug('AuthContext: User updated, refreshing customer profile...');
+                const customerData = await fetchCustomerProfile(session.user.id);
+                if (customerData) {
+                  setCustomer(customerData);
+                  localStorage.setItem("roam_customer", JSON.stringify(customerData));
+                }
               }
-            }
-            break;
+              break;
 
-          default:
-            break;
+            default:
+              break;
+          }
+        } catch (error) {
+          logger.error('AuthContext: Error in onAuthStateChange handler:', error);
+        } finally {
+          // Always ensure loading is set to false after auth state changes complete
+          setLoading(false);
         }
       }
     );
