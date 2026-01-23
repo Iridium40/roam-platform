@@ -117,6 +117,13 @@ export default function SignIn() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Marketing Consent Notice for OAuth */}
+              {isSignUp && (
+                <div className="text-xs text-center text-muted-foreground">
+                  By continuing, you agree to receive marketing emails and SMS from ROAM.
+                </div>
+              )}
+
               {/* Google Sign In */}
               <Button
                 type="button"
@@ -262,6 +269,24 @@ export default function SignIn() {
                     </p>
                   )}
                 </div>
+
+                {/* Marketing Consent Disclosure */}
+                {isSignUp && (
+                  <div className="text-xs text-muted-foreground bg-muted/50 rounded-md p-3 space-y-1">
+                    <p>
+                      By creating an account, you agree to our{" "}
+                      <Link to="/terms" className="text-roam-blue hover:underline">Terms of Service</Link>
+                      {" "}and{" "}
+                      <Link to="/privacy" className="text-roam-blue hover:underline">Privacy Policy</Link>.
+                    </p>
+                    <p className="text-muted-foreground/80">
+                      By providing your email and phone number, you consent to receive marketing 
+                      communications from ROAM, including promotional emails and SMS text messages. 
+                      Message frequency varies. Message and data rates may apply. 
+                      Reply STOP to unsubscribe from SMS at any time.
+                    </p>
+                  </div>
+                )}
 
                 <Button 
                   type="submit" 

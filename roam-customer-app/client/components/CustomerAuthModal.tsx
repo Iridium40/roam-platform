@@ -715,8 +715,19 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
           </TabsContent>
         </Tabs>
 
-        <div className="text-center text-sm text-foreground/60">
-          By signing up, you agree to our Terms of Service and Privacy Policy
+        <div className="text-center text-xs text-foreground/60 space-y-2 px-2">
+          <p>
+            By signing up, you agree to our{" "}
+            <a href="/terms" className="text-roam-blue hover:underline">Terms of Service</a>
+            {" "}and{" "}
+            <a href="/privacy" className="text-roam-blue hover:underline">Privacy Policy</a>
+          </p>
+          <p className="text-foreground/50">
+            By providing your email and phone number, you consent to receive marketing 
+            communications from ROAM, including promotional emails and SMS text messages. 
+            Message frequency varies. Message and data rates may apply. 
+            Reply STOP to unsubscribe from SMS at any time.
+          </p>
         </div>
       </DialogContent>
     </Dialog>
