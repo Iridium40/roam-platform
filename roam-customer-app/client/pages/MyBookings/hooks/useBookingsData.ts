@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from "react";
-import { supabase } from "@/lib/supabase";
 import type { BookingWithDetails } from "@/types/index";
 import useRealtimeBookings from "@/hooks/useRealtimeBookings";
 import { PAGINATION_CONFIG, getDateRange } from "../config/pagination.config";
@@ -50,11 +49,12 @@ const transformBooking = (booking: any): BookingWithDetails => ({
   updated_at: booking.created_at || new Date().toISOString(),
 });
 
-// Get auth headers (same pattern as provider app)
-const getAuthHeaders = async (): Promise<HeadersInit> => {
-  const { data: { session } } = await supabase.auth.getSession();
+// Get auth headers - use cached token from localStorage instead of calling supabase.auth.getSession()
+// which can hang in some situations
+const getAuthHeaders = (): HeadersInit => {
+  const cachedToken = localStorage.getItem('roam_access_token');
   return {
-    'Authorization': `Bearer ${session?.access_token || ''}`,
+    'Authorization': `Bearer ${cachedToken || ''}`,
     'Content-Type': 'application/json',
   };
 };
@@ -97,8 +97,8 @@ export const useBookingsData = (currentUser: any) => {
       const startDateStr = start.toISOString().split('T')[0];
       const endDateStr = end.toISOString().split('T')[0];
 
-      // Get auth headers
-      const headers = await getAuthHeaders();
+      // Get auth headers (synchronous - uses cached token)
+      const headers = getAuthHeaders();
 
       // Build query params
       const queryParams = new URLSearchParams({
