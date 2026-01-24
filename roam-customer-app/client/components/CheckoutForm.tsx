@@ -248,25 +248,40 @@ export function CheckoutForm({ bookingDetails, clientSecret, onSuccess, onError 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     
-    if (!stripe || !elements) {
-      onError('Stripe has not loaded yet');
+    logger.debug('Booking payment submit started', { 
+      selectedPaymentMethod, 
+      hasStripe: !!stripe, 
+      hasElements: !!elements,
+      hasClientSecret: !!clientSecret 
+    });
+
+    if (!stripe || !clientSecret) {
+      const errorMsg = 'Stripe has not loaded yet';
+      logger.error(errorMsg);
+      onError(errorMsg);
+      return;
+    }
+
+    // Only require elements if using new payment method
+    if (selectedPaymentMethod === 'new' && !elements) {
+      const errorMsg = 'Payment form has not loaded yet';
+      logger.error(errorMsg);
+      onError(errorMsg);
       return;
     }
 
     setIsLoading(true);
 
     try {
-      if (!clientSecret) {
-        throw new Error('Payment intent not found');
-      }
-
       let paymentIntent;
       let error;
 
       if (selectedPaymentMethod !== 'new') {
+        logger.debug('Using saved payment method:', selectedPaymentMethod);
         // Use saved payment method - verify it belongs to the customer first
         if (customer?.user_id) {
           try {
+            logger.debug('Verifying payment method...');
             const verifyResponse = await fetch('/api/stripe/verify-payment-method', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -280,8 +295,9 @@ export function CheckoutForm({ bookingDetails, clientSecret, onSuccess, onError 
               const errorData = await verifyResponse.json();
               throw new Error(errorData.error || 'Payment method verification failed');
             }
+            logger.debug('Payment method verified successfully');
           } catch (verifyError: any) {
-            console.error('Payment method verification error:', verifyError);
+            logger.error('Payment method verification error:', verifyError);
             onError(verifyError.message || 'This payment method cannot be used. Please select a different card or add a new one.');
             setIsLoading(false);
             return;
@@ -291,11 +307,17 @@ export function CheckoutForm({ bookingDetails, clientSecret, onSuccess, onError 
         // Confirm payment with saved payment method
         // For manual capture, this will authorize but not charge (status will be 'requires_capture')
         // Note: With manual capture, confirmCardPayment should work normally - it will authorize but not capture
+        logger.debug('Confirming payment with saved card...');
         const result = await stripe.confirmCardPayment(clientSecret, {
           payment_method: selectedPaymentMethod,
         });
         paymentIntent = result.paymentIntent;
         error = result.error;
+        
+        logger.debug('Payment confirmation result:', { 
+          status: paymentIntent?.status, 
+          hasError: !!error 
+        });
         
         // Check if payment was authorized but not captured (manual capture)
         if (paymentIntent && paymentIntent.status === 'requires_capture') {
@@ -304,6 +326,7 @@ export function CheckoutForm({ bookingDetails, clientSecret, onSuccess, onError 
           logger.debug('Payment charged successfully');
         }
       } else {
+        logger.debug('Using new payment method from PaymentElement');
         // Use new payment method from PaymentElement
         let paymentMethodId: string | null = null;
 
@@ -707,7 +730,7 @@ export function CheckoutForm({ bookingDetails, clientSecret, onSuccess, onError 
             <Button
               type="submit"
               className="w-full h-12 text-base bg-roam-blue hover:bg-roam-blue/90"
-              disabled={!stripe || isLoading}
+              disabled={!stripe || isLoading || (selectedPaymentMethod === 'new' && !elements)}
             >
               {isLoading ? (
                 <>
