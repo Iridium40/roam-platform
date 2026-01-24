@@ -468,7 +468,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           transaction_description: 'Platform service payment (pending capture)',
           transaction_type: isAddMoreService ? 'additional_service' : 'initial_booking',
         }, {
-          onConflict: 'booking_id,stripe_payment_intent_id',
+          onConflict: 'stripe_payment_intent_id',
           ignoreDuplicates: true,
         });
 
