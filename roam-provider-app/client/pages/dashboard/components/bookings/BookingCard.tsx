@@ -562,8 +562,8 @@ function BookingCard({
                           (${totalAmount.toFixed(2)} - ${serviceFee.toFixed(2)} fee)
                         </p>
                       )}
-                      {/* Balance to Collect - for deposit bookings */}
-                      {remainingBalance > 0 && !isRemainingBalanceCharged && (
+                      {/* Balance to Collect - ONLY for deposit pricing type services */}
+                      {remainingBalance > 0 && !isRemainingBalanceCharged && booking.services?.pricing_type === 'deposit' && (
                         <div className="mt-2 px-2 py-1 bg-amber-100 border border-amber-300 rounded text-amber-800">
                           <p className="text-xs font-semibold">Balance to Collect</p>
                           <p className="text-sm font-bold">${remainingBalance.toFixed(2)}</p>
@@ -860,11 +860,12 @@ function BookingCard({
                 <span className="text-lg font-bold text-blue-600">
                   ${parseFloat(booking.total_amount || '0').toFixed(2)}
                 </span>
-                {/* Balance to Collect - for deposit bookings (mobile) */}
+                {/* Balance to Collect - ONLY for deposit pricing type services (mobile) */}
                 {(() => {
                   const remainingBalance = parseFloat(booking.remaining_balance || '0');
                   const isRemainingBalanceCharged = booking.remaining_balance_charged === true;
-                  if (remainingBalance > 0 && !isRemainingBalanceCharged) {
+                  const isDepositService = booking.services?.pricing_type === 'deposit';
+                  if (remainingBalance > 0 && !isRemainingBalanceCharged && isDepositService) {
                     return (
                       <div className="mt-1 px-1.5 py-0.5 bg-amber-100 border border-amber-300 rounded text-amber-800">
                         <p className="text-[10px] font-semibold">Balance Due</p>
