@@ -1121,6 +1121,13 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
       return;
     }
 
+    // Check if this is a balance payment
+    if (paymentIntent.metadata?.type === 'remaining_balance_payment') {
+      console.log('💰 Processing as remaining balance payment');
+      await handleBalancePaymentIntent(paymentIntent);
+      return;
+    }
+
     // Check if this payment intent was already processed
     // This could be from checkout.session.completed webhook OR from payment processor capture
     const { data: existingBusinessTransaction } = await supabase
@@ -1717,6 +1724,148 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
   } catch (error: any) {
     console.error('❌ Error handling payment intent succeeded:', error);
     console.error('Error stack:', error.stack);
+    throw error;
+  }
+}
+
+async function handleBalancePaymentIntent(paymentIntent: Stripe.PaymentIntent) {
+  const {
+    booking_id,
+    customer_id,
+    provider_id,
+    business_id,
+    balance_amount,
+    platform_fee,
+    provider_amount,
+    booking_reference,
+    connectedAccountId,
+    transferAmount,
+  } = paymentIntent.metadata;
+
+  try {
+    console.log('💳 Processing balance payment intent:', {
+      paymentIntentId: paymentIntent.id,
+      bookingId: booking_id,
+      balanceAmount: balance_amount,
+      platformFee: platform_fee,
+      providerAmount: provider_amount,
+      connectedAccountId,
+    });
+
+    // Update booking to mark balance as charged
+    const { error: bookingUpdateError } = await supabase
+      .from('bookings')
+      .update({
+        remaining_balance_charged: true,
+        remaining_balance_charged_at: new Date().toISOString(),
+        payment_status: 'paid',
+      })
+      .eq('id', booking_id);
+
+    if (bookingUpdateError) {
+      console.error('Error updating booking for balance payment:', bookingUpdateError);
+      throw bookingUpdateError;
+    }
+
+    console.log('✅ Updated booking remaining_balance_charged to true');
+
+    // Create financial transaction record
+    const { error: txError } = await supabase
+      .from('financial_transactions')
+      .insert({
+        booking_id,
+        customer_id,
+        business_id,
+        amount: parseFloat(balance_amount),
+        currency: 'usd',
+        payment_method: 'card',
+        description: 'Remaining balance payment',
+        transaction_type: 'balance_payment',
+        status: 'completed',
+        processed_at: new Date().toISOString(),
+        metadata: {
+          type: 'remaining_balance_payment',
+          provider_id,
+          platform_fee: parseFloat(platform_fee || '0'),
+          provider_amount: parseFloat(provider_amount || balance_amount || '0'),
+          stripe_payment_intent_id: paymentIntent.id,
+          booking_reference,
+        },
+      });
+
+    if (txError) {
+      console.error('Error creating financial transaction for balance:', txError);
+      // Don't throw - booking update is more important
+    }
+
+    // Update business_payment_transactions with completion status
+    const { error: bptError } = await supabase
+      .from('business_payment_transactions')
+      .update({
+        transaction_description: 'Remaining balance payment - completed',
+        gross_payment_amount: parseFloat(balance_amount),
+        platform_fee: parseFloat(platform_fee || '0'),
+        net_payment_amount: parseFloat(provider_amount || balance_amount || '0'),
+      })
+      .eq('booking_id', booking_id)
+      .eq('stripe_payment_intent_id', paymentIntent.id);
+
+    if (bptError) {
+      console.error('Error updating business payment transaction for balance:', bptError);
+      // Don't throw - booking update is more important
+    }
+
+    // Create Stripe Transfer to connected account
+    if (connectedAccountId && paymentIntent.latest_charge && transferAmount) {
+      try {
+        const chargeId = typeof paymentIntent.latest_charge === 'string'
+          ? paymentIntent.latest_charge
+          : paymentIntent.latest_charge.id;
+        
+        const transferAmountCents = parseInt(transferAmount);
+        
+        console.log('💸 Creating Stripe Transfer for balance payment to connected account:', {
+          amount: transferAmountCents / 100,
+          amountCents: transferAmountCents,
+          destination: connectedAccountId,
+          sourceTransaction: chargeId,
+        });
+        
+        const transfer = await stripe.transfers.create({
+          amount: transferAmountCents,
+          currency: 'usd',
+          destination: connectedAccountId,
+          source_transaction: chargeId,
+          metadata: {
+            booking_id: booking_id,
+            payment_intent_id: paymentIntent.id,
+            transfer_type: 'balance_payment',
+            balance_amount: balance_amount,
+            platform_fee: platform_fee || '0',
+            provider_id: provider_id,
+          },
+          description: `Balance payment for booking ${booking_reference || booking_id}`,
+        });
+        
+        console.log('✅ Balance payment transfer created successfully:', {
+          transferId: transfer.id,
+          amount: transferAmountCents / 100,
+          destination: connectedAccountId,
+        });
+        
+      } catch (transferError: any) {
+        console.error('❌ Error creating balance payment transfer:', transferError);
+        console.warn('⚠️ Balance payment recorded but transfer failed - may need manual resolution');
+        // Don't fail the payment processing - record it and handle transfer manually if needed
+      }
+    } else {
+      console.warn('⚠️ No connected account ID, charge ID, or transfer amount - skipping balance transfer');
+    }
+
+    console.log('✅ Balance payment processed successfully for booking:', booking_id);
+
+  } catch (error) {
+    console.error('❌ Error processing balance payment intent:', error);
     throw error;
   }
 }

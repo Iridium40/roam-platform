@@ -217,6 +217,18 @@ export function createServer() {
     }
   );
 
+  app.post("/api/stripe/create-balance-payment-intent",
+    async (req, res) => {
+      try {
+        const balancePaymentHandler = await import("../api/stripe/create-balance-payment-intent");
+        await balancePaymentHandler.default(req, res);
+      } catch (error) {
+        console.error("Error importing balance payment intent handler:", error);
+        res.status(500).json({ error: "Failed to load balance payment intent handler" });
+      }
+    }
+  );
+
   // Webhook handler function (used by both routes)
   const handleStripeWebhook = async (req: any, res: any) => {
     console.log('🎯 [WEBHOOK] Received webhook request from Stripe');

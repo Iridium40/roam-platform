@@ -23,6 +23,11 @@ import { format } from "date-fns";
 import { Footer } from "@/components/Footer";
 import { logger } from "@/utils/logger";
 import { PageErrorBoundary } from "@/components/ErrorBoundary";
+import { loadStripe } from "@stripe/stripe-js";
+import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
+
+// Initialize Stripe
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY!);
 
 interface BookingForPayment {
   id: string;
@@ -61,6 +66,97 @@ const formatCurrency = (amount: number | string | null | undefined) => {
   }).format(numAmount);
 };
 
+// Payment Form Component using Stripe Elements
+function PaymentForm({ bookingId, amount }: { bookingId: string; amount: number }) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!stripe || !elements) {
+      return;
+    }
+
+    setIsProcessing(true);
+    setErrorMessage(null);
+
+    try {
+      // Confirm the payment
+      const { error, paymentIntent } = await stripe.confirmPayment({
+        elements,
+        confirmParams: {
+          return_url: `${window.location.origin}/balance-payment-success?booking_id=${bookingId}`,
+        },
+        redirect: 'if_required',
+      });
+
+      if (error) {
+        setErrorMessage(error.message || 'Payment failed');
+        toast({
+          title: "Payment Failed",
+          description: error.message || "Please try again.",
+          variant: "destructive",
+        });
+        setIsProcessing(false);
+      } else if (paymentIntent && paymentIntent.status === 'succeeded') {
+        // Payment succeeded without redirect
+        toast({
+          title: "Payment Successful!",
+          description: "Your balance has been paid.",
+        });
+        navigate(`/balance-payment-success?booking_id=${bookingId}`);
+      }
+    } catch (err: any) {
+      logger.error('Payment confirmation error:', err);
+      setErrorMessage(err.message || 'An unexpected error occurred');
+      setIsProcessing(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="p-4 bg-muted/30 rounded-lg">
+        <PaymentElement />
+      </div>
+
+      {errorMessage && (
+        <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+          <p className="text-sm text-red-600">{errorMessage}</p>
+        </div>
+      )}
+
+      <Button
+        type="submit"
+        disabled={!stripe || isProcessing}
+        className="w-full h-12 text-lg bg-amber-500 hover:bg-amber-600 text-white"
+      >
+        {isProcessing ? (
+          <>
+            <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+            Processing Payment...
+          </>
+        ) : (
+          <>
+            <CreditCard className="w-5 h-5 mr-2" />
+            Pay {formatCurrency(amount)}
+          </>
+        )}
+      </Button>
+
+      {/* Security Note */}
+      <div className="flex items-center justify-center gap-2 text-xs text-foreground/50">
+        <Shield className="w-4 h-4" />
+        <span>Secure payment powered by Stripe</span>
+      </div>
+    </form>
+  );
+}
+
 function PayBalanceContent() {
   const { bookingId } = useParams<{ bookingId: string }>();
   const navigate = useNavigate();
@@ -70,10 +166,11 @@ function PayBalanceContent() {
   const [booking, setBooking] = useState<BookingForPayment | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [clientSecret, setClientSecret] = useState<string>("");
+  const [paymentBreakdown, setPaymentBreakdown] = useState<any>(null);
 
-  // Fetch booking data from API instead of direct Supabase query
-  const fetchBooking = async () => {
+  // Fetch booking data and create payment intent
+  const fetchBookingAndCreatePaymentIntent = async () => {
     if (!bookingId || !customer) return;
 
     try {
@@ -86,16 +183,16 @@ function PayBalanceContent() {
         throw new Error("Authentication required. Please sign in again.");
       }
 
-      // Fetch from API
-      const response = await fetch(`/api/bookings/list?customer_id=${customer.id}`, {
+      // Step 1: Fetch booking details from API
+      const bookingsResponse = await fetch(`/api/bookings/list?customer_id=${customer.id}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       });
 
-      if (!response.ok) {
-        if (response.status === 401) {
+      if (!bookingsResponse.ok) {
+        if (bookingsResponse.status === 401) {
           // Token is invalid, clear and redirect
           localStorage.removeItem('roam_access_token');
           localStorage.removeItem('roam_customer');
@@ -105,8 +202,8 @@ function PayBalanceContent() {
         throw new Error("Failed to load booking details.");
       }
 
-      const data = await response.json();
-      const bookings = data.data || [];
+      const bookingsData = await bookingsResponse.json();
+      const bookings = bookingsData.data || [];
       
       // Find the specific booking
       const bookingData = bookings.find((b: any) => b.id === bookingId);
@@ -116,9 +213,35 @@ function PayBalanceContent() {
       }
 
       setBooking(bookingData);
+
+      // Step 2: Create payment intent if balance is due
+      const remainingBalance = parseFloat(bookingData.remaining_balance || '0');
+      if (remainingBalance > 0 && !bookingData.remaining_balance_charged) {
+        const apiBaseUrl = import.meta.env.VITE_API_URL || '';
+        const paymentResponse = await fetch(`${apiBaseUrl}/api/stripe/create-balance-payment-intent`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            booking_id: bookingId,
+            customer_id: customer.id,
+          }),
+        });
+
+        if (!paymentResponse.ok) {
+          const errorData = await paymentResponse.json();
+          throw new Error(errorData.error || errorData.details || 'Failed to initialize payment');
+        }
+
+        const paymentData = await paymentResponse.json();
+        setClientSecret(paymentData.clientSecret);
+        setPaymentBreakdown(paymentData.breakdown);
+        logger.debug('Payment intent created:', paymentData);
+      }
     } catch (err: any) {
-      logger.error("Error loading booking:", err);
-      setError(err.message || "Failed to load booking details.");
+      logger.error("Error loading booking or creating payment intent:", err);
+      setError(err.message || "Failed to load payment details.");
     } finally {
       setLoading(false);
     }
@@ -126,52 +249,12 @@ function PayBalanceContent() {
 
   useEffect(() => {
     if (customer && bookingId) {
-      fetchBooking();
+      fetchBookingAndCreatePaymentIntent();
     }
   }, [customer, bookingId]);
 
-  const handlePayBalance = async () => {
-    if (!booking || !customer) return;
-
-    try {
-      setIsProcessing(true);
-
-      // Determine API base URL
-      const apiBaseUrl = import.meta.env.VITE_API_URL || '';
-
-      const response = await fetch(`${apiBaseUrl}/api/stripe/create-balance-checkout-session`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          booking_id: booking.id,
-          customer_id: customer.id,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || data.details || 'Failed to create checkout session');
-      }
-
-      // Redirect to Stripe Checkout
-      if (data.checkout_url) {
-        window.location.href = data.checkout_url;
-      } else {
-        throw new Error('No checkout URL received');
-      }
-    } catch (err: any) {
-      logger.error("Error creating checkout session:", err);
-      toast({
-        title: "Payment Error",
-        description: err.message || "Failed to initiate payment. Please try again.",
-        variant: "destructive",
-      });
-      setIsProcessing(false);
-    }
-  };
+  const remainingBalance = booking ? parseFloat(booking.remaining_balance as string) || 0 : 0;
+  const depositPaid = booking ? parseFloat(booking.total_amount as string) - parseFloat(booking.service_fee as string) || 0 : 0;
 
   // Loading state
   if (authLoading || loading) {
@@ -226,9 +309,6 @@ function PayBalanceContent() {
       </div>
     );
   }
-
-  const remainingBalance = parseFloat(booking.remaining_balance as string) || 0;
-  const depositPaid = parseFloat(booking.total_amount as string) - parseFloat(booking.service_fee as string) || 0;
 
   // No balance due state
   if (remainingBalance <= 0) {
@@ -366,30 +446,29 @@ function PayBalanceContent() {
 
                 <Separator />
 
-                {/* Pay Button */}
-                <Button
-                  onClick={handlePayBalance}
-                  disabled={isProcessing}
-                  className="w-full h-12 text-lg bg-amber-500 hover:bg-amber-600 text-white"
-                >
-                  {isProcessing ? (
-                    <>
-                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      <CreditCard className="w-5 h-5 mr-2" />
-                      Pay {formatCurrency(remainingBalance)}
-                    </>
-                  )}
-                </Button>
-
-                {/* Security Note */}
-                <div className="flex items-center justify-center gap-2 text-xs text-foreground/50">
-                  <Shield className="w-4 h-4" />
-                  <span>Secure payment powered by Stripe</span>
-                </div>
+                {/* Payment Form with Stripe Elements */}
+                {clientSecret ? (
+                  <Elements
+                    stripe={stripePromise}
+                    options={{
+                      clientSecret,
+                      appearance: {
+                        theme: 'stripe',
+                        variables: {
+                          colorPrimary: '#f59e0b',
+                          borderRadius: '8px',
+                        },
+                      },
+                    }}
+                  >
+                    <PaymentForm bookingId={booking.id} amount={remainingBalance} />
+                  </Elements>
+                ) : (
+                  <div className="text-center py-4">
+                    <Loader2 className="w-6 h-6 animate-spin text-amber-500 mx-auto mb-2" />
+                    <p className="text-sm text-foreground/60">Initializing payment...</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
