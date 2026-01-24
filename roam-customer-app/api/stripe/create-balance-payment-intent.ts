@@ -276,7 +276,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         stripe_payment_intent_id: paymentIntent.id,
         stripe_connect_account_id: connectedAccount.account_id,
         transaction_description: 'Remaining balance payment',
-        transaction_type: 'balance_payment',
+        transaction_type: 'additional_service',
       });
 
     if (bptError && bptError.code !== '23505') { // Ignore duplicate errors
@@ -295,7 +295,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         stripe_transaction_id: paymentIntent.id,
         payment_method: 'card',
         description: `Remaining balance payment for ${serviceName}`,
-        transaction_type: 'balance_payment',
+        transaction_type: 'booking_payment',
         status: 'pending',
         processed_at: new Date().toISOString(),
         metadata: {

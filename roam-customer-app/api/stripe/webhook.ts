@@ -562,7 +562,7 @@ async function handleRemainingBalancePayment(session: Stripe.Checkout.Session) {
           : (session.payment_intent as any)?.id || null,
         description: 'Remaining balance payment',
         booking_reference,
-        transaction_type: 'remaining_balance_payment',
+        transaction_type: 'additional_service',
       });
 
     if (bptError) {
@@ -1790,7 +1790,7 @@ async function handleBalancePaymentIntent(paymentIntent: Stripe.PaymentIntent) {
       .from('financial_transactions')
       .select('id')
       .eq('booking_id', booking_id)
-      .eq('transaction_type', 'balance_payment')
+      .eq('transaction_type', 'booking_payment')
       .eq('stripe_transaction_id', paymentIntent.id)
       .maybeSingle();
 
@@ -1806,7 +1806,7 @@ async function handleBalancePaymentIntent(paymentIntent: Stripe.PaymentIntent) {
           currency: 'usd',
           payment_method: 'card',
           description: 'Remaining balance payment',
-          transaction_type: 'balance_payment',
+          transaction_type: 'booking_payment',
           status: 'completed',
           processed_at: new Date().toISOString(),
           stripe_transaction_id: paymentIntent.id,
