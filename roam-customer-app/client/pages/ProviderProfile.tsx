@@ -174,44 +174,20 @@ export default function ProviderProfile() {
           setServices(providerServices);
         }
 
-        // Load reviews for this provider (approved reviews, with featured ones first)
-        const { data: reviewsData, error: reviewsError } = await supabase
-          .from('reviews')
-          .select(`
-            id,
-            booking_id,
-            overall_rating,
-            service_rating,
-            communication_rating,
-            punctuality_rating,
-            review_text,
-            is_featured,
-            created_at,
-            bookings (
-              service_id,
-              customer_id,
-              services (
-                name
-              ),
-              customer_profiles (
-                first_name,
-                last_name
-              )
-            )
-          `)
-          .eq('provider_id', providerData.id)
-          .eq('is_approved', true)
-          .order('is_featured', { ascending: false })
-          .order('created_at', { ascending: false });
-
-        if (!reviewsError && reviewsData) {
-          // Transform reviews to include service name and customer info
-          const transformedReviews = reviewsData.map((review: any) => ({
-            ...review,
-            services: review.bookings?.services,
-            customer_profiles: review.bookings?.customer_profiles,
-          }));
-          setReviews(transformedReviews);
+        // Load reviews using API endpoint (avoids RLS issues for unauthenticated users)
+        try {
+          const apiBaseUrl = import.meta.env.VITE_API_URL || '';
+          const reviewsResponse = await fetch(`${apiBaseUrl}/api/reviews/provider?providerId=${providerData.id}`);
+          
+          if (reviewsResponse.ok) {
+            const reviewsData = await reviewsResponse.json();
+            setReviews(reviewsData.reviews || []);
+          } else {
+            console.warn('Failed to fetch provider reviews, continuing without them');
+          }
+        } catch (reviewsError) {
+          console.warn('Error fetching provider reviews:', reviewsError);
+          // Continue without reviews - not critical for page load
         }
 
       } catch (error) {

@@ -725,59 +725,35 @@ function BookServiceContent() {
         if (data.business) {
           const businessData = data.business;
           
-          // Fetch actual rating for this business with timeout
+          // Fetch rating for this business using API endpoint
+          let businessRating = 0;
+          let businessReviewCount = 0;
+          
           try {
-            const reviewsPromise = supabase
-              .from('reviews')
-              .select('overall_rating')
-              .eq('business_id', businessData.id)
-              .eq('is_approved', true);
+            const apiBaseUrl = import.meta.env.VITE_API_URL || '';
+            const ratingsResponse = await fetch(`${apiBaseUrl}/api/reviews/business?businessId=${businessData.id}`);
             
-            const reviewsTimeout = new Promise((_, reject) => 
-              setTimeout(() => reject(new Error('Reviews fetch timeout')), 3000)
-            );
-            
-            const { data: businessReviews } = await Promise.race([
-              reviewsPromise,
-              reviewsTimeout
-            ]) as any;
-            
-            let businessRating = 0;
-            let businessReviewCount = 0;
-            if (businessReviews && businessReviews.length > 0) {
-              businessReviewCount = businessReviews.length;
-              const totalRating = businessReviews.reduce((sum: number, r: any) => sum + (r.overall_rating || 0), 0);
-              businessRating = totalRating / businessReviewCount;
+            if (ratingsResponse.ok) {
+              const ratingsData = await ratingsResponse.json();
+              businessRating = ratingsData.averageRating || 0;
+              businessReviewCount = ratingsData.reviewCount || 0;
             }
-
-            const business = {
-              id: businessData.id,
-              business_name: businessData.business_name,
-              description: businessData.business_description || businessData.description,
-              image_url: businessData.image_url,
-              logo_url: businessData.logo_url,
-              business_type: businessData.business_type,
-              rating: businessRating,
-              review_count: businessReviewCount,
-            };
-            setSelectedBusiness(business);
-            setBusinesses([business]); // Only show this business
           } catch (error) {
-            logger.warn('Error loading business reviews, continuing without ratings:', error);
-            // Still set the business even if reviews fail
-            const business = {
-              id: businessData.id,
-              business_name: businessData.business_name,
-              description: businessData.business_description || businessData.description,
-              image_url: businessData.image_url,
-              logo_url: businessData.logo_url,
-              business_type: businessData.business_type,
-              rating: 0,
-              review_count: 0,
-            };
-            setSelectedBusiness(business);
-            setBusinesses([business]);
+            logger.warn('Error loading business ratings, continuing without them:', error);
           }
+
+          const business = {
+            id: businessData.id,
+            business_name: businessData.business_name,
+            description: businessData.business_description || businessData.description,
+            image_url: businessData.image_url,
+            logo_url: businessData.logo_url,
+            business_type: businessData.business_type,
+            rating: businessRating,
+            review_count: businessReviewCount,
+          };
+          setSelectedBusiness(business);
+          setBusinesses([business]); // Only show this business
         }
       } catch (error) {
         logger.error('Error loading service:', error);
@@ -915,27 +891,23 @@ function BookServiceContent() {
         return true;
       });
 
-      // Fetch ratings for each business from reviews table
+      // Fetch ratings for businesses using API endpoint (avoids RLS issues)
       const businessIds = availableBusinesses.map(item => item.business_profiles.id);
+      let businessRatings: Record<string, { rating: number; count: number }> = {};
       
-      const { data: businessReviewsData } = await supabase
-        .from('reviews')
-        .select('business_id, overall_rating')
-        .in('business_id', businessIds)
-        .eq('is_approved', true);
-      
-      // Calculate ratings per business
-      const businessRatings: Record<string, { total: number; count: number }> = {};
-      if (businessReviewsData) {
-        businessReviewsData.forEach(review => {
-          if (review.business_id) {
-            if (!businessRatings[review.business_id]) {
-              businessRatings[review.business_id] = { total: 0, count: 0 };
-            }
-            businessRatings[review.business_id].total += review.overall_rating || 0;
-            businessRatings[review.business_id].count += 1;
-          }
-        });
+      try {
+        const apiBaseUrl = import.meta.env.VITE_API_URL || '';
+        const ratingsResponse = await fetch(`${apiBaseUrl}/api/reviews/bulk-ratings?businessIds=${businessIds.join(',')}`);
+        
+        if (ratingsResponse.ok) {
+          const ratingsData = await ratingsResponse.json();
+          businessRatings = ratingsData.ratings || {};
+        } else {
+          console.warn('Failed to fetch business ratings, continuing without them');
+        }
+      } catch (error) {
+        console.warn('Error fetching business ratings:', error);
+        // Continue without ratings - not critical
       }
 
       // Transform data to match Business interface with actual ratings
@@ -946,9 +918,7 @@ function BookServiceContent() {
         
         // Get actual rating data
         const ratingData = businessRatings[item.business_profiles.id];
-        const rating = ratingData && ratingData.count > 0 
-          ? ratingData.total / ratingData.count 
-          : 0;
+        const rating = ratingData?.rating || 0;
         const reviewCount = ratingData?.count || 0;
         
         // Map delivery_type to delivery_types array based on business_services.delivery_type

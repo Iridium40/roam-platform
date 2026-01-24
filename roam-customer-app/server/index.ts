@@ -87,6 +87,43 @@ export function createServer() {
     }
   );
 
+  // Review routes
+  app.get("/api/reviews/business",
+    async (req, res) => {
+      try {
+        const businessReviewsHandler = await import("../api/reviews/business");
+        await businessReviewsHandler.default(req, res);
+      } catch (error) {
+        console.error("Error importing business reviews handler:", error);
+        res.status(500).json({ error: "Failed to load business reviews handler" });
+      }
+    }
+  );
+
+  app.get("/api/reviews/provider",
+    async (req, res) => {
+      try {
+        const providerReviewsHandler = await import("../api/reviews/provider");
+        await providerReviewsHandler.default(req, res);
+      } catch (error) {
+        console.error("Error importing provider reviews handler:", error);
+        res.status(500).json({ error: "Failed to load provider reviews handler" });
+      }
+    }
+  );
+
+  app.get("/api/reviews/bulk-ratings",
+    async (req, res) => {
+      try {
+        const bulkRatingsHandler = await import("../api/reviews/bulk-ratings");
+        await bulkRatingsHandler.default(req, res);
+      } catch (error) {
+        console.error("Error importing bulk ratings handler:", error);
+        res.status(500).json({ error: "Failed to load bulk ratings handler" });
+      }
+    }
+  );
+
   // Booking routes with validation
   app.get("/api/bookings/list",
     async (req, res) => {

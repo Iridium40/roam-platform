@@ -187,51 +187,25 @@ function BusinessProfileContent() {
         if (businessError) throw businessError;
         if (!businessData) throw new Error('Business not available');
         
-        // Fetch actual reviews for this business (with customer and service info)
-        const { data: reviewsData, error: reviewsError } = await supabase
-          .from('reviews')
-          .select(`
-            id,
-            booking_id,
-            overall_rating,
-            service_rating,
-            communication_rating,
-            punctuality_rating,
-            review_text,
-            is_featured,
-            created_at,
-            bookings (
-              service_id,
-              customer_id,
-              services (
-                name
-              ),
-              customer_profiles (
-                first_name,
-                last_name
-              )
-            )
-          `)
-          .eq('business_id', businessId)
-          .eq('is_approved', true)
-          .order('is_featured', { ascending: false })
-          .order('created_at', { ascending: false });
-        
+        // Fetch reviews using API endpoint (avoids RLS issues for unauthenticated users)
         let calculatedRating = 0;
         let reviewCount = 0;
         
-        if (!reviewsError && reviewsData && reviewsData.length > 0) {
-          reviewCount = reviewsData.length;
-          const totalRating = reviewsData.reduce((sum, review) => sum + (review.overall_rating || 0), 0);
-          calculatedRating = totalRating / reviewCount;
+        try {
+          const apiBaseUrl = import.meta.env.VITE_API_URL || '';
+          const reviewsResponse = await fetch(`${apiBaseUrl}/api/reviews/business?businessId=${businessId}`);
           
-          // Transform reviews to include service name and customer info
-          const transformedReviews = reviewsData.map((review: any) => ({
-            ...review,
-            services: review.bookings?.services,
-            customer_profiles: review.bookings?.customer_profiles,
-          }));
-          setReviews(transformedReviews);
+          if (reviewsResponse.ok) {
+            const reviewsData = await reviewsResponse.json();
+            calculatedRating = reviewsData.averageRating || 0;
+            reviewCount = reviewsData.reviewCount || 0;
+            setReviews(reviewsData.reviews || []);
+          } else {
+            console.warn('Failed to fetch reviews, continuing without them');
+          }
+        } catch (reviewsError) {
+          console.warn('Error fetching reviews:', reviewsError);
+          // Continue without reviews - not critical for page load
         } else {
           setReviews([]);
         }
@@ -330,40 +304,43 @@ function BusinessProfileContent() {
         if (!staffError && staffData) {
           console.log('✅ Found staff members:', staffData.length);
           
-          // Fetch actual ratings for staff members from reviews
-          const staffIds = staffData.map(s => s.id);
-          const { data: staffReviewsData } = await supabase
-            .from('reviews')
-            .select('provider_id, overall_rating')
-            .in('provider_id', staffIds)
-            .eq('is_approved', true);
+          // Fetch ratings for staff members using API (avoids RLS issues)
+          let staffRatings: Record<string, { rating: number; count: number }> = {};
           
-          // Calculate ratings per staff member
-          const staffRatings: Record<string, { total: number; count: number }> = {};
-          if (staffReviewsData) {
-            staffReviewsData.forEach(review => {
-              if (review.provider_id) {
-                if (!staffRatings[review.provider_id]) {
-                  staffRatings[review.provider_id] = { total: 0, count: 0 };
+          try {
+            const staffIds = staffData.map(s => s.id);
+            const apiBaseUrl = import.meta.env.VITE_API_URL || '';
+            
+            // Fetch ratings for each provider
+            const ratingPromises = staffIds.map(async (providerId) => {
+              try {
+                const response = await fetch(`${apiBaseUrl}/api/reviews/provider?providerId=${providerId}`);
+                if (response.ok) {
+                  const data = await response.json();
+                  return { providerId, rating: data.averageRating || 0, count: data.reviewCount || 0 };
                 }
-                staffRatings[review.provider_id].total += review.overall_rating || 0;
-                staffRatings[review.provider_id].count += 1;
+              } catch (error) {
+                console.warn(`Failed to fetch rating for provider ${providerId}`);
               }
+              return { providerId, rating: 0, count: 0 };
             });
+            
+            const ratings = await Promise.all(ratingPromises);
+            ratings.forEach(({ providerId, rating, count }) => {
+              staffRatings[providerId] = { rating, count };
+            });
+          } catch (error) {
+            console.warn('Error fetching staff ratings:', error);
+            // Continue without ratings
           }
 
-          // Add actual ratings to staff members
+          // Add ratings to staff members
           const staffWithRatings = staffData.map((provider) => {
             const ratingData = staffRatings[provider.id];
-            const rating = ratingData && ratingData.count > 0 
-              ? ratingData.total / ratingData.count 
-              : 0;
-            const reviewCount = ratingData?.count || 0;
-            
             return {
               ...provider,
-              rating: rating,
-              review_count: reviewCount,
+              rating: ratingData?.rating || 0,
+              review_count: ratingData?.count || 0,
             };
           });
           setStaff(staffWithRatings);
