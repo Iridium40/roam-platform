@@ -3,6 +3,54 @@ import type { BookingWithDetails } from "@/types/index";
 import useRealtimeBookings from "@/hooks/useRealtimeBookings";
 import { PAGINATION_CONFIG, getDateRange } from "../config/pagination.config";
 
+// Helper function to format location string
+const formatLocation = (booking: any): string => {
+  const deliveryType = booking.delivery_type;
+  
+  // For customer_location deliveries
+  if (deliveryType === 'customer_location') {
+    if (booking.customer_locations) {
+      const loc = booking.customer_locations;
+      const parts = [
+        loc.street_address,
+        loc.unit_number,
+        loc.city,
+        loc.state,
+        loc.zip_code
+      ].filter(Boolean);
+      return parts.length > 0 ? parts.join(', ') : 'Location TBD';
+    }
+    // For guest bookings, check if there's guest location data stored
+    if (booking.guest_name) {
+      return 'Customer Location (Guest Booking)';
+    }
+    return 'Location TBD';
+  }
+  
+  // For business_location deliveries
+  if (deliveryType === 'business_location') {
+    if (booking.business_locations) {
+      const loc = booking.business_locations;
+      const parts = [
+        loc.address_line1,
+        loc.address_line2,
+        loc.city,
+        loc.state,
+        loc.postal_code
+      ].filter(Boolean);
+      return parts.length > 0 ? parts.join(', ') : 'Location TBD';
+    }
+    return 'Business Location';
+  }
+  
+  // For virtual deliveries
+  if (deliveryType === 'virtual') {
+    return 'Virtual Service';
+  }
+  
+  return 'Location TBD';
+};
+
 // Helper function to transform booking data
 const transformBooking = (booking: any): BookingWithDetails => ({
   ...booking,
@@ -33,8 +81,8 @@ const transformBooking = (booking: any): BookingWithDetails => ({
   time: booking.start_time || '',
   status: booking.booking_status || 'pending',
   deliveryType: booking.delivery_type || 'customer_location',
-  location: "Location TBD",
-  locationDetails: null,
+  location: formatLocation(booking),
+  locationDetails: booking.customer_locations || booking.business_locations || null,
   price: booking.total_amount ? `$${booking.total_amount}` : "Price TBD",
   duration: booking.services?.duration_minutes 
     ? `${booking.services.duration_minutes} min` 
