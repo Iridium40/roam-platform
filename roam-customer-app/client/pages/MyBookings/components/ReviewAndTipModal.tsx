@@ -270,23 +270,50 @@ const ReviewAndTipModal: React.FC<ReviewAndTipModalProps> = ({
       // Get auth headers - try multiple methods for Vercel compatibility
       let token: string | null = null;
       
-      // Method 1: Try getting fresh session
+      // Method 1: Try getting fresh session (this will auto-refresh if expired)
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.access_token) {
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error('Session error:', sessionError);
+          logger.warn('Session retrieval failed, attempting refresh:', sessionError);
+          
+          // Try to refresh the session
+          const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
+          
+          if (refreshError) {
+            console.error('Token refresh failed:', refreshError);
+            throw new Error('Your session has expired. Please sign in again.');
+          }
+          
+          if (refreshedSession?.access_token) {
+            token = refreshedSession.access_token;
+            localStorage.setItem('roam_access_token', token);
+            console.log('Token refreshed successfully');
+            logger.debug('Using refreshed token for tip');
+          }
+        } else if (session?.access_token) {
           token = session.access_token;
+          // Update localStorage with fresh token
+          localStorage.setItem('roam_access_token', token);
           logger.debug('Using session token for tip');
         }
       } catch (error) {
+        console.error('Auth error:', error);
         logger.warn('Session retrieval failed for tip, trying localStorage:', error);
       }
       
-      // Method 2: Fallback to localStorage cached token
+      // Method 2: Fallback to localStorage cached token (may be expired)
       if (!token) {
         token = localStorage.getItem('roam_access_token');
         if (token) {
-          logger.debug('Using cached token for tip');
+          logger.debug('Using cached token for tip (may be expired)');
         }
+      }
+      
+      // Method 3: If still no token, user needs to sign in
+      if (!token) {
+        throw new Error('You are not signed in. Please sign in and try again.');
       }
       
       const headers: Record<string, string> = {
