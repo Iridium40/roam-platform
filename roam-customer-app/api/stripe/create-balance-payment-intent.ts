@@ -158,6 +158,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (existingProfile?.stripe_customer_id) {
       stripeCustomerId = existingProfile.stripe_customer_id;
       console.log('✅ Using existing Stripe customer for balance payment:', stripeCustomerId);
+      
+      // Verify customer has payment methods
+      try {
+        const paymentMethods = await stripe.paymentMethods.list({
+          customer: stripeCustomerId,
+          type: 'card',
+        });
+        console.log('💳 Customer has', paymentMethods.data.length, 'saved payment methods');
+      } catch (error) {
+        console.warn('⚠️ Could not fetch payment methods:', error);
+      }
     } else {
       // Create new Stripe customer
       const stripeCustomer = await stripe.customers.create({
