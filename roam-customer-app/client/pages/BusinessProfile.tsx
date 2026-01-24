@@ -206,8 +206,6 @@ function BusinessProfileContent() {
         } catch (reviewsError) {
           console.warn('Error fetching reviews:', reviewsError);
           // Continue without reviews - not critical for page load
-        } else {
-          setReviews([]);
         }
         
         setBusiness({
