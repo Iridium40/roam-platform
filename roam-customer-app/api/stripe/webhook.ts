@@ -1752,50 +1752,81 @@ async function handleBalancePaymentIntent(paymentIntent: Stripe.PaymentIntent) {
       connectedAccountId,
     });
 
-    // Update booking to mark balance as charged
-    const { error: bookingUpdateError } = await supabase
+    // First check if booking exists and get current state
+    const { data: currentBooking, error: fetchError } = await supabase
       .from('bookings')
-      .update({
-        remaining_balance_charged: true,
-        remaining_balance_charged_at: new Date().toISOString(),
-        payment_status: 'paid',
-      })
-      .eq('id', booking_id);
+      .select('id, remaining_balance_charged, payment_status')
+      .eq('id', booking_id)
+      .single();
 
-    if (bookingUpdateError) {
-      console.error('Error updating booking for balance payment:', bookingUpdateError);
-      throw bookingUpdateError;
+    if (fetchError || !currentBooking) {
+      console.error('Error fetching booking for balance payment:', fetchError);
+      throw new Error(`Booking ${booking_id} not found`);
     }
 
-    console.log('✅ Updated booking remaining_balance_charged to true');
+    // Only update if not already marked as charged (prevent duplicate processing)
+    if (!currentBooking.remaining_balance_charged) {
+      const { error: bookingUpdateError } = await supabase
+        .from('bookings')
+        .update({
+          remaining_balance_charged: true,
+          remaining_balance_charged_at: new Date().toISOString(),
+          payment_status: 'paid',
+        })
+        .eq('id', booking_id);
 
-    // Create financial transaction record
-    const { error: txError } = await supabase
+      if (bookingUpdateError) {
+        console.error('Error updating booking for balance payment:', bookingUpdateError);
+        throw bookingUpdateError;
+      }
+
+      console.log('✅ Updated booking remaining_balance_charged to true');
+    } else {
+      console.log('ℹ️ Booking already marked as balance charged, skipping update');
+    }
+
+    // Check if financial transaction already exists to prevent duplicates
+    const { data: existingTx } = await supabase
       .from('financial_transactions')
-      .insert({
-        booking_id,
-        customer_id,
-        business_id,
-        amount: parseFloat(balance_amount),
-        currency: 'usd',
-        payment_method: 'card',
-        description: 'Remaining balance payment',
-        transaction_type: 'balance_payment',
-        status: 'completed',
-        processed_at: new Date().toISOString(),
-        metadata: {
-          type: 'remaining_balance_payment',
-          provider_id,
-          platform_fee: parseFloat(platform_fee || '0'),
-          provider_amount: parseFloat(provider_amount || balance_amount || '0'),
-          stripe_payment_intent_id: paymentIntent.id,
-          booking_reference,
-        },
-      });
+      .select('id')
+      .eq('booking_id', booking_id)
+      .eq('transaction_type', 'balance_payment')
+      .eq('stripe_transaction_id', paymentIntent.id)
+      .maybeSingle();
 
-    if (txError) {
-      console.error('Error creating financial transaction for balance:', txError);
-      // Don't throw - booking update is more important
+    if (!existingTx) {
+      // Create financial transaction record only if it doesn't exist
+      const { error: txError } = await supabase
+        .from('financial_transactions')
+        .insert({
+          booking_id,
+          customer_id,
+          business_id,
+          amount: parseFloat(balance_amount),
+          currency: 'usd',
+          payment_method: 'card',
+          description: 'Remaining balance payment',
+          transaction_type: 'balance_payment',
+          status: 'completed',
+          processed_at: new Date().toISOString(),
+          stripe_transaction_id: paymentIntent.id,
+          metadata: {
+            type: 'remaining_balance_payment',
+            provider_id,
+            platform_fee: parseFloat(platform_fee || '0'),
+            provider_amount: parseFloat(provider_amount || balance_amount || '0'),
+            booking_reference,
+          },
+        });
+
+      if (txError) {
+        console.error('Error creating financial transaction for balance:', txError);
+        // Don't throw - booking update is more important
+      } else {
+        console.log('✅ Created financial transaction for balance payment');
+      }
+    } else {
+      console.log('ℹ️ Financial transaction already exists for this balance payment');
     }
 
     // Update business_payment_transactions with completion status
