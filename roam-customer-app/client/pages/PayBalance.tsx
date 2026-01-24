@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
+import { Label } from "@/components/ui/label";
 import {
   ArrowLeft,
   Calendar,
@@ -67,13 +68,63 @@ const formatCurrency = (amount: number | string | null | undefined) => {
 };
 
 // Payment Form Component using Stripe Elements
-function PaymentForm({ bookingId, amount }: { bookingId: string; amount: number }) {
+function PaymentForm({ bookingId, amount, clientSecret }: { bookingId: string; amount: number; clientSecret: string }) {
   const stripe = useStripe();
   const elements = useElements();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { customer } = useAuth();
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [savedPaymentMethods, setSavedPaymentMethods] = useState<any[]>([]);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('new');
+  const [loadingPaymentMethods, setLoadingPaymentMethods] = useState(true);
+
+  // Load saved payment methods
+  useEffect(() => {
+    const loadPaymentMethods = async () => {
+      if (!customer?.user_id) {
+        setLoadingPaymentMethods(false);
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/stripe/list-payment-methods?customer_id=${customer.user_id}`);
+        if (response.ok) {
+          const data = await response.json();
+          setSavedPaymentMethods(data.payment_methods || []);
+          logger.debug('Loaded saved payment methods:', data.payment_methods?.length || 0);
+          
+          // Set default payment method if available
+          if (data.default_payment_method_id) {
+            setSelectedPaymentMethod(data.default_payment_method_id);
+          } else if (data.payment_methods && data.payment_methods.length > 0) {
+            setSelectedPaymentMethod(data.payment_methods[0].id);
+          }
+        }
+      } catch (error) {
+        logger.error('Error loading payment methods:', error);
+      } finally {
+        setLoadingPaymentMethods(false);
+      }
+    };
+
+    loadPaymentMethods();
+  }, [customer?.user_id]);
+
+  // Format card brand name
+  const getCardBrandName = (brand: string) => {
+    const brands: Record<string, string> = {
+      visa: 'Visa',
+      mastercard: 'Mastercard',
+      amex: 'American Express',
+      discover: 'Discover',
+      diners: 'Diners Club',
+      jcb: 'JCB',
+      unionpay: 'UnionPay',
+    };
+    return brands[brand.toLowerCase()] || brand;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,14 +137,52 @@ function PaymentForm({ bookingId, amount }: { bookingId: string; amount: number 
     setErrorMessage(null);
 
     try {
-      // Confirm the payment
-      const { error, paymentIntent } = await stripe.confirmPayment({
-        elements,
-        confirmParams: {
-          return_url: `${window.location.origin}/balance-payment-success?booking_id=${bookingId}`,
-        },
-        redirect: 'if_required',
-      });
+      let paymentIntent;
+      let error;
+
+      if (selectedPaymentMethod !== 'new') {
+        // Use saved payment method - verify it belongs to the customer first
+        if (customer?.user_id) {
+          try {
+            const verifyResponse = await fetch('/api/stripe/verify-payment-method', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                payment_method_id: selectedPaymentMethod,
+                customer_id: customer.user_id,
+              }),
+            });
+
+            if (!verifyResponse.ok) {
+              const errorData = await verifyResponse.json();
+              throw new Error(errorData.error || 'Payment method verification failed');
+            }
+          } catch (verifyError: any) {
+            logger.error('Payment method verification error:', verifyError);
+            setErrorMessage(verifyError.message || 'This payment method cannot be used. Please select a different card or add a new one.');
+            setIsProcessing(false);
+            return;
+          }
+        }
+
+        // Confirm payment with saved payment method
+        const result = await stripe.confirmCardPayment(clientSecret, {
+          payment_method: selectedPaymentMethod,
+        });
+        paymentIntent = result.paymentIntent;
+        error = result.error;
+      } else {
+        // Use new payment method from PaymentElement
+        const result = await stripe.confirmPayment({
+          elements,
+          confirmParams: {
+            return_url: `${window.location.origin}/balance-payment-success?booking_id=${bookingId}`,
+          },
+          redirect: 'if_required',
+        });
+        paymentIntent = result.paymentIntent;
+        error = result.error;
+      }
 
       if (error) {
         setErrorMessage(error.message || 'Payment failed');
@@ -120,16 +209,79 @@ function PaymentForm({ bookingId, amount }: { bookingId: string; amount: number 
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="p-4 bg-muted/30 rounded-lg">
-        <PaymentElement 
-          options={{
-            layout: {
-              type: 'tabs',
-              defaultCollapsed: false,
-            },
-          }}
-        />
-      </div>
+      {/* Saved Payment Methods */}
+      {!loadingPaymentMethods && savedPaymentMethods.length > 0 && (
+        <div className="space-y-3">
+          <Label className="text-base font-semibold">Payment Method</Label>
+          <div className="space-y-2">
+            {savedPaymentMethods.map((pm) => (
+              <div
+                key={pm.id}
+                className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors ${
+                  selectedPaymentMethod === pm.id ? 'border-amber-500 bg-amber-50' : ''
+                }`}
+                onClick={() => setSelectedPaymentMethod(pm.id)}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                    selectedPaymentMethod === pm.id ? 'border-amber-500' : 'border-gray-300'
+                  }`}>
+                    {selectedPaymentMethod === pm.id && (
+                      <div className="w-2 h-2 rounded-full bg-amber-500" />
+                    )}
+                  </div>
+                  {pm.card && (
+                    <>
+                      <CreditCard className="w-5 h-5 text-gray-600" />
+                      <span className="font-medium">
+                        {getCardBrandName(pm.card.brand)} •••• {pm.card.last4}
+                      </span>
+                      <span className="text-sm text-gray-500">
+                        Expires {pm.card.exp_month}/{pm.card.exp_year}
+                      </span>
+                      {pm.is_default && (
+                        <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded">
+                          Default
+                        </span>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            ))}
+            
+            <div
+              className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors ${
+                selectedPaymentMethod === 'new' ? 'border-amber-500 bg-amber-50' : ''
+              }`}
+              onClick={() => setSelectedPaymentMethod('new')}
+            >
+              <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                selectedPaymentMethod === 'new' ? 'border-amber-500' : 'border-gray-300'
+              }`}>
+                {selectedPaymentMethod === 'new' && (
+                  <div className="w-2 h-2 rounded-full bg-amber-500" />
+                )}
+              </div>
+              <span className="font-medium">Use a new payment method</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Payment Element - Only show when "new" is selected */}
+      {selectedPaymentMethod === 'new' && (
+        <div className="p-4 bg-muted/30 rounded-lg">
+          <PaymentElement 
+            options={{
+              layout: {
+                type: 'tabs',
+                defaultCollapsed: false,
+              },
+            }}
+          />
+        </div>
+      )}
 
       {errorMessage && (
         <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
@@ -139,7 +291,7 @@ function PaymentForm({ bookingId, amount }: { bookingId: string; amount: number 
 
       <Button
         type="submit"
-        disabled={!stripe || isProcessing}
+        disabled={!stripe || isProcessing || (selectedPaymentMethod === 'new' && !elements)}
         className="w-full h-12 text-lg bg-amber-500 hover:bg-amber-600 text-white"
       >
         {isProcessing ? (
@@ -469,7 +621,7 @@ function PayBalanceContent() {
                       loader: 'auto',
                     }}
                   >
-                    <PaymentForm bookingId={booking.id} amount={remainingBalance} />
+                    <PaymentForm bookingId={booking.id} amount={remainingBalance} clientSecret={clientSecret} />
                   </Elements>
                 ) : (
                   <div className="text-center py-4">
