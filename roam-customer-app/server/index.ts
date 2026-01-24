@@ -423,6 +423,32 @@ export function createServer() {
     }
   );
 
+  // Get business profile route (server-side to bypass RLS)
+  app.get("/api/businesses/get-business",
+    async (req, res) => {
+      try {
+        const handler = await import("../api/businesses/get-business");
+        await handler.default(req, res);
+      } catch (error) {
+        console.error("Error importing get-business handler:", error);
+        res.status(500).json({ error: "Failed to load get-business handler" });
+      }
+    }
+  );
+
+  // Get provider profile route (server-side to bypass RLS)
+  app.get("/api/providers/get-provider",
+    async (req, res) => {
+      try {
+        const handler = await import("../api/providers/get-provider");
+        await handler.default(req, res);
+      } catch (error) {
+        console.error("Error importing get-provider handler:", error);
+        res.status(500).json({ error: "Failed to load get-provider handler" });
+      }
+    }
+  );
+
   // Providers-by-service route (server-side to bypass RLS joins)
   app.get("/api/providers/by-service",
     async (req, res) => {

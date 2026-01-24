@@ -151,40 +151,21 @@ function BusinessProfileContent() {
       if (!businessId) return;
       
       try {
-        // Load business details
-        const { data: businessData, error: businessError } = await supabase
-          .from('business_profiles')
-          .select(`
-            id,
-            business_name,
-            business_description,
-            image_url,
-            logo_url,
-            cover_image_url,
-            cover_image_position,
-            verification_status,
-            business_hours,
-            is_active,
-            bank_connected,
-            stripe_account_id,
-            providers!inner (
-              id,
-              provider_role,
-              is_active,
-              active_for_bookings
-            )
-          `)
-          .eq('id', businessId)
-          .eq('is_active', true)
-          .eq('verification_status', 'approved')
-          .eq('bank_connected', true)
-          .not('stripe_account_id', 'is', null)
-          .eq('providers.is_active', true)
-          .eq('providers.active_for_bookings', true)
-          .in('providers.provider_role', ['owner', 'provider'])
-          .single();
+        // Load business details using API endpoint (avoids RLS issues for unauthenticated users)
+        logger.debug('Fetching business profile via API...');
+        const apiBaseUrl = import.meta.env.VITE_API_URL || '';
+        const businessResponse = await fetch(`${apiBaseUrl}/api/businesses/get-business?businessId=${businessId}`);
+        
+        if (!businessResponse.ok) {
+          const errorData = await businessResponse.json().catch(() => ({}));
+          throw new Error(errorData.error || 'Business not found');
+        }
 
-        if (businessError) throw businessError;
+        const businessApiData = await businessResponse.json();
+        const businessData = businessApiData.business;
+        const servicesData = businessApiData.services;
+        const staffData = businessApiData.staff;
+
         if (!businessData) throw new Error('Business not available');
         
         // Fetch reviews using API endpoint (avoids RLS issues for unauthenticated users)
@@ -222,37 +203,10 @@ function BusinessProfileContent() {
           business_hours: businessData.business_hours || undefined,
         });
 
-        // Load services for this business with business-specific pricing and duration
-        logger.debug('Loading services for business ID:', businessId);
-        const { data: servicesData, error: servicesError } = await supabase
-          .from('business_services')
-          .select(`
-            business_price,
-            business_duration_minutes,
-            delivery_type,
-            services (
-              id,
-              name,
-              description,
-              min_price,
-              duration_minutes,
-              image_url
-            )
-          `)
-          .eq('business_id', businessId)
-          .eq('is_active', true);
-
-        logger.debug('Services query result:', { 
-          servicesData, 
-          servicesError,
-          servicesCount: servicesData?.length || 0
-        });
-
-        if (servicesError) {
-          console.error('❌ Error loading services:', servicesError);
-          console.error('Error details:', JSON.stringify(servicesError, null, 2));
-          setServices([]); // Set empty array on error
-        } else if (servicesData && servicesData.length > 0) {
+        // Transform services data from API
+        logger.debug('Processing services from API:', { servicesCount: servicesData?.length || 0 });
+        
+        if (servicesData && servicesData.length > 0) {
           // Transform business_services data to Service interface
           const transformedServices = servicesData.map((item: any) => ({
             id: item.services.id,
@@ -272,34 +226,10 @@ function BusinessProfileContent() {
           setServices([]);
         }
 
-        // Load staff members (owners and providers) for this business
-        console.log('🔍 Loading staff for business ID:', businessId);
-        const { data: staffData, error: staffError } = await supabase
-          .from('providers')
-          .select(`
-            id,
-            user_id,
-            first_name,
-            last_name,
-            bio,
-            image_url,
-            cover_image_url,
-            provider_role,
-            active_for_bookings
-          `)
-          .eq('business_id', businessId)
-          .in('provider_role', ['owner', 'provider'])
-          .eq('is_active', true)
-          .eq('active_for_bookings', true);
+        // Process staff data from API
+        console.log('🔍 Processing staff from API:', { staffCount: staffData?.length || 0 });
 
-        logger.debug('Staff query result:', { staffData, staffError });
-
-        if (staffError) {
-          logger.error('Error loading staff:', staffError);
-          logger.error('Error details:', JSON.stringify(staffError, null, 2));
-        }
-
-        if (!staffError && staffData) {
+        if (staffData && staffData.length > 0) {
           console.log('✅ Found staff members:', staffData.length);
           
           // Fetch ratings for staff members using API (avoids RLS issues)

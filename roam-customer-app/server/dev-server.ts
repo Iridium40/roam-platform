@@ -7,6 +7,9 @@ app.listen(port, () => {
   console.log(`🚀 Development API server running on http://localhost:${port}`);
   console.log(`📋 Available endpoints:`);
   console.log(`   GET  /api/services/get-service - Get service details`);
+  console.log(`   GET  /api/businesses/by-service - Get businesses by service`);
+  console.log(`   GET  /api/businesses/get-business - Get business profile`);
+  console.log(`   GET  /api/providers/get-provider - Get provider profile`);
   console.log(`   GET  /api/reviews/business - Get business reviews`);
   console.log(`   GET  /api/reviews/provider - Get provider reviews`);
   console.log(`   GET  /api/reviews/bulk-ratings - Get bulk business ratings`);
