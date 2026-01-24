@@ -121,7 +121,14 @@ function PaymentForm({ bookingId, amount }: { bookingId: string; amount: number 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="p-4 bg-muted/30 rounded-lg">
-        <PaymentElement />
+        <PaymentElement 
+          options={{
+            layout: {
+              type: 'tabs',
+              defaultCollapsed: false,
+            },
+          }}
+        />
       </div>
 
       {errorMessage && (
@@ -459,6 +466,7 @@ function PayBalanceContent() {
                           borderRadius: '8px',
                         },
                       },
+                      loader: 'auto',
                     }}
                   >
                     <PaymentForm bookingId={booking.id} amount={remainingBalance} />
