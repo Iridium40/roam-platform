@@ -165,8 +165,18 @@ export const BookingCard: React.FC<BookingCardProps> = ({
     return new Date() > oneDayAfterBooking;
   };
 
+  // Check if booking is more than 2 days past the booking date
+  const isMoreThanTwoDaysPastBooking = () => {
+    const bookingDate = new Date(`${booking.date} ${booking.time}`);
+    const twoDaysAfterBooking = new Date(bookingDate.getTime() + 2 * 24 * 60 * 60 * 1000);
+    return new Date() > twoDaysAfterBooking;
+  };
+
   // Hide message button if in final state AND more than 1 day past booking date
   const shouldHideMessageButton = isFinalStatus && isMoreThanOneDayPastBooking();
+  
+  // Hide tip and review buttons if completed AND more than 2 days past booking date
+  const shouldShowTipAndReview = booking.booking_status === "completed" && !isMoreThanTwoDaysPastBooking();
 
   return (
     <>
@@ -553,47 +563,52 @@ export const BookingCard: React.FC<BookingCardProps> = ({
                     )}
                   </Button>
                 )}
-                {booking.reviews && booking.reviews.length > 0 ? (
-                  <div className="space-y-2">
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      className="w-full border-green-500 text-green-600 hover:bg-green-50"
-                      onClick={() => setShowReviewModal(true)}
-                    >
-                      <CheckCircle className="w-4 h-4 mr-2" />
-                      View Review & Tip
-                    </Button>
-                    <div className="flex items-center justify-center gap-3 text-sm text-gray-500">
-                      <span>{booking.reviews[0].overall_rating}/5 stars</span>
-                      {booking.tips && booking.tips.length > 0 && (
-                        <>
-                          <span>•</span>
-                          <span>${parseFloat(booking.tips[0].tip_amount || '0').toFixed(2)} tip</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="border-purple-500 text-purple-600 hover:bg-purple-50"
-                      onClick={() => setShowTipModal(true)}
-                    >
-                      <CreditCard className="w-4 h-4 mr-1.5" />
-                      Send Tip
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      className="bg-roam-blue hover:bg-roam-blue/90"
-                      onClick={() => setShowReviewModal(true)}
-                    >
-                      <Star className="w-4 h-4 mr-1.5" />
-                      Leave Review
-                    </Button>
-                  </div>
+                {/* Only show tip and review buttons within 2 days of completion */}
+                {shouldShowTipAndReview && (
+                  <>
+                    {booking.reviews && booking.reviews.length > 0 ? (
+                      <div className="space-y-2">
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          className="w-full border-green-500 text-green-600 hover:bg-green-50"
+                          onClick={() => setShowReviewModal(true)}
+                        >
+                          <CheckCircle className="w-4 h-4 mr-2" />
+                          View Review & Tip
+                        </Button>
+                        <div className="flex items-center justify-center gap-3 text-sm text-gray-500">
+                          <span>{booking.reviews[0].overall_rating}/5 stars</span>
+                          {booking.tips && booking.tips.length > 0 && (
+                            <>
+                              <span>•</span>
+                              <span>${parseFloat(booking.tips[0].tip_amount || '0').toFixed(2)} tip</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-purple-500 text-purple-600 hover:bg-purple-50"
+                          onClick={() => setShowTipModal(true)}
+                        >
+                          <CreditCard className="w-4 h-4 mr-1.5" />
+                          Send Tip
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          className="bg-roam-blue hover:bg-roam-blue/90"
+                          onClick={() => setShowReviewModal(true)}
+                        >
+                          <Star className="w-4 h-4 mr-1.5" />
+                          Leave Review
+                        </Button>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             )}
@@ -983,47 +998,52 @@ export const BookingCard: React.FC<BookingCardProps> = ({
                     )}
                   </Button>
                 )}
-                {booking.reviews && booking.reviews.length > 0 ? (
-                  <div className="space-y-2">
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      className="w-full border-green-500 text-green-600 hover:bg-green-50"
-                      onClick={() => setShowReviewModal(true)}
-                    >
-                      <CheckCircle className="w-4 h-4 mr-2" />
-                      View Review & Tip
-                    </Button>
-                    <div className="flex items-center justify-center gap-3 text-sm text-gray-500">
-                      <span>{booking.reviews[0].overall_rating}/5 stars</span>
-                      {booking.tips && booking.tips.length > 0 && (
-                        <>
-                          <span>•</span>
-                          <span>${parseFloat(booking.tips[0].tip_amount || '0').toFixed(2)} tip</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="border-purple-500 text-purple-600 hover:bg-purple-50"
-                      onClick={() => setShowTipModal(true)}
-                    >
-                      <CreditCard className="w-4 h-4 mr-1.5" />
-                      <span className="text-xs">Send Tip</span>
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      className="bg-roam-blue hover:bg-roam-blue/90"
-                      onClick={() => setShowReviewModal(true)}
-                    >
-                      <Star className="w-4 h-4 mr-1.5" />
-                      <span className="text-xs">Leave Review</span>
-                    </Button>
-                  </div>
+                {/* Only show tip and review buttons within 2 days of completion (mobile) */}
+                {shouldShowTipAndReview && (
+                  <>
+                    {booking.reviews && booking.reviews.length > 0 ? (
+                      <div className="space-y-2">
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          className="w-full border-green-500 text-green-600 hover:bg-green-50"
+                          onClick={() => setShowReviewModal(true)}
+                        >
+                          <CheckCircle className="w-4 h-4 mr-2" />
+                          View Review & Tip
+                        </Button>
+                        <div className="flex items-center justify-center gap-3 text-sm text-gray-500">
+                          <span>{booking.reviews[0].overall_rating}/5 stars</span>
+                          {booking.tips && booking.tips.length > 0 && (
+                            <>
+                              <span>•</span>
+                              <span>${parseFloat(booking.tips[0].tip_amount || '0').toFixed(2)} tip</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-purple-500 text-purple-600 hover:bg-purple-50"
+                          onClick={() => setShowTipModal(true)}
+                        >
+                          <CreditCard className="w-4 h-4 mr-1.5" />
+                          <span className="text-xs">Send Tip</span>
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          className="bg-roam-blue hover:bg-roam-blue/90"
+                          onClick={() => setShowReviewModal(true)}
+                        >
+                          <Star className="w-4 h-4 mr-1.5" />
+                          <span className="text-xs">Leave Review</span>
+                        </Button>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             )}

@@ -153,6 +153,12 @@ const isWithin24Hours = (booking: BookingWithDetails) => {
   return diffInHours <= 24 && diffInHours > 0;
 };
 
+const isMoreThanTwoDaysPast = (booking: BookingWithDetails) => {
+  const bookingDateTime = new Date(`${booking.booking_date || booking.date} ${booking.start_time || booking.time}`);
+  const twoDaysAfter = new Date(bookingDateTime.getTime() + 2 * 24 * 60 * 60 * 1000);
+  return new Date() > twoDaysAfter;
+};
+
 function BookingDetailsContent() {
   const { bookingId } = useParams<{ bookingId: string }>();
   const navigate = useNavigate();
@@ -465,8 +471,8 @@ function BookingDetailsContent() {
                 </Card>
               )}
 
-              {/* Review & Tip Call-to-Action Banner for Completed Bookings */}
-              {booking.booking_status === "completed" && (!hasReview || !hasTip) && (
+              {/* Review & Tip Call-to-Action Banner for Completed Bookings (within 2 days) */}
+              {booking.booking_status === "completed" && (!hasReview || !hasTip) && !isMoreThanTwoDaysPast(booking) && (
                 <Card className="bg-gradient-to-r from-roam-blue/10 to-purple-100 border-roam-blue/20">
                   <CardContent className="py-4">
                     <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -918,8 +924,8 @@ function BookingDetailsContent() {
                 </Card>
               )}
 
-              {/* Review & Tip Card */}
-              {booking.booking_status === "completed" && (
+              {/* Review & Tip Card (only show within 2 days of completion or if already submitted) */}
+              {booking.booking_status === "completed" && (hasReview || hasTip || !isMoreThanTwoDaysPast(booking)) && (
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-lg flex items-center gap-2">
@@ -958,13 +964,17 @@ function BookingDetailsContent() {
                               Reviewed on {format(new Date(booking.reviews![0].created_at), "MMM d, yyyy")}
                             </p>
                           </div>
-                        ) : (
+                        ) : !isMoreThanTwoDaysPast(booking) ? (
                           <div className="bg-gray-50 rounded-lg p-4 text-center">
                             <p className="text-foreground/60 mb-3">You haven't left a review yet</p>
                             <Button onClick={() => setShowReviewModal(true)}>
                               <Star className="w-4 h-4 mr-2" />
                               Leave Review
                             </Button>
+                          </div>
+                        ) : (
+                          <div className="bg-gray-50 rounded-lg p-4 text-center">
+                            <p className="text-foreground/60 text-sm">Review period has expired</p>
                           </div>
                         )}
                       </div>
@@ -989,7 +999,7 @@ function BookingDetailsContent() {
                               Sent on {format(new Date(booking.tips![0].created_at), "MMM d, yyyy")}
                             </p>
                           </div>
-                        ) : (
+                        ) : !isMoreThanTwoDaysPast(booking) ? (
                           <div className="bg-gray-50 rounded-lg p-4 text-center">
                             <p className="text-foreground/60 mb-3">Show your appreciation with a tip</p>
                             <Button
@@ -1000,6 +1010,10 @@ function BookingDetailsContent() {
                               <Heart className="w-4 h-4 mr-2" />
                               Send Tip
                             </Button>
+                          </div>
+                        ) : (
+                          <div className="bg-gray-50 rounded-lg p-4 text-center">
+                            <p className="text-foreground/60 text-sm">Tip period has expired</p>
                           </div>
                         )}
                       </div>
