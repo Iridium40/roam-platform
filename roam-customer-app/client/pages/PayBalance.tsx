@@ -278,6 +278,10 @@ function PaymentForm({ bookingId, amount, clientSecret }: { bookingId: string; a
                 type: 'tabs',
                 defaultCollapsed: false,
               },
+              wallets: {
+                applePay: 'never',
+                googlePay: 'never',
+              },
             }}
           />
         </div>
