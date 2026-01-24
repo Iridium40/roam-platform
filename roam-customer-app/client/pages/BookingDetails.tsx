@@ -191,118 +191,25 @@ function BookingDetailsContent() {
       setLoading(true);
       setError(null);
 
-      // Fetch booking with all related data
-      const { data: bookingData, error: bookingError } = await supabase
-        .from("bookings")
-        .select(`
-          *,
-          providers!left (
-            id,
-            user_id,
-            first_name,
-            last_name,
-            email,
-            phone,
-            image_url,
-            business_id,
-            average_rating
-          ),
-          services!left (
-            id,
-            name,
-            description,
-            min_price,
-            duration_minutes,
-            image_url
-          ),
-          customer_profiles!left (
-            id,
-            first_name,
-            last_name,
-            email,
-            phone
-          ),
-          business_locations!left (
-            id,
-            business_id,
-            location_name,
-            address_line1,
-            address_line2,
-            city,
-            state,
-            postal_code,
-            country,
-            is_primary,
-            offers_mobile_services
-          ),
-          business_profiles!left (
-            id,
-            business_name,
-            business_type,
-            business_description,
-            image_url,
-            logo_url
-          ),
-          customer_locations!left (
-            id,
-            customer_id,
-            location_name,
-            street_address,
-            unit_number,
-            city,
-            state,
-            zip_code,
-            is_primary,
-            access_instructions
-          ),
-          reviews!left (
-            id,
-            overall_rating,
-            service_rating,
-            communication_rating,
-            punctuality_rating,
-            review_text,
-            created_at
-          ),
-          tips!left (
-            id,
-            tip_amount,
-            tip_percentage,
-            customer_message,
-            payment_status,
-            created_at
-          )
-        `)
-        .eq("id", bookingId)
-        .eq("customer_id", customer.id)
-        .single();
+      logger.debug("Fetching booking details via API for:", bookingId);
 
-      if (bookingError) {
-        logger.error("Error fetching booking:", bookingError);
+      // Fetch booking details using API endpoint (avoids RLS issues)
+      const apiBaseUrl = import.meta.env.VITE_API_URL || '';
+      const response = await fetch(`${apiBaseUrl}/api/bookings/get-booking?bookingId=${bookingId}&customerId=${customer.id}`);
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to load booking details');
+      }
+
+      const data = await response.json();
+      const bookingData = data.booking;
+
+      if (!bookingData) {
         throw new Error("Booking not found or you don't have access to it.");
       }
 
-      // Fetch reviews separately (more reliable than join)
-      const { data: reviewsData, error: reviewsError } = await supabase
-        .from("reviews")
-        .select("*")
-        .eq("booking_id", bookingId);
-
-      if (reviewsError) {
-        logger.error("Error fetching reviews:", reviewsError);
-      }
-
-      // Fetch tips separately (more reliable than join)
-      const { data: tipsData, error: tipsError } = await supabase
-        .from("tips")
-        .select("*")
-        .eq("booking_id", bookingId);
-
-      if (tipsError) {
-        logger.error("Error fetching tips:", tipsError);
-      }
-
-      // Transform booking data with explicitly fetched reviews and tips
+      // Transform booking data
       const transformedBooking: BookingWithDetails = {
         ...bookingData,
         service_name: bookingData.services?.name || "Service",
@@ -313,78 +220,21 @@ function BookingDetailsContent() {
         duration: bookingData.services?.duration_minutes
           ? `${bookingData.services.duration_minutes} min`
           : "60 min",
-        // Use explicitly fetched reviews and tips instead of relying on join
-        reviews: reviewsData || [],
-        tips: tipsData || [],
+        reviews: bookingData.reviews || [],
+        tips: bookingData.tips || [],
       };
 
       logger.debug("Booking Details loaded:", {
         bookingId,
-        reviewsCount: reviewsData?.length || 0,
-        tipsCount: tipsData?.length || 0,
-        reviews: reviewsData,
-        tips: tipsData,
+        reviewsCount: bookingData.reviews?.length || 0,
+        tipsCount: bookingData.tips?.length || 0,
       });
 
       setBooking(transformedBooking);
+      setTransactions(data.transactions || []);
+      setBookingChanges(data.bookingChanges || []);
+      setBookingAddons(data.bookingAddons || []);
 
-      // Fetch transactions for this booking
-      const { data: txData, error: txError } = await supabase
-        .from("financial_transactions")
-        .select("*")
-        .eq("booking_id", bookingId)
-        .order("created_at", { ascending: false });
-
-      if (!txError) {
-        setTransactions(txData || []);
-      }
-
-      // Fetch booking changes (additional services, reschedules, etc.)
-      const { data: changesData, error: changesError } = await supabase
-        .from("booking_changes")
-        .select("*")
-        .eq("booking_id", bookingId)
-        .order("created_at", { ascending: false });
-
-      if (!changesError) {
-        setBookingChanges(changesData || []);
-      }
-
-      // Fetch booking addons (addons selected during initial booking)
-      const { data: addonsData, error: addonsError } = await supabase
-        .from("booking_addons")
-        .select(`
-          *,
-          service_addons (
-            id,
-            name,
-            description,
-            image_url
-          )
-        `)
-        .eq("booking_id", bookingId)
-        .order("added_at", { ascending: true });
-
-      if (!addonsError) {
-        // Fetch business addon prices if available
-        if (addonsData && addonsData.length > 0 && bookingData.business_id) {
-          const addonIds = addonsData.map((a: any) => a.addon_id);
-          const { data: businessAddonPrices } = await supabase
-            .from("business_addons")
-            .select("addon_id, custom_price")
-            .eq("business_id", bookingData.business_id)
-            .in("addon_id", addonIds);
-
-          // Merge business prices with addons
-          const addonsWithPrices = addonsData.map((addon: any) => ({
-            ...addon,
-            business_addons: businessAddonPrices?.filter((ba: any) => ba.addon_id === addon.addon_id) || [],
-          }));
-          setBookingAddons(addonsWithPrices);
-        } else {
-          setBookingAddons(addonsData || []);
-        }
-      }
     } catch (err: any) {
       logger.error("Error loading booking details:", err);
       setError(err.message || "Failed to load booking details.");

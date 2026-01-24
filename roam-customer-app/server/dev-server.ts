@@ -14,6 +14,7 @@ app.listen(port, () => {
   console.log(`   GET  /api/reviews/provider - Get provider reviews`);
   console.log(`   GET  /api/reviews/bulk-ratings - Get bulk business ratings`);
   console.log(`   GET  /api/bookings/list - List customer bookings`);
+  console.log(`   GET  /api/bookings/get-booking - Get single booking details`);
   console.log(`   POST /api/contact/submit - Contact form submissions`);
   console.log(`   POST /api/chat - AI Chatbot API`);
   console.log(`   POST /api/subscribe - Newsletter subscription`);

@@ -137,6 +137,18 @@ export function createServer() {
     }
   );
 
+  app.get("/api/bookings/get-booking",
+    async (req, res) => {
+      try {
+        const getBookingHandler = await import("../api/bookings/get-booking");
+        await getBookingHandler.default(req, res);
+      } catch (error) {
+        console.error("Error importing get-booking handler:", error);
+        res.status(500).json({ error: "Failed to load get-booking handler" });
+      }
+    }
+  );
+
   app.post("/api/bookings", 
     requireAuth(['customer', 'owner', 'dispatcher', 'admin']),
     validateRequest(schemas.createBooking),
