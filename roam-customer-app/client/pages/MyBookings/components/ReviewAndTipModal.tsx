@@ -277,18 +277,26 @@ const ReviewAndTipModal: React.FC<ReviewAndTipModalProps> = ({
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.details || 'Failed to create payment intent');
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        logger.error('Tip payment intent creation failed:', errorData);
+        throw new Error(errorData.details || errorData.error || `Failed to create payment intent (${response.status})`);
       }
 
-      const { clientSecret } = await response.json();
-      setClientSecret(clientSecret);
+      const data = await response.json();
+      logger.debug('Tip payment intent created successfully:', data);
+      
+      if (!data.clientSecret) {
+        throw new Error('No client secret received from server');
+      }
+      
+      setClientSecret(data.clientSecret);
       setCurrentStep('checkout');
-    } catch (error) {
+    } catch (error: any) {
       logger.error('Error creating tip payment intent:', error);
+      const errorMessage = error?.message || 'Failed to process tip. Please try again.';
       toast({
         title: "Error processing tip",
-        description: "Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {

@@ -30,6 +30,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     console.log('💰 Tip Payment Intent request received');
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
     console.log('Environment check:', {
       hasStripeKey: !!process.env.STRIPE_SECRET_KEY,
       hasSupabaseUrl: !!process.env.VITE_PUBLIC_SUPABASE_URL,
@@ -47,8 +48,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Validate required fields
     if (!tip_amount || !booking_id || !customer_id || !provider_id || !business_id) {
+      console.error('❌ Missing required fields:', {
+        tip_amount: !!tip_amount,
+        booking_id: !!booking_id,
+        customer_id: !!customer_id,
+        provider_id: !!provider_id,
+        business_id: !!business_id
+      });
       return res.status(400).json({ 
-        error: 'Missing required fields: tip_amount, booking_id, customer_id, provider_id, business_id' 
+        error: 'Missing required fields',
+        details: 'Required: tip_amount, booking_id, customer_id, provider_id, business_id',
+        received: {
+          tip_amount: !!tip_amount,
+          booking_id: !!booking_id,
+          customer_id: !!customer_id,
+          provider_id: !!provider_id,
+          business_id: !!business_id
+        }
       });
     }
 
@@ -224,6 +240,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.log('✅ Created tip payment intent:', paymentIntent.id);
 
     // Create tip record in database with 'pending' status
+    console.log('💾 Creating tip record with data:', {
+      booking_id,
+      customer_id,
+      provider_id,
+      business_id,
+      tip_amount,
+      payment_intent_id: paymentIntent.id
+    });
+
     const { data: tipRecord, error: tipError } = await supabase
       .from('tips')
       .insert({
@@ -244,10 +269,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .single();
 
     if (tipError) {
-      console.error('⚠️ Failed to create tip record (non-fatal):', tipError);
+      console.error('⚠️ Failed to create tip record (non-fatal):', {
+        error: tipError,
+        code: tipError.code,
+        message: tipError.message,
+        details: tipError.details,
+        hint: tipError.hint
+      });
       // Don't fail the request - tip record can be created by webhook
     } else {
-      console.log('✅ Tip record created:', tipRecord.id);
+      console.log('✅ Tip record created:', tipRecord?.id);
     }
 
     return res.status(200).json({
