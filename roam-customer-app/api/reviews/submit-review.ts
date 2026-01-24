@@ -69,13 +69,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .insert({
         booking_id,
         overall_rating,
-        service_rating: service_rating || overall_rating,
-        communication_rating: communication_rating || overall_rating,
-        punctuality_rating: punctuality_rating || overall_rating,
+        service_rating: service_rating ?? overall_rating,
+        communication_rating: communication_rating ?? overall_rating,
+        punctuality_rating: punctuality_rating ?? overall_rating,
         review_text: review_text || null,
-        business_id: business_id || null,
-        provider_id: provider_id || null,
-        review_status: "pending", // Reviews start as pending for moderation
+        business_id: business_id ?? null,
+        provider_id: provider_id ?? null,
+        is_approved: false, // Reviews start as not approved (pending moderation)
+        is_featured: false,
       })
       .select()
       .single();
