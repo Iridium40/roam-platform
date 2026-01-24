@@ -81,97 +81,45 @@ export default function ProviderProfile() {
       if (!providerId) return;
       
       try {
-        // Load provider/owner details by provider id
-        // Note: Staff members use business cover image, not personal cover image
-        const { data: providerData, error: providerError } = await supabase
-          .from('providers')
-          .select(`
-            id,
-            user_id,
-            first_name,
-            last_name,
-            bio,
-            image_url,
-            provider_role,
-            business_id,
-            business_profiles (
-              business_name,
-              id,
-              cover_image_url,
-              cover_image_position
-            )
-          `)
-          .eq('id', providerId)
-          .in('provider_role', ['owner', 'provider'])
-          .eq('is_active', true)
-          .single();
+        // Load provider details using API endpoint (avoids RLS issues for unauthenticated users)
+        console.log('🔍 Fetching provider profile via API...');
+        const apiBaseUrl = import.meta.env.VITE_API_URL || '';
+        const providerResponse = await fetch(`${apiBaseUrl}/api/providers/get-provider?providerId=${providerId}`);
+        
+        if (!providerResponse.ok) {
+          const errorData = await providerResponse.json().catch(() => ({}));
+          throw new Error(errorData.error || 'Provider not found');
+        }
 
-        if (providerError) throw providerError;
+        const providerApiData = await providerResponse.json();
+        const providerData = providerApiData.provider;
+        const servicesData = providerApiData.services;
+
         if (!providerData) throw new Error('Provider not found');
+        
+        console.log('✅ Provider profile fetched successfully');
         
         setProvider({
           ...providerData,
           business: providerData.business_profiles,
         });
 
-        // Load services this provider offers (from provider_services)
-        const { data: providerServicesData, error: providerServicesError } = await supabase
-          .from('provider_services')
-          .select(`
-            service_id,
-            is_active,
-            services (
-              id,
-              name,
-              description,
-              min_price,
-              duration_minutes,
-              image_url
-            )
-          `)
-          .eq('provider_id', providerData.id)
-          .eq('is_active', true);
-
-        if (!providerServicesError && providerServicesData) {
-          // Get service IDs to fetch business_services data
-          const serviceIds = providerServicesData.map((ps: any) => ps.service_id).filter(Boolean);
-          
-          // Fetch business_services for pricing and delivery type
-          let businessServicesMap: Record<string, { business_price?: number; business_duration_minutes?: number; delivery_type?: string }> = {};
-          
-          if (serviceIds.length > 0 && providerData.business_id) {
-            const { data: businessServicesData } = await supabase
-              .from('business_services')
-              .select('service_id, business_price, business_duration_minutes, delivery_type')
-              .eq('business_id', providerData.business_id)
-              .in('service_id', serviceIds)
-              .eq('is_active', true);
-            
-            if (businessServicesData) {
-              businessServicesData.forEach((bs: any) => {
-                businessServicesMap[bs.service_id] = {
-                  business_price: bs.business_price,
-                  business_duration_minutes: bs.business_duration_minutes,
-                  delivery_type: bs.delivery_type,
-                };
-              });
-            }
-          }
-          
-          // Merge provider services with business services data
-          const providerServices = providerServicesData
-            .map((ps: any) => {
-              if (!ps.services) return null;
-              const businessData = businessServicesMap[ps.service_id] || {};
-              return {
-                ...ps.services,
-                business_price: businessData.business_price,
-                business_duration_minutes: businessData.business_duration_minutes,
-                delivery_type: businessData.delivery_type,
-              };
-            })
-            .filter(Boolean);
-          setServices(providerServices);
+        // Transform services data from API
+        if (servicesData && servicesData.length > 0) {
+          const transformedServices = servicesData.map((item: any) => ({
+            id: item.services.id,
+            name: item.services.name,
+            description: item.services.description,
+            min_price: item.services.min_price,
+            duration_minutes: item.services.duration_minutes,
+            image_url: item.services.image_url,
+            business_price: item.business_price,
+            business_duration_minutes: item.business_duration_minutes,
+            delivery_type: item.delivery_type,
+          }));
+          setServices(transformedServices);
+        } else {
+          setServices([]);
         }
 
         // Load reviews using API endpoint (avoids RLS issues for unauthenticated users)
