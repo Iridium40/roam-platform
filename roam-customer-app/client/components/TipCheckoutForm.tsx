@@ -130,8 +130,25 @@ export function TipCheckoutForm({ tipAmount, providerName, clientSecret, onSucce
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
-    if (!stripe || !elements || !clientSecret) {
-      onError('Stripe has not loaded yet');
+    logger.debug('Tip payment submit started', { 
+      selectedPaymentMethod, 
+      hasStripe: !!stripe, 
+      hasElements: !!elements,
+      hasClientSecret: !!clientSecret 
+    });
+
+    if (!stripe || !clientSecret) {
+      const errorMsg = 'Stripe has not loaded yet';
+      logger.error(errorMsg);
+      onError(errorMsg);
+      return;
+    }
+
+    // Only require elements if using new payment method
+    if (selectedPaymentMethod === 'new' && !elements) {
+      const errorMsg = 'Payment form has not loaded yet';
+      logger.error(errorMsg);
+      onError(errorMsg);
       return;
     }
 
@@ -143,9 +160,12 @@ export function TipCheckoutForm({ tipAmount, providerName, clientSecret, onSucce
       let error;
 
       if (selectedPaymentMethod !== 'new') {
+        logger.debug('Using saved payment method:', selectedPaymentMethod);
+        
         // Use saved payment method - verify it belongs to the customer first
         if (customer?.user_id) {
           try {
+            logger.debug('Verifying payment method...');
             const verifyResponse = await fetch('/api/stripe/verify-payment-method', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -159,6 +179,7 @@ export function TipCheckoutForm({ tipAmount, providerName, clientSecret, onSucce
               const errorData = await verifyResponse.json();
               throw new Error(errorData.error || 'Payment method verification failed');
             }
+            logger.debug('Payment method verified successfully');
           } catch (verifyError: any) {
             logger.error('Payment method verification error:', verifyError);
             setErrorMessage(verifyError.message || 'This payment method cannot be used. Please select a different card or add a new one.');
@@ -169,12 +190,19 @@ export function TipCheckoutForm({ tipAmount, providerName, clientSecret, onSucce
         }
 
         // Confirm payment with saved payment method
+        logger.debug('Confirming payment with saved card...');
         const result = await stripe.confirmCardPayment(clientSecret, {
           payment_method: selectedPaymentMethod,
         });
         paymentIntent = result.paymentIntent;
         error = result.error;
+        logger.debug('Payment confirmation result:', { 
+          status: paymentIntent?.status, 
+          hasError: !!error 
+        });
       } else {
+        logger.debug('Using new payment method from PaymentElement');
+        
         // Use new payment method from PaymentElement
         const result = await stripe.confirmPayment({
           elements,
@@ -185,6 +213,10 @@ export function TipCheckoutForm({ tipAmount, providerName, clientSecret, onSucce
         });
         paymentIntent = result.paymentIntent;
         error = result.error;
+        logger.debug('Payment confirmation result:', { 
+          status: paymentIntent?.status, 
+          hasError: !!error 
+        });
       }
 
       if (error) {
@@ -194,6 +226,10 @@ export function TipCheckoutForm({ tipAmount, providerName, clientSecret, onSucce
       } else if (paymentIntent && paymentIntent.status === 'succeeded') {
         logger.debug('Tip payment successful');
         onSuccess();
+      } else {
+        logger.warn('Unexpected payment state:', paymentIntent?.status);
+        setErrorMessage('Payment status unclear. Please check your bookings.');
+        onError('Payment status unclear');
       }
     } catch (err: any) {
       logger.error('Payment error:', err);
@@ -343,7 +379,7 @@ export function TipCheckoutForm({ tipAmount, providerName, clientSecret, onSucce
             {/* Submit Button */}
             <Button
               type="submit"
-              disabled={!stripe || !elements || isProcessing}
+              disabled={!stripe || isProcessing || (selectedPaymentMethod === 'new' && !elements)}
               className="w-full"
             >
               {isProcessing ? (
@@ -352,7 +388,7 @@ export function TipCheckoutForm({ tipAmount, providerName, clientSecret, onSucce
                   Processing Tip...
                 </>
               ) : (
-                `Send ${tipAmount.toFixed(2)} Tip`
+                `Send $${tipAmount.toFixed(2)} Tip`
               )}
             </Button>
           </form>
