@@ -1,5 +1,5 @@
 import { useState, useEffect, lazy, Suspense } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -156,6 +156,7 @@ const isWithin24Hours = (booking: BookingWithDetails) => {
 function BookingDetailsContent() {
   const { bookingId } = useParams<{ bookingId: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { customer, loading: authLoading } = useAuth();
   const { toast } = useToast();
 
@@ -248,6 +249,20 @@ function BookingDetailsContent() {
       fetchBookingDetails();
     }
   }, [customer, bookingId]);
+
+  // Auto-refresh booking when returning from payment success page
+  useEffect(() => {
+    const fromPayment = searchParams.get('from_payment');
+    if (fromPayment === 'success' && customer && bookingId) {
+      logger.debug('Refreshing booking details after successful payment');
+      // Small delay to ensure webhook has processed
+      setTimeout(() => {
+        fetchBookingDetails();
+      }, 1000);
+      // Clean up URL parameter
+      setSearchParams({});
+    }
+  }, [searchParams, customer, bookingId, setSearchParams]);
 
   // Action handlers
   const handleCancelBooking = async () => {

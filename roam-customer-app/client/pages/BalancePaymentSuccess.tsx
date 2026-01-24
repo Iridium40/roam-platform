@@ -24,14 +24,14 @@ export default function BalancePaymentSuccess() {
 
   const handleViewBooking = () => {
     if (bookingId) {
-      navigate(`/my-bookings/${bookingId}`);
+      navigate(`/my-bookings/${bookingId}?from_payment=success`);
     } else {
-      navigate('/my-bookings');
+      navigate('/my-bookings?from_payment=success');
     }
   };
 
   const handleBackToBookings = () => {
-    navigate('/my-bookings');
+    navigate('/my-bookings?from_payment=success');
   };
 
   if (isLoading) {

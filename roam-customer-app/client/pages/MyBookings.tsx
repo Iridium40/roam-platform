@@ -20,9 +20,9 @@ import {
   MessageCircle,
   Search,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { useState, lazy, Suspense } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { logger } from "@/utils/logger";
 import { ChatErrorBoundary } from "@/components/ErrorBoundary";
 import type { BookingWithDetails } from "@/types/index";
@@ -46,6 +46,7 @@ import { Footer } from "@/components/Footer";
 export default function MyBookings() {
   const { customer, loading: authLoading } = useAuth();
   const currentUser = customer;
+  const [searchParams, setSearchParams] = useSearchParams();
 
   logger.debug("MyBookings page state:", {
     is_authenticated: !!customer,
@@ -99,6 +100,20 @@ export default function MyBookings() {
     setBookings,
     refreshBookings
   );
+
+  // Auto-refresh bookings when returning from payment success page
+  useEffect(() => {
+    const fromPayment = searchParams.get('from_payment');
+    if (fromPayment === 'success') {
+      logger.debug('Refreshing bookings after successful payment');
+      // Small delay to ensure webhook has processed
+      setTimeout(() => {
+        refreshBookings();
+      }, 1000);
+      // Clean up URL parameter
+      setSearchParams({});
+    }
+  }, [searchParams, refreshBookings, setSearchParams]);
 
   // Handler functions
   const handleCancel = (booking: BookingWithDetails) => {

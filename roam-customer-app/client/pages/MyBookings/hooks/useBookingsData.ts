@@ -123,6 +123,10 @@ export const useBookingsData = (currentUser: any) => {
                 ...booking,
                 booking_status: bookingUpdate.status,
                 updated_at: bookingUpdate.updated_at,
+                // Also update payment-related fields if they changed
+                remaining_balance_charged: bookingUpdate.remaining_balance_charged ?? booking.remaining_balance_charged,
+                remaining_balance_charged_at: bookingUpdate.remaining_balance_charged_at ?? booking.remaining_balance_charged_at,
+                payment_status: bookingUpdate.payment_status ?? booking.payment_status,
               }
             : booking,
         ),
