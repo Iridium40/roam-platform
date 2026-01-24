@@ -65,7 +65,12 @@ export function TipCheckoutForm({ tipAmount, providerName, clientSecret, onSucce
       if (!customer?.user_id) return;
 
       try {
-        const { data: locations, error: locationError } = await supabase
+        // Add timeout to prevent hanging
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Billing address load timeout')), 3000);
+        });
+
+        const queryPromise = supabase
           .from('customer_locations')
           .select('*')
           .eq('customer_id', customer.user_id)
@@ -73,6 +78,8 @@ export function TipCheckoutForm({ tipAmount, providerName, clientSecret, onSucce
           .eq('is_active', true)
           .limit(1)
           .maybeSingle();
+
+        const { data: locations, error: locationError } = await Promise.race([queryPromise, timeoutPromise]) as any;
 
         if (locations && !locationError) {
           setBillingAddress({
@@ -99,6 +106,7 @@ export function TipCheckoutForm({ tipAmount, providerName, clientSecret, onSucce
         }
       } catch (error) {
         logger.error('Error loading billing address:', error);
+        // Always set basic billing info even if location fetch fails
         if (customer.first_name || customer.last_name || customer.email) {
           setBillingAddress({
             name: customer.first_name && customer.last_name 
@@ -166,7 +174,13 @@ export function TipCheckoutForm({ tipAmount, providerName, clientSecret, onSucce
         if (customer?.user_id) {
           try {
             logger.debug('Verifying payment method...');
-            const verifyResponse = await fetch('/api/stripe/verify-payment-method', {
+            
+            // Add timeout to verification
+            const verifyTimeoutPromise = new Promise((_, reject) => {
+              setTimeout(() => reject(new Error('Payment verification timeout - please try again')), 15000);
+            });
+
+            const verifyPromise = fetch('/api/stripe/verify-payment-method', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -174,6 +188,8 @@ export function TipCheckoutForm({ tipAmount, providerName, clientSecret, onSucce
                 customer_id: customer.user_id,
               }),
             });
+
+            const verifyResponse = await Promise.race([verifyPromise, verifyTimeoutPromise]) as Response;
 
             if (!verifyResponse.ok) {
               const errorData = await verifyResponse.json();
@@ -191,9 +207,17 @@ export function TipCheckoutForm({ tipAmount, providerName, clientSecret, onSucce
 
         // Confirm payment with saved payment method
         logger.debug('Confirming payment with saved card...');
-        const result = await stripe.confirmCardPayment(clientSecret, {
+        
+        // Add timeout to payment confirmation
+        const confirmTimeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Payment confirmation timeout - please try again')), 30000);
+        });
+
+        const confirmPromise = stripe.confirmCardPayment(clientSecret, {
           payment_method: selectedPaymentMethod,
         });
+
+        const result = await Promise.race([confirmPromise, confirmTimeoutPromise]) as any;
         paymentIntent = result.paymentIntent;
         error = result.error;
         logger.debug('Payment confirmation result:', { 
@@ -203,14 +227,21 @@ export function TipCheckoutForm({ tipAmount, providerName, clientSecret, onSucce
       } else {
         logger.debug('Using new payment method from PaymentElement');
         
+        // Add timeout to payment confirmation
+        const confirmTimeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Payment confirmation timeout - please try again')), 30000);
+        });
+
         // Use new payment method from PaymentElement
-        const result = await stripe.confirmPayment({
+        const confirmPromise = stripe.confirmPayment({
           elements,
           confirmParams: {
             return_url: `${window.location.origin}/my-bookings?tip_success=true`,
           },
           redirect: 'if_required',
         });
+
+        const result = await Promise.race([confirmPromise, confirmTimeoutPromise]) as any;
         paymentIntent = result.paymentIntent;
         error = result.error;
         logger.debug('Payment confirmation result:', { 
