@@ -172,8 +172,12 @@ export const BookingCard: React.FC<BookingCardProps> = ({
     return new Date() > twoDaysAfterBooking;
   };
 
-  // Hide message button if in final state AND more than 1 day past booking date
-  const shouldHideMessageButton = isFinalStatus && isMoreThanOneDayPastBooking();
+  // Hide message button if:
+  // - Booking is declined (hide immediately)
+  // - OR booking is in other final state AND more than 1 day past booking date
+  const shouldHideMessageButton = 
+    booking.booking_status === "declined" || 
+    (isFinalStatus && isMoreThanOneDayPastBooking());
   
   // Hide tip and review buttons if completed AND more than 2 days past booking date
   const shouldShowTipAndReview = booking.booking_status === "completed" && !isMoreThanTwoDaysPastBooking();

@@ -1766,6 +1766,8 @@ async function handleBalancePaymentIntent(paymentIntent: Stripe.PaymentIntent) {
 
     // Only update if not already marked as charged (prevent duplicate processing)
     if (!currentBooking.remaining_balance_charged) {
+      console.log('📝 Updating booking remaining_balance_charged for booking:', booking_id);
+      
       const { error: bookingUpdateError } = await supabase
         .from('bookings')
         .update({
@@ -1776,11 +1778,17 @@ async function handleBalancePaymentIntent(paymentIntent: Stripe.PaymentIntent) {
         .eq('id', booking_id);
 
       if (bookingUpdateError) {
-        console.error('Error updating booking for balance payment:', bookingUpdateError);
-        throw bookingUpdateError;
+        console.error('Error updating booking for balance payment:', {
+          error: bookingUpdateError,
+          code: bookingUpdateError.code,
+          message: bookingUpdateError.message,
+          bookingId: booking_id
+        });
+        // Don't throw - payment succeeded, log for manual follow-up if needed
+        console.warn('⚠️ Booking update failed but payment succeeded - may need manual update for booking:', booking_id);
+      } else {
+        console.log('✅ Updated booking remaining_balance_charged to true for booking:', booking_id);
       }
-
-      console.log('✅ Updated booking remaining_balance_charged to true');
     } else {
       console.log('ℹ️ Booking already marked as balance charged, skipping update');
     }
