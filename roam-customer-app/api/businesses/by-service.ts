@@ -64,23 +64,65 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({ error: "Failed to fetch businesses", details: error.message });
     }
 
+    console.log(`📊 Found ${data?.length || 0} business_services records for service ${serviceId}`);
+
     // Filter to only include businesses that are fully set up for bookings
     const eligibleBusinesses = (data || []).filter(item => {
       const business = item.business_profiles as any;
-      if (!business) return false;
-      if (!business.is_active) return false;
-      if (business.verification_status !== "approved") return false;
-      if (!business.bank_connected) return false;
-      if (!business.stripe_account_id) return false;
+      
+      // Debug logging for each business
+      const businessName = business?.business_name || 'Unknown';
+      const checks = {
+        hasBusinessProfile: !!business,
+        isActive: business?.is_active,
+        verificationStatus: business?.verification_status,
+        bankConnected: business?.bank_connected,
+        hasStripeAccount: !!business?.stripe_account_id,
+        providerCount: business?.providers?.length || 0,
+        locationCount: business?.business_locations?.length || 0,
+      };
+      
+      if (!business) {
+        console.log(`❌ ${businessName}: No business profile`);
+        return false;
+      }
+      if (!business.is_active) {
+        console.log(`❌ ${businessName}: Not active`, checks);
+        return false;
+      }
+      if (business.verification_status !== "approved") {
+        console.log(`❌ ${businessName}: Not approved (status: ${business.verification_status})`, checks);
+        return false;
+      }
+      if (!business.bank_connected) {
+        console.log(`❌ ${businessName}: Bank not connected`, checks);
+        return false;
+      }
+      if (!business.stripe_account_id) {
+        console.log(`❌ ${businessName}: No Stripe account`, checks);
+        return false;
+      }
+      
       // Must have at least one bookable provider
       const bookableProviders = (business.providers || []).filter(
         (p: any) => p.is_active && p.active_for_bookings && ["owner", "provider"].includes(p.provider_role)
       );
-      if (bookableProviders.length === 0) return false;
+      if (bookableProviders.length === 0) {
+        console.log(`❌ ${businessName}: No bookable providers (total providers: ${business.providers?.length || 0})`, checks);
+        return false;
+      }
+      
       // Must have at least one location
-      if (!business.business_locations || business.business_locations.length === 0) return false;
+      if (!business.business_locations || business.business_locations.length === 0) {
+        console.log(`❌ ${businessName}: No locations`, checks);
+        return false;
+      }
+      
+      console.log(`✅ ${businessName}: Eligible for booking`, checks);
       return true;
     });
+
+    console.log(`✅ Returning ${eligibleBusinesses.length} eligible businesses out of ${data?.length || 0} total`);
 
     return res.status(200).json({ data: eligibleBusinesses });
   } catch (err) {
