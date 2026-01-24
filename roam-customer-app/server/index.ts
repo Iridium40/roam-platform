@@ -74,6 +74,19 @@ export function createServer() {
     }
   );
 
+  // Service routes
+  app.get("/api/services/get-service",
+    async (req, res) => {
+      try {
+        const getServiceHandler = await import("../api/services/get-service");
+        await getServiceHandler.default(req, res);
+      } catch (error) {
+        console.error("Error importing get-service handler:", error);
+        res.status(500).json({ error: "Failed to load get-service handler" });
+      }
+    }
+  );
+
   // Booking routes with validation
   app.get("/api/bookings/list",
     async (req, res) => {

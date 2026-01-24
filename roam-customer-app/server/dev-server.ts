@@ -6,6 +6,7 @@ const app = createServer();
 app.listen(port, () => {
   console.log(`🚀 Development API server running on http://localhost:${port}`);
   console.log(`📋 Available endpoints:`);
+  console.log(`   GET  /api/services/get-service - Get service details`);
   console.log(`   GET  /api/bookings/list - List customer bookings`);
   console.log(`   POST /api/contact/submit - Contact form submissions`);
   console.log(`   POST /api/chat - AI Chatbot API`);

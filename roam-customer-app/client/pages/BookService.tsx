@@ -688,141 +688,95 @@ function BookServiceContent() {
       try {
         logger.debug('Loading service details for:', serviceId);
         
-        // Load service details with timeout
-        const servicePromise = supabase
-          .from('services')
-          .select('*')
-          .eq('id', serviceId)
-          .single();
+        // Use API endpoint instead of direct Supabase query to avoid RLS issues
+        const apiBaseUrl = import.meta.env.VITE_API_URL || '';
+        const params = new URLSearchParams({ serviceId });
+        if (businessId) params.append('businessId', businessId);
+        if (promotionId) params.append('promotionId', promotionId);
         
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Service fetch timeout')), 10000)
-        );
+        const response = await fetch(`${apiBaseUrl}/api/services/get-service?${params.toString()}`);
         
-        const { data: serviceData, error: serviceError } = await Promise.race([
-          servicePromise,
-          timeoutPromise
-        ]) as any;
-
-        if (serviceError) {
-          logger.error('Error loading service:', serviceError);
-          throw serviceError;
+        if (!response.ok) {
+          throw new Error('Failed to load service details');
         }
         
-        if (!serviceData) {
-          throw new Error('Service not found');
-        }
+        const data = await response.json();
         
-        logger.debug('Service loaded:', serviceData.name);
-        setService(serviceData);
+        logger.debug('Service loaded:', data.service.name);
+        setService(data.service);
+        
+        // Set platform fee if returned
+        if (data.platformFeePercentage !== undefined) {
+          setPlatformFeePercentage(data.platformFeePercentage);
+        }
 
-        // Load promotion if promotionId is provided
-        if (promotionId) {
+        // Set promotion if returned
+        if (data.promotion) {
+          setPromotion({
+            id: data.promotion.id,
+            promoCode: data.promotion.promo_code,
+            savingsType: data.promotion.savings_type,
+            savingsAmount: data.promotion.savings_amount,
+            savingsMaxAmount: data.promotion.savings_max_amount,
+          });
+        }
+
+        // If business is returned, set it and skip business selection
+        if (data.business) {
+          const businessData = data.business;
+          
+          // Fetch actual rating for this business with timeout
           try {
-            const promotionPromise = supabase
-              .from('promotions')
-              .select('*')
-              .eq('id', promotionId)
-              .single();
+            const reviewsPromise = supabase
+              .from('reviews')
+              .select('overall_rating')
+              .eq('business_id', businessData.id)
+              .eq('is_approved', true);
             
-            const timeoutPromise = new Promise((_, reject) => 
-              setTimeout(() => reject(new Error('Promotion fetch timeout')), 5000)
+            const reviewsTimeout = new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Reviews fetch timeout')), 3000)
             );
             
-            const { data: promotionData, error: promotionError } = await Promise.race([
-              promotionPromise,
-              timeoutPromise
+            const { data: businessReviews } = await Promise.race([
+              reviewsPromise,
+              reviewsTimeout
             ]) as any;
-
-            if (!promotionError && promotionData) {
-              setPromotion({
-                id: promotionData.id,
-                promoCode: promotionData.promo_code,
-                savingsType: promotionData.savings_type,
-                savingsAmount: promotionData.savings_amount,
-                savingsMaxAmount: promotionData.savings_max_amount,
-              });
-            }
-          } catch (error) {
-            logger.warn('Error loading promotion, continuing without it:', error);
-          }
-        }
-
-        // If businessId is provided, load that specific business and skip business selection
-        if (businessId) {
-          try {
-            const businessPromise = supabase
-              .from('business_profiles')
-              .select('id, business_name, business_description, image_url, logo_url, business_type')
-              .eq('id', businessId)
-              .single();
             
-            const timeoutPromise = new Promise((_, reject) => 
-              setTimeout(() => reject(new Error('Business fetch timeout')), 5000)
-            );
-            
-            const { data: businessData, error: businessError } = await Promise.race([
-              businessPromise,
-              timeoutPromise
-            ]) as any;
-
-            if (!businessError && businessData) {
-              // Fetch actual rating for this business with timeout
-              try {
-                const reviewsPromise = supabase
-                  .from('reviews')
-                  .select('overall_rating')
-                  .eq('business_id', businessData.id)
-                  .eq('is_approved', true);
-                
-                const reviewsTimeout = new Promise((_, reject) => 
-                  setTimeout(() => reject(new Error('Reviews fetch timeout')), 3000)
-                );
-                
-                const { data: businessReviews } = await Promise.race([
-                  reviewsPromise,
-                  reviewsTimeout
-                ]) as any;
-                
-                let businessRating = 0;
-                let businessReviewCount = 0;
-                if (businessReviews && businessReviews.length > 0) {
-                  businessReviewCount = businessReviews.length;
-                  const totalRating = businessReviews.reduce((sum: number, r: any) => sum + (r.overall_rating || 0), 0);
-                  businessRating = totalRating / businessReviewCount;
-                }
-
-                const business = {
-                  id: businessData.id,
-                  business_name: businessData.business_name,
-                  description: businessData.business_description || businessData.description,
-                  image_url: businessData.image_url,
-                  logo_url: businessData.logo_url,
-                  business_type: businessData.business_type,
-                  rating: businessRating,
-                  review_count: businessReviewCount,
-                };
-                setSelectedBusiness(business);
-                setBusinesses([business]); // Only show this business
-              } catch (error) {
-                logger.warn('Error loading business reviews, continuing without ratings:', error);
-                // Still set the business even if reviews fail
-                const business = {
-                  id: businessData.id,
-                  business_name: businessData.business_name,
-                  description: businessData.business_description || businessData.description,
-                  image_url: businessData.image_url,
-                  logo_url: businessData.logo_url,
-                  business_type: businessData.business_type,
-                  rating: 0,
-                  review_count: 0,
-                };
-                setSelectedBusiness(business);
-                setBusinesses([business]);
-              }
+            let businessRating = 0;
+            let businessReviewCount = 0;
+            if (businessReviews && businessReviews.length > 0) {
+              businessReviewCount = businessReviews.length;
+              const totalRating = businessReviews.reduce((sum: number, r: any) => sum + (r.overall_rating || 0), 0);
+              businessRating = totalRating / businessReviewCount;
             }
+
+            const business = {
+              id: businessData.id,
+              business_name: businessData.business_name,
+              description: businessData.business_description || businessData.description,
+              image_url: businessData.image_url,
+              logo_url: businessData.logo_url,
+              business_type: businessData.business_type,
+              rating: businessRating,
+              review_count: businessReviewCount,
+            };
+            setSelectedBusiness(business);
+            setBusinesses([business]); // Only show this business
           } catch (error) {
-            logger.warn('Error loading business, continuing without it:', error);
+            logger.warn('Error loading business reviews, continuing without ratings:', error);
+            // Still set the business even if reviews fail
+            const business = {
+              id: businessData.id,
+              business_name: businessData.business_name,
+              description: businessData.business_description || businessData.description,
+              image_url: businessData.image_url,
+              logo_url: businessData.logo_url,
+              business_type: businessData.business_type,
+              rating: 0,
+              review_count: 0,
+            };
+            setSelectedBusiness(business);
+            setBusinesses([business]);
           }
         }
       } catch (error) {
@@ -843,45 +797,7 @@ function BookServiceContent() {
     }
   }, [sortBy, sortOrder, allBusinesses]);
 
-  // Fetch platform fee configuration
-  useEffect(() => {
-    const fetchPlatformFee = async () => {
-      try {
-        logger.debug('Fetching platform fee configuration...');
-        
-        const configPromise = supabase
-          .from('system_config')
-          .select('config_value')
-          .eq('config_key', 'platform_fee_percentage')
-          .maybeSingle();
-        
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Platform fee fetch timeout')), 5000)
-        );
-        
-        const { data, error } = await Promise.race([
-          configPromise,
-          timeoutPromise
-        ]) as any;
-
-        if (error) {
-          logger.error('Error fetching platform fee:', error);
-          // Default to 0% if config not found
-          setPlatformFeePercentage(0);
-          return;
-        }
-
-        const feePercentage = parseFloat(data?.config_value ?? '') || 0;
-        logger.debug('Platform fee percentage loaded:', feePercentage + '%');
-        setPlatformFeePercentage(feePercentage);
-      } catch (error) {
-        logger.error('Error fetching platform fee configuration:', error);
-        setPlatformFeePercentage(0);
-      }
-    };
-
-    fetchPlatformFee();
-  }, []);
+  // Platform fee is now fetched along with service details in loadServiceAndPromotion
 
   // Load locations when delivery type is selected
   useEffect(() => {
