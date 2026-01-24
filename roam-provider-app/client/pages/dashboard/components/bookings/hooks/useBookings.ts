@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/auth/AuthProvider";
 import { supabase } from "@/lib/supabase";
 import { PAGINATION_CONFIG, getPageSize, getDateRange } from "../config/pagination.config";
 import { getAuthHeaders } from "@/lib/api/authUtils";
+import useRealtimeBookings from "@/hooks/useRealtimeBookings";
 
 interface BookingStats {
   totalBookings: number;
@@ -46,6 +47,30 @@ export function useBookings(providerData: any, business: any) {
   
   // Dynamic page size based on device (responsive)
   const [pageSize, setPageSize] = useState(getPageSize());
+  
+  // Real-time booking updates for payment status changes
+  useRealtimeBookings({
+    userId: business?.id,
+    userType: "business",
+    enableNotifications: false, // Don't show toast notifications, just update state
+    onStatusChange: (bookingUpdate) => {
+      // Update booking in the list when payment status changes
+      setBookings((prevBookings) =>
+        prevBookings.map((booking) =>
+          booking.id === bookingUpdate.id
+            ? {
+                ...booking,
+                booking_status: bookingUpdate.status,
+                remaining_balance_charged: bookingUpdate.remaining_balance_charged ?? booking.remaining_balance_charged,
+                remaining_balance_charged_at: bookingUpdate.remaining_balance_charged_at ?? booking.remaining_balance_charged_at,
+                payment_status: bookingUpdate.payment_status ?? booking.payment_status,
+                updated_at: bookingUpdate.updated_at,
+              }
+            : booking
+        )
+      );
+    },
+  });
   
   // Check URL params for filters and sync with state
   useEffect(() => {

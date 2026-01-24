@@ -15,6 +15,9 @@ export interface BookingUpdate {
   business_name?: string;
   scheduled_date?: string;
   scheduled_time?: string;
+  remaining_balance_charged?: boolean;
+  remaining_balance_charged_at?: string;
+  payment_status?: string;
 }
 
 interface UseRealtimeBookingsOptions {
@@ -111,6 +114,9 @@ export function useRealtimeBookings(options: UseRealtimeBookingsOptions = {}) {
             business_name: newBooking.business_name,
             scheduled_date: newBooking.scheduled_date,
             scheduled_time: newBooking.scheduled_time,
+            remaining_balance_charged: newBooking.remaining_balance_charged,
+            remaining_balance_charged_at: newBooking.remaining_balance_charged_at,
+            payment_status: newBooking.payment_status,
           };
 
           // Update state
