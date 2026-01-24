@@ -157,46 +157,22 @@ const ReviewAndTipModal: React.FC<ReviewAndTipModalProps> = ({
         throw new Error('Review already exists for this booking');
       }
 
-      // First, check if a review already exists for this booking
-      logger.debug('DATABASE CHECK DEBUG: Checking for existing review for booking:', booking.id);
-      
-      const { data: existingReview, error: checkError } = await supabase
-        .from('reviews')
-        .select('id')
-        .eq('booking_id', booking.id)
-        .maybeSingle();
+      logger.debug('Submitting review via API for booking:', booking.id);
 
-      logger.debug('DATABASE CHECK DEBUG: Database query result:', {
-        existingReview,
-        checkError,
-        errorCode: checkError?.code,
-        errorMessage: checkError?.message
+      // Submit review via API endpoint (avoids RLS issues)
+      const apiBaseUrl = import.meta.env.VITE_API_URL || '';
+      
+      // Add timeout to prevent infinite spinning
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Review submission timeout - please try again')), 15000);
       });
 
-      if (checkError && checkError.code !== 'PGRST116') {
-        // PGRST116 is "not found" error, which is expected if no review exists
-        logger.error('DATABASE CHECK DEBUG: Unexpected error:', checkError);
-        throw checkError;
-      }
-
-      if (existingReview) {
-        // Review already exists, show appropriate message
-        logger.debug('DATABASE CHECK DEBUG: Review found in database, showing error');
-        toast({
-          title: "Review already submitted",
-          description: "You have already submitted a review for this booking.",
-          variant: "destructive",
-        });
-        throw new Error('Review already exists for this booking');
-      }
-
-      logger.debug('DATABASE CHECK DEBUG: No existing review found, proceeding with submission');
-
-      // No existing review, proceed with insertion
-      // Include business_id and provider_id from the booking
-      const { data, error } = await supabase
-        .from('reviews')
-        .insert({
+      const submitPromise = fetch(`${apiBaseUrl}/api/reviews/submit-review`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           booking_id: booking.id,
           overall_rating: reviewData.overall_rating,
           service_rating: reviewData.service_rating,
@@ -205,18 +181,35 @@ const ReviewAndTipModal: React.FC<ReviewAndTipModalProps> = ({
           review_text: reviewData.review_text,
           business_id: booking.business_id || null,
           provider_id: booking.providers?.id || booking.provider_id || null,
-        })
-        .select()
-        .single();
+        }),
+      });
 
-      if (error) throw error;
+      const response = await Promise.race([submitPromise, timeoutPromise]) as Response;
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        
+        // Handle duplicate review error specifically
+        if (response.status === 409) {
+          toast({
+            title: "Review already submitted",
+            description: "You have already submitted a review for this booking.",
+            variant: "destructive",
+          });
+          throw new Error('Review already exists for this booking');
+        }
+        
+        throw new Error(errorData.error || 'Failed to submit review');
+      }
+
+      const data = await response.json();
 
       toast({
         title: "Review submitted successfully!",
         description: "Thank you for your feedback.",
       });
 
-      return data;
+      return data.review;
     } catch (error) {
       logger.error('Error submitting review:', error);
       
@@ -227,7 +220,7 @@ const ReviewAndTipModal: React.FC<ReviewAndTipModalProps> = ({
       
       toast({
         title: "Error submitting review",
-        description: "Please try again.",
+        description: error instanceof Error ? error.message : "Please try again.",
         variant: "destructive",
       });
       throw error;

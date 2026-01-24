@@ -124,6 +124,18 @@ export function createServer() {
     }
   );
 
+  app.post("/api/reviews/submit-review",
+    async (req, res) => {
+      try {
+        const submitReviewHandler = await import("../api/reviews/submit-review");
+        await submitReviewHandler.default(req, res);
+      } catch (error) {
+        console.error("Error importing submit review handler:", error);
+        res.status(500).json({ error: "Failed to load submit review handler" });
+      }
+    }
+  );
+
   // Booking routes with validation
   app.get("/api/bookings/list",
     async (req, res) => {

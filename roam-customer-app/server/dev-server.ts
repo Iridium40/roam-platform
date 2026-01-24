@@ -13,6 +13,7 @@ app.listen(port, () => {
   console.log(`   GET  /api/reviews/business - Get business reviews`);
   console.log(`   GET  /api/reviews/provider - Get provider reviews`);
   console.log(`   GET  /api/reviews/bulk-ratings - Get bulk business ratings`);
+  console.log(`   POST /api/reviews/submit-review - Submit a review for a booking`);
   console.log(`   GET  /api/bookings/list - List customer bookings`);
   console.log(`   GET  /api/bookings/get-booking - Get single booking details`);
   console.log(`   POST /api/contact/submit - Contact form submissions`);
