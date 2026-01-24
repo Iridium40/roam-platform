@@ -364,7 +364,9 @@ async function fallbackBookings(
       *,
       customer_profiles (id, user_id, first_name, last_name, email, phone, image_url),
       services (id, name, description, duration_minutes, min_price),
-      providers (id, user_id, first_name, last_name, image_url)
+      providers (id, user_id, first_name, last_name, image_url),
+      customer_locations (id, location_name, street_address, unit_number, city, state, zip_code),
+      business_locations (id, location_name, address_line1, address_line2, city, state, postal_code)
     `, { count: 'exact' })
     .eq('business_id', businessId);
 

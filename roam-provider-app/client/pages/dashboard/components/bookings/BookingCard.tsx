@@ -662,13 +662,13 @@ function BookingCard({
                 ) : booking.customer_locations ? (
                   <a
                     href={`https://maps.google.com/maps?q=${encodeURIComponent(
-                      `${booking.customer_locations.address_line1 || ""}, ${booking.customer_locations.city || ""}, ${booking.customer_locations.state || ""}`
+                      `${booking.customer_locations.street_address || ""}, ${booking.customer_locations.city || ""}, ${booking.customer_locations.state || ""}`
                     )}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-blue-600 hover:text-blue-800 hover:underline"
                   >
-                    {booking.customer_locations.address_line1}, {booking.customer_locations.city}, {booking.customer_locations.state}
+                    {booking.customer_locations.street_address}, {booking.customer_locations.city}, {booking.customer_locations.state}
                   </a>
                 ) : booking.business_locations ? (
                   <a
@@ -1006,13 +1006,13 @@ function BookingCard({
               ) : booking.customer_locations ? (
                 <a
                   href={`https://maps.google.com/maps?q=${encodeURIComponent(
-                    `${booking.customer_locations.address_line1 || ""}, ${booking.customer_locations.city || ""}, ${booking.customer_locations.state || ""}`
+                    `${booking.customer_locations.street_address || ""}, ${booking.customer_locations.city || ""}, ${booking.customer_locations.state || ""}`
                   )}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-sm text-blue-600 hover:underline"
                 >
-                  {booking.customer_locations.address_line1}, {booking.customer_locations.city}, {booking.customer_locations.state}
+                  {booking.customer_locations.street_address}, {booking.customer_locations.city}, {booking.customer_locations.state}
                 </a>
               ) : booking.business_locations ? (
                 <a
