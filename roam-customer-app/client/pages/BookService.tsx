@@ -799,6 +799,14 @@ function BookServiceContent() {
 
   // Load businesses that offer this service with pricing and availability validation
   const loadBusinesses = async () => {
+    console.log('🏢 loadBusinesses called with:', {
+      serviceId,
+      selectedDate,
+      selectedTime: selectedTime,
+      selectedDateType: typeof selectedDate,
+      selectedDateValid: selectedDate instanceof Date,
+      selectedTimeType: typeof selectedTime
+    });
     logger.debug('loadBusinesses called with:', {
       serviceId,
       selectedDate,
@@ -809,19 +817,24 @@ function BookServiceContent() {
     });
 
     if (!serviceId) {
+      console.log('❌ loadBusinesses: Missing serviceId');
       logger.debug('Missing serviceId');
       return;
     }
 
     if (!selectedDate) {
+      console.log('❌ loadBusinesses: Missing selectedDate');
       logger.debug('Missing selectedDate');
       return;
     }
 
     if (!selectedTime) {
+      console.log('❌ loadBusinesses: Missing selectedTime');
       logger.debug('Missing selectedTime');
       return;
     }
+    
+    console.log('✅ loadBusinesses: All checks passed, fetching API...');
 
     setCheckoutLoading(true);
 
@@ -845,8 +858,10 @@ function BookServiceContent() {
       }
 
       logger.debug('Fetching business services with pricing (server API)...');
+      console.log('🌐 Calling API: /api/businesses/by-service?serviceId=' + serviceId);
 
       const resp = await fetch(`/api/businesses/by-service?serviceId=${encodeURIComponent(serviceId)}`);
+      console.log('🌐 API Response status:', resp.status);
       const json = await resp.json().catch(() => ({}));
       const businessServiceData = json?.data || [];
 
@@ -1307,6 +1322,8 @@ function BookServiceContent() {
           } else {
             // No businessId provided - go to business selection (Service Only specified)
             // Load all businesses that offer this service
+            console.log('📍 handleStepNext: Transitioning to business step, calling loadBusinesses...');
+            console.log('📍 State:', { selectedDate, selectedTime, serviceId, businessId });
             loadBusinesses();
             setCurrentStep('business');
           }

@@ -219,31 +219,34 @@ export const BookingCard: React.FC<BookingCardProps> = ({
                 {/* Price */}
                 <div className="text-right flex-shrink-0">
                   {(() => {
-                    const totalAmount = parseFloat(booking.total_amount || '0');
+                    const depositAmount = parseFloat(booking.total_amount || '0');
                     const remainingBalance = parseFloat(booking.remaining_balance || '0');
                     const isRemainingBalanceCharged = booking.remaining_balance_charged === true;
-                    const depositPaid = totalAmount - remainingBalance;
                     const isDepositPricing = booking.pricing_type === 'deposit';
                     
-                    // Only show deposit info for deposit-type pricing
+                    // For deposit pricing, show full breakdown
                     if (isDepositPricing && remainingBalance > 0) {
+                      const fullServicePrice = depositAmount + remainingBalance;
+                      const totalPaid = isRemainingBalanceCharged ? fullServicePrice : depositAmount;
+                      
                       return (
                         <div>
                           <div className="text-2xl font-bold text-roam-blue">
-                            ${totalAmount.toFixed(2)}
+                            ${fullServicePrice.toFixed(2)}
                           </div>
-                          <p className="text-xs text-green-600 font-medium">
-                            Deposit Paid: ${depositPaid.toFixed(2)}
-                          </p>
-                          {!isRemainingBalanceCharged && (
-                            <p className="text-xs text-amber-600 font-medium">
-                              Balance Due: ${remainingBalance.toFixed(2)}
-                            </p>
-                          )}
-                          {isRemainingBalanceCharged && (
+                          {isRemainingBalanceCharged ? (
                             <p className="text-xs text-green-600 font-medium">
-                              Fully Paid
+                              Paid in Full
                             </p>
+                          ) : (
+                            <>
+                              <p className="text-xs text-green-600 font-medium">
+                                Deposit: ${depositAmount.toFixed(2)}
+                              </p>
+                              <p className="text-xs text-amber-600 font-medium">
+                                Due: ${remainingBalance.toFixed(2)}
+                              </p>
+                            </>
                           )}
                         </div>
                       );
@@ -253,7 +256,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({
                     return (
                       <div>
                         <div className="text-2xl font-bold text-roam-blue">
-                          ${totalAmount.toFixed(2)}
+                          ${depositAmount.toFixed(2)}
                         </div>
                         <p className="text-xs text-green-600 font-medium">
                           Paid
@@ -647,26 +650,27 @@ export const BookingCard: React.FC<BookingCardProps> = ({
                 {/* Price with deposit info for mobile */}
                 <div className="text-right flex-shrink-0">
                   {(() => {
-                    const totalAmount = parseFloat(booking.total_amount || '0');
+                    const depositAmount = parseFloat(booking.total_amount || '0');
                     const remainingBalance = parseFloat(booking.remaining_balance || '0');
                     const isRemainingBalanceCharged = booking.remaining_balance_charged === true;
                     const isDepositPricing = booking.pricing_type === 'deposit';
                     
-                    // Only show deposit info for deposit-type pricing
+                    // For deposit pricing, show full breakdown
                     if (isDepositPricing && remainingBalance > 0) {
+                      const fullServicePrice = depositAmount + remainingBalance;
+                      
                       return (
                         <div>
                           <span className="text-xl font-bold text-roam-blue">
-                            ${totalAmount.toFixed(2)}
+                            ${fullServicePrice.toFixed(2)}
                           </span>
-                          {!isRemainingBalanceCharged && (
+                          {isRemainingBalanceCharged ? (
+                            <p className="text-[10px] text-green-600 font-medium">
+                              Paid in Full
+                            </p>
+                          ) : (
                             <p className="text-[10px] text-amber-600 font-medium">
                               ${remainingBalance.toFixed(2)} due
-                            </p>
-                          )}
-                          {isRemainingBalanceCharged && (
-                            <p className="text-[10px] text-green-600 font-medium">
-                              Paid
                             </p>
                           )}
                         </div>
@@ -677,7 +681,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({
                     return (
                       <div>
                         <span className="text-xl font-bold text-roam-blue">
-                          ${totalAmount.toFixed(2)}
+                          ${depositAmount.toFixed(2)}
                         </span>
                         <p className="text-[10px] text-green-600 font-medium">
                           Paid

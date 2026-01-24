@@ -178,12 +178,12 @@ function FavoriteButtonBase({
       variant={variant}
       size="sm"
       onClick={handleToggleFavorite}
-      disabled={isWorking || !isAuthenticated}
+      disabled={isWorking}
       className={cn(
         getSizeClasses(),
         "transition-all duration-200 rounded-lg",
         !isAuthenticated
-          ? "text-gray-300 cursor-not-allowed"
+          ? "text-gray-400 hover:text-red-400 cursor-pointer"
           : isFavorited
             ? "text-red-500 hover:text-red-600"
             : "text-gray-400 hover:text-red-500",
