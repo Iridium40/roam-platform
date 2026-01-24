@@ -228,10 +228,45 @@ const ReviewAndTipModal: React.FC<ReviewAndTipModalProps> = ({
   };
 
   const handleTipSubmit = async () => {
-    if (!booking || !booking.providers || tipData.tip_amount < 1) return;
+    if (!booking || !booking.providers || tipData.tip_amount < 1) {
+      console.error('TIP VALIDATION FAILED:', {
+        hasBooking: !!booking,
+        hasProvider: !!booking?.providers,
+        tipAmount: tipData.tip_amount
+      });
+      toast({
+        title: "Cannot process tip",
+        description: "Missing required booking information",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate required fields
+    if (!booking.customer_id || !booking.business_id) {
+      console.error('TIP VALIDATION FAILED - Missing IDs:', {
+        customerId: booking.customer_id,
+        businessId: booking.business_id,
+        providerId: booking.providers.id
+      });
+      toast({
+        title: "Cannot process tip",
+        description: "Missing required customer or business information",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setTipCheckoutLoading(true);
     try {
+      console.log('TIP SUBMISSION STARTED:', {
+        bookingId: booking.id,
+        customerId: booking.customer_id,
+        providerId: booking.providers.id,
+        businessId: booking.business_id,
+        tipAmount: tipData.tip_amount
+      });
+
       // Get auth headers - try multiple methods for Vercel compatibility
       let token: string | null = null;
       
@@ -279,13 +314,16 @@ const ReviewAndTipModal: React.FC<ReviewAndTipModalProps> = ({
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
         logger.error('Tip payment intent creation failed:', errorData);
+        console.error('TIP ERROR:', errorData); // Make error visible in console
         throw new Error(errorData.details || errorData.error || `Failed to create payment intent (${response.status})`);
       }
 
       const data = await response.json();
       logger.debug('Tip payment intent created successfully:', data);
+      console.log('TIP SUCCESS:', data); // Make success visible in console
       
       if (!data.clientSecret) {
+        console.error('TIP ERROR: No client secret in response:', data);
         throw new Error('No client secret received from server');
       }
       
@@ -293,6 +331,7 @@ const ReviewAndTipModal: React.FC<ReviewAndTipModalProps> = ({
       setCurrentStep('checkout');
     } catch (error: any) {
       logger.error('Error creating tip payment intent:', error);
+      console.error('TIP EXCEPTION:', error); // Make exception visible in console
       const errorMessage = error?.message || 'Failed to process tip. Please try again.';
       toast({
         title: "Error processing tip",
