@@ -281,9 +281,24 @@ const ReviewAndTipModal: React.FC<ReviewAndTipModalProps> = ({
       // Get auth headers - try multiple methods for Vercel compatibility
       let token: string | null = null;
       
-      // Method 1: Try getting fresh session (this will auto-refresh if expired)
+      console.log('🔐 Getting auth token...');
+      
+      // Method 1: Try getting fresh session with timeout
       try {
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        console.log('🔐 Attempting supabase.auth.getSession()...');
+        
+        // Add timeout to prevent hanging
+        const sessionPromise = supabase.auth.getSession();
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Session fetch timeout')), 5000)
+        );
+        
+        const { data: { session }, error: sessionError } = await Promise.race([
+          sessionPromise, 
+          timeoutPromise
+        ]) as any;
+        
+        console.log('🔐 getSession result:', { hasSession: !!session, error: sessionError?.message });
         
         if (sessionError) {
           console.error('Session error:', sessionError);
@@ -307,25 +322,31 @@ const ReviewAndTipModal: React.FC<ReviewAndTipModalProps> = ({
           token = session.access_token;
           // Update localStorage with fresh token
           localStorage.setItem('roam_access_token', token);
+          console.log('🔐 Got token from session');
           logger.debug('Using session token for tip');
         }
-      } catch (error) {
-        console.error('Auth error:', error);
+      } catch (error: any) {
+        console.error('🔐 Auth error:', error?.message || error);
         logger.warn('Session retrieval failed for tip, trying localStorage:', error);
       }
       
       // Method 2: Fallback to localStorage cached token (may be expired)
       if (!token) {
+        console.log('🔐 Trying localStorage fallback...');
         token = localStorage.getItem('roam_access_token');
         if (token) {
+          console.log('🔐 Got token from localStorage');
           logger.debug('Using cached token for tip (may be expired)');
         }
       }
       
       // Method 3: If still no token, user needs to sign in
       if (!token) {
+        console.error('🔐 No token available');
         throw new Error('You are not signed in. Please sign in and try again.');
       }
+      
+      console.log('🔐 Token acquired, proceeding with API call...');
       
       const headers: Record<string, string> = {
         'Content-Type': 'application/json'
