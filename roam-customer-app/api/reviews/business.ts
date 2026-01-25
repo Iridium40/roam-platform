@@ -52,17 +52,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         providers (
           first_name,
           last_name
-        ),
-        bookings (
-          service_id,
-          services (
-            name
-          )
         )
       `)
       .eq('business_id', businessId)
       .eq('is_approved', true)
       .order('created_at', { ascending: false });
+    
+    // Fetch service names for bookings (separate query to avoid nested relationship issues)
+    let servicesByBookingId: Record<string, any> = {};
+    if (reviews && reviews.length > 0) {
+      const bookingIds = reviews.map(r => r.booking_id).filter(Boolean);
+      if (bookingIds.length > 0) {
+        const { data: bookingsData } = await supabase
+          .from('bookings')
+          .select('id, service_id, services (name)')
+          .in('id', bookingIds);
+        
+        if (bookingsData) {
+          bookingsData.forEach((b: any) => {
+            servicesByBookingId[b.id] = b.services;
+          });
+        }
+      }
+    }
     
     console.log('Business reviews query result:', { businessId, reviewCount: reviews?.length, error: reviewsError });
 
@@ -104,7 +116,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       created_at: review.created_at,
       customer_profiles: review.customer_profiles,
       providers: review.providers,
-      services: review.bookings?.services || null,
+      services: servicesByBookingId[review.booking_id] || null,
     }));
 
     return res.status(200).json({

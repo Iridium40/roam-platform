@@ -180,47 +180,24 @@ export async function processBookingAcceptance(
       console.log('📋 This may be a rescheduled booking - no additional charges will be made');
       
       // Update booking to mark service fee as charged (if not already marked)
-      const serviceFeeAmount = booking.service_fee || 0;
-      const serviceAmount = (booking.total_amount || 0) - serviceFeeAmount;
-      
-      // Check if booking is within 24 hours (may have changed due to reschedule)
-      const bookingDateTime = new Date(`${booking.booking_date}T${booking.start_time}`);
-      const now = new Date();
-      const hoursUntilBooking = (bookingDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
-      const isWithin24Hours = hoursUntilBooking <= 24;
-
-      // Update remaining balance charge status based on current date
-      // Note: We don't charge or refund - we just update the status
-      // If rescheduled to ≤24h and wasn't charged before, we should mark it
-      // But we can't actually charge it now since payment intent is already succeeded
-      const updateData: any = {
-        service_fee_charged: true,
-      };
-
-      // Only update remaining_balance_charged if it's different from current state
-      if (booking.remaining_balance_charged !== isWithin24Hours) {
-        updateData.remaining_balance_charged = isWithin24Hours;
-        if (isWithin24Hours && !booking.remaining_balance_charged) {
-          updateData.remaining_balance_charged_at = new Date().toISOString();
-        }
-      }
-
+      // Note: remaining_balance_charged stays false until provider adds balance and customer pays
       await supabase
         .from('bookings')
-        .update(updateData)
+        .update({
+          service_fee_charged: true,
+          service_fee_charged_at: booking.service_fee_charged_at || new Date().toISOString(),
+          payment_status: 'paid',
+        })
         .eq('id', bookingId);
 
       console.log('✅ Booking payment status updated (no additional charges):', {
         serviceFeeCharged: true,
-        remainingBalanceCharged: isWithin24Hours,
-        hoursUntilBooking: hoursUntilBooking.toFixed(2),
       });
 
       return {
         success: true,
         serviceFeeCharged: true,
-        serviceAmountCharged: isWithin24Hours,
-        serviceAmountAuthorized: !isWithin24Hours,
+        serviceAmountCharged: true,
         paymentIntentId: paymentIntent.id,
       };
     }
@@ -271,27 +248,27 @@ export async function processBookingAcceptance(
             serviceFeeAmount = serviceAmount * platformFeePercentage;
             
             // Update booking with calculated service_fee
+            // remaining_balance stays at 0 - provider can add it later if needed
             await supabase
               .from('bookings')
               .update({
                 service_fee: serviceFeeAmount,
-                remaining_balance: serviceAmount,
+                remaining_balance: 0, // Always 0 at capture - provider adds later if needed
               })
               .eq('id', bookingId);
             
-            console.log(`💰 Calculated and updated service_fee: $${serviceFeeAmount.toFixed(2)}, remaining_balance: $${serviceAmount.toFixed(2)}`);
+            console.log(`💰 Calculated and updated service_fee: $${serviceFeeAmount.toFixed(2)}, remaining_balance: $0.00`);
           }
           
           const serviceAmount = totalAmount - serviceFeeAmount;
           
           // Update booking to mark as charged
+          // Note: remaining_balance_charged stays false until provider adds a balance and customer pays it
           await supabase
             .from('bookings')
             .update({
               service_fee_charged: true,
               service_fee_charged_at: new Date().toISOString(),
-              remaining_balance_charged: true,
-              remaining_balance_charged_at: new Date().toISOString(),
               payment_status: 'paid',
             })
             .eq('id', bookingId);
