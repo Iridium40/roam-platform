@@ -29,7 +29,6 @@ import {
   Hash,
   Map,
   CreditCard,
-  Plus,
   FileText,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -38,7 +37,6 @@ import { logger } from "@/utils/logger";
 import type { BookingWithDetails } from "@/types/index";
 import { formatBookingDate, isWithin24Hours, getDeliveryTypeLabel, getDeliveryTypeIcon } from "../utils/bookingCalculations";
 import ReviewAndTipModal from "./ReviewAndTipModal";
-import { AddMoreServiceModal } from "./AddMoreServiceModal";
 
 interface BookingCardProps {
   booking: BookingWithDetails;
@@ -68,7 +66,6 @@ export const BookingCard: React.FC<BookingCardProps> = ({
   const navigate = useNavigate();
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [showTipModal, setShowTipModal] = useState(false);
-  const [showAddMoreModal, setShowAddMoreModal] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const { customer } = useAuth();
 
@@ -409,39 +406,23 @@ export const BookingCard: React.FC<BookingCardProps> = ({
             </Button>
 
             {/* In Progress Booking Actions */}
-            {!isPastBooking && booking.booking_status === "in_progress" && (
-              <div className="grid grid-cols-2 gap-2">
-                {/* Message Button */}
-                {booking.providers && (
-                  <Button
-                    size="sm"
-                    className="bg-roam-blue hover:bg-roam-blue/90 text-white font-medium relative"
-                    onClick={handleMessageClick}
+            {!isPastBooking && booking.booking_status === "in_progress" && booking.providers && (
+              <Button
+                size="sm"
+                className="w-full bg-roam-blue hover:bg-roam-blue/90 text-white font-medium relative"
+                onClick={handleMessageClick}
+              >
+                <MessageCircle className="w-4 h-4 mr-1.5" />
+                Message
+                {unreadCount > 0 && (
+                  <Badge
+                    variant="destructive"
+                    className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs font-bold rounded-full"
                   >
-                    <MessageCircle className="w-4 h-4 mr-1.5" />
-                    Message
-                    {unreadCount > 0 && (
-                      <Badge
-                        variant="destructive"
-                        className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs font-bold rounded-full"
-                      >
-                        {unreadCount > 9 ? '9+' : unreadCount}
-                      </Badge>
-                    )}
-                  </Button>
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </Badge>
                 )}
-                
-                {/* Add More button */}
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="border-purple-500 text-purple-600 hover:bg-purple-50"
-                  onClick={() => setShowAddMoreModal(true)}
-                >
-                  <Plus className="w-4 h-4 mr-1.5" />
-                  Add More Services
-                </Button>
-              </div>
+              </Button>
             )}
 
             {/* Pending/Confirmed Booking Actions */}
@@ -530,11 +511,13 @@ export const BookingCard: React.FC<BookingCardProps> = ({
             {/* Completed Booking Actions */}
             {booking.booking_status === "completed" && (
               <div className="space-y-2">
-                {/* Pay Balance Button - Show for deposit bookings with unpaid remaining balance */}
+                {/* Pay Balance Button - Show for bookings with unpaid remaining balance */}
                 {(() => {
                   const remainingBalance = parseFloat(booking.remaining_balance || '0');
                   const isRemainingBalanceCharged = booking.remaining_balance_charged === true;
                   const hasUnpaidBalance = remainingBalance > 0 && !isRemainingBalanceCharged;
+                  // Customer pays: provider amount + 20% platform fee
+                  const totalCustomerPays = remainingBalance * 1.20;
                   
                   if (hasUnpaidBalance) {
                     return (
@@ -544,7 +527,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({
                         onClick={() => navigate(`/my-bookings/${booking.id}/pay-balance`)}
                       >
                         <CreditCard className="w-4 h-4 mr-2" />
-                        Pay Balance (${remainingBalance.toFixed(2)})
+                        Pay Balance (${totalCustomerPays.toFixed(2)})
                       </Button>
                     );
                   }
@@ -841,40 +824,24 @@ export const BookingCard: React.FC<BookingCardProps> = ({
             </Button>
 
             {/* In Progress Booking Actions */}
-            {!isPastBooking && booking.booking_status === "in_progress" && (
-              <div className="grid grid-cols-2 gap-2">
-                {/* Message Button */}
-                {booking.providers && (
-                  <Button
-                    size="sm"
-                    className="bg-roam-blue hover:bg-roam-blue/90 text-white font-medium relative"
-                    onClick={handleMessageClick}
-                    title={`Message ${booking.providers.first_name} ${booking.providers.last_name} about this booking`}
+            {!isPastBooking && booking.booking_status === "in_progress" && booking.providers && (
+              <Button
+                size="sm"
+                className="w-full bg-roam-blue hover:bg-roam-blue/90 text-white font-medium relative"
+                onClick={handleMessageClick}
+                title={`Message ${booking.providers.first_name} ${booking.providers.last_name} about this booking`}
+              >
+                <MessageCircle className="w-4 h-4 mr-1.5" />
+                <span className="text-xs">Message</span>
+                {unreadCount > 0 && (
+                  <Badge
+                    variant="destructive"
+                    className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs font-bold rounded-full"
                   >
-                    <MessageCircle className="w-4 h-4 mr-1.5" />
-                    <span className="text-xs">Message</span>
-                    {unreadCount > 0 && (
-                      <Badge
-                        variant="destructive"
-                        className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs font-bold rounded-full"
-                      >
-                        {unreadCount > 9 ? '9+' : unreadCount}
-                      </Badge>
-                    )}
-                  </Button>
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </Badge>
                 )}
-                
-                {/* Add More button */}
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="border-purple-500 text-purple-600 hover:bg-purple-50"
-                  onClick={() => setShowAddMoreModal(true)}
-                >
-                  <Plus className="w-4 h-4 mr-1.5" />
-                  <span className="text-xs">Add More Services</span>
-                </Button>
-              </div>
+              </Button>
             )}
 
             {/* Pending/Confirmed Booking Actions */}
@@ -965,11 +932,13 @@ export const BookingCard: React.FC<BookingCardProps> = ({
             {/* Completed Booking Actions */}
             {booking.booking_status === "completed" && (
               <div className="space-y-2">
-                {/* Pay Balance Button - Show for deposit bookings with unpaid remaining balance */}
+                {/* Pay Balance Button - Show for bookings with unpaid remaining balance */}
                 {(() => {
                   const remainingBalance = parseFloat(booking.remaining_balance || '0');
                   const isRemainingBalanceCharged = booking.remaining_balance_charged === true;
                   const hasUnpaidBalance = remainingBalance > 0 && !isRemainingBalanceCharged;
+                  // Customer pays: provider amount + 20% platform fee
+                  const totalCustomerPays = remainingBalance * 1.20;
                   
                   if (hasUnpaidBalance) {
                     return (
@@ -979,7 +948,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({
                         onClick={() => navigate(`/my-bookings/${booking.id}/pay-balance`)}
                       >
                         <CreditCard className="w-4 h-4 mr-2" />
-                        <span className="text-xs">Pay Balance (${remainingBalance.toFixed(2)})</span>
+                        <span className="text-xs">Pay Balance (${totalCustomerPays.toFixed(2)})</span>
                       </Button>
                     );
                   }
@@ -1096,19 +1065,6 @@ export const BookingCard: React.FC<BookingCardProps> = ({
       }}
       booking={booking}
       initialStep="tip"
-    />
-
-    {/* Add More Service Modal */}
-    <AddMoreServiceModal
-      isOpen={showAddMoreModal}
-      onClose={() => setShowAddMoreModal(false)}
-      booking={booking}
-      onSuccess={() => {
-        // Refresh booking data to get updated remaining_balance
-        if (onRefresh) {
-          onRefresh();
-        }
-      }}
     />
   </>
   );

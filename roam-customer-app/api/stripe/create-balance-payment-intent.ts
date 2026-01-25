@@ -120,12 +120,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Calculate amounts
-    const balanceAmountCents = Math.round(remainingBalance * 100);
-    
-    // Calculate platform fee (20% of balance)
+    // remaining_balance = what provider charges (and receives)
+    // Platform fee (20%) is added ON TOP - customer pays provider amount + platform fee
     const platformFeePercentage = 0.20;
     const platformFee = Math.round(remainingBalance * platformFeePercentage * 100); // in cents
-    const providerAmount = remainingBalance - (platformFee / 100);
+    const totalCustomerPaysCents = Math.round(remainingBalance * 100) + platformFee; // provider amount + platform fee
+    const providerAmount = remainingBalance; // Provider receives the full amount they charged
 
     const serviceName = (booking.services as any)?.name || 'Service';
     const businessName = (booking.business_profiles as any)?.business_name || 'Business';
@@ -228,9 +228,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
 
     // Create Payment Intent for remaining balance
+    // Customer pays: provider amount + platform fee
     // This will be automatically captured (charged immediately) when confirmed
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: balanceAmountCents,
+      amount: totalCustomerPaysCents, // Provider amount + 20% platform fee
       currency: 'usd',
       customer: stripeCustomerId, // Enable saved payment methods
       description: `Remaining Balance - ${serviceName} (${booking.booking_reference || booking_id})`,
@@ -244,12 +245,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         customer_id,
         provider_id: booking.provider_id,
         business_id: booking.business_id,
-        balance_amount: remainingBalance.toString(),
-        platform_fee: (platformFee / 100).toString(),
-        provider_amount: providerAmount.toString(),
+        balance_amount: remainingBalance.toString(), // What provider charged
+        platform_fee: (platformFee / 100).toString(), // 20% platform fee
+        provider_amount: providerAmount.toString(), // What provider receives (same as balance_amount)
+        total_customer_pays: (totalCustomerPaysCents / 100).toString(), // What customer pays
         booking_reference: booking.booking_reference || '',
         connectedAccountId: connectedAccount.account_id,
-        transferAmount: balanceAmountCents.toString(),
+        transferAmount: Math.round(providerAmount * 100).toString(), // Transfer provider amount to connected account
       },
       automatic_payment_methods: {
         enabled: true,
@@ -260,6 +262,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.log('✅ Created balance payment intent:', paymentIntent.id);
 
     // Save payment intent to business_payment_transactions
+    // gross_payment_amount = what customer pays (provider amount + platform fee)
+    // net_payment_amount = what provider receives (providerAmount)
     const paymentDate = new Date().toISOString().split('T')[0];
     const taxYear = new Date().getFullYear();
 
@@ -269,9 +273,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         booking_id,
         business_id: booking.business_id,
         payment_date: paymentDate,
-        gross_payment_amount: remainingBalance,
-        platform_fee: platformFee / 100,
-        net_payment_amount: providerAmount,
+        gross_payment_amount: totalCustomerPaysCents / 100, // What customer pays
+        platform_fee: platformFee / 100, // 20% platform fee
+        net_payment_amount: providerAmount, // What provider receives
         tax_year: taxYear,
         stripe_payment_intent_id: paymentIntent.id,
         stripe_connect_account_id: connectedAccount.account_id,
@@ -290,7 +294,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .from('financial_transactions')
       .insert({
         booking_id,
-        amount: remainingBalance,
+        amount: totalCustomerPaysCents / 100, // What customer pays
         currency: 'USD',
         stripe_transaction_id: paymentIntent.id,
         payment_method: 'card',
@@ -303,6 +307,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           business_id: booking.business_id,
           provider_id: booking.provider_id,
           payment_type: 'balance_payment',
+          provider_amount: providerAmount,
+          platform_fee: platformFee / 100,
         },
       });
 

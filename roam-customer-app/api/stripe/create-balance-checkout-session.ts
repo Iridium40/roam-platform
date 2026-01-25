@@ -121,12 +121,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Calculate amounts
-    const balanceAmountCents = Math.round(remainingBalance * 100);
-    
-    // Calculate platform fee (20% of balance)
+    // remaining_balance = what provider charges (and receives)
+    // Platform fee (20%) is added ON TOP - customer pays provider amount + platform fee
     const platformFeePercentage = 0.20;
-    const platformFee = Math.round(remainingBalance * platformFeePercentage * 100) / 100;
-    const providerAmount = remainingBalance - platformFee;
+    const platformFee = Math.round(remainingBalance * platformFeePercentage * 100) / 100; // in dollars
+    const providerAmount = remainingBalance; // Provider receives the full amount they charged
+    const totalCustomerPays = remainingBalance + platformFee; // What customer pays
+    const totalCustomerPaysCents = Math.round(totalCustomerPays * 100);
 
     // Determine domain for redirect URLs
     const isProd = process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production';
@@ -163,6 +164,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Create Checkout Session for remaining balance payment
+    // Customer pays: provider amount + platform fee
     const session = await stripe.checkout.sessions.create({
       customer: stripeCustomerId, // Use existing Stripe customer to show saved payment methods
       payment_method_types: ['card'],
@@ -179,7 +181,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 provider_id: booking.provider_id,
               },
             },
-            unit_amount: balanceAmountCents,
+            unit_amount: totalCustomerPaysCents, // Provider amount + 20% platform fee
           },
           quantity: 1,
         },
@@ -194,9 +196,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         customer_id,
         provider_id: booking.provider_id,
         business_id: booking.business_id,
-        balance_amount: remainingBalance.toString(),
-        platform_fee: platformFee.toString(),
-        provider_amount: providerAmount.toString(),
+        balance_amount: remainingBalance.toString(), // What provider charged
+        platform_fee: platformFee.toString(), // 20% platform fee
+        provider_amount: providerAmount.toString(), // What provider receives
+        total_customer_pays: totalCustomerPays.toString(), // What customer pays
         booking_reference: booking.booking_reference || '',
       },
     });

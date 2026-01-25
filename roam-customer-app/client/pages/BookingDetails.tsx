@@ -439,37 +439,42 @@ function BookingDetailsContent() {
 
             {/* Main Content Grid */}
             <div className="grid gap-6">
-              {/* Pay Balance Call-to-Action Banner for Completed Deposit Bookings */}
+              {/* Pay Balance Call-to-Action Banner for Completed Bookings with Balance Due */}
               {booking.booking_status === "completed" && 
                parseFloat(booking.remaining_balance || '0') > 0 && 
-               !booking.remaining_balance_charged && (
-                <Card className="bg-gradient-to-r from-amber-50 to-orange-100 border-amber-300">
-                  <CardContent className="py-4">
-                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-white rounded-full">
-                          <CreditCard className="w-6 h-6 text-amber-600" />
+               !booking.remaining_balance_charged && (() => {
+                // Customer pays: provider amount + 20% platform fee
+                const providerAmount = parseFloat(booking.remaining_balance || '0');
+                const totalCustomerPays = providerAmount * 1.20;
+                return (
+                  <Card className="bg-gradient-to-r from-amber-50 to-orange-100 border-amber-300">
+                    <CardContent className="py-4">
+                      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-white rounded-full">
+                            <CreditCard className="w-6 h-6 text-amber-600" />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-gray-900">
+                              Balance Due: {formatCurrency(totalCustomerPays)}
+                            </h3>
+                            <p className="text-sm text-foreground/70">
+                              Your provider has completed the service. Please pay the remaining balance to close this booking.
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <h3 className="font-semibold text-gray-900">
-                            Balance Due: {formatCurrency(booking.remaining_balance)}
-                          </h3>
-                          <p className="text-sm text-foreground/70">
-                            Your provider has completed the service. Please pay the remaining balance to close this booking.
-                          </p>
-                        </div>
+                        <Button
+                          onClick={() => navigate(`/my-bookings/${booking.id}/pay-balance`)}
+                          className="bg-amber-500 hover:bg-amber-600 text-white"
+                        >
+                          <CreditCard className="w-4 h-4 mr-2" />
+                          Pay Balance
+                        </Button>
                       </div>
-                      <Button
-                        onClick={() => navigate(`/my-bookings/${booking.id}/pay-balance`)}
-                        className="bg-amber-500 hover:bg-amber-600 text-white"
-                      >
-                        <CreditCard className="w-4 h-4 mr-2" />
-                        Pay Balance
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
+                    </CardContent>
+                  </Card>
+                );
+              })()}
 
               {/* Review & Tip Call-to-Action Banner for Completed Bookings (within 2 days) */}
               {booking.booking_status === "completed" && (!hasReview || !hasTip) && !isMoreThanTwoDaysPast(booking) && (

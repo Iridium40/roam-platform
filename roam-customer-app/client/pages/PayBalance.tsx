@@ -416,7 +416,11 @@ function PayBalanceContent() {
     }
   }, [customer, bookingId]);
 
-  const remainingBalance = booking ? parseFloat(booking.remaining_balance as string) || 0 : 0;
+  // Provider amount = what provider set as remaining balance
+  const providerAmount = booking ? parseFloat(booking.remaining_balance as string) || 0 : 0;
+  // Customer pays: provider amount + 20% platform fee
+  const totalCustomerPays = providerAmount * 1.20;
+  const platformFee = providerAmount * 0.20;
   const depositPaid = booking ? parseFloat(booking.total_amount as string) - parseFloat(booking.service_fee as string) || 0 : 0;
 
   // Loading state
@@ -474,7 +478,7 @@ function PayBalanceContent() {
   }
 
   // No balance due state
-  if (remainingBalance <= 0) {
+  if (providerAmount <= 0) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-accent/5 to-roam-light-blue/10 flex items-center justify-center">
         <div className="text-center max-w-md">
@@ -597,12 +601,26 @@ function PayBalanceContent() {
                     </span>
                   </div>
                   
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-foreground/70">Additional Services</span>
+                    <span className="font-medium">
+                      {formatCurrency(providerAmount)}
+                    </span>
+                  </div>
+                  
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-foreground/70">Service Fee (20%)</span>
+                    <span className="font-medium">
+                      {formatCurrency(platformFee)}
+                    </span>
+                  </div>
+                  
                   <Separator className="my-2" />
                   
                   <div className="flex justify-between items-center">
-                    <span className="font-semibold text-lg">Balance Due</span>
+                    <span className="font-semibold text-lg">Total Due</span>
                     <span className="text-2xl font-bold text-amber-600">
-                      {formatCurrency(remainingBalance)}
+                      {formatCurrency(totalCustomerPays)}
                     </span>
                   </div>
                 </div>
@@ -625,7 +643,7 @@ function PayBalanceContent() {
                       loader: 'auto',
                     }}
                   >
-                    <PaymentForm bookingId={booking.id} amount={remainingBalance} clientSecret={clientSecret} />
+                    <PaymentForm bookingId={booking.id} amount={totalCustomerPays} clientSecret={clientSecret} />
                   </Elements>
                 ) : (
                   <div className="text-center py-4">

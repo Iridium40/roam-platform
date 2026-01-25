@@ -173,8 +173,10 @@ function BookingCard({
     setIsChatOpen(true);
   };
 
-  // Check if this is a deposit booking (has remaining balance that hasn't been charged)
-  const isDepositBooking = parseFloat(booking.remaining_balance || '0') > 0 && !booking.remaining_balance_charged;
+  // Check if this booking has an unpaid remaining balance
+  const hasUnpaidBalance = parseFloat(booking.remaining_balance || '0') > 0 && !booking.remaining_balance_charged;
+  // Check if this is a deposit pricing type service (requires balance confirmation on completion)
+  const isDepositPricingType = booking.services?.pricing_type === 'deposit';
   // Deposit paid shows what the business earned from the initial deposit
   // This is the total_amount minus the platform fee (service_fee)
   // total_amount = service_amount + platform_fee, so deposit_paid = total_amount - service_fee
@@ -190,8 +192,9 @@ function BookingCard({
       return;
     }
     
-    // For completing a deposit booking, show the final balance modal
-    if (status === "completed" && isDepositBooking) {
+    // For completing a DEPOSIT service, always show the final balance modal
+    // (deposit services require provider to confirm/enter remaining balance before completing)
+    if (status === "completed" && isDepositPricingType) {
       // Pre-fill with current remaining balance
       setFinalBalanceAmount(parseFloat(booking.remaining_balance || '0').toFixed(2));
       setFinalBalanceError(null);
@@ -199,7 +202,7 @@ function BookingCard({
       return;
     }
     
-    // Show confirmation dialog for other actions
+    // Show confirmation dialog for other actions (including fixed price completions)
     setConfirmationDialog({ isOpen: true, status });
   };
   
@@ -562,22 +565,36 @@ function BookingCard({
                           (${totalAmount.toFixed(2)} - ${serviceFee.toFixed(2)} fee)
                         </p>
                       )}
-                      {/* Balance to Collect - ONLY for deposit pricing type services */}
-                      {remainingBalance > 0 && !isRemainingBalanceCharged && booking.services?.pricing_type === 'deposit' && (
+                      {/* Balance to Collect - Show for accepted/confirmed/in_progress bookings */}
+                      {(booking.booking_status === 'confirmed' || booking.booking_status === 'in_progress') && !isRemainingBalanceCharged && (
+                        <div className={`mt-2 px-2 py-1 rounded ${remainingBalance > 0 ? 'bg-amber-100 border border-amber-300 text-amber-800' : 'bg-gray-100 border border-gray-200 text-gray-600'}`}>
+                          <p className="text-xs font-semibold">Balance to Collect</p>
+                          <p className="text-sm font-bold">${remainingBalance.toFixed(2)}</p>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openEditBalanceModal();
+                            }}
+                            className={`text-xs underline mt-1 ${remainingBalance > 0 ? 'text-amber-700 hover:text-amber-900' : 'text-blue-600 hover:text-blue-800'}`}
+                          >
+                            {remainingBalance > 0 ? 'Edit Amount' : '+ Add Balance'}
+                          </button>
+                        </div>
+                      )}
+                      {/* Show unpaid balance for completed bookings */}
+                      {booking.booking_status === 'completed' && remainingBalance > 0 && !isRemainingBalanceCharged && (
                         <div className="mt-2 px-2 py-1 bg-amber-100 border border-amber-300 rounded text-amber-800">
                           <p className="text-xs font-semibold">Balance to Collect</p>
                           <p className="text-sm font-bold">${remainingBalance.toFixed(2)}</p>
-                          {booking.booking_status === 'completed' && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                openEditBalanceModal();
-                              }}
-                              className="text-xs text-amber-700 hover:text-amber-900 underline mt-1"
-                            >
-                              Edit Amount
-                            </button>
-                          )}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openEditBalanceModal();
+                            }}
+                            className="text-xs text-amber-700 hover:text-amber-900 underline mt-1"
+                          >
+                            Edit Amount
+                          </button>
                         </div>
                       )}
                     </div>
@@ -860,30 +877,49 @@ function BookingCard({
                 <span className="text-lg font-bold text-blue-600">
                   ${parseFloat(booking.total_amount || '0').toFixed(2)}
                 </span>
-                {/* Balance to Collect - ONLY for deposit pricing type services (mobile) */}
+                {/* Balance to Collect - Show for confirmed/in_progress bookings (mobile) */}
                 {(() => {
                   const remainingBalance = parseFloat(booking.remaining_balance || '0');
                   const isRemainingBalanceCharged = booking.remaining_balance_charged === true;
-                  const isDepositService = booking.services?.pricing_type === 'deposit';
-                  if (remainingBalance > 0 && !isRemainingBalanceCharged && isDepositService) {
+                  
+                  // Show balance box for confirmed/in_progress bookings
+                  if ((booking.booking_status === 'confirmed' || booking.booking_status === 'in_progress') && !isRemainingBalanceCharged) {
+                    return (
+                      <div className={`mt-1 px-1.5 py-0.5 rounded ${remainingBalance > 0 ? 'bg-amber-100 border border-amber-300 text-amber-800' : 'bg-gray-100 border border-gray-200 text-gray-600'}`}>
+                        <p className="text-[10px] font-semibold">Balance</p>
+                        <p className="text-xs font-bold">${remainingBalance.toFixed(2)}</p>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEditBalanceModal();
+                          }}
+                          className={`text-[10px] underline ${remainingBalance > 0 ? 'text-amber-700 hover:text-amber-900' : 'text-blue-600 hover:text-blue-800'}`}
+                        >
+                          {remainingBalance > 0 ? 'Edit' : '+ Add'}
+                        </button>
+                      </div>
+                    );
+                  }
+                  
+                  // Show unpaid balance for completed bookings
+                  if (booking.booking_status === 'completed' && remainingBalance > 0 && !isRemainingBalanceCharged) {
                     return (
                       <div className="mt-1 px-1.5 py-0.5 bg-amber-100 border border-amber-300 rounded text-amber-800">
                         <p className="text-[10px] font-semibold">Balance Due</p>
                         <p className="text-xs font-bold">${remainingBalance.toFixed(2)}</p>
-                        {booking.booking_status === 'completed' && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openEditBalanceModal();
-                            }}
-                            className="text-[10px] text-amber-700 hover:text-amber-900 underline"
-                          >
-                            Edit
-                          </button>
-                        )}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEditBalanceModal();
+                          }}
+                          className="text-[10px] text-amber-700 hover:text-amber-900 underline"
+                        >
+                          Edit
+                        </button>
                       </div>
                     );
                   }
+                  
                   return null;
                 })()}
               </div>
@@ -1242,7 +1278,7 @@ function BookingCard({
             {/* Final Balance Input */}
             <div className="space-y-2">
               <Label htmlFor="final-balance" className="text-sm font-medium">
-                Final Balance Due from Customer
+                Additional Amount to Charge
               </Label>
               <div className="relative">
                 <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -1261,18 +1297,28 @@ function BookingCard({
                 />
               </div>
               <p className="text-xs text-gray-500">
-                Enter the remaining amount the customer needs to pay based on actual time/materials used. Enter 0 if no additional payment is needed.
+                Enter the amount you want to charge for additional services. You will receive this full amount. Enter 0 if no additional payment is needed.
               </p>
             </div>
             
-            {/* Total Summary */}
-            {finalBalanceAmount && !isNaN(parseFloat(finalBalanceAmount)) && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-blue-800">Total Service Cost</span>
-                  <span className="font-bold text-blue-700">
-                    ${(depositAmount + parseFloat(finalBalanceAmount || '0')).toFixed(2)}
-                  </span>
+            {/* Payment Breakdown */}
+            {finalBalanceAmount && !isNaN(parseFloat(finalBalanceAmount)) && parseFloat(finalBalanceAmount) > 0 && (
+              <div className="space-y-2">
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-green-800">You Will Receive</span>
+                    <span className="font-bold text-green-700">
+                      ${parseFloat(finalBalanceAmount || '0').toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-gray-600">Customer Pays (incl. 20% service fee)</span>
+                    <span className="font-semibold text-gray-700">
+                      ${(parseFloat(finalBalanceAmount || '0') * 1.20).toFixed(2)}
+                    </span>
+                  </div>
                 </div>
               </div>
             )}
@@ -1353,19 +1399,21 @@ function BookingCard({
             </div>
             
             {/* Current Balance Info */}
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-amber-800">Current Balance Due</span>
-                <span className="font-semibold text-amber-700">
-                  ${parseFloat(booking.remaining_balance || '0').toFixed(2)}
-                </span>
+            {parseFloat(booking.remaining_balance || '0') > 0 && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-amber-800">Current Balance (You Receive)</span>
+                  <span className="font-semibold text-amber-700">
+                    ${parseFloat(booking.remaining_balance || '0').toFixed(2)}
+                  </span>
+                </div>
               </div>
-            </div>
+            )}
             
             {/* New Balance Input */}
             <div className="space-y-2">
               <Label htmlFor="edit-balance" className="text-sm font-medium">
-                New Balance Amount
+                Amount to Charge
               </Label>
               <div className="relative">
                 <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -1384,9 +1432,31 @@ function BookingCard({
                 />
               </div>
               <p className="text-xs text-gray-500">
-                Enter the correct amount the customer needs to pay. Enter 0 if no payment is needed.
+                Enter the amount you want to charge. You will receive this full amount. Enter 0 to clear the balance.
               </p>
             </div>
+            
+            {/* Payment Breakdown */}
+            {editBalanceAmount && !isNaN(parseFloat(editBalanceAmount)) && parseFloat(editBalanceAmount) > 0 && (
+              <div className="space-y-2">
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-green-800">You Will Receive</span>
+                    <span className="font-bold text-green-700">
+                      ${parseFloat(editBalanceAmount || '0').toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-gray-600">Customer Pays (incl. 20% service fee)</span>
+                    <span className="font-semibold text-gray-700">
+                      ${(parseFloat(editBalanceAmount || '0') * 1.20).toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
             
             {/* Error Message */}
             {editBalanceError && (
