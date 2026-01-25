@@ -219,12 +219,12 @@ export const BookingCard: React.FC<BookingCardProps> = ({
                     const depositAmount = parseFloat(booking.total_amount || '0');
                     const remainingBalance = parseFloat(booking.remaining_balance || '0');
                     const isRemainingBalanceCharged = booking.remaining_balance_charged === true;
-                    const isDepositPricing = booking.pricing_type === 'deposit';
+                    // Check both possible locations for pricing_type
+                    const isDepositPricing = booking.services?.pricing_type === 'deposit' || booking.pricing_type === 'deposit';
                     
-                    // For deposit pricing, show full breakdown
+                    // For deposit pricing with remaining balance (paid or unpaid)
                     if (isDepositPricing && remainingBalance > 0) {
                       const fullServicePrice = depositAmount + remainingBalance;
-                      const totalPaid = isRemainingBalanceCharged ? fullServicePrice : depositAmount;
                       
                       return (
                         <div>
@@ -245,6 +245,23 @@ export const BookingCard: React.FC<BookingCardProps> = ({
                               </p>
                             </>
                           )}
+                        </div>
+                      );
+                    }
+                    
+                    // For deposit pricing where balance was paid but remaining_balance is now 0
+                    // Check if there's a charged balance indicator
+                    if (isDepositPricing && isRemainingBalanceCharged && remainingBalance === 0) {
+                      // Balance was paid, but remaining_balance might have been cleared
+                      // In this case, just show the deposit as "Paid in Full"
+                      return (
+                        <div>
+                          <div className="text-2xl font-bold text-roam-blue">
+                            ${depositAmount.toFixed(2)}
+                          </div>
+                          <p className="text-xs text-green-600 font-medium">
+                            Paid in Full
+                          </p>
                         </div>
                       );
                     }
@@ -636,9 +653,10 @@ export const BookingCard: React.FC<BookingCardProps> = ({
                     const depositAmount = parseFloat(booking.total_amount || '0');
                     const remainingBalance = parseFloat(booking.remaining_balance || '0');
                     const isRemainingBalanceCharged = booking.remaining_balance_charged === true;
-                    const isDepositPricing = booking.pricing_type === 'deposit';
+                    // Check both possible locations for pricing_type
+                    const isDepositPricing = booking.services?.pricing_type === 'deposit' || booking.pricing_type === 'deposit';
                     
-                    // For deposit pricing, show full breakdown
+                    // For deposit pricing with remaining balance (paid or unpaid)
                     if (isDepositPricing && remainingBalance > 0) {
                       const fullServicePrice = depositAmount + remainingBalance;
                       
@@ -656,6 +674,20 @@ export const BookingCard: React.FC<BookingCardProps> = ({
                               ${remainingBalance.toFixed(2)} due
                             </p>
                           )}
+                        </div>
+                      );
+                    }
+                    
+                    // For deposit pricing where balance was paid but remaining_balance is now 0
+                    if (isDepositPricing && isRemainingBalanceCharged && remainingBalance === 0) {
+                      return (
+                        <div>
+                          <span className="text-xl font-bold text-roam-blue">
+                            ${depositAmount.toFixed(2)}
+                          </span>
+                          <p className="text-[10px] text-green-600 font-medium">
+                            Paid in Full
+                          </p>
                         </div>
                       );
                     }

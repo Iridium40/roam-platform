@@ -568,22 +568,33 @@ function BookingCard({
                 {(() => {
                   const totalAmount = parseFloat(booking.total_amount || '0');
                   const serviceFee = parseFloat(booking.service_fee || '0');
-                  const businessEarnings = totalAmount - serviceFee;
                   const remainingBalance = parseFloat(booking.remaining_balance || '0');
                   const isRemainingBalanceCharged = booking.remaining_balance_charged === true;
                   const isDepositPricingType = booking.services?.pricing_type === 'deposit';
                   
+                  // Calculate total earnings including remaining balance if charged
+                  // Provider receives: deposit earnings + 100% of remaining balance (platform fee was added on top for customer)
+                  const depositEarnings = totalAmount - serviceFee;
+                  const balanceEarnings = isRemainingBalanceCharged ? remainingBalance : 0;
+                  const totalEarnings = depositEarnings + balanceEarnings;
+                  
+                  // Calculate total gross amount (what customer paid)
+                  const depositGross = totalAmount;
+                  const balanceGross = isRemainingBalanceCharged ? remainingBalance * 1.20 : 0; // Customer paid 20% on top
+                  const totalGross = depositGross + balanceGross;
+                  const totalFees = serviceFee + (isRemainingBalanceCharged ? remainingBalance * 0.20 : 0);
+                  
                   return (
                     <div>
                       <div className="text-2xl font-bold text-green-600">
-                        ${businessEarnings.toFixed(2)}
+                        ${totalEarnings.toFixed(2)}
                       </div>
                       <p className="text-xs text-gray-500">
                         Your earnings
                       </p>
-                      {serviceFee > 0 && (
+                      {(serviceFee > 0 || balanceEarnings > 0) && (
                         <p className="text-xs text-gray-400">
-                          (${totalAmount.toFixed(2)} - ${serviceFee.toFixed(2)} fee)
+                          (${totalGross.toFixed(2)} - ${totalFees.toFixed(2)} fee)
                         </p>
                       )}
                       {/* Add Balance link - Show for confirmed/in_progress bookings */}
@@ -907,9 +918,30 @@ function BookingCard({
                 </p>
               </div>
               <div className="text-right flex-shrink-0">
-                <span className="text-lg font-bold text-blue-600">
-                  ${parseFloat(booking.total_amount || '0').toFixed(2)}
-                </span>
+                {/* Mobile - Show total earnings including remaining balance */}
+                {(() => {
+                  const totalAmount = parseFloat(booking.total_amount || '0');
+                  const serviceFee = parseFloat(booking.service_fee || '0');
+                  const remainingBalance = parseFloat(booking.remaining_balance || '0');
+                  const isRemainingBalanceCharged = booking.remaining_balance_charged === true;
+                  const isDepositService = booking.services?.pricing_type === 'deposit';
+                  
+                  // Calculate total earnings including remaining balance if charged
+                  const depositEarnings = totalAmount - serviceFee;
+                  const balanceEarnings = isRemainingBalanceCharged ? remainingBalance : 0;
+                  const totalEarnings = depositEarnings + balanceEarnings;
+                  
+                  return (
+                    <>
+                      <span className="text-lg font-bold text-green-600">
+                        ${totalEarnings.toFixed(2)}
+                      </span>
+                      {isRemainingBalanceCharged && remainingBalance > 0 && (
+                        <p className="text-[10px] text-green-600 font-medium">Paid in Full</p>
+                      )}
+                    </>
+                  );
+                })()}
                 {/* Balance - Show for bookings (mobile) */}
                 {(() => {
                   const remainingBalance = parseFloat(booking.remaining_balance || '0');
