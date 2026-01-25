@@ -285,7 +285,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .update({
           total_amount: totalAmount / 100,
           service_fee: platformFee / 100,
-          remaining_balance: serviceAmount, // Service amount for provider
+          remaining_balance: 0, // Starts at 0, provider can add after service completion
           payment_status: 'pending',
           stripe_payment_intent_id: paymentIntent.id, // CRITICAL: Store payment intent ID for capture on acceptance
         })

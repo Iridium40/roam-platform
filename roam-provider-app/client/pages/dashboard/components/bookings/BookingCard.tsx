@@ -291,10 +291,17 @@ function BookingCard({
     }
   };
   
-  // Open edit balance modal with current balance pre-filled
+  // Open edit balance modal
+  // For confirmed/in_progress: start with empty field so provider enters fresh amount
+  // For completed: pre-fill with current balance
   const openEditBalanceModal = () => {
-    const currentBalance = parseFloat(booking.remaining_balance || '0');
-    setEditBalanceAmount(currentBalance.toFixed(2));
+    if (booking.booking_status === 'completed') {
+      const currentBalance = parseFloat(booking.remaining_balance || '0');
+      setEditBalanceAmount(currentBalance.toFixed(2));
+    } else {
+      // For confirmed/in_progress, start empty so provider enters fresh amount
+      setEditBalanceAmount('');
+    }
     setEditBalanceError(null);
     setShowEditBalanceModal(true);
   };
@@ -565,21 +572,17 @@ function BookingCard({
                           (${totalAmount.toFixed(2)} - ${serviceFee.toFixed(2)} fee)
                         </p>
                       )}
-                      {/* Balance to Collect - Show for accepted/confirmed/in_progress bookings */}
+                      {/* Add Balance link - Show for confirmed/in_progress bookings */}
                       {(booking.booking_status === 'confirmed' || booking.booking_status === 'in_progress') && !isRemainingBalanceCharged && (
-                        <div className={`mt-2 px-2 py-1 rounded ${remainingBalance > 0 ? 'bg-amber-100 border border-amber-300 text-amber-800' : 'bg-gray-100 border border-gray-200 text-gray-600'}`}>
-                          <p className="text-xs font-semibold">Balance to Collect</p>
-                          <p className="text-sm font-bold">${remainingBalance.toFixed(2)}</p>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openEditBalanceModal();
-                            }}
-                            className={`text-xs underline mt-1 ${remainingBalance > 0 ? 'text-amber-700 hover:text-amber-900' : 'text-blue-600 hover:text-blue-800'}`}
-                          >
-                            {remainingBalance > 0 ? 'Edit Amount' : '+ Add Balance'}
-                          </button>
-                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEditBalanceModal();
+                          }}
+                          className="mt-2 text-xs text-blue-600 hover:text-blue-800 underline"
+                        >
+                          + Add Balance
+                        </button>
                       )}
                       {/* Show unpaid balance for completed bookings */}
                       {booking.booking_status === 'completed' && remainingBalance > 0 && !isRemainingBalanceCharged && (
@@ -877,31 +880,27 @@ function BookingCard({
                 <span className="text-lg font-bold text-blue-600">
                   ${parseFloat(booking.total_amount || '0').toFixed(2)}
                 </span>
-                {/* Balance to Collect - Show for confirmed/in_progress bookings (mobile) */}
+                {/* Balance - Show for bookings (mobile) */}
                 {(() => {
                   const remainingBalance = parseFloat(booking.remaining_balance || '0');
                   const isRemainingBalanceCharged = booking.remaining_balance_charged === true;
                   
-                  // Show balance box for confirmed/in_progress bookings
+                  // Show "+ Add Balance" link for confirmed/in_progress bookings
                   if ((booking.booking_status === 'confirmed' || booking.booking_status === 'in_progress') && !isRemainingBalanceCharged) {
                     return (
-                      <div className={`mt-1 px-1.5 py-0.5 rounded ${remainingBalance > 0 ? 'bg-amber-100 border border-amber-300 text-amber-800' : 'bg-gray-100 border border-gray-200 text-gray-600'}`}>
-                        <p className="text-[10px] font-semibold">Balance</p>
-                        <p className="text-xs font-bold">${remainingBalance.toFixed(2)}</p>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openEditBalanceModal();
-                          }}
-                          className={`text-[10px] underline ${remainingBalance > 0 ? 'text-amber-700 hover:text-amber-900' : 'text-blue-600 hover:text-blue-800'}`}
-                        >
-                          {remainingBalance > 0 ? 'Edit' : '+ Add'}
-                        </button>
-                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openEditBalanceModal();
+                        }}
+                        className="mt-1 text-[10px] text-blue-600 hover:text-blue-800 underline"
+                      >
+                        + Add Balance
+                      </button>
                     );
                   }
                   
-                  // Show unpaid balance for completed bookings
+                  // Show unpaid balance for completed bookings (provider has set this during completion)
                   if (booking.booking_status === 'completed' && remainingBalance > 0 && !isRemainingBalanceCharged) {
                     return (
                       <div className="mt-1 px-1.5 py-0.5 bg-amber-100 border border-amber-300 rounded text-amber-800">

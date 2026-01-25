@@ -667,7 +667,8 @@ async function handleBookingPayment(session: Stripe.Checkout.Session) {
   // Calculate service fee if not already set (20% of service amount)
   // Service amount = total_amount - service_fee, or total_amount / 1.2 if service_fee not set
   let serviceFee = booking.service_fee || 0;
-  let remainingBalance = booking.remaining_balance || 0;
+  // remaining_balance always starts at 0 - provider can add after service completion
+  const remainingBalance = 0;
   
   if (!serviceFee || serviceFee === 0) {
     // Calculate service fee from metadata or calculate from total
@@ -677,12 +678,10 @@ async function handleBookingPayment(session: Stripe.Checkout.Session) {
     if (serviceAmountFromMetadata > 0) {
       const serviceAmount = serviceAmountFromMetadata;
       serviceFee = serviceAmount * platformFeePercentage;
-      remainingBalance = serviceAmount;
     } else {
       const totalAmount = booking.total_amount || 0;
       const serviceAmount = totalAmount / (1 + platformFeePercentage);
       serviceFee = serviceAmount * platformFeePercentage;
-      remainingBalance = serviceAmount;
     }
   }
 
@@ -1242,7 +1241,8 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
 
     // Calculate service fee if not already set (20% of service amount)
     let serviceFee = booking.service_fee || 0;
-    let remainingBalance = booking.remaining_balance || 0;
+    // remaining_balance always starts at 0 - provider can add after service completion
+    const remainingBalance = 0;
     
     if (!serviceFee || serviceFee === 0) {
       // Calculate service fee from metadata or calculate from total
@@ -1253,13 +1253,11 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
         // Use service amount from metadata
         const serviceAmount = serviceAmountFromMetadata;
         serviceFee = serviceAmount * platformFeePercentage;
-        remainingBalance = serviceAmount;
       } else {
         // Calculate from total_amount: total = serviceAmount + (serviceAmount * 0.2) = serviceAmount * 1.2
         const totalAmount = booking.total_amount || 0;
         const serviceAmount = totalAmount / (1 + platformFeePercentage);
         serviceFee = serviceAmount * platformFeePercentage;
-        remainingBalance = serviceAmount;
       }
     }
 
@@ -1278,8 +1276,7 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
       if (isCharged) {
         updateData.service_fee_charged = true;
         updateData.service_fee_charged_at = new Date().toISOString();
-        updateData.remaining_balance_charged = true;
-        updateData.remaining_balance_charged_at = new Date().toISOString();
+        // Note: remaining_balance_charged stays false until provider adds a balance and customer pays
       }
       
       // Update service_fee and remaining_balance if they weren't set

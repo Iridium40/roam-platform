@@ -69,28 +69,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       console.warn('Could not fetch service details:', serviceError);
     }
 
-    // Determine if this is a deposit-type service
+    // Determine if this is a deposit-type service (for tracking purposes only)
     const isDepositService = service?.pricing_type === 'deposit';
-    const depositAmount = service?.min_price || 0;
     
-    // Calculate service_fee and remaining_balance based on pricing_type
-    let serviceFee: number;
-    let remainingBalance: number;
+    // All services: charge full amount at booking, remaining_balance starts at 0
+    // Provider can add remaining balance after service completion if needed
+    const serviceFee = total_amount;
+    const remainingBalance = 0;
     
-    if (isDepositService && depositAmount > 0 && depositAmount < total_amount) {
-      // Deposit service: charge deposit now, remaining balance later
-      serviceFee = depositAmount;
-      remainingBalance = total_amount - depositAmount;
-      console.log('💰 Deposit service detected:', { 
-        depositAmount, 
-        totalAmount: total_amount, 
-        remainingBalance 
-      });
-    } else {
-      // Fixed price service: charge full amount now
-      serviceFee = total_amount;
-      remainingBalance = 0;
-    }
+    console.log('💰 Booking payment:', { 
+      pricingType: isDepositService ? 'deposit' : 'fixed',
+      totalAmount: total_amount, 
+      serviceFee,
+      remainingBalance: 0
+    });
 
     // Get customer details from Supabase
     const { data: customer, error: customerError} = await supabase
