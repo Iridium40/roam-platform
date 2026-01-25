@@ -40,6 +40,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         *,
         providers (
           id,
+          user_id,
           first_name,
           last_name,
           image_url,
@@ -53,7 +54,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           description,
           duration_minutes,
           min_price,
-          image_url
+          image_url,
+          pricing_type
         ),
         business_profiles (
           id,

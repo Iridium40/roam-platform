@@ -128,6 +128,17 @@ const ReviewAndTipModal: React.FC<ReviewAndTipModalProps> = ({
     }));
   };
 
+  // Reset loading states when modal opens/closes to prevent stuck states
+  useEffect(() => {
+    if (isOpen) {
+      // Reset loading states when modal opens
+      setTipCheckoutLoading(false);
+      setIsSubmitting(false);
+      setClientSecret('');
+      console.log('🔄 Modal opened - reset loading states');
+    }
+  }, [isOpen]);
+
   // Set initial step based on existing review/tip or initialStep prop
   useEffect(() => {
     if (!isOpen) return; // Only set step when modal opens
@@ -698,7 +709,12 @@ const ReviewAndTipModal: React.FC<ReviewAndTipModalProps> = ({
                   Close
                 </Button>
                 <Button
-                  onClick={handleTipSubmitClick}
+                  onClick={() => {
+                    console.log('⚡ SUBMIT BUTTON CLICKED DIRECTLY');
+                    console.log('tipCheckoutLoading:', tipCheckoutLoading);
+                    console.log('tipData:', tipData);
+                    handleTipSubmitClick();
+                  }}
                   disabled={tipCheckoutLoading || tipData.tip_amount < 1}
                   className="flex-1"
                 >

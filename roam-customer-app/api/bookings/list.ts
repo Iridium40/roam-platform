@@ -65,7 +65,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .from("bookings")
       .select(`
         *,
-        providers (id, first_name, last_name, image_url, average_rating),
+        providers (id, user_id, first_name, last_name, image_url, average_rating, email),
         services (id, name, description, duration_minutes, min_price, image_url, pricing_type),
         business_profiles (id, business_name, logo_url),
         customer_locations (id, location_name, street_address, unit_number, city, state, zip_code),
