@@ -46,8 +46,6 @@ import { PageErrorBoundary } from "@/components/ErrorBoundary";
 const EnhancedConversationChat = lazy(() => import("@/components/EnhancedConversationChat"));
 import { CancelBookingModal, RescheduleModal } from "./MyBookings/components";
 import ReviewAndTipModal from "./MyBookings/components/ReviewAndTipModal";
-import { AddMoreServiceModal } from "./MyBookings/components/AddMoreServiceModal";
-
 // Types for additional data
 interface Transaction {
   id: string;
@@ -180,7 +178,6 @@ function BookingDetailsContent() {
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [showTipModal, setShowTipModal] = useState(false);
-  const [showAddMoreModal, setShowAddMoreModal] = useState(false);
 
   // Action states
   const [isCancelling, setIsCancelling] = useState(false);
@@ -667,24 +664,14 @@ function BookingDetailsContent() {
                   <div className="space-y-2">
                     {/* In Progress Booking Actions */}
                     {booking.booking_status === "in_progress" && (
-                      <div className="grid grid-cols-2 gap-2">
-                        {/* Message Button */}
+                      <div className="space-y-2">
+                        {/* Message Button - Full Width */}
                         <Button
                           onClick={() => setShowMessageModal(true)}
-                          className="bg-roam-blue hover:bg-roam-blue/90"
+                          className="w-full bg-roam-blue hover:bg-roam-blue/90"
                         >
                           <MessageCircle className="w-4 h-4 mr-2" />
                           Message Provider
-                        </Button>
-                        
-                        {/* Add More Services Button */}
-                        <Button
-                          variant="outline"
-                          className="border-purple-500 text-purple-600 hover:bg-purple-50"
-                          onClick={() => setShowAddMoreModal(true)}
-                        >
-                          <Plus className="w-4 h-4 mr-2" />
-                          Add More Services
                         </Button>
                       </div>
                     )}
@@ -1174,14 +1161,6 @@ function BookingDetailsContent() {
         }}
         booking={booking}
         initialStep="tip"
-      />
-
-      {/* Add More Services Modal */}
-      <AddMoreServiceModal
-        isOpen={showAddMoreModal}
-        onClose={() => setShowAddMoreModal(false)}
-        booking={booking}
-        onSuccess={fetchBookingDetails}
       />
 
       {/* Footer */}
