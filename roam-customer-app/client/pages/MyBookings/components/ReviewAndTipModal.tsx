@@ -325,18 +325,37 @@ const ReviewAndTipModal: React.FC<ReviewAndTipModalProps> = ({
       }
 
       // Create Payment Intent for tip
-      const response = await fetch('/api/stripe/create-tip-payment-intent', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          tip_amount: tipData.tip_amount,
-          booking_id: booking.id,
-          customer_id: booking.customer_id,
-          provider_id: booking.providers.id,
-          business_id: booking.business_id,
-          customer_message: tipData.customer_message,
-        }),
-      });
+      console.log('🚀 SENDING TIP REQUEST TO API...');
+      const requestBody = {
+        tip_amount: tipData.tip_amount,
+        booking_id: booking.id,
+        customer_id: booking.customer_id,
+        provider_id: booking.providers.id,
+        business_id: booking.business_id,
+        customer_message: tipData.customer_message,
+      };
+      console.log('Request body:', requestBody);
+      
+      // Add timeout to prevent infinite spinning
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => {
+        console.error('❌ TIP REQUEST TIMEOUT after 30 seconds');
+        controller.abort();
+      }, 30000);
+      
+      let response: Response;
+      try {
+        response = await fetch('/api/stripe/create-tip-payment-intent', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(requestBody),
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timeoutId);
+      }
+
+      console.log('📥 TIP API RESPONSE RECEIVED:', response.status, response.statusText);
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
@@ -359,13 +378,22 @@ const ReviewAndTipModal: React.FC<ReviewAndTipModalProps> = ({
     } catch (error: any) {
       logger.error('Error creating tip payment intent:', error);
       console.error('TIP EXCEPTION:', error); // Make exception visible in console
-      const errorMessage = error?.message || 'Failed to process tip. Please try again.';
+      
+      // Handle specific error types
+      let errorMessage = 'Failed to process tip. Please try again.';
+      if (error.name === 'AbortError') {
+        errorMessage = 'Request timed out. Please check your connection and try again.';
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      
       toast({
         title: "Error processing tip",
         description: errorMessage,
         variant: "destructive",
       });
     } finally {
+      console.log('🏁 TIP SUBMIT FINALLY BLOCK - Setting loading to false');
       setTipCheckoutLoading(false);
     }
   };
@@ -385,7 +413,11 @@ const ReviewAndTipModal: React.FC<ReviewAndTipModalProps> = ({
   };
 
   const handleTipSubmitClick = async () => {
+    console.log('🎯 TIP SUBMIT BUTTON CLICKED');
+    console.log('Current tip data:', tipData);
+    console.log('Booking data:', { id: booking?.id, customer_id: booking?.customer_id, business_id: booking?.business_id });
     await handleTipSubmit();
+    console.log('🎯 TIP SUBMIT COMPLETED');
   };
 
   const handleTipCheckoutSuccess = () => {
