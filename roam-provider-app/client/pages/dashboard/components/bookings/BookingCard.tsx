@@ -334,9 +334,13 @@ function BookingCard({
   const isRescheduled = Boolean(booking.original_booking_date || booking.original_booking_time);
 
   // Check if messaging should be allowed
-  // Hide message button if booking is in final status AND booking date is more than 1 day past
+  // Never allow messaging for declined bookings
+  // Hide message button for other final statuses if booking date is more than 1 day past
   const canMessage = () => {
-    const finalStatuses = ['completed', 'cancelled', 'declined', 'no_show'];
+    // Never allow messaging for declined bookings
+    if (booking.booking_status === 'declined') return false;
+    
+    const finalStatuses = ['completed', 'cancelled', 'no_show'];
     const isInFinalStatus = finalStatuses.includes(booking.booking_status);
     
     if (!isInFinalStatus) return true;

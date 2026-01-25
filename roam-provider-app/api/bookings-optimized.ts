@@ -231,12 +231,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           description: booking.service_description,
           duration_minutes: booking.service_duration,
           min_price: booking.service_min_price,
+          pricing_type: booking.service_pricing_type,
         };
         // Remove flattened fields
         delete booking.service_name;
         delete booking.service_description;
         delete booking.service_duration;
         delete booking.service_min_price;
+        delete booking.service_pricing_type;
       }
       return booking;
     });
@@ -363,7 +365,7 @@ async function fallbackBookings(
     .select(`
       *,
       customer_profiles (id, user_id, first_name, last_name, email, phone, image_url),
-      services (id, name, description, duration_minutes, min_price),
+      services (id, name, description, duration_minutes, min_price, pricing_type),
       providers (id, user_id, first_name, last_name, image_url),
       customer_locations (id, location_name, street_address, unit_number, city, state, zip_code),
       business_locations (id, location_name, address_line1, address_line2, city, state, postal_code)
