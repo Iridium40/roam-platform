@@ -329,13 +329,19 @@ export function useBookings(providerData: any, business: any) {
     
     filteredBookings.forEach((b: any) => {
       const status = b.booking_status;
-      
-      // Check if this is a completed deposit booking with unpaid remaining balance
-      const remainingBalance = parseFloat(b.remaining_balance || '0');
+      const isDepositService = b.services?.pricing_type === 'deposit';
       const isRemainingBalanceCharged = b.remaining_balance_charged === true;
+      const remainingBalance = parseFloat(b.remaining_balance || '0');
       const hasUnpaidBalance = remainingBalance > 0 && !isRemainingBalanceCharged;
       
-      // Keep completed bookings with unpaid balance in ACTIVE tab
+      // For deposit services: keep in ACTIVE until remaining_balance_charged = true
+      // This ensures the booking stays active until customer pays final balance
+      if (status === 'completed' && isDepositService && !isRemainingBalanceCharged) {
+        active.push(b);
+        return;
+      }
+      
+      // For any service: keep in ACTIVE if there's an unpaid balance
       if (status === 'completed' && hasUnpaidBalance) {
         active.push(b);
         return;

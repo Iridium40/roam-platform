@@ -219,12 +219,16 @@ function BookingCard({
     setFinalBalanceError(null);
     
     try {
+      // If amount is 0, mark as charged (no payment needed, booking is settled)
+      // If amount > 0, mark as not charged (customer needs to pay)
+      const isSettled = amount === 0;
+      
       // Update the remaining balance in the database
       const { error: updateError } = await supabase
         .from('bookings')
         .update({
           remaining_balance: amount,
-          remaining_balance_charged: false, // Customer needs to pay this
+          remaining_balance_charged: isSettled, // true if $0 (settled), false if customer needs to pay
         })
         .eq('id', booking.id);
       
@@ -233,6 +237,11 @@ function BookingCard({
         setFinalBalanceError("Failed to update balance. Please try again.");
         return;
       }
+      
+      // Update local booking state to reflect the change
+      // This ensures the booking stays in Active tab if balance > 0 and not charged
+      booking.remaining_balance = amount.toString();
+      booking.remaining_balance_charged = isSettled;
       
       // Now complete the booking
       await onUpdateStatus(booking.id, "completed");

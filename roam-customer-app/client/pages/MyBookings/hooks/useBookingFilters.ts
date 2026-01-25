@@ -82,16 +82,22 @@ export const useBookingFilters = (bookings: BookingWithDetails[]) => {
       // ACTIVE TAB:
       // - All bookings that are NOT in a final state (completed, cancelled, no_show, declined)
       // - Includes pending, confirmed, in_progress regardless of date
-      // - ALSO includes completed bookings with unpaid remaining balance (deposit services)
+      // - ALSO includes completed DEPOSIT bookings until remaining_balance_charged = true
+      // - ALSO includes completed bookings with unpaid remaining balance (any pricing type)
       active: filtered.filter((booking) => {
         const status = booking.booking_status || 'pending';
-        
-        // Check if this is a completed deposit booking with unpaid remaining balance
-        const remainingBalance = parseFloat(booking.remaining_balance || '0');
+        const isDepositService = booking.services?.pricing_type === 'deposit';
         const isRemainingBalanceCharged = booking.remaining_balance_charged === true;
+        const remainingBalance = parseFloat(booking.remaining_balance || '0');
         const hasUnpaidBalance = remainingBalance > 0 && !isRemainingBalanceCharged;
         
-        // Keep completed bookings with unpaid balance in active tab
+        // For deposit services: keep in active until remaining_balance_charged = true
+        // This ensures the booking stays active until customer pays final balance
+        if (status === 'completed' && isDepositService && !isRemainingBalanceCharged) {
+          return true;
+        }
+        
+        // For any service: keep in active if there's an unpaid balance
         if (status === 'completed' && hasUnpaidBalance) {
           return true;
         }
@@ -111,16 +117,21 @@ export const useBookingFilters = (bookings: BookingWithDetails[]) => {
       
       // CLOSED TAB:
       // - All bookings in final states (completed, cancelled, no_show, declined) regardless of date
-      // - EXCLUDES completed bookings with unpaid remaining balance (those stay in active)
+      // - EXCLUDES completed deposit bookings until remaining_balance_charged = true
+      // - EXCLUDES completed bookings with unpaid remaining balance
       closed: filtered.filter((booking) => {
         const status = booking.booking_status || 'pending';
-        
-        // Check if this is a completed deposit booking with unpaid remaining balance
-        const remainingBalance = parseFloat(booking.remaining_balance || '0');
+        const isDepositService = booking.services?.pricing_type === 'deposit';
         const isRemainingBalanceCharged = booking.remaining_balance_charged === true;
+        const remainingBalance = parseFloat(booking.remaining_balance || '0');
         const hasUnpaidBalance = remainingBalance > 0 && !isRemainingBalanceCharged;
         
-        // Keep completed bookings with unpaid balance OUT of closed tab (they're in active)
+        // For deposit services: don't show in closed until remaining_balance_charged = true
+        if (status === 'completed' && isDepositService && !isRemainingBalanceCharged) {
+          return false;
+        }
+        
+        // Keep completed bookings with unpaid balance OUT of closed tab
         if (status === 'completed' && hasUnpaidBalance) {
           return false;
         }
