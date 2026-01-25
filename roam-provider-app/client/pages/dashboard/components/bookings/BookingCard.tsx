@@ -571,6 +571,7 @@ function BookingCard({
                   const businessEarnings = totalAmount - serviceFee;
                   const remainingBalance = parseFloat(booking.remaining_balance || '0');
                   const isRemainingBalanceCharged = booking.remaining_balance_charged === true;
+                  const isDepositPricingType = booking.services?.pricing_type === 'deposit';
                   
                   return (
                     <div>
@@ -610,6 +611,22 @@ function BookingCard({
                             className="text-xs text-amber-700 hover:text-amber-900 underline mt-1"
                           >
                             Edit Amount
+                          </button>
+                        </div>
+                      )}
+                      {/* Show "Send Final Balance" for completed deposit bookings with no balance set yet */}
+                      {booking.booking_status === 'completed' && isDepositPricingType && remainingBalance === 0 && !isRemainingBalanceCharged && (
+                        <div className="mt-2 px-2 py-1 bg-blue-50 border border-blue-200 rounded text-blue-800">
+                          <p className="text-xs font-semibold">Remaining Balance</p>
+                          <p className="text-sm font-bold">$0.00</p>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openEditBalanceModal();
+                            }}
+                            className="text-xs text-blue-600 hover:text-blue-800 underline mt-1"
+                          >
+                            + Send Final Balance
                           </button>
                         </div>
                       )}
@@ -927,6 +944,26 @@ function BookingCard({
                           className="text-[10px] text-amber-700 hover:text-amber-900 underline"
                         >
                           Edit
+                        </button>
+                      </div>
+                    );
+                  }
+                  
+                  // Show "Send Final Balance" for completed deposit bookings with no balance set yet
+                  const isDepositService = booking.services?.pricing_type === 'deposit';
+                  if (booking.booking_status === 'completed' && isDepositService && remainingBalance === 0 && !isRemainingBalanceCharged) {
+                    return (
+                      <div className="mt-1 px-1.5 py-0.5 bg-blue-50 border border-blue-200 rounded text-blue-800">
+                        <p className="text-[10px] font-semibold">Remaining Balance</p>
+                        <p className="text-xs font-bold">$0.00</p>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEditBalanceModal();
+                          }}
+                          className="text-[10px] text-blue-600 hover:text-blue-800 underline"
+                        >
+                          + Send Final Balance
                         </button>
                       </div>
                     );
