@@ -124,12 +124,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (countsError) {
         console.error('Error fetching booking counts:', countsError);
         
-        // Fallback to simple count if function doesn't exist
-        if (countsError.code === '42883') {
-          return await fallbackCounts(supabase, business_id, effectiveProviderId, res, startTime);
-        }
-        
-        return res.status(500).json({ error: 'Failed to fetch booking counts' });
+        // Fallback to simple count if function fails for any reason
+        console.log('Falling back to simple count due to error:', countsError.code);
+        return await fallbackCounts(supabase, business_id, effectiveProviderId, res, startTime);
       }
 
       return res.status(200).json({
@@ -159,15 +156,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (bookingsError) {
       console.error('Error fetching bookings:', bookingsError);
       
-      // Fallback to regular query if function doesn't exist
-      if (bookingsError.code === '42883') {
-        return await fallbackBookings(supabase, business_id, effectiveProviderId, req.query, res, startTime);
-      }
-      
-      return res.status(500).json({ 
-        error: 'Failed to fetch bookings',
-        details: bookingsError.message 
-      });
+      // Fallback to regular query if function fails for any reason
+      // Common errors: 42883 (function doesn't exist), 42703 (column doesn't exist)
+      console.log('Falling back to direct query due to error:', bookingsError.code);
+      return await fallbackBookings(supabase, business_id, effectiveProviderId, req.query, res, startTime);
     }
 
     // Extract stats from first row (same for all rows)
