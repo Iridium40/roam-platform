@@ -411,17 +411,19 @@ export default function FinancialsTab({
 
   // CSV Export function for Stripe payouts
   const exportStripePayoutsToCSV = () => {
-    // Apply date filters to Stripe payouts
+    // Apply date filters to Stripe payouts - use string comparison to avoid timezone issues
     let filtered = stripePayouts.filter((payout: any) => {
-      if (stripePayoutFilters.startDate) {
+      if (stripePayoutFilters.startDate || stripePayoutFilters.endDate) {
+        // Convert Unix timestamp to YYYY-MM-DD string for comparison
         const payoutDate = new Date(payout.created * 1000);
-        if (payoutDate < new Date(stripePayoutFilters.startDate)) return false;
-      }
-      if (stripePayoutFilters.endDate) {
-        const payoutDate = new Date(payout.created * 1000);
-        const endDate = new Date(stripePayoutFilters.endDate);
-        endDate.setHours(23, 59, 59, 999);
-        if (payoutDate > endDate) return false;
+        const payoutDateStr = payoutDate.toISOString().split('T')[0];
+        
+        if (stripePayoutFilters.startDate && payoutDateStr < stripePayoutFilters.startDate) {
+          return false;
+        }
+        if (stripePayoutFilters.endDate && payoutDateStr > stripePayoutFilters.endDate) {
+          return false;
+        }
       }
       return true;
     });
@@ -476,17 +478,19 @@ export default function FinancialsTab({
 
   // CSV Export function for tips
   const exportTipsToCSV = () => {
-    // Apply filters to tips (same logic as display)
+    // Apply filters to tips (same logic as display) - use string comparison to avoid timezone issues
     let filtered = tipsData.filter((tip: any) => {
-      if (tipFilters.startDate) {
-        const tipDate = new Date(tip.tip_given_at || tip.created_at);
-        if (tipDate < new Date(tipFilters.startDate)) return false;
-      }
-      if (tipFilters.endDate) {
-        const tipDate = new Date(tip.tip_given_at || tip.created_at);
-        const endDate = new Date(tipFilters.endDate);
-        endDate.setHours(23, 59, 59, 999);
-        if (tipDate > endDate) return false;
+      const rawDate = tip.tip_given_at || tip.created_at;
+      if (rawDate && (tipFilters.startDate || tipFilters.endDate)) {
+        // Extract just the date portion (YYYY-MM-DD) for comparison
+        const tipDateStr = rawDate.split('T')[0];
+        
+        if (tipFilters.startDate && tipDateStr < tipFilters.startDate) {
+          return false;
+        }
+        if (tipFilters.endDate && tipDateStr > tipFilters.endDate) {
+          return false;
+        }
       }
       if (tipFilters.providerId !== 'all') {
         if (tip.provider_id !== tipFilters.providerId) return false;
@@ -1405,17 +1409,19 @@ export default function FinancialsTab({
 
               <div className="space-y-3">
                 {(() => {
-                  // Apply filters to Stripe payouts
+                  // Apply filters to Stripe payouts - use string comparison to avoid timezone issues
                   let filtered = stripePayouts.filter((payout: any) => {
-                    if (stripePayoutFilters.startDate) {
+                    if (stripePayoutFilters.startDate || stripePayoutFilters.endDate) {
+                      // Convert Unix timestamp to YYYY-MM-DD string for comparison
                       const payoutDate = new Date(payout.created * 1000);
-                      if (payoutDate < new Date(stripePayoutFilters.startDate)) return false;
-                    }
-                    if (stripePayoutFilters.endDate) {
-                      const payoutDate = new Date(payout.created * 1000);
-                      const endDate = new Date(stripePayoutFilters.endDate);
-                      endDate.setHours(23, 59, 59, 999);
-                      if (payoutDate > endDate) return false;
+                      const payoutDateStr = payoutDate.toISOString().split('T')[0];
+                      
+                      if (stripePayoutFilters.startDate && payoutDateStr < stripePayoutFilters.startDate) {
+                        return false;
+                      }
+                      if (stripePayoutFilters.endDate && payoutDateStr > stripePayoutFilters.endDate) {
+                        return false;
+                      }
                     }
                     return true;
                   });
@@ -1928,16 +1934,18 @@ export default function FinancialsTab({
                     {(() => {
                       // Apply filters to tips
                       let filtered = tipsData.filter((tip: any) => {
-                        // Filter by date range
-                        if (tipFilters.startDate) {
-                          const tipDate = new Date(tip.tip_given_at || tip.created_at);
-                          if (tipDate < new Date(tipFilters.startDate)) return false;
-                        }
-                        if (tipFilters.endDate) {
-                          const tipDate = new Date(tip.tip_given_at || tip.created_at);
-                          const endDate = new Date(tipFilters.endDate);
-                          endDate.setHours(23, 59, 59, 999);
-                          if (tipDate > endDate) return false;
+                        // Filter by date range - use string comparison to avoid timezone issues
+                        const rawDate = tip.tip_given_at || tip.created_at;
+                        if (rawDate && (tipFilters.startDate || tipFilters.endDate)) {
+                          // Extract just the date portion (YYYY-MM-DD) for comparison
+                          const tipDateStr = rawDate.split('T')[0];
+                          
+                          if (tipFilters.startDate && tipDateStr < tipFilters.startDate) {
+                            return false;
+                          }
+                          if (tipFilters.endDate && tipDateStr > tipFilters.endDate) {
+                            return false;
+                          }
                         }
 
                         // Filter by provider
