@@ -328,6 +328,12 @@ export default function BookingDetailModal({
               <h2 className="text-lg sm:text-xl font-bold truncate">
                 {selectedBooking.services?.name || "Service"}
               </h2>
+              {/* Show add-ons if any */}
+              {selectedBooking.booking_addons && selectedBooking.booking_addons.length > 0 && (
+                <p className="text-sm text-blue-200 mt-0.5">
+                  + {selectedBooking.booking_addons.map((addon: any) => addon.service_addons?.name || 'Add-on').join(', ')}
+                </p>
+              )}
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-sm text-blue-100">
                 <span className="flex items-center gap-1">
                   <Calendar className="h-3.5 w-3.5" />
@@ -418,9 +424,29 @@ export default function BookingDetailModal({
                 {selectedBooking.total_amount && (
                   <div>
                     <span className="text-xs text-gray-500 uppercase tracking-wide">Total</span>
-                    <p className="font-semibold text-green-600">
-                      {formatCurrency(selectedBooking.total_amount)}
-                    </p>
+                    {(() => {
+                      const depositAmount = parseFloat(selectedBooking.total_amount || '0');
+                      const remainingBalance = parseFloat(selectedBooking.remaining_balance || '0');
+                      const isRemainingBalanceCharged = selectedBooking.remaining_balance_charged === true;
+                      
+                      // If remaining balance was charged, show total including both
+                      const totalPaid = isRemainingBalanceCharged 
+                        ? depositAmount + remainingBalance 
+                        : depositAmount;
+                      
+                      return (
+                        <div>
+                          <p className="font-semibold text-green-600">
+                            {formatCurrency(totalPaid)}
+                          </p>
+                          {isRemainingBalanceCharged && remainingBalance > 0 && (
+                            <p className="text-xs text-gray-500">
+                              (Deposit: {formatCurrency(depositAmount)} + Final: {formatCurrency(remainingBalance)})
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
               </CardContent>

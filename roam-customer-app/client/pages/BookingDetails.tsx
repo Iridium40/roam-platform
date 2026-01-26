@@ -557,6 +557,12 @@ function BookingDetailsContent() {
                     </Avatar>
                     <div className="flex-1">
                       <h3 className="font-semibold text-xl">{booking.service_name}</h3>
+                      {/* Show add-ons if any */}
+                      {bookingAddons && bookingAddons.length > 0 && (
+                        <p className="text-sm text-blue-600 mt-0.5">
+                          + {bookingAddons.map((addon) => addon.service_addons?.name || 'Add-on').join(', ')}
+                        </p>
+                      )}
                       <p className="text-foreground/60">
                         with {booking.providers?.first_name} {booking.providers?.last_name}
                       </p>

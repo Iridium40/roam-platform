@@ -795,33 +795,68 @@ async function handleBookingPayment(session: Stripe.Checkout.Session) {
   // Ensure currency is exactly 3 characters (schema: varchar(3))
   const currency = (paymentIntent.currency.toUpperCase() || 'USD').substring(0, 3);
   
-  const { data: financialTransaction, error: financialError } = await supabase
+  // Check if a pending transaction already exists (from authorization phase)
+  const { data: existingTx } = await supabase
     .from('financial_transactions')
-    .insert({
-      booking_id: booking.id,
-      amount: totalAmount, // numeric(10, 2)
-      currency: currency, // varchar(3)
-      stripe_transaction_id: paymentIntent.id, // varchar(255)
-      payment_method: 'card', // varchar(50)
-      description: 'Service booking payment received', // text
-      transaction_type: 'booking_payment', // transaction_type enum
-      status: 'completed', // status enum
-      processed_at: new Date().toISOString(), // timestamp
-      metadata: { // jsonb
-        charge_id: paymentIntent.latest_charge,
-        customer_id: paymentIntent.customer,
-        payment_method_types: paymentIntent.payment_method_types,
-        booking_reference: booking.booking_reference || null,
-        booking_customer_id: booking.customer_id || null
-      }
-    })
-    .select()
-    .single();
+    .select('id, status')
+    .eq('stripe_transaction_id', paymentIntent.id)
+    .maybeSingle();
+  
+  if (existingTx) {
+    // Update existing transaction to completed
+    const { error: updateError } = await supabase
+      .from('financial_transactions')
+      .update({
+        status: 'completed',
+        description: 'Service booking payment received',
+        processed_at: new Date().toISOString(),
+        metadata: {
+          charge_id: paymentIntent.latest_charge,
+          customer_id: paymentIntent.customer,
+          payment_method_types: paymentIntent.payment_method_types,
+          booking_reference: booking.booking_reference || null,
+          booking_customer_id: booking.customer_id || null
+        }
+      })
+      .eq('id', existingTx.id);
+    
+    if (updateError) {
+      console.error('Error updating financial transaction to completed:', updateError);
+    } else {
+      console.log('✅ Updated existing financial transaction to completed:', existingTx.id);
+    }
+  } else {
+    // Create new transaction record
+    const { data: financialTransaction, error: financialError } = await supabase
+      .from('financial_transactions')
+      .insert({
+        booking_id: booking.id,
+        amount: totalAmount, // numeric(10, 2)
+        currency: currency, // varchar(3)
+        stripe_transaction_id: paymentIntent.id, // varchar(255)
+        payment_method: 'card', // varchar(50)
+        description: 'Service booking payment received', // text
+        transaction_type: 'booking_payment', // transaction_type enum
+        status: 'completed', // status enum
+        processed_at: new Date().toISOString(), // timestamp
+        metadata: { // jsonb
+          charge_id: paymentIntent.latest_charge,
+          customer_id: paymentIntent.customer,
+          payment_method_types: paymentIntent.payment_method_types,
+          booking_reference: booking.booking_reference || null,
+          booking_customer_id: booking.customer_id || null
+        }
+      })
+      .select()
+      .single();
 
-  if (financialError) {
-    if (financialError.code !== '23505') { // Ignore duplicates
-      console.error('Error recording financial transaction:', financialError);
-      throw financialError;
+    if (financialError) {
+      if (financialError.code !== '23505') { // Ignore duplicates
+        console.error('Error recording financial transaction:', financialError);
+        throw financialError;
+      }
+    } else {
+      console.log('✅ Created new financial transaction:', financialTransaction?.id);
     }
   }
 
@@ -1138,13 +1173,14 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
 
     const { data: existingFinancialTransaction } = await supabase
       .from('financial_transactions')
-      .select('id')
+      .select('id, status')
       .eq('stripe_transaction_id', paymentIntent.id)
       .limit(1)
       .maybeSingle();
 
-    // If both transactions exist, payment was already processed
-    if (existingBusinessTransaction && existingFinancialTransaction) {
+    // If both transactions exist and financial transaction is already completed, skip
+    if (existingBusinessTransaction && existingFinancialTransaction && existingFinancialTransaction.status === 'completed') {
+      console.log('✅ Payment already fully processed');
       return;
     }
 
@@ -1379,41 +1415,66 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
     // Ensure currency is exactly 3 characters (schema: varchar(3))
     const currency = (paymentIntent.currency.toUpperCase() || 'USD').substring(0, 3);
     
-    // Only create if it doesn't already exist (idempotent)
-    if (!existingFinancialTransaction) {
+    if (existingFinancialTransaction) {
+      // Update existing transaction (from authorization phase) to completed
+      const { error: updateError } = await supabase
+        .from('financial_transactions')
+        .update({
+          status: 'completed',
+          description: 'Service booking payment received',
+          processed_at: new Date().toISOString(),
+          metadata: {
+            charge_id: paymentIntent.latest_charge,
+            customer_id: paymentIntent.customer,
+            payment_method_types: paymentIntent.payment_method_types,
+            booking_reference: booking.booking_reference || null,
+            booking_customer_id: booking.customer_id || null,
+            captured_by: paymentIntent.metadata?.captured_by || 'webhook',
+          }
+        })
+        .eq('id', existingFinancialTransaction.id);
       
+      if (updateError) {
+        console.error('Error updating financial transaction to completed:', updateError);
+      } else {
+        console.log('✅ Updated existing financial transaction to completed:', existingFinancialTransaction.id);
+      }
+    } else {
+      // Create new transaction record
       const { data: financialTransaction, error: financialError } = await supabase
         .from('financial_transactions')
         .insert({
-      booking_id: bookingId, // uuid NOT NULL
-      amount: totalAmount, // numeric(10, 2) NOT NULL
-      currency: currency, // varchar(3) default 'USD'
-      stripe_transaction_id: paymentIntent.id, // varchar(255)
-      payment_method: 'card', // varchar(50)
-      description: 'Service booking payment received', // text
+          booking_id: bookingId, // uuid NOT NULL
+          amount: totalAmount, // numeric(10, 2) NOT NULL
+          currency: currency, // varchar(3) default 'USD'
+          stripe_transaction_id: paymentIntent.id, // varchar(255)
+          payment_method: 'card', // varchar(50)
+          description: 'Service booking payment received', // text
           transaction_type: 'booking_payment', // transaction_type enum
-      status: 'completed', // status enum
-      processed_at: new Date().toISOString(), // timestamp
-      metadata: { // jsonb default '{}'
-        charge_id: paymentIntent.latest_charge,
-        customer_id: paymentIntent.customer,
+          status: 'completed', // status enum
+          processed_at: new Date().toISOString(), // timestamp
+          metadata: { // jsonb default '{}'
+            charge_id: paymentIntent.latest_charge,
+            customer_id: paymentIntent.customer,
             payment_method_types: paymentIntent.payment_method_types,
             booking_reference: booking.booking_reference || null,
             booking_customer_id: booking.customer_id || null,
             captured_by: paymentIntent.metadata?.captured_by || 'webhook', // Track if captured by payment processor or webhook
-      }
+          }
         })
         .select()
         .single();
 
-    if (financialError) {
+      if (financialError) {
         if (financialError.code === '23503') {
           throw new Error(`Booking ${bookingId} not found or invalid`);
         } else if (financialError.code !== '23505') {
           // Don't throw for duplicates
           console.error('Error recording financial transaction:', financialError);
-      throw financialError;
+          throw financialError;
         }
+      } else {
+        console.log('✅ Created new financial transaction:', financialTransaction?.id);
       }
     }
 

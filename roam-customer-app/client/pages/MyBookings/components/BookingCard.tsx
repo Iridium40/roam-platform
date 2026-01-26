@@ -204,6 +204,12 @@ export const BookingCard: React.FC<BookingCardProps> = ({
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1">
                   <h3 className="font-semibold text-lg text-gray-900">{booking.service_name}</h3>
+                  {/* Show add-ons if any */}
+                  {booking.booking_addons && booking.booking_addons.length > 0 && (
+                    <p className="text-xs text-blue-600 mt-0.5">
+                      + {booking.booking_addons.map((addon: any) => addon.service_addons?.name || 'Add-on').join(', ')}
+                    </p>
+                  )}
                   <p className="text-sm text-foreground/60 mt-0.5">
                     with {booking.providers?.first_name} {booking.providers?.last_name}
                     <span className="inline-flex items-center gap-1 ml-2">
@@ -643,6 +649,12 @@ export const BookingCard: React.FC<BookingCardProps> = ({
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-lg leading-tight">{booking.service_name}</h3>
+                  {/* Show add-ons if any */}
+                  {booking.booking_addons && booking.booking_addons.length > 0 && (
+                    <p className="text-xs text-blue-600 mt-0.5">
+                      + {booking.booking_addons.map((addon: any) => addon.service_addons?.name || 'Add-on').join(', ')}
+                    </p>
+                  )}
                   <p className="text-sm text-foreground/60 mt-0.5">
                     with {booking.providers?.first_name} {booking.providers?.last_name}
                   </p>

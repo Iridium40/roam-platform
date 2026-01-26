@@ -552,6 +552,12 @@ function BookingCard({
                     );
                   })()}
                 </div>
+                {/* Show add-ons if any */}
+                {booking.booking_addons && booking.booking_addons.length > 0 && (
+                  <p className="text-xs text-blue-600 mt-0.5">
+                    + {booking.booking_addons.map((addon: any) => addon.service_addons?.name || 'Add-on').join(', ')}
+                  </p>
+                )}
                 <p className="text-sm text-gray-600 mt-0.5">
                   <span className="font-medium">Customer:</span>{" "}
                   {booking.guest_name
@@ -908,6 +914,12 @@ function BookingCard({
                     </Badge>
                   )}
                 </div>
+                {/* Show add-ons if any (mobile) */}
+                {booking.booking_addons && booking.booking_addons.length > 0 && (
+                  <p className="text-[10px] text-blue-600 mt-0.5">
+                    + {booking.booking_addons.map((addon: any) => addon.service_addons?.name || 'Add-on').join(', ')}
+                  </p>
+                )}
                 <p className="text-sm text-gray-600 mt-0.5">
                   {booking.guest_name
                     ? booking.guest_name
