@@ -229,6 +229,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // Fallback: if payment_intent.succeeded wasn't received, process from charge
         const charge = event.data.object as Stripe.Charge;
         if (charge.payment_intent && typeof charge.payment_intent === 'string') {
+          // Skip tip payments - they are handled by payment_intent.succeeded
+          // which has idempotency protection built in
+          const paymentIntentId = charge.payment_intent;
+          const { data: existingTip } = await supabase
+            .from('tips')
+            .select('id')
+            .eq('stripe_payment_intent_id', paymentIntentId)
+            .maybeSingle();
+          
+          if (existingTip) {
+            console.log('⏭️ Skipping charge.succeeded for tip payment - handled by payment_intent.succeeded');
+            processed = true;
+            break;
+          }
+
           const { data: existingTransaction } = await supabase
             .from('financial_transactions')
             .select('id')
@@ -1991,6 +2006,23 @@ async function handleTipPaymentIntent(paymentIntent: Stripe.PaymentIntent) {
       connectedAccountId,
     });
 
+    // Check if tip already processed (idempotency check)
+    const { data: existingTip } = await supabase
+      .from('tips')
+      .select('id, stripe_transfer_id, payment_status')
+      .eq('stripe_payment_intent_id', paymentIntent.id)
+      .maybeSingle();
+
+    // If tip already completed with transfer, skip processing
+    if (existingTip?.payment_status === 'completed' && existingTip?.stripe_transfer_id) {
+      console.log('✅ Tip already processed with transfer, skipping:', {
+        tipId: existingTip.id,
+        transferId: existingTip.stripe_transfer_id,
+      });
+      console.log('✅ Tip payment processed successfully with transfer');
+      return;
+    }
+
     // Use the 5% platform fee structure from metadata
     const platformFeeAmount = parseFloat(platform_fee || '0');
     const providerNetAmount = parseFloat(provider_net || tip_amount || '0');
@@ -2002,9 +2034,10 @@ async function handleTipPaymentIntent(paymentIntent: Stripe.PaymentIntent) {
     });
 
     // Create Stripe Transfer to connected account for 95% of tip
-    let stripeTransferId: string | null = null;
+    // Skip if transfer already exists from a previous webhook call
+    let stripeTransferId: string | null = existingTip?.stripe_transfer_id || null;
     
-    if (connectedAccountId && paymentIntent.latest_charge) {
+    if (!stripeTransferId && connectedAccountId && paymentIntent.latest_charge) {
       try {
         const chargeId = typeof paymentIntent.latest_charge === 'string'
           ? paymentIntent.latest_charge
@@ -2046,20 +2079,20 @@ async function handleTipPaymentIntent(paymentIntent: Stripe.PaymentIntent) {
         });
         
       } catch (transferError: any) {
-        console.error('❌ Error creating tip transfer:', transferError);
-        console.warn('⚠️ Tip payment recorded but transfer failed - may need manual resolution');
+        // Check if error is due to transfer already existing
+        if (transferError.message?.includes('already a transfer')) {
+          console.log('⚠️ Transfer already exists for this charge - continuing with tip record update');
+        } else {
+          console.error('❌ Error creating tip transfer:', transferError);
+          console.warn('⚠️ Tip payment recorded but transfer failed - may need manual resolution');
+        }
         // Don't fail the tip processing - record it and handle transfer manually if needed
       }
+    } else if (stripeTransferId) {
+      console.log('✅ Using existing transfer ID from tip record:', stripeTransferId);
     } else {
       console.warn('⚠️ No connected account ID or charge ID - skipping tip transfer');
     }
-
-    // Check if tip record already exists (created when payment intent was created)
-    const { data: existingTip } = await supabase
-      .from('tips')
-      .select('id')
-      .eq('stripe_payment_intent_id', paymentIntent.id)
-      .maybeSingle();
 
     let tipRecordId: string;
 
