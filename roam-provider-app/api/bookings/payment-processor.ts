@@ -185,7 +185,7 @@ export async function processBookingAcceptance(
         .from('bookings')
         .update({
           service_fee_charged: true,
-          service_fee_charged_at: booking.service_fee_charged_at || new Date().toISOString(),
+          service_fee_charged_at: new Date().toISOString(),
           payment_status: 'paid',
         })
         .eq('id', bookingId);
@@ -537,10 +537,10 @@ export async function processBookingAcceptance(
 
     // Cancel the original payment intent since we're creating two separate ones
     try {
-      const piStatus = paymentIntent.status;
       // At this point, payment intent is not 'succeeded' (we returned early if it was)
       // So we only need to check if it's not already canceled
-      if (piStatus !== 'canceled') {
+      // Use string comparison to avoid TypeScript enum issues
+      if ((paymentIntent.status as string) !== 'canceled') {
         await stripe.paymentIntents.cancel(paymentIntent.id);
         console.log('✅ Cancelled original payment intent:', paymentIntent.id);
       }
