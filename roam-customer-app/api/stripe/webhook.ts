@@ -714,6 +714,13 @@ async function handleBookingPayment(session: Stripe.Checkout.Session) {
       payment_status: isCharged ? 'paid' : 'pending', // Only mark as paid if already charged
     };
     
+    // Mark payment as captured if charged (same as handlePaymentIntentSucceeded)
+    if (isCharged) {
+      updateData.service_fee_charged = true;
+      updateData.service_fee_charged_at = new Date().toISOString();
+      // Note: remaining_balance_charged stays false until provider adds a balance and customer pays
+    }
+    
     // Update service_fee and remaining_balance if they weren't set
     if (!booking.service_fee || booking.service_fee === 0) {
       updateData.service_fee = serviceFee;
