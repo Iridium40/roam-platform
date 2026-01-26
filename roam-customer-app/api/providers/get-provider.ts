@@ -59,6 +59,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Fetch services this provider offers through their business
+    // business_profiles can be an array from the join, extract first element
+    const businessProfile = Array.isArray(providerData.business_profiles) 
+      ? providerData.business_profiles[0] 
+      : providerData.business_profiles;
+    
     const { data: servicesData, error: servicesError } = await supabase
       .from('business_services')
       .select(`
@@ -74,7 +79,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           image_url
         )
       `)
-      .eq('business_id', providerData.business_profiles?.id)
+      .eq('business_id', businessProfile?.id)
       .eq('is_active', true);
 
     if (servicesError) {
