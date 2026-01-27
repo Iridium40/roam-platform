@@ -7,8 +7,8 @@ import { PAGINATION_CONFIG, getDateRange } from "../config/pagination.config";
 const formatLocation = (booking: any): string => {
   const deliveryType = booking.delivery_type;
   
-  // For customer_location deliveries
-  if (deliveryType === 'customer_location') {
+  // For mobile / customer_location deliveries (service at customer's location)
+  if (deliveryType === 'mobile' || deliveryType === 'customer_location') {
     if (booking.customer_locations) {
       const loc = booking.customer_locations;
       const parts = [
@@ -18,13 +18,13 @@ const formatLocation = (booking: any): string => {
         loc.state,
         loc.zip_code
       ].filter(Boolean);
-      return parts.length > 0 ? parts.join(', ') : 'Location TBD';
+      return parts.length > 0 ? parts.join(', ') : 'Your location - confirm with provider';
     }
     // For guest bookings, check if there's guest location data stored
     if (booking.guest_name) {
       return 'Customer Location (Guest Booking)';
     }
-    return 'Location TBD';
+    return 'Your location - confirm with provider';
   }
   
   // For business_location deliveries

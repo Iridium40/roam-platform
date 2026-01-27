@@ -78,8 +78,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .select(`
         *,
         customer_profiles (id, user_id, first_name, last_name, email, phone, image_url),
-        customer_locations (id, location_name, street_address, city, state, zip_code),
-        business_locations (id, location_name, address_line1, city, state, postal_code),
+        customer_locations!bookings_customer_location_id_fkey (id, location_name, street_address, city, state, zip_code),
+        business_locations!bookings_business_location_id_fkey (id, location_name, address_line1, city, state, postal_code),
         services (id, name, description, duration_minutes, min_price),
         providers (id, user_id, first_name, last_name, image_url),
         business_profiles (id, business_name, business_type),

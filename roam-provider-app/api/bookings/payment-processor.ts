@@ -279,41 +279,75 @@ export async function processBookingAcceptance(
             ? `Deposit payment captured - Balance $${(booking.remaining_balance || 0).toFixed(2)} due at service`
             : 'Service booking payment - captured on acceptance';
           
-          // Record financial transactions
-          const { data: financialTransaction, error: financialError } = await supabase
+          // Check if there's an existing pending transaction from authorization phase
+          const { data: existingPendingTx } = await supabase
             .from('financial_transactions')
-            .insert({
-              booking_id: bookingId,
-              amount: totalAmount,
-              currency: 'USD',
-              stripe_transaction_id: capturedPaymentIntent.id,
-              payment_method: 'card',
-              description: paymentDescription,
-              transaction_type: 'booking_payment',
-              status: 'completed',
-              processed_at: new Date().toISOString(),
-              metadata: {
-                payment_type: isDepositPayment ? 'deposit' : 'full_payment',
-                is_deposit: isDepositPayment,
-                remaining_balance: booking.remaining_balance || 0,
-                captured_on_acceptance: true,
-              },
-            })
-            .select()
-            .single();
+            .select('id, status')
+            .eq('booking_id', bookingId)
+            .eq('transaction_type', 'booking_payment')
+            .eq('status', 'pending')
+            .maybeSingle();
 
-          if (financialError) {
-            console.error('❌ Error recording financial transaction:', financialError);
-            console.error('❌ Error code:', financialError.code);
-            console.error('❌ Error message:', financialError.message);
-            if (financialError.code !== '23505') { // Ignore duplicates
-              // Don't throw - webhook will create transaction as fallback
-              console.error('⚠️ Financial transaction creation failed - webhook will create it as fallback');
+          if (existingPendingTx) {
+            // Update existing pending transaction to completed
+            const { error: updateError } = await supabase
+              .from('financial_transactions')
+              .update({
+                status: 'completed',
+                description: paymentDescription,
+                stripe_transaction_id: capturedPaymentIntent.id,
+                processed_at: new Date().toISOString(),
+                metadata: {
+                  payment_type: isDepositPayment ? 'deposit' : 'full_payment',
+                  is_deposit: isDepositPayment,
+                  remaining_balance: booking.remaining_balance || 0,
+                  captured_on_acceptance: true,
+                },
+              })
+              .eq('id', existingPendingTx.id);
+
+            if (updateError) {
+              console.error('❌ Error updating existing pending transaction:', updateError);
             } else {
-              console.log('⚠️ Financial transaction already exists (duplicate)');
+              console.log('✅ Updated existing pending transaction to completed:', existingPendingTx.id);
             }
           } else {
-            console.log('✅ Financial transaction recorded:', financialTransaction?.id);
+            // No existing pending transaction - insert new one
+            const { data: financialTransaction, error: financialError } = await supabase
+              .from('financial_transactions')
+              .insert({
+                booking_id: bookingId,
+                amount: totalAmount,
+                currency: 'USD',
+                stripe_transaction_id: capturedPaymentIntent.id,
+                payment_method: 'card',
+                description: paymentDescription,
+                transaction_type: 'booking_payment',
+                status: 'completed',
+                processed_at: new Date().toISOString(),
+                metadata: {
+                  payment_type: isDepositPayment ? 'deposit' : 'full_payment',
+                  is_deposit: isDepositPayment,
+                  remaining_balance: booking.remaining_balance || 0,
+                  captured_on_acceptance: true,
+                },
+              })
+              .select()
+              .single();
+
+            if (financialError) {
+              console.error('❌ Error recording financial transaction:', financialError);
+              console.error('❌ Error code:', financialError.code);
+              console.error('❌ Error message:', financialError.message);
+              if (financialError.code !== '23505') { // Ignore duplicates
+                // Don't throw - webhook will create transaction as fallback
+                console.error('⚠️ Financial transaction creation failed - webhook will create it as fallback');
+              } else {
+                console.log('⚠️ Financial transaction already exists (duplicate)');
+              }
+            } else {
+              console.log('✅ Financial transaction recorded:', financialTransaction?.id);
+            }
           }
 
           // Create business_payment_transaction

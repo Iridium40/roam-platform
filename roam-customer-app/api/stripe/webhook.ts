@@ -1873,17 +1873,44 @@ async function handleBalancePaymentIntent(paymentIntent: Stripe.PaymentIntent) {
       console.log('ℹ️ Booking already marked as balance charged, skipping update');
     }
 
-    // Check if financial transaction already exists to prevent duplicates
+    // Check if financial transaction already exists (created during payment intent creation)
     const { data: existingTx } = await supabase
       .from('financial_transactions')
-      .select('id')
+      .select('id, status')
       .eq('booking_id', booking_id)
       .eq('transaction_type', 'booking_payment')
       .eq('stripe_transaction_id', paymentIntent.id)
       .maybeSingle();
 
-    if (!existingTx) {
-      // Create financial transaction record only if it doesn't exist
+    if (existingTx) {
+      // Update existing transaction to completed (it may have been created as pending)
+      if (existingTx.status !== 'completed') {
+        const { error: updateError } = await supabase
+          .from('financial_transactions')
+          .update({
+            status: 'completed',
+            description: 'Remaining balance payment',
+            processed_at: new Date().toISOString(),
+            metadata: {
+              type: 'remaining_balance_payment',
+              provider_id,
+              platform_fee: parseFloat(platform_fee || '0'),
+              provider_amount: parseFloat(provider_amount || balance_amount || '0'),
+              booking_reference,
+            },
+          })
+          .eq('id', existingTx.id);
+
+        if (updateError) {
+          console.error('Error updating financial transaction for balance:', updateError);
+        } else {
+          console.log('✅ Updated financial transaction to completed for balance payment');
+        }
+      } else {
+        console.log('ℹ️ Financial transaction already completed for this balance payment');
+      }
+    } else {
+      // Create financial transaction record if it doesn't exist
       const { error: txError } = await supabase
         .from('financial_transactions')
         .insert({
@@ -1913,8 +1940,6 @@ async function handleBalancePaymentIntent(paymentIntent: Stripe.PaymentIntent) {
       } else {
         console.log('✅ Created financial transaction for balance payment');
       }
-    } else {
-      console.log('ℹ️ Financial transaction already exists for this balance payment');
     }
 
     // Update business_payment_transactions with completion status

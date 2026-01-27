@@ -565,13 +565,11 @@ function BookingDetailsContent() {
                       )}
                       <p className="text-foreground/60">
                         with {booking.providers?.first_name} {booking.providers?.last_name}
-                      </p>
-                      {booking.providers?.average_rating && (
-                        <div className="flex items-center gap-1 mt-1">
+                        <span className="inline-flex items-center gap-1 ml-2">
                           <Star className="w-4 h-4 text-roam-warning fill-current" />
-                          <span className="text-sm">{booking.providers.average_rating}</span>
-                        </div>
-                      )}
+                          <span className="text-sm">{booking.providers?.average_rating || "No rating"}</span>
+                        </span>
+                      </p>
                     </div>
                     <div className="text-right">
                       <p className="text-2xl font-bold text-roam-blue">
@@ -624,17 +622,23 @@ function BookingDetailsContent() {
                             {booking.business_locations.address_line1}, {booking.business_locations.city}, {booking.business_locations.state}
                           </button>
                         )}
-                        {booking.delivery_type === "mobile" && booking.customer_locations && (
-                          <button
-                            onClick={() => {
-                              const address = `${booking.customer_locations!.street_address}, ${booking.customer_locations!.city}, ${booking.customer_locations!.state}`;
-                              window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`, "_blank");
-                            }}
-                            className="text-sm text-roam-blue hover:underline flex items-center gap-1"
-                          >
-                            <MapPin className="w-4 h-4" />
-                            {booking.customer_locations.street_address}, {booking.customer_locations.city}, {booking.customer_locations.state}
-                          </button>
+                        {booking.delivery_type === "mobile" && (
+                          booking.customer_locations ? (
+                            <button
+                              onClick={() => {
+                                const address = `${booking.customer_locations!.street_address}, ${booking.customer_locations!.city}, ${booking.customer_locations!.state}`;
+                                window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`, "_blank");
+                              }}
+                              className="text-sm text-roam-blue hover:underline flex items-center gap-1"
+                            >
+                              <MapPin className="w-4 h-4" />
+                              {booking.customer_locations.street_address}, {booking.customer_locations.city}, {booking.customer_locations.state}
+                            </button>
+                          ) : (
+                            <p className="text-sm text-foreground/60">
+                              Service at your location - address to be confirmed with provider
+                            </p>
+                          )
                         )}
                         {booking.delivery_type === "virtual" && (
                           <p className="text-sm text-foreground/60">Virtual service - link will be provided</p>
@@ -1041,12 +1045,10 @@ function BookingDetailsContent() {
                       <h3 className="font-semibold text-lg">
                         {booking.providers?.first_name} {booking.providers?.last_name}
                       </h3>
-                      {booking.providers?.average_rating && (
-                        <div className="flex items-center gap-1 mt-1">
-                          <Star className="w-4 h-4 text-roam-warning fill-current" />
-                          <span className="text-sm">{booking.providers.average_rating} rating</span>
-                        </div>
-                      )}
+                      <div className="flex items-center gap-1 mt-1">
+                        <Star className="w-4 h-4 text-roam-warning fill-current" />
+                        <span className="text-sm">{booking.providers?.average_rating || "No rating"}</span>
+                      </div>
                       <div className="mt-3 space-y-2">
                         {booking.providers?.email && (
                           <a

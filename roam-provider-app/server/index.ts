@@ -872,7 +872,7 @@ export function createServer() {
               phone,
               image_url
             ),
-            customer_locations (
+            customer_locations!bookings_customer_location_id_fkey (
               id,
               location_name,
               street_address,
@@ -887,7 +887,7 @@ export function createServer() {
               access_instructions,
               location_type
             ),
-            business_locations (
+            business_locations!bookings_business_location_id_fkey (
               id,
               location_name,
               address_line1,

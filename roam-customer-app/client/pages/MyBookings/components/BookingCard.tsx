@@ -374,6 +374,8 @@ export const BookingCard: React.FC<BookingCardProps> = ({
                     <span className="text-foreground/60">
                       {booking.delivery_type === 'virtual'
                         ? 'Virtual Service - Link will be provided'
+                        : booking.delivery_type === 'mobile'
+                        ? 'Your location - confirm with provider'
                         : 'Location TBD'
                       }
                     </span>
@@ -846,6 +848,8 @@ export const BookingCard: React.FC<BookingCardProps> = ({
                   <p className="text-sm text-foreground/60">
                     {booking.delivery_type === 'virtual'
                       ? 'Virtual Service - Link will be provided'
+                      : booking.delivery_type === 'mobile'
+                      ? 'Your location - confirm with provider'
                       : 'Location TBD'
                     }
                   </p>
