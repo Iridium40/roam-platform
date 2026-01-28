@@ -64,6 +64,9 @@ import NotFound from "./pages/NotFound";
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
 
+// PWA Components
+import { PWAInstallBanner, OfflineIndicator, ServiceWorkerRegistration } from "@/components/pwa";
+
 // Lazy load large components for better performance
 const AdminUsers = lazy(() => import("./pages/AdminUsers"));
 const AdminCustomers = lazy(() => import("./pages/AdminCustomers"));
@@ -109,6 +112,8 @@ window.addEventListener("unhandledrejection", async (event) => {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
+      {/* PWA Components */}
+      <OfflineIndicator />
       <Toaster />
       <Sonner />
       <BrowserRouter>
@@ -328,6 +333,9 @@ const App = () => (
         </Routes>
       </BrowserRouter>
       <AnnouncementPopup appType="admin" />
+      {/* PWA Install Banner and Service Worker */}
+      <PWAInstallBanner />
+      <ServiceWorkerRegistration />
     </TooltipProvider>
   </QueryClientProvider>
 );
