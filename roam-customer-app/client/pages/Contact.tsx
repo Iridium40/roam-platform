@@ -118,15 +118,15 @@ export default function Contact() {
   const faqs = [
     {
       question: "How do I book a service?",
-      answer: "Browse our services, select a provider, choose your preferred time, and complete the booking with secure payment."
+      answer: "Browse our services, choose your preferred time, select a provider, choose your location and complete the booking with secure payment."
     },
     {
       question: "How do I become a provider?",
-      answer: "Apply through our 'Become a Provider' page. We welcome verified professionals in beauty, fitness, wellness, and healthcare."
+      answer: "Apply through our 'Become a Provider' page. We welcome verified professionals in beauty, fitness, wellness, and healthcare to name a few."
     },
     {
       question: "What if I need to cancel my booking?",
-      answer: "Cancellation policies vary by provider. Most allow cancellations up to 24 hours before your appointment."
+      answer: "You may cancel from your My Bookings page. Cancellations are allowed up to 24 hours before your appointment."
     },
     {
       question: "How does payment work?",

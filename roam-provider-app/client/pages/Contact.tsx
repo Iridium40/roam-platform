@@ -304,7 +304,7 @@ function FAQ() {
   const faqs = [
     {
       question: "How do I get paid?",
-      answer: "Payments are automatically transferred to your linked bank account once a week on Thursday. No invoicing required!",
+      answer: "Payments are automatically transferred to your linked bank account once a week (Default Day is Thursday). You may go to the Financials page and click the Stripe Dashboard to change your day of the week in which you get paid. No invoicing required!",
     },
     {
       question: "What does ROAM charge?",
@@ -312,11 +312,11 @@ function FAQ() {
     },
     {
       question: "Can I set my own prices?",
-      answer: "Yes! You have complete control over your service pricing, add-ons, and travel fees. Update them anytime from your dashboard.",
+      answer: "Yes! You have complete control over your service pricing fees. We don't list travel fees and it is expected that they are included into your service fees. You may update your service fees at anytime in your dashboard under business settings.",
     },
     {
       question: "How do I handle cancellations?",
-      answer: "Our straightforward cancellation policy is easy to understand for both providers and customers. Cancellations made more than 24 hours in advance receive a 100% refund of service fees (platform fees are not refunded). Cancellations within 24 hours receive no refund.",
+      answer: "Our straightforward cancellation policy is easy to understand for both providers and customers. Cancellations made more than 24 hours in advance receive a 100% refund of service fees (platform fees are not refunded). Cancellations within 24 hours receive no refund to the customer. Providers will be paid out for bookings that were canceled at a delayed date of 60 days due to banking regulations.",
     },
     {
       question: "Do I need insurance?",
@@ -324,7 +324,31 @@ function FAQ() {
     },
     {
       question: "How does scheduling work?",
-      answer: "You control your availability through the provider dashboard. Customers can only book times you've marked as available, and you can accept or decline any booking request.",
+      answer: "You control your availability through the provider dashboard. Customers can only book days and times you've marked as available, and you can accept or decline any booking request.",
+    },
+    {
+      question: "Is there really no commission on my services?",
+      answer: "Yes. You keep 100% of your service fees. Customers pay a separate platform fee to ROAM for convenience and security.",
+    },
+    {
+      question: "Do I have to give customers my phone number?",
+      answer: "No, you are not required to provide your phone number or email to a customer. All communication may happen via our secure in-app messaging to protect your privacy.",
+    },
+    {
+      question: "Can I receive a tip from clients?",
+      answer: "Yes, ROAM allows the clients to leave a tip after the session is completed via the app.",
+    },
+    {
+      question: "What if a client requests more services during the booking?",
+      answer: "ROAM allows service providers to add to the client's balance to receive additional funds at anytime prior to completion of the booking.",
+    },
+    {
+      question: "Can I choose the services I offer on ROAM?",
+      answer: "Yes, ROAM provides a list of services supported on the app. As a service provider, you decide what service you wish to offer to your clients. If the service you wish to provide is not listed then request it by sending an email to: providersupport@roamyourbestlife.com",
+    },
+    {
+      question: "Who sets the prices for services on ROAM?",
+      answer: "Our service providers set their own prices for the services they offer.",
     },
   ];
 

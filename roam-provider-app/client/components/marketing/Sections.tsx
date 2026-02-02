@@ -265,35 +265,50 @@ export function Comparison() {
 export function FAQ() {
   const items = [
     {
-      q: "Is there really no commission on my services?",
-      a: "Yes. You keep 100% of your rate. Customers pay a separate platform fee to ROAM for convenience and security.",
+      q: "How do I get paid?",
+      a: "Payments are automatically transferred to your linked bank account once a week (Default Day is Thursday). You may go to the Financials page and click the Stripe Dashboard to change your day of the week in which you get paid. No invoicing required!",
     },
     {
-      q: "When do I get paid?",
-      a: "You set your payout schedule in Stripe Express. You can also choose an instant payout (minutes).",
+      q: "What does ROAM charge?",
+      a: "ROAM charges a 20% platform fee on each booking. This covers payment processing, marketing, customer support, and all platform features.",
+    },
+    {
+      q: "Can I set my own prices?",
+      a: "Yes! You have complete control over your service pricing fees. We don't list travel fees and it is expected that they are included into your service fees. You may update your service fees at anytime in your dashboard under business settings.",
+    },
+    {
+      q: "How do I handle cancellations?",
+      a: "Our straightforward cancellation policy is easy to understand for both providers and customers. Cancellations made more than 24 hours in advance receive a 100% refund of service fees (platform fees are not refunded). Cancellations within 24 hours receive no refund to the customer. Providers will be paid out for bookings that were canceled at a delayed date of 60 days due to banking regulations.",
+    },
+    {
+      q: "Do I need insurance?",
+      a: "Yes, all providers must maintain current liability insurance and provide proof during onboarding. This protects you, your customers, and the ROAM platform.",
+    },
+    {
+      q: "How does scheduling work?",
+      a: "You control your availability through the provider dashboard. Customers can only book days and times you've marked as available, and you can accept or decline any booking request.",
+    },
+    {
+      q: "Is there really no commission on my services?",
+      a: "Yes. You keep 100% of your service fees. Customers pay a separate platform fee to ROAM for convenience and security.",
     },
     {
       q: "Do I have to give customers my phone number?",
-      a: "No. All communication happens via secure in-app messaging to protect your privacy.",
+      a: "No, you are not required to provide your phone number or email to a customer. All communication may happen via our secure in-app messaging to protect your privacy.",
     },
     {
       q: "How can I become a service partner on ROAM?",
-      a: "If you are a service provider interested in joining the ROAM Team, download the app and submit the requested information for review.",
-    },
-    {
-      q: "What kind of support does ROAM offer?",
       a: (
         <span>
-          Learn more about the resources ROAM offers {""}
+          If you are a service provider interested in joining the ROAM Team, go to{" "}
           <a
-            href="https://roamyourbestlife.com/wp-content/uploads/2024/06/Service-Partner-Resources.pdf"
+            href="https://roamprovider.com"
             target="_blank"
             rel="noopener noreferrer"
             className="font-semibold text-primary underline-offset-2 hover:underline"
           >
-            here
+            roamprovider.com
           </a>
-          .
         </span>
       ),
     },
@@ -306,20 +321,16 @@ export function FAQ() {
       a: "ROAM provides a convenient and transparent connection to preferred services and providers to its members. Service sectors are offered based on demand and ROAM tracks and identifies the demand in our service areas. We want providers to have easy access to members and vice versa, so controlling the services offered ensures a more streamlined connection.",
     },
     {
-      q: "How do I contact customer support?",
+      q: "How do I contact provider support?",
       a: (
         <span>
-          You can contact 24 hour customer support via the app or submit any
-          inquiries or concerns you may have via {""}
+          You can contact provider support by email at:{" "}
           <a
-            href="https://roamyourbestlife.com/providers/#link-popup"
-            target="_blank"
-            rel="noopener noreferrer"
+            href="mailto:providersupport@roamyourbestlife.com"
             className="font-semibold text-primary underline-offset-2 hover:underline"
           >
-            email here
+            providersupport@roamyourbestlife.com
           </a>
-          .
         </span>
       ),
     },
@@ -328,30 +339,26 @@ export function FAQ() {
       a: "Yes, ROAM allows the clients to leave a tip after the session is completed via the app.",
     },
     {
+      q: "What if a client requests more services during the booking?",
+      a: "ROAM allows service providers to add to the client's balance to receive additional funds at anytime prior to completion of the booking.",
+    },
+    {
       q: "Can I choose the services I offer on ROAM?",
-      a: "Yes, ROAM provides a list of services supported on the app. As a service provider, you decide what service you wish to offer to your clients.",
+      a: (
+        <span>
+          Yes, ROAM provides a list of services supported on the app. As a service provider, you decide what service you wish to offer to your clients. If the service you wish to provide is not listed then request it by sending an email to:{" "}
+          <a
+            href="mailto:providersupport@roamyourbestlife.com"
+            className="font-semibold text-primary underline-offset-2 hover:underline"
+          >
+            providersupport@roamyourbestlife.com
+          </a>
+        </span>
+      ),
     },
     {
       q: "Who sets the prices for services on ROAM?",
       a: "Our service providers set their own prices for the services they offer.",
-    },
-    {
-      q: "How can I learn about ROAM's latest news and partner events?",
-      a: (
-        <span>
-          Sign up for our {""}
-          <a
-            href="https://roamyourbestlife.com/providers/#link-newsletter"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-semibold text-primary underline-offset-2 hover:underline"
-          >
-            emails
-          </a>{" "}
-          and check our app and website regularly to stay in the loop on the
-          latest news and events.
-        </span>
-      ),
     },
   ];
   return (

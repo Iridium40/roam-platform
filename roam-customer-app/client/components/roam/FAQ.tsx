@@ -13,11 +13,11 @@ export default function FAQ() {
     },
     {
       q: "What if I need to cancel or reschedule?",
-      a: `Our straightforward cancellation policy is easy to understand. Cancellations made more than 24 hours in advance receive a 100% refund of service fees (platform fees are not refunded). Cancellations within 24 hours receive no refund.`,
+      a: `You may cancel or reschedule from your My Booking page. Our straightforward cancellation policy is easy to understand. Cancellations made more than 24 hours in advance receive a 100% refund of service fees (platform fees are not refunded). Cancellations within 24 hours receive no refund.`,
     },
     {
       q: "How does pricing work?",
-      a: `Pricing includes a service fee and a platform fee of 20%. That is it.`,
+      a: `Pricing includes a service fee, a platform fee of 20% and any applicable taxes.`,
     },
     {
       q: "Is my payment information secure?",
