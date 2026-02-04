@@ -16,9 +16,9 @@ import { NotificationPreferences } from '@/components/NotificationPreferences';
 import { logger } from '@/utils/logger';
 
 export default function CustomerProfile() {
-  const { customer } = useAuth();
+  const { customer, loading: authLoading } = useAuth();
   const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
+  const [dataLoading, setDataLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   
@@ -53,7 +53,7 @@ export default function CustomerProfile() {
     if (!customer) return;
 
     try {
-      setLoading(true);
+      setDataLoading(true);
       const { data, error } = await supabase
         .from('customer_profiles')
         .select('*')
@@ -84,7 +84,7 @@ export default function CustomerProfile() {
         variant: 'destructive',
       });
     } finally {
-      setLoading(false);
+      setDataLoading(false);
     }
   };
 
@@ -92,7 +92,7 @@ export default function CustomerProfile() {
     if (!customer) return;
 
     try {
-      setLoading(true);
+      setDataLoading(true);
 
       const { error } = await supabase
         .from('customer_profiles')
@@ -124,7 +124,7 @@ export default function CustomerProfile() {
         variant: 'destructive',
       });
     } finally {
-      setLoading(false);
+      setDataLoading(false);
     }
   };
 
@@ -205,7 +205,35 @@ export default function CustomerProfile() {
     return 'CU';
   };
 
-  if (loading && !profileData.first_name) {
+  // Show loading while auth is initializing
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 animate-spin text-roam-blue mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show sign-in prompt if not authenticated
+  if (!customer) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <User className="w-12 h-12 text-roam-blue mx-auto mb-4" />
+          <h2 className="text-xl font-semibold mb-2">Sign In Required</h2>
+          <p className="text-muted-foreground mb-4">Please sign in to view your profile.</p>
+          <Button asChild>
+            <Link to="/signin">Sign In</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (dataLoading && !profileData.first_name) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -382,10 +410,10 @@ export default function CustomerProfile() {
             {/* Save Button */}
             <Button 
               onClick={handleSave} 
-              disabled={loading || !hasChanges}
+              disabled={dataLoading || !hasChanges}
               className="w-full"
             >
-              {loading ? (
+              {dataLoading ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   Saving...

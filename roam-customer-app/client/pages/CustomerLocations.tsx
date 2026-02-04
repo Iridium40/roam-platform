@@ -41,10 +41,10 @@ interface CustomerLocation {
 }
 
 export default function CustomerLocations() {
-  const { customer } = useAuth();
+  const { customer, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const [locations, setLocations] = useState<CustomerLocation[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingLocation, setEditingLocation] = useState<CustomerLocation | null>(null);
@@ -72,7 +72,7 @@ export default function CustomerLocations() {
     if (!customer) return;
 
     try {
-      setLoading(true);
+      setDataLoading(true);
       const { data, error } = await supabase
         .from('customer_locations')
         .select('*')
@@ -91,9 +91,37 @@ export default function CustomerLocations() {
         variant: 'destructive',
       });
     } finally {
-      setLoading(false);
+      setDataLoading(false);
     }
   };
+
+  // Show loading while auth is initializing
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <MapPin className="w-12 h-12 animate-pulse text-roam-blue mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show sign-in prompt if not authenticated
+  if (!customer) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <MapPin className="w-12 h-12 text-roam-blue mx-auto mb-4" />
+          <h2 className="text-xl font-semibold mb-2">Sign In Required</h2>
+          <p className="text-muted-foreground mb-4">Please sign in to view your saved locations.</p>
+          <Button asChild>
+            <Link to="/signin">Sign In</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   // Parse Google Places result and populate form fields (when place is selected)
   // Memoized to prevent re-renders that cause focus loss
@@ -398,7 +426,7 @@ export default function CustomerLocations() {
   };
 
 
-  if (loading) {
+  if (dataLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">

@@ -51,12 +51,12 @@ interface BusinessFavorite {
 }
 
 export function CustomerFavorites() {
-  const { isCustomer, customer } = useAuth();
+  const { isCustomer, customer, loading: authLoading } = useAuth();
   const { favorites: providerFavorites, loading: providersLoading, error: providersError, removeFavorite: removeProviderFavorite } = useFavorites();
   const [serviceFavorites, setServiceFavorites] = useState<ServiceFavorite[]>([]);
   const [businessFavorites, setBusinessFavorites] = useState<BusinessFavorite[]>([]);
-  const [servicesLoading, setServicesLoading] = useState(true);
-  const [businessesLoading, setBusinessesLoading] = useState(true);
+  const [servicesLoading, setServicesLoading] = useState(false);
+  const [businessesLoading, setBusinessesLoading] = useState(false);
   const [servicesError, setServicesError] = useState<string | null>(null);
   const [businessesError, setBusinessesError] = useState<string | null>(null);
 
@@ -171,8 +171,19 @@ export function CustomerFavorites() {
     }
   };
 
-  const loading = providersLoading || servicesLoading || businessesLoading;
+  const dataLoading = providersLoading || servicesLoading || businessesLoading;
   const error = providersError || servicesError || businessesError;
+
+  // Show loading while auth is initializing
+  if (authLoading) {
+    return (
+      <Card className="p-8 text-center">
+        <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-roam-blue" />
+        <h3 className="text-lg font-semibold mb-2">Loading...</h3>
+        <p className="text-foreground/60">Please wait...</p>
+      </Card>
+    );
+  }
 
   if (!isCustomer) {
     return (
@@ -191,7 +202,7 @@ export function CustomerFavorites() {
     );
   }
 
-  if (loading) {
+  if (dataLoading) {
     return (
       <Card className="p-8 text-center">
         <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-roam-blue" />

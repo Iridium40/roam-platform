@@ -53,9 +53,9 @@ interface Transaction {
 }
 
 export default function CustomerTransactions() {
-  const { customer } = useAuth();
+  const { customer, loading: authLoading } = useAuth();
   const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(false);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [filter, setFilter] = useState<'all' | 'payment' | 'refund' | 'tip'>('all');
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
@@ -72,7 +72,7 @@ export default function CustomerTransactions() {
     if (!customer) return;
 
     try {
-      setLoading(true);
+      setDataLoading(true);
 
       // Get all bookings for this customer
       const { data: bookingsData, error: bookingsError } = await supabase
@@ -86,7 +86,7 @@ export default function CustomerTransactions() {
 
       if (bookingIds.length === 0) {
         setTransactions([]);
-        setLoading(false);
+        setDataLoading(false);
         return;
       }
 
@@ -150,7 +150,7 @@ export default function CustomerTransactions() {
         variant: 'destructive',
       });
     } finally {
-      setLoading(false);
+      setDataLoading(false);
     }
   };
 
@@ -247,7 +247,35 @@ export default function CustomerTransactions() {
     return txType === filter;
   });
 
-  if (loading) {
+  // Show loading while auth is initializing
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 animate-spin text-roam-blue mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show sign-in prompt if not authenticated
+  if (!customer) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <Receipt className="w-12 h-12 text-roam-blue mx-auto mb-4" />
+          <h2 className="text-xl font-semibold mb-2">Sign In Required</h2>
+          <p className="text-muted-foreground mb-4">Please sign in to view your transaction history.</p>
+          <Button asChild>
+            <Link to="/signin">Sign In</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (dataLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
