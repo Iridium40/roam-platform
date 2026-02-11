@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -18,16 +19,114 @@ export function NotificationPreferences() {
   const [saving, setSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
 
+  // SMS Consent Preferences (from customer_profiles)
+  const [smsPreferences, setSmsPreferences] = useState({
+    serviceMessages: true,
+    marketingMessages: false,
+  });
+  const [originalSmsPreferences, setOriginalSmsPreferences] = useState({
+    serviceMessages: true,
+    marketingMessages: false,
+  });
+  const [savingSmsPreferences, setSavingSmsPreferences] = useState(false);
+  const [hasSmsChanges, setHasSmsChanges] = useState(false);
+
   const userId = customer?.user_id;
 
   useEffect(() => {
     if (userId) {
       loadSettings();
+      loadSmsPreferences();
     } else if (!authLoading) {
       // Auth loaded but no user
       setLoading(false);
     }
   }, [userId, authLoading]);
+
+  // Detect SMS preference changes
+  useEffect(() => {
+    setHasSmsChanges(
+      smsPreferences.serviceMessages !== originalSmsPreferences.serviceMessages ||
+      smsPreferences.marketingMessages !== originalSmsPreferences.marketingMessages
+    );
+  }, [smsPreferences, originalSmsPreferences]);
+
+  async function loadSmsPreferences() {
+    try {
+      const { data, error } = await supabase
+        .from('customer_profiles')
+        .select('sms_service_consent, sms_marketing_consent')
+        .eq('user_id', userId)
+        .single();
+
+      if (error) {
+        logger.error('Error loading SMS preferences:', error);
+        return;
+      }
+
+      if (data) {
+        const prefs = {
+          serviceMessages: data.sms_service_consent ?? true,
+          marketingMessages: data.sms_marketing_consent ?? false,
+        };
+        setSmsPreferences(prefs);
+        setOriginalSmsPreferences({ ...prefs });
+      }
+    } catch (error) {
+      logger.error('Error loading SMS preferences:', error);
+    }
+  }
+
+  async function saveSmsPreferences() {
+    setSavingSmsPreferences(true);
+    try {
+      const now = new Date().toISOString();
+
+      const updateData: Record<string, any> = {
+        sms_service_consent: smsPreferences.serviceMessages,
+        sms_marketing_consent: smsPreferences.marketingMessages,
+      };
+
+      // Track consent/opt-out dates
+      if (smsPreferences.marketingMessages && !originalSmsPreferences.marketingMessages) {
+        updateData.sms_marketing_consent_date = now;
+        updateData.sms_marketing_opt_out_date = null;
+      } else if (!smsPreferences.marketingMessages && originalSmsPreferences.marketingMessages) {
+        updateData.sms_marketing_opt_out_date = now;
+      }
+
+      if (smsPreferences.serviceMessages && !originalSmsPreferences.serviceMessages) {
+        updateData.sms_service_consent_date = now;
+        updateData.sms_service_opt_out_date = null;
+      } else if (!smsPreferences.serviceMessages && originalSmsPreferences.serviceMessages) {
+        updateData.sms_service_opt_out_date = now;
+      }
+
+      const { error } = await supabase
+        .from('customer_profiles')
+        .update(updateData)
+        .eq('user_id', userId);
+
+      if (error) throw error;
+
+      setOriginalSmsPreferences({ ...smsPreferences });
+      setHasSmsChanges(false);
+
+      toast({
+        title: 'Settings saved',
+        description: 'Your SMS preferences have been updated.',
+      });
+    } catch (error) {
+      logger.error('Error saving SMS preferences:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to save SMS preferences. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setSavingSmsPreferences(false);
+    }
+  }
 
   // Detect changes by comparing current settings with original
   useEffect(() => {
@@ -203,6 +302,75 @@ export function NotificationPreferences() {
 
   return (
     <div className="space-y-6">
+      {/* SMS Consent Preferences */}
+      <Card>
+        <CardHeader>
+          <CardTitle>SMS Preferences</CardTitle>
+          <CardDescription>
+            Manage your SMS message consent for service and marketing communications
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Service Messages */}
+          <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+            <div className="flex-1">
+              <p className="font-medium">Service Messages</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Booking confirmations, appointment reminders, and account notifications
+              </p>
+            </div>
+            <div className="ml-4">
+              <span className="text-sm text-muted-foreground bg-muted px-3 py-1 rounded-full">
+                Required
+              </span>
+            </div>
+          </div>
+
+          {/* Marketing Messages */}
+          <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+            <div className="flex-1">
+              <p className="font-medium">Marketing Messages</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Promotional offers, discounts, and announcements
+              </p>
+            </div>
+            <div className="ml-4">
+              <Switch
+                checked={smsPreferences.marketingMessages}
+                onCheckedChange={(checked) =>
+                  setSmsPreferences(prev => ({ ...prev, marketingMessages: checked }))
+                }
+              />
+            </div>
+          </div>
+
+          {/* Help text */}
+          <p className="text-xs text-muted-foreground">
+            You can also reply STOP to any text message to opt out, or HELP for assistance.
+          </p>
+
+          {/* Save button */}
+          <Button
+            onClick={saveSmsPreferences}
+            disabled={savingSmsPreferences || !hasSmsChanges}
+            className="w-full"
+          >
+            {savingSmsPreferences ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4 mr-2" />
+                Save SMS Preferences
+              </>
+            )}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Notification Preferences */}
       <Card>
         <CardHeader>
           <CardTitle>Notification Preferences</CardTitle>

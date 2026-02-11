@@ -48,6 +48,8 @@ export interface SendSMSParams {
   templateKey: string;
   variables: Record<string, any>;
   metadata?: Record<string, any>;
+  /** Optional message type: 'service' for transactional, 'marketing' for promotional */
+  messageType?: 'service' | 'marketing';
 }
 
 export interface SendNotificationParams {

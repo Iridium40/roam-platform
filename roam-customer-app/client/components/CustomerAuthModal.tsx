@@ -65,8 +65,12 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
     phone: "",
   });
 
-  // SMS marketing consent state
-  const [smsConsent, setSmsConsent] = useState(false);
+  // SMS consent state
+  const [consent, setConsent] = useState({
+    serviceMessages: true,      // Can default to checked (required for service)
+    marketingMessages: false,   // MUST default to unchecked (Twilio requirement)
+    termsAccepted: false,       // Required
+  });
 
   const resetForm = () => {
     setSignInData({ email: "", password: "" });
@@ -78,7 +82,7 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
       confirmPassword: "",
       phone: "",
     });
-    setSmsConsent(false);
+    setConsent({ serviceMessages: true, marketingMessages: false, termsAccepted: false });
     setError(null);
     setSuccess(null);
     setShowPassword(false);
@@ -164,6 +168,8 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
         firstName: signUpData.firstName,
         lastName: signUpData.lastName,
         phone: signUpData.phone,
+        smsServiceConsent: consent.serviceMessages,
+        smsMarketingConsent: consent.marketingMessages,
       });
 
       // Check if this was successful registration that requires email confirmation
@@ -700,32 +706,101 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
                       </div>
                     )}
 
-                  {/* SMS Marketing Consent Checkbox */}
-                  <div className="flex items-start space-x-3 p-3 bg-muted/50 rounded-lg">
-                    <Checkbox
-                      id="sms-consent"
-                      checked={smsConsent}
-                      onCheckedChange={(checked) => setSmsConsent(checked === true)}
-                      className="mt-0.5"
-                    />
-                    <div className="grid gap-1.5 leading-none">
-                      <label
-                        htmlFor="sms-consent"
-                        className="text-sm font-medium leading-tight cursor-pointer"
-                      >
-                        I agree to receive promotional SMS messages from ROAM
-                      </label>
-                      <p className="text-xs text-muted-foreground">
-                        Message frequency varies. Message and data rates may apply. 
-                        Reply STOP to unsubscribe at any time.
-                      </p>
+                  {/* SMS Consent Section */}
+                  <div className="space-y-3">
+                    {/* Service Messages - Required */}
+                    <div className="flex items-start space-x-3 p-3 bg-muted/50 rounded-lg">
+                      <Checkbox
+                        id="service-messages"
+                        checked={consent.serviceMessages}
+                        onCheckedChange={(checked) =>
+                          setConsent(prev => ({ ...prev, serviceMessages: checked === true }))
+                        }
+                        className="mt-0.5"
+                      />
+                      <div className="grid gap-1.5 leading-none">
+                        <label
+                          htmlFor="service-messages"
+                          className="text-sm font-medium leading-tight cursor-pointer"
+                        >
+                          Service Messages <span className="text-red-500">*</span>
+                        </label>
+                        <p className="text-xs text-muted-foreground">
+                          I agree to receive booking confirmations, appointment reminders,
+                          and account notifications via SMS. Message and data rates may apply.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Marketing Messages - Optional, MUST be unchecked by default */}
+                    <div className="flex items-start space-x-3 p-3 bg-muted/50 rounded-lg">
+                      <Checkbox
+                        id="marketing-messages"
+                        checked={consent.marketingMessages}
+                        onCheckedChange={(checked) =>
+                          setConsent(prev => ({ ...prev, marketingMessages: checked === true }))
+                        }
+                        className="mt-0.5"
+                      />
+                      <div className="grid gap-1.5 leading-none">
+                        <label
+                          htmlFor="marketing-messages"
+                          className="text-sm font-medium leading-tight cursor-pointer"
+                        >
+                          Marketing Messages <span className="text-muted-foreground">(Optional)</span>
+                        </label>
+                        <p className="text-xs text-muted-foreground">
+                          I'd like to receive promotional offers, discounts, and announcements
+                          via SMS. You can opt out anytime by replying STOP.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Terms & Privacy - Required */}
+                    <div className="flex items-start space-x-3 p-3 bg-muted/50 rounded-lg">
+                      <Checkbox
+                        id="terms-accepted"
+                        checked={consent.termsAccepted}
+                        onCheckedChange={(checked) =>
+                          setConsent(prev => ({ ...prev, termsAccepted: checked === true }))
+                        }
+                        className="mt-0.5"
+                      />
+                      <div className="grid gap-1.5 leading-none">
+                        <label
+                          htmlFor="terms-accepted"
+                          className="text-sm font-medium leading-tight cursor-pointer"
+                        >
+                          Terms & Privacy <span className="text-red-500">*</span>
+                        </label>
+                        <p className="text-xs text-muted-foreground">
+                          I agree to the{' '}
+                          <a
+                            href="/terms"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-roam-blue underline hover:text-roam-blue/80"
+                          >
+                            Terms of Service
+                          </a>
+                          {' '}and{' '}
+                          <a
+                            href="/privacy"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-roam-blue underline hover:text-roam-blue/80"
+                          >
+                            Privacy Policy
+                          </a>.
+                        </p>
+                      </div>
                     </div>
                   </div>
 
                   <Button
                     type="submit"
                     className="w-full bg-roam-blue hover:bg-roam-blue/90"
-                    disabled={loading}
+                    disabled={loading || !consent.serviceMessages || !consent.termsAccepted}
                   >
                     {loading ? (
                       <>
@@ -742,14 +817,7 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
           </TabsContent>
         </Tabs>
 
-        <div className="text-center text-xs text-foreground/60 space-y-2 px-2">
-          <p>
-            By signing up, you agree to our{" "}
-            <a href="/terms" className="text-roam-blue hover:underline">Terms of Service</a>
-            {" "}and{" "}
-            <a href="/privacy" className="text-roam-blue hover:underline">Privacy Policy</a>
-          </p>
-        </div>
+        {/* Terms acknowledgment moved to consent checkboxes in sign-up form */}
       </DialogContent>
     </Dialog>
   );

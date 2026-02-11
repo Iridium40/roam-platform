@@ -19,7 +19,11 @@ export default function SignIn() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
-  const [smsConsent, setSmsConsent] = useState(false);
+  const [consent, setConsent] = useState({
+    serviceMessages: true,      // Can default to checked (required for service)
+    marketingMessages: false,   // MUST default to unchecked (Twilio requirement)
+    termsAccepted: false,       // Required
+  });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -39,6 +43,8 @@ export default function SignIn() {
           firstName,
           lastName,
           phone,
+          smsServiceConsent: consent.serviceMessages,
+          smsMarketingConsent: consent.marketingMessages,
         });
         toast({
           title: "Account Created",
@@ -74,7 +80,7 @@ export default function SignIn() {
     setFirstName("");
     setLastName("");
     setPhone("");
-    setSmsConsent(false);
+    setConsent({ serviceMessages: true, marketingMessages: false, termsAccepted: false });
   };
 
   return (
@@ -266,34 +272,83 @@ export default function SignIn() {
                   )}
                 </div>
 
-                {/* Terms Agreement & SMS Marketing Consent */}
+                {/* SMS Consent Section */}
                 {isSignUp && (
                   <div className="space-y-3">
-                    <p className="text-xs text-muted-foreground">
-                      By creating an account, you agree to our{" "}
-                      <Link to="/terms" className="text-roam-blue hover:underline">Terms of Service</Link>
-                      {" "}and{" "}
-                      <Link to="/privacy" className="text-roam-blue hover:underline">Privacy Policy</Link>.
-                    </p>
-                    
-                    {/* SMS Marketing Consent Checkbox */}
+                    {/* Service Messages - Required */}
                     <div className="flex items-start space-x-3 p-3 bg-muted/50 rounded-lg">
                       <Checkbox
-                        id="sms-consent-page"
-                        checked={smsConsent}
-                        onCheckedChange={(checked) => setSmsConsent(checked === true)}
+                        id="service-messages-page"
+                        checked={consent.serviceMessages}
+                        onCheckedChange={(checked) =>
+                          setConsent(prev => ({ ...prev, serviceMessages: checked === true }))
+                        }
                         className="mt-0.5"
                       />
                       <div className="grid gap-1.5 leading-none">
                         <label
-                          htmlFor="sms-consent-page"
+                          htmlFor="service-messages-page"
                           className="text-sm font-medium leading-tight cursor-pointer"
                         >
-                          I agree to receive promotional SMS messages from ROAM
+                          Service Messages <span className="text-red-500">*</span>
                         </label>
                         <p className="text-xs text-muted-foreground">
-                          Message frequency varies. Message and data rates may apply. 
-                          Reply STOP to unsubscribe at any time.
+                          I agree to receive booking confirmations, appointment reminders,
+                          and account notifications via SMS. Message and data rates may apply.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Marketing Messages - Optional, MUST be unchecked by default */}
+                    <div className="flex items-start space-x-3 p-3 bg-muted/50 rounded-lg">
+                      <Checkbox
+                        id="marketing-messages-page"
+                        checked={consent.marketingMessages}
+                        onCheckedChange={(checked) =>
+                          setConsent(prev => ({ ...prev, marketingMessages: checked === true }))
+                        }
+                        className="mt-0.5"
+                      />
+                      <div className="grid gap-1.5 leading-none">
+                        <label
+                          htmlFor="marketing-messages-page"
+                          className="text-sm font-medium leading-tight cursor-pointer"
+                        >
+                          Marketing Messages <span className="text-muted-foreground">(Optional)</span>
+                        </label>
+                        <p className="text-xs text-muted-foreground">
+                          I'd like to receive promotional offers, discounts, and announcements
+                          via SMS. You can opt out anytime by replying STOP.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Terms & Privacy - Required */}
+                    <div className="flex items-start space-x-3 p-3 bg-muted/50 rounded-lg">
+                      <Checkbox
+                        id="terms-accepted-page"
+                        checked={consent.termsAccepted}
+                        onCheckedChange={(checked) =>
+                          setConsent(prev => ({ ...prev, termsAccepted: checked === true }))
+                        }
+                        className="mt-0.5"
+                      />
+                      <div className="grid gap-1.5 leading-none">
+                        <label
+                          htmlFor="terms-accepted-page"
+                          className="text-sm font-medium leading-tight cursor-pointer"
+                        >
+                          Terms & Privacy <span className="text-red-500">*</span>
+                        </label>
+                        <p className="text-xs text-muted-foreground">
+                          I agree to the{' '}
+                          <Link to="/terms" className="text-roam-blue underline hover:text-roam-blue/80">
+                            Terms of Service
+                          </Link>
+                          {' '}and{' '}
+                          <Link to="/privacy" className="text-roam-blue underline hover:text-roam-blue/80">
+                            Privacy Policy
+                          </Link>.
                         </p>
                       </div>
                     </div>
@@ -303,7 +358,7 @@ export default function SignIn() {
                 <Button 
                   type="submit" 
                   className="w-full bg-roam-blue hover:bg-roam-blue/90"
-                  disabled={loading}
+                  disabled={loading || (isSignUp && (!consent.serviceMessages || !consent.termsAccepted))}
                 >
                   {loading ? (
                     <>

@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { FileText, Shield, Calendar, DollarSign, ArrowLeft } from "lucide-react";
+import { FileText, Shield, Calendar, DollarSign, ArrowLeft, MessageSquare } from "lucide-react";
 import { Header } from "@/components/Header";
 
 export default function TermsAndConditions() {
@@ -10,7 +10,8 @@ export default function TermsAndConditions() {
     { icon: DollarSign, title: "Booking & Payment", id: "booking" },
     { icon: Calendar, title: "Cancellation Policy", id: "cancellation" },
     { icon: Shield, title: "Disputes & Contact", id: "disputes" },
-    { icon: FileText, title: "General Terms", id: "general" }
+    { icon: FileText, title: "General Terms", id: "general" },
+    { icon: MessageSquare, title: "SMS/Text Messaging", id: "sms-terms" }
   ];
 
   return (
@@ -178,6 +179,138 @@ export default function TermsAndConditions() {
                     <p className="text-foreground/80 leading-relaxed">
                     By using ROAM's services, you agree to comply with all applicable laws and regulations. ROAM reserves the right to modify these terms and conditions at any time. Continued use of our services after changes constitutes acceptance of the modified terms.
                   </p>
+                  </div>
+                </section>
+
+                <section id="sms-terms" className="mb-12 scroll-mt-24">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-emerald-500 rounded-xl flex items-center justify-center shadow-sm">
+                      <MessageSquare className="w-5 h-5 text-white" />
+                    </div>
+                    <h2 className="text-2xl font-bold mb-0">5. SMS/Text Messaging Terms</h2>
+                  </div>
+                  
+                  <div className="space-y-6">
+                    <div className="bg-teal-50 p-6 rounded-xl border border-teal-200">
+                      <h3 className="text-xl font-bold mb-3">5.1 Consent to Receive Messages</h3>
+                      <p className="text-foreground/80 leading-relaxed mb-4">
+                        By providing your phone number and checking the appropriate consent boxes during 
+                        registration or at any later time, you agree to receive text messages from ROAM 
+                        at the phone number provided.
+                      </p>
+                      <ul className="space-y-2 ml-6 text-foreground/80">
+                        <li className="flex items-start gap-2">
+                          <span className="text-teal-600 mt-1">•</span>
+                          <span><strong>Service Messages:</strong> By creating an account, you consent to receive 
+                          transactional messages related to your bookings, appointments, and account activity. 
+                          This consent is required to use our booking services.</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-teal-600 mt-1">•</span>
+                          <span><strong>Marketing Messages:</strong> You may optionally consent to receive promotional 
+                          messages including offers, discounts, and announcements. This consent is not required 
+                          to use our services and you may opt out at any time.</span>
+                        </li>
+                      </ul>
+                    </div>
+
+                    <div className="bg-teal-50 p-6 rounded-xl border border-teal-200">
+                      <h3 className="text-xl font-bold mb-3">5.2 Your Responsibilities</h3>
+                      <p className="text-foreground/80 leading-relaxed mb-4">You agree to:</p>
+                      <ul className="space-y-2 ml-6 text-foreground/80">
+                        <li className="flex items-start gap-2">
+                          <span className="text-teal-600 mt-1">•</span>
+                          <span>Provide a valid mobile phone number that you own or are authorized to use</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-teal-600 mt-1">•</span>
+                          <span>Promptly notify us if your phone number changes</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-teal-600 mt-1">•</span>
+                          <span>Not provide phone numbers belonging to others without their consent</span>
+                        </li>
+                      </ul>
+                    </div>
+
+                    <div className="bg-teal-50 p-6 rounded-xl border border-teal-200">
+                      <h3 className="text-xl font-bold mb-3">5.3 Message Frequency & Costs</h3>
+                      <ul className="space-y-2 ml-6 text-foreground/80">
+                        <li className="flex items-start gap-2">
+                          <span className="text-teal-600 mt-1">•</span>
+                          <span>Service message frequency varies based on your booking activity</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-teal-600 mt-1">•</span>
+                          <span>Marketing messages are limited to approximately 4-8 per month</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-teal-600 mt-1">•</span>
+                          <span>Message and data rates may apply based on your mobile carrier plan</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-teal-600 mt-1">•</span>
+                          <span>ROAM does not charge for SMS messages, but your carrier may</span>
+                        </li>
+                      </ul>
+                    </div>
+
+                    <div className="bg-teal-50 p-6 rounded-xl border border-teal-200">
+                      <h3 className="text-xl font-bold mb-3">5.4 Opting Out</h3>
+                      <p className="text-foreground/80 leading-relaxed mb-4">You may opt out of messages at any time:</p>
+                      <ul className="space-y-2 ml-6 text-foreground/80">
+                        <li className="flex items-start gap-2">
+                          <span className="text-teal-600 mt-1">•</span>
+                          <span>Reply <strong>STOP</strong> to any text message to unsubscribe</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-teal-600 mt-1">•</span>
+                          <span>Update your preferences at{' '}
+                            <a href="https://roamyourbestlife.com/customer/profile" className="text-roam-blue underline">
+                              roamyourbestlife.com/customer/profile
+                            </a>
+                          </span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-teal-600 mt-1">•</span>
+                          <span><strong>Marketing opt-out:</strong> You will stop receiving promotional messages but 
+                          will continue to receive service messages for active bookings</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-teal-600 mt-1">•</span>
+                          <span><strong>Service opt-out:</strong> Contact support@roamyourbestlife.com (note: this 
+                          may limit your ability to receive booking updates)</span>
+                        </li>
+                      </ul>
+                    </div>
+
+                    <div className="bg-teal-50 p-6 rounded-xl border border-teal-200">
+                      <h3 className="text-xl font-bold mb-3">5.5 Limitations</h3>
+                      <ul className="space-y-2 ml-6 text-foreground/80">
+                        <li className="flex items-start gap-2">
+                          <span className="text-teal-600 mt-1">•</span>
+                          <span>We cannot guarantee message delivery; messages may be delayed or fail due to carrier issues</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-teal-600 mt-1">•</span>
+                          <span>SMS should not be relied upon for time-sensitive emergencies</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-teal-600 mt-1">•</span>
+                          <span>We reserve the right to modify or discontinue SMS services at any time</span>
+                        </li>
+                      </ul>
+                    </div>
+
+                    <div className="bg-teal-50 p-6 rounded-xl border border-teal-200">
+                      <h3 className="text-xl font-bold mb-3">5.6 Privacy</h3>
+                      <p className="text-foreground/80 leading-relaxed">
+                        Your phone number and messaging data are handled in accordance with our{' '}
+                        <Link to="/privacy" className="text-roam-blue underline">
+                          Privacy Policy
+                        </Link>. We do not sell or share your phone number with third parties for their marketing purposes.
+                      </p>
+                    </div>
                   </div>
                 </section>
 

@@ -51,6 +51,62 @@ By using our platform, you agree to the practices described in this Privacy Poli
 - Publicly available sources`,
     },
     {
+      id: "sms-text-messaging",
+      title: "SMS/Text Messaging",
+      content: `**Information We Collect**
+
+When you provide your phone number and consent to receive text messages, we collect:
+- Your mobile phone number
+- Your messaging preferences (service messages and/or marketing messages)
+- Records of messages sent to you
+- Your opt-in and opt-out history
+
+**Types of Messages**
+
+We may send you the following types of SMS/text messages based on your preferences:
+
+*Service Messages* (with your consent):
+- Booking confirmations and updates
+- Appointment reminders
+- Provider arrival notifications
+- Account security alerts
+- Customer support communications
+
+*Marketing Messages* (only with your explicit opt-in):
+- Promotional offers and discounts
+- New service announcements
+- Special events and seasonal promotions
+
+**Message Frequency**
+- Service messages are sent as needed based on your booking activity
+- Marketing messages are limited to approximately 4-8 messages per month
+
+**Opting Out**
+
+You can opt out of text messages at any time by:
+- Replying **STOP** to any message
+- Updating your preferences in your account profile at https://roamyourbestlife.com/customer/profile
+- Contacting us at support@roamyourbestlife.com
+
+After opting out, you will receive a confirmation message. Note that opting out of marketing messages does not affect service messages related to your bookings.
+
+**Opting Back In**
+
+To opt back in, reply **START** to any previous message from us or update your preferences in your account profile.
+
+**Costs**
+
+Message and data rates may apply. Please consult your mobile carrier for details about your text messaging plan.
+
+**Carriers**
+
+ROAM works with major US carriers including AT&T, Verizon, T-Mobile, Sprint, and others. Carriers are not liable for delayed or undelivered messages.
+
+**Help**
+
+For help with SMS messaging, reply **HELP** to any message or contact support@roamyourbestlife.com.`,
+    },
+    {
       id: "how-we-use",
       title: "3. How We Use Your Information",
       content: `We use your information to:

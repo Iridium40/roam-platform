@@ -83,7 +83,47 @@ export async function sendSMS(params: SendSMSParams): Promise<SendResult> {
       };
     }
 
-    // 4. Check quiet hours
+    // 4b. Check marketing consent if this is a marketing message
+    if (params.messageType === 'marketing') {
+      const { data: profile } = await supabase
+        .from('customer_profiles')
+        .select('sms_marketing_consent')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (!profile?.sms_marketing_consent) {
+        console.log('ℹ️ User has not consented to marketing messages');
+        return {
+          success: true,
+          channel: 'sms',
+          recipient: '',
+          skipped: true,
+          skipReason: 'User has not consented to marketing messages',
+        };
+      }
+    }
+
+    // 4c. Check service consent if this is a service message
+    if (params.messageType === 'service') {
+      const { data: profile } = await supabase
+        .from('customer_profiles')
+        .select('sms_service_consent')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (profile && !profile.sms_service_consent) {
+        console.log('ℹ️ User has not consented to service messages');
+        return {
+          success: true,
+          channel: 'sms',
+          recipient: '',
+          skipped: true,
+          skipReason: 'User has not consented to service messages',
+        };
+      }
+    }
+
+    // 5. Check quiet hours (renumbered from 4)
     if (settings?.quiet_hours_enabled && settings.quiet_hours_start && settings.quiet_hours_end) {
       const now = new Date();
       const currentTime = now.toTimeString().slice(0, 5); // HH:MM
@@ -248,6 +288,77 @@ export async function sendSMS(params: SendSMSParams): Promise<SendResult> {
       recipient: '',
       error: error instanceof Error ? error.message : String(error),
     };
+  }
+}
+
+/**
+ * Send a marketing SMS to all opted-in users using a template
+ */
+export async function sendBulkMarketingSMS(params: {
+  templateKey: string;
+  variables: Record<string, any>;
+  metadata?: Record<string, any>;
+}): Promise<{ sent: number; skipped: number; failed: number }> {
+  const { templateKey, variables, metadata } = params;
+
+  console.log('📱 SMS Service: Starting bulk marketing send', { templateKey });
+
+  try {
+    const supabaseUrl = process.env.VITE_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+      throw new Error('Missing Supabase credentials');
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Only fetch users who have opted in to marketing and have a phone number
+    const { data: users, error } = await supabase
+      .from('customer_profiles')
+      .select('user_id, phone')
+      .eq('sms_marketing_consent', true)
+      .not('phone', 'is', null)
+      .neq('phone', '');
+
+    if (error || !users) {
+      console.error('❌ Error fetching opted-in users:', error);
+      return { sent: 0, skipped: 0, failed: 1 };
+    }
+
+    console.log(`📱 Found ${users.length} opted-in users for marketing SMS`);
+
+    let sent = 0;
+    let skipped = 0;
+    let failed = 0;
+
+    for (const user of users) {
+      const result = await sendSMS({
+        userId: user.user_id,
+        templateKey,
+        variables,
+        metadata,
+        messageType: 'marketing',
+      });
+
+      if (result.success && !result.skipped) {
+        sent++;
+      } else if (result.skipped) {
+        skipped++;
+      } else {
+        failed++;
+      }
+
+      // Rate limiting: wait 100ms between messages
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+
+    console.log(`📱 Bulk marketing SMS complete: ${sent} sent, ${skipped} skipped, ${failed} failed`);
+    return { sent, skipped, failed };
+
+  } catch (error) {
+    console.error('❌ Bulk marketing SMS failed:', error);
+    return { sent: 0, skipped: 0, failed: 1 };
   }
 }
 

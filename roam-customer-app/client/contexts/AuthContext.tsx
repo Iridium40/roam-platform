@@ -20,6 +20,8 @@ interface AuthContextType {
     firstName: string;
     lastName: string;
     phone?: string;
+    smsServiceConsent?: boolean;
+    smsMarketingConsent?: boolean;
   }) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signInWithGoogleIdToken: (idToken: string, nonce: string) => Promise<void>;
@@ -92,6 +94,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   useEffect(() => {
+    // Safety timeout: if getSession or fetch hangs (e.g. network issues), stop loading after 8s
+    const AUTH_INIT_TIMEOUT_MS = 8000;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    const safetyTimeout = new Promise<void>((resolve) => {
+      timeoutId = setTimeout(() => {
+        logger.debug("AuthContext: Init timeout reached, stopping loading state");
+        setLoading(false);
+        resolve();
+      }, AUTH_INIT_TIMEOUT_MS);
+    });
+
     // Try to restore session from localStorage first
     const initializeAuth = async () => {
       try {
@@ -113,15 +126,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           } else {
             setCustomer(customerData);
             setLoading(false);
+            if (timeoutId) clearTimeout(timeoutId);
             return;
           }
         }
 
-        // If no stored session, try to get current session from Supabase
+        // If no stored session, try to get current session from Supabase (with timeout)
         try {
-          const {
-            data: { session },
-          } = await supabase.auth.getSession();
+          const getSessionPromise = supabase.auth.getSession();
+          const { data: { session } } = await Promise.race([
+            getSessionPromise,
+            safetyTimeout.then(() => ({ data: { session: null as any } })),
+          ]);
           if (session?.user) {
             logger.debug("Session user found, checking for customer profile", session.user.id);
 
@@ -170,6 +186,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       } catch (error) {
         logger.error("AuthContext: Error during initialization:", error);
       } finally {
+        if (timeoutId) clearTimeout(timeoutId);
         setLoading(false);
       }
     };
@@ -388,6 +405,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     firstName: string;
     lastName: string;
     phone?: string;
+    smsServiceConsent?: boolean;
+    smsMarketingConsent?: boolean;
   }) => {
     setLoading(true);
     try {
@@ -432,12 +451,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       );
 
       // Create customer profile
+      const now = new Date().toISOString();
       const newProfile = {
         user_id: authData.user.id,
         email: customerData.email,
         first_name: customerData.firstName,
         last_name: customerData.lastName,
         phone: customerData.phone || "",
+        sms_service_consent: customerData.smsServiceConsent ?? true,
+        sms_service_consent_date: (customerData.smsServiceConsent ?? true) ? now : null,
+        sms_marketing_consent: customerData.smsMarketingConsent ?? false,
+        sms_marketing_consent_date: customerData.smsMarketingConsent ? now : null,
       };
 
       const { data: createdProfile, error: createError } = await supabase

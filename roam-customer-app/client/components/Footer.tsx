@@ -78,6 +78,17 @@ export function Footer() {
               Accessibility
             </Link>
           </div>
+
+          {/* SMS Terms Disclosure */}
+          <p className="text-xs text-foreground/40 mt-4 leading-relaxed">
+            <strong>SMS Terms:</strong> By opting in to ROAM text messages, you consent to receive 
+            automated messages at the number provided. Consent is not a condition of purchase. 
+            Message frequency varies. Message & data rates may apply. Reply STOP to unsubscribe, 
+            HELP for help. Manage preferences at{' '}
+            <Link to="/customer/profile" className="underline hover:text-roam-blue transition-colors">
+              roamyourbestlife.com/customer/profile
+            </Link>.
+          </p>
         </div>
       </div>
     </footer>
