@@ -1645,8 +1645,8 @@ function BookServiceContent() {
     // Calculate total amount (service amount + service fee)
     const totalAmount = serviceAmount + serviceFee;
     
-    // Remaining balance is the service amount (what the business receives)
-    const remainingBalance = serviceAmount;
+    // Remaining balance starts at 0 - provider sets it after service completion for deposit-type services
+    const remainingBalance = 0;
     
     logger.debug('Checkout amounts:', {
       baseServiceAmount,

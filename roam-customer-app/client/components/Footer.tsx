@@ -81,10 +81,17 @@ export function Footer() {
 
           {/* SMS Terms Disclosure */}
           <p className="text-xs text-foreground/40 mt-4 leading-relaxed">
-            <strong>SMS Terms:</strong> By opting in to ROAM text messages, you consent to receive 
-            automated messages at the number provided. Consent is not a condition of purchase. 
-            Message frequency varies. Message & data rates may apply. Reply STOP to unsubscribe, 
-            HELP for help. Manage preferences at{' '}
+            <strong>SMS Terms:</strong> By checking the optional marketing messages box during sign-up, 
+            you consent to receive recurring automated promotional text messages from ROAM at the 
+            number provided. Consent to receive marketing messages is not a condition of purchase 
+            or use of our services. Msg frequency varies. Msg & data rates may apply. 
+            Reply STOP to unsubscribe, HELP for help. View our{' '}
+            <Link to="/terms-and-conditions" className="underline hover:text-roam-blue transition-colors">
+              Terms
+            </Link>{' '}&{' '}
+            <Link to="/privacy" className="underline hover:text-roam-blue transition-colors">
+              Privacy Policy
+            </Link>. Manage preferences at{' '}
             <Link to="/customer/profile" className="underline hover:text-roam-blue transition-colors">
               roamyourbestlife.com/customer/profile
             </Link>.

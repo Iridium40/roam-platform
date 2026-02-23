@@ -733,7 +733,7 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
                     </div>
 
                     {/* Marketing Messages - Optional, MUST be unchecked by default */}
-                    <div className="flex items-start space-x-3 p-3 bg-muted/50 rounded-lg">
+                    <div className="flex items-start space-x-3 p-3 bg-muted/50 rounded-lg border border-dashed border-muted-foreground/20">
                       <Checkbox
                         id="marketing-messages"
                         checked={consent.marketingMessages}
@@ -747,11 +747,16 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
                           htmlFor="marketing-messages"
                           className="text-sm font-medium leading-tight cursor-pointer"
                         >
-                          Marketing Messages <span className="text-muted-foreground">(Optional)</span>
+                          Marketing Messages <span className="text-muted-foreground font-normal italic">&mdash; completely optional</span>
                         </label>
                         <p className="text-xs text-muted-foreground">
                           I'd like to receive promotional offers, discounts, and announcements
-                          via SMS. You can opt out anytime by replying STOP.
+                          via SMS from ROAM. Msg frequency varies. Msg & data rates may apply.
+                          Reply STOP to cancel anytime. Reply HELP for help.{' '}
+                          <strong className="text-foreground/70">
+                            This is not required to create an account or use ROAM services.
+                            Consent is not a condition of any purchase.
+                          </strong>
                         </p>
                       </div>
                     </div>
