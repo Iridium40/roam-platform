@@ -603,8 +603,14 @@ function BookingCard({
                           (${totalGross.toFixed(2)} - ${totalFees.toFixed(2)} fee)
                         </p>
                       )}
-                      {/* Add Balance link - Show for confirmed/in_progress bookings */}
-                      {(booking.booking_status === 'confirmed' || booking.booking_status === 'in_progress') && !isRemainingBalanceCharged && (
+                      {/* Deposit Paid indicator for deposit-type services */}
+                      {isDepositPricingType && !isRemainingBalanceCharged && remainingBalance === 0 && booking.booking_status !== 'completed' && (
+                        <p className="text-xs text-green-600 font-medium mt-1">
+                          Deposit Paid
+                        </p>
+                      )}
+                      {/* Add Balance link - Only show once service has started (in_progress) */}
+                      {booking.booking_status === 'in_progress' && !isRemainingBalanceCharged && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -951,6 +957,10 @@ function BookingCard({
                       {isRemainingBalanceCharged && remainingBalance > 0 && (
                         <p className="text-[10px] text-green-600 font-medium">Paid in Full</p>
                       )}
+                      {/* Deposit Paid indicator for deposit-type services */}
+                      {isDepositService && !isRemainingBalanceCharged && remainingBalance === 0 && booking.booking_status !== 'completed' && (
+                        <p className="text-[10px] text-green-600 font-medium">Deposit Paid</p>
+                      )}
                     </>
                   );
                 })()}
@@ -959,8 +969,8 @@ function BookingCard({
                   const remainingBalance = parseFloat(booking.remaining_balance || '0');
                   const isRemainingBalanceCharged = booking.remaining_balance_charged === true;
                   
-                  // Show "+ Add Balance" link for confirmed/in_progress bookings
-                  if ((booking.booking_status === 'confirmed' || booking.booking_status === 'in_progress') && !isRemainingBalanceCharged) {
+                  // Show "+ Add Balance" link only once service has started (in_progress)
+                  if (booking.booking_status === 'in_progress' && !isRemainingBalanceCharged) {
                     return (
                       <button
                         onClick={(e) => {
