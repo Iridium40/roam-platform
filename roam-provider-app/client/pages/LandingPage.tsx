@@ -1,10 +1,15 @@
 import { Button } from "@/components/ui/button";
 import EarningsCalculator from "@/components/marketing/EarningsCalculator";
 import {
+  ActivityProof,
   ValueProps,
   HowItWorks,
   Comparison,
   FAQ,
+  ProviderTestimonials,
+  FoundingProvider,
+  PerfectFor,
+  ClientTypes,
 } from "@/components/marketing/Sections";
 import { Check } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -13,8 +18,13 @@ export default function LandingPage() {
   return (
     <div className="bg-background">
       <Hero />
+      <ActivityProof />
+      <ProviderTestimonials />
       <ValueProps />
+      <ClientTypes />
+      <PerfectFor />
       <HowItWorks />
+      <FoundingProvider />
       <Comparison />
       <EarningsCalculator />
       <CTA />
@@ -25,11 +35,11 @@ export default function LandingPage() {
 
 function Hero() {
   const bullets = [
-    "You Keep 100% of Your Service Price",
-    "Customers Pay All Platform Fees",
-    "Get Paid for Confirmed Bookings Only",
-    "Join 400+ Successful Providers",
-    "Free Marketing & Customer Acquisition",
+    "Vacation Rentals & Beach Houses",
+    "Bridal Parties & Special Events",
+    "Luxury Condos & Resorts",
+    "Travelers Who Pay Premium Rates",
+    "Zero Commission — Keep 100%",
   ];
 
   return (
@@ -37,16 +47,23 @@ function Hero() {
       <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(1000px_400px_at_10%_-20%,theme(colors.primary/0.15),transparent),radial-gradient(800px_400px_at_90%_10%,theme(colors.secondary/0.2),transparent)]" />
       <div className="container grid items-center gap-10 py-16 md:grid-cols-2 md:py-24">
         <div>
-          <h1 className="mt-4 text-4xl font-extrabold leading-tight tracking-tight sm:text-5xl">
-            Keep 100% of Your Rates.
-            <br className="hidden sm:block" /> We'll Bring You the Customers.
+          <div className="inline-flex items-center gap-2 rounded-full bg-roam-yellow/20 px-4 py-1.5 text-sm font-medium text-roam-blue mb-4">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+            </span>
+            Now Accepting Providers in 30A & Emerald Coast
+          </div>
+          <h1 className="text-4xl font-extrabold leading-tight tracking-tight sm:text-5xl">
+            Get Booked by Travelers
+            <br className="hidden sm:block" /> Visiting the Emerald Coast
           </h1>
           <p className="mt-4 max-w-xl text-lg text-muted-foreground">
-            Join Florida's newest wellness marketplace. Serious, prepaid customers. No commissions on your earnings. No hassle.
+            Turn vacation season into your highest-earning season. ROAM connects you with premium clients — travelers, bridal parties, and luxury guests who don't price shop.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Button asChild className="min-w-40">
-              <Link to="/provider-portal">Become a Provider</Link>
+              <Link to="/provider-portal">Apply Now — Limited Spots</Link>
             </Button>
             <Button
               asChild
@@ -55,19 +72,22 @@ function Hero() {
               <Link to="/how-it-works">See How It Works</Link>
             </Button>
           </div>
-          <ul className="mt-8 grid gap-2 sm:grid-cols-2">
-            {bullets.map((b) => (
-              <li
-                key={b}
-                className="flex items-start gap-2 text-sm text-foreground/80"
-              >
-                <Check className="mt-0.5 h-4 w-4 text-primary" /> {b}
-              </li>
-            ))}
-          </ul>
+          <div className="mt-8">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">Your Clients Include:</p>
+            <ul className="grid gap-2 sm:grid-cols-2">
+              {bullets.map((b) => (
+                <li
+                  key={b}
+                  className="flex items-start gap-2 text-sm text-foreground/80"
+                >
+                  <Check className="mt-0.5 h-4 w-4 text-primary" /> {b}
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
         <div className="relative">
-          <div className="mx-auto w-full max-w-lg overflow-hidden rounded-2xl border bg-white">
+          <div className="mx-auto w-full max-w-lg overflow-hidden rounded-2xl border bg-white shadow-xl">
             <img
               src="/landing-dashboard-preview.png"
               alt="ROAM provider dashboard example"
@@ -75,7 +95,7 @@ function Hero() {
             />
           </div>
           <p className="mt-3 text-center text-xs text-muted-foreground">
-            Provider Dashboard
+            Your Mobile Business Command Center
           </p>
         </div>
       </div>

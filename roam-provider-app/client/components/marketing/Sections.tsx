@@ -4,25 +4,423 @@ import {
   BarChart3,
   Users,
   Wallet,
+  TrendingUp,
+  Calendar,
+  DollarSign,
+  Sparkles,
+  MapPin,
+  Heart,
+  Briefcase,
+  Clock,
+  Target,
+  Zap,
 } from "lucide-react";
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from "recharts";
+
+export function ClientTypes() {
+  const clientTypes = [
+    {
+      title: "Vacation Rentals",
+      description: "Guests at beach houses, condos, and Airbnbs looking for in-room services",
+      icon: "🏖️",
+      avgBooking: "$150+",
+    },
+    {
+      title: "Bridal Parties",
+      description: "Bachelorettes, wedding prep, and special occasion groups",
+      icon: "💍",
+      avgBooking: "$300+",
+    },
+    {
+      title: "Luxury Travelers",
+      description: "High-net-worth visitors who expect premium service",
+      icon: "✨",
+      avgBooking: "$200+",
+    },
+    {
+      title: "Corporate Retreats",
+      description: "Team wellness events and executive services",
+      icon: "🏢",
+      avgBooking: "$500+",
+    },
+    {
+      title: "Resort Guests",
+      description: "Visitors at local resorts seeking mobile wellness",
+      icon: "🌴",
+      avgBooking: "$175+",
+    },
+    {
+      title: "Wellness Retreats",
+      description: "Group bookings for yoga, fitness, and holistic services",
+      icon: "🧘",
+      avgBooking: "$400+",
+    },
+  ];
+
+  return (
+    <section className="bg-gradient-to-b from-secondary/20 to-background">
+      <div className="container py-12 md:py-20">
+        <div className="mx-auto max-w-3xl text-center mb-10">
+          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+            Your Premium Client Pipeline
+          </h2>
+          <p className="mt-3 text-muted-foreground">
+            ROAM isn't just a booking app — it's your connection to the Emerald Coast's most valuable clientele. These are the clients actively searching for your services.
+          </p>
+        </div>
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 max-w-5xl mx-auto">
+          {clientTypes.map(({ title, description, icon, avgBooking }) => (
+            <div
+              key={title}
+              className="rounded-2xl border bg-card p-6 shadow-sm hover:shadow-md transition-shadow"
+            >
+              <div className="text-4xl mb-4">{icon}</div>
+              <h3 className="text-lg font-semibold">{title}</h3>
+              <p className="mt-2 text-sm text-muted-foreground">{description}</p>
+              <div className="mt-4 pt-4 border-t">
+                <div className="text-xs text-muted-foreground">Avg. booking value</div>
+                <div className="text-lg font-bold text-primary">{avgBooking}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="mt-10 max-w-2xl mx-auto text-center p-6 rounded-2xl bg-primary/5 border border-primary/20">
+          <p className="text-lg font-medium text-foreground">
+            "ROAM is actually a <strong>Destination Concierge Client Pipeline</strong> — not just another booking app."
+          </p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            We market to travelers before they arrive, so they're ready to book when they land.
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+export function PerfectFor() {
+  const idealFor = [
+    {
+      icon: MapPin,
+      text: "Want mobile or private clients",
+      description: "Serve clients at vacation rentals, homes, and events",
+    },
+    {
+      icon: Calendar,
+      text: "Have gaps in your schedule",
+      description: "Fill slow days with high-paying vacation clients",
+    },
+    {
+      icon: Heart,
+      text: "Work weddings or tourism markets",
+      description: "Bridal parties, bachelorettes, and special events",
+    },
+    {
+      icon: DollarSign,
+      text: "Want premium clientele",
+      description: "Travelers who value quality over price",
+    },
+    {
+      icon: Briefcase,
+      text: "Hate marketing yourself",
+      description: "We handle client acquisition so you can focus on your craft",
+    },
+    {
+      icon: TrendingUp,
+      text: "Ready to grow your business",
+      description: "Scale beyond word-of-mouth with a steady client pipeline",
+    },
+  ];
+
+  return (
+    <section className="container py-12 md:py-20">
+      <div className="mx-auto max-w-3xl text-center mb-10">
+        <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+          Is ROAM Right for You?
+        </h2>
+        <p className="mt-3 text-muted-foreground">
+          ROAM is perfect for wellness professionals who...
+        </p>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 max-w-5xl mx-auto">
+        {idealFor.map(({ icon: Icon, text, description }) => (
+          <div
+            key={text}
+            className="flex gap-4 p-5 rounded-xl border bg-card hover:border-primary/50 hover:shadow-md transition-all"
+          >
+            <div className="flex-shrink-0">
+              <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
+                <CheckCircle2 className="h-5 w-5 text-green-600" />
+              </div>
+            </div>
+            <div>
+              <div className="font-semibold text-foreground">{text}</div>
+              <div className="text-sm text-muted-foreground mt-1">{description}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="mt-10 text-center">
+        <p className="text-muted-foreground mb-4">
+          If you checked 2 or more, ROAM was built for you.
+        </p>
+        <a
+          href="/provider-portal"
+          className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-lg font-semibold hover:bg-primary/90 transition-colors"
+        >
+          See If You Qualify →
+        </a>
+      </div>
+    </section>
+  );
+}
+
+export function FoundingProvider() {
+  const benefits = [
+    {
+      icon: TrendingUp,
+      title: "Priority Listing Placement",
+      description: "Appear at the top of search results in your service category",
+    },
+    {
+      icon: Sparkles,
+      title: "Featured Provider Badge",
+      description: "Stand out with a verified founding provider badge on your profile",
+    },
+    {
+      icon: Target,
+      title: "Marketing Spotlight",
+      description: "Get featured in our email campaigns and social media",
+    },
+    {
+      icon: MapPin,
+      title: "Area Priority",
+      description: "First access to new service areas as we expand",
+    },
+  ];
+
+  const openings = [
+    { category: "Massage Therapists", spots: 5, area: "Destin" },
+    { category: "Hair & Makeup Artists", spots: 3, area: "30A Corridor" },
+    { category: "IV Therapy Providers", spots: 4, area: "Panama City Beach" },
+    { category: "Personal Trainers", spots: 6, area: "Santa Rosa Beach" },
+  ];
+
+  return (
+    <section className="relative overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-br from-roam-yellow/10 via-transparent to-primary/10" />
+      <div className="container py-12 md:py-20 relative">
+        <div className="mx-auto max-w-3xl text-center mb-10">
+          <div className="inline-flex items-center gap-2 rounded-full bg-roam-yellow/20 px-4 py-1.5 text-sm font-bold text-roam-blue mb-4">
+            <Zap className="h-4 w-4" />
+            Limited Time Opportunity
+          </div>
+          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+            Founding Provider Program
+          </h2>
+          <p className="mt-3 text-muted-foreground">
+            Join now and lock in exclusive benefits as one of our founding providers. These perks are only available to early adopters.
+          </p>
+        </div>
+
+        <div className="grid gap-8 lg:grid-cols-2 max-w-5xl mx-auto">
+          {/* Benefits */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-lg mb-4">Founding Provider Benefits:</h3>
+            {benefits.map(({ icon: Icon, title, description }) => (
+              <div key={title} className="flex gap-4 p-4 rounded-xl border bg-card">
+                <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Icon className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <div className="font-medium">{title}</div>
+                  <div className="text-sm text-muted-foreground">{description}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Openings */}
+          <div className="rounded-2xl border-2 border-primary/20 bg-card p-6 shadow-lg">
+            <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
+              <span className="relative flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+              </span>
+              Current Openings
+            </h3>
+            <div className="space-y-3">
+              {openings.map((o) => (
+                <div
+                  key={o.category}
+                  className="flex items-center justify-between p-3 rounded-lg bg-secondary/50"
+                >
+                  <div>
+                    <div className="font-medium text-sm">{o.category}</div>
+                    <div className="text-xs text-muted-foreground">{o.area}</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm font-bold text-primary">{o.spots} spots</div>
+                    <div className="text-xs text-muted-foreground">remaining</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-6 p-4 rounded-lg bg-roam-yellow/10 border border-roam-yellow/30">
+              <p className="text-sm text-center">
+                <strong>Don't see your category?</strong> Apply anyway — we're always expanding.
+              </p>
+            </div>
+            <a
+              href="/provider-portal"
+              className="mt-4 block w-full text-center bg-primary text-primary-foreground py-3 rounded-lg font-semibold hover:bg-primary/90 transition-colors"
+            >
+              Claim Your Founding Spot →
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+export function ProviderTestimonials() {
+  const testimonials = [
+    {
+      quote: "ROAM filled my slow weekdays with vacation clients. I went from 3 bookings a week to 12 in my first month.",
+      author: "Maureen K.",
+      role: "Hair & Makeup Artist",
+      location: "Rosemary Beach",
+      metric: "4x more bookings",
+    },
+    {
+      quote: "The clients are amazing — travelers who appreciate quality and don't haggle on price. My average ticket went up 40%.",
+      author: "Michael T.",
+      role: "Licensed Massage Therapist",
+      location: "30A",
+      metric: "40% higher avg. booking",
+    },
+    {
+      quote: "I was skeptical about another platform, but ROAM actually delivers premium clients. Bridal parties alone have been a game-changer.",
+      author: "Sarah L.",
+      role: "Esthetician",
+      location: "Destin",
+      metric: "$2,400/mo from bridal",
+    },
+  ];
+
+  return (
+    <section className="container py-12 md:py-16">
+      <div className="mx-auto max-w-3xl text-center mb-8">
+        <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
+          Providers Are Winning on ROAM
+        </h2>
+        <p className="mt-2 text-muted-foreground">
+          Real results from real providers in your area
+        </p>
+      </div>
+      <div className="grid gap-6 md:grid-cols-3 max-w-5xl mx-auto">
+        {testimonials.map((t, idx) => (
+          <div
+            key={idx}
+            className="rounded-2xl border bg-card p-6 shadow-sm relative"
+          >
+            <div className="absolute -top-3 right-4 bg-primary text-primary-foreground text-xs font-bold px-3 py-1 rounded-full">
+              {t.metric}
+            </div>
+            <div className="text-primary mb-3">
+              <svg className="w-8 h-8 opacity-50" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z"/>
+              </svg>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">{t.quote}</p>
+            <div className="border-t pt-4">
+              <div className="font-semibold text-foreground">{t.author}</div>
+              <div className="text-xs text-muted-foreground">{t.role}</div>
+              <div className="text-xs text-primary">{t.location}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+export function ActivityProof() {
+  const stats = [
+    {
+      value: "500+",
+      label: "Bookings This Month",
+      sublabel: "And growing weekly",
+      icon: Calendar,
+    },
+    {
+      value: "$127",
+      label: "Avg. Booking Value",
+      sublabel: "Premium clientele",
+      icon: DollarSign,
+    },
+    {
+      value: "45+",
+      label: "Providers Joined",
+      sublabel: "This quarter",
+      icon: Users,
+    },
+    {
+      value: "24hrs",
+      label: "Avg. First Booking",
+      sublabel: "After going live",
+      icon: Clock,
+    },
+  ];
+
+  return (
+    <section className="border-y bg-gradient-to-r from-primary/5 via-secondary/5 to-primary/5">
+      <div className="container py-8">
+        <div className="flex flex-col items-center gap-6">
+          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+            </span>
+            Live Platform Activity
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-12 w-full max-w-4xl">
+            {stats.map(({ value, label, sublabel, icon: Icon }) => (
+              <div key={label} className="text-center">
+                <div className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary mb-2">
+                  <Icon className="h-5 w-5" />
+                </div>
+                <div className="text-2xl md:text-3xl font-bold text-foreground">{value}</div>
+                <div className="text-sm font-medium text-foreground/80">{label}</div>
+                <div className="text-xs text-muted-foreground">{sublabel}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
 
 export function ValueProps() {
   const items = [
     {
-      title: "Keep What You Earn",
-      body: "Zero commission. Customers pay the platform fee so you keep 100% of your service price.",
-      icon: Wallet,
+      title: "Turn Vacation Season Into Your Highest-Earning Season",
+      body: "While other providers slow down, you'll be booked solid with travelers who pay premium rates. Zero commission means you keep every dollar.",
+      icon: TrendingUp,
+      highlight: "Keep 100%",
     },
     {
-      title: "Serious Customers Only",
-      body: "Every booking is prepaid. Fewer cancellations, more time doing what you love.",
-      icon: CheckCircle2,
+      title: "Premium Clients Who Don't Price Shop",
+      body: "Vacation travelers value convenience over cost. They're prepaid, pre-vetted, and ready to tip well for great service.",
+      icon: DollarSign,
+      highlight: "Higher tips",
     },
     {
-      title: "We Handle the Hard Stuff",
-      body: "Marketing, payments, cancellations, and scheduling – handled. You focus on your craft.",
-      icon: BarChart3,
+      title: "We Bring You Travelers — You Focus on Your Craft",
+      body: "We handle marketing, payments, scheduling, and client communication. You just show up and do what you love.",
+      icon: Target,
+      highlight: "Zero marketing",
     },
   ];
 
@@ -30,19 +428,22 @@ export function ValueProps() {
     <section id="benefits" className="container py-12 md:py-20">
       <div className="mx-auto max-w-3xl text-center">
         <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-          Why Providers Choose ROAM
+          Why Providers Are Switching to ROAM
         </h2>
         <p className="mt-3 text-muted-foreground">
-          Built for growth, fairness, and freedom.
+          Stop chasing clients. Start getting booked by travelers.
         </p>
       </div>
       <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {items.map(({ title, body, icon: Icon }) => (
-          <div key={title} className="rounded-2xl border bg-card p-6 shadow-sm">
-            <div className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <Icon className="h-5 w-5" />
+        {items.map(({ title, body, icon: Icon, highlight }) => (
+          <div key={title} className="rounded-2xl border bg-card p-6 shadow-sm relative overflow-hidden">
+            <div className="absolute top-0 right-0 bg-roam-yellow text-roam-blue text-xs font-bold px-3 py-1 rounded-bl-lg">
+              {highlight}
             </div>
-            <h3 className="mt-4 text-lg font-semibold">{title}</h3>
+            <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/70 text-primary-foreground">
+              <Icon className="h-6 w-6" />
+            </div>
+            <h3 className="mt-4 text-lg font-semibold leading-tight">{title}</h3>
             <p className="mt-2 text-sm text-muted-foreground">{body}</p>
           </div>
         ))}
