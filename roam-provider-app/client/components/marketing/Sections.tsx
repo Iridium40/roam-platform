@@ -14,46 +14,145 @@ import {
   Clock,
   Target,
   Zap,
+  Building2,
+  Car,
+  Store,
 } from "lucide-react";
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from "recharts";
 
+export function ProviderTypes() {
+  const locationBased = {
+    title: "Have a Salon, Spa, or Studio?",
+    subtitle: "Travelers discover and book at your location",
+    icon: Store,
+    benefits: [
+      "New clients find you through ROAM",
+      "Travelers book appointments at your location",
+      "Fill slow days with vacation visitors",
+      "No marketing effort required",
+    ],
+    example: {
+      quote: "Tourists book blowouts at my salon before dinner reservations. ROAM brings me clients I'd never reach otherwise.",
+      type: "Salon Owner",
+    },
+  };
+
+  const mobileBased = {
+    title: "Offer Mobile Services?",
+    subtitle: "Go to clients at vacation rentals, homes, and events",
+    icon: Car,
+    benefits: [
+      "Serve clients at vacation rentals & beach houses",
+      "Bridal parties, corporate retreats, special events",
+      "Premium rates for convenience",
+      "Flexible schedule — you choose when and where",
+    ],
+    example: {
+      quote: "I bring massage therapy to vacation homes along 30A. Travelers pay premium rates and tip generously.",
+      type: "Mobile Therapist",
+    },
+  };
+
+  return (
+    <section className="container py-12 md:py-20">
+      <div className="mx-auto max-w-3xl text-center mb-10">
+        <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+          Two Ways to Grow with ROAM
+        </h2>
+        <p className="mt-3 text-muted-foreground">
+          Whether clients come to you or you go to them — ROAM connects you with premium travelers visiting the Emerald Coast.
+        </p>
+      </div>
+
+      <div className="grid gap-8 md:grid-cols-2 max-w-5xl mx-auto">
+        {[locationBased, mobileBased].map((type) => {
+          const Icon = type.icon;
+          return (
+            <div
+              key={type.title}
+              className="rounded-2xl border-2 border-primary/20 bg-card p-6 shadow-lg hover:border-primary/40 transition-colors"
+            >
+              <div className="flex items-center gap-4 mb-6">
+                <div className="h-14 w-14 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <Icon className="h-7 w-7 text-primary" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold">{type.title}</h3>
+                  <p className="text-sm text-muted-foreground">{type.subtitle}</p>
+                </div>
+              </div>
+
+              <ul className="space-y-3 mb-6">
+                {type.benefits.map((benefit) => (
+                  <li key={benefit} className="flex items-start gap-3">
+                    <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+                    <span className="text-sm">{benefit}</span>
+                  </li>
+                ))}
+              </ul>
+
+              <div className="p-4 rounded-xl bg-secondary/50 border">
+                <p className="text-sm italic text-muted-foreground">"{type.example.quote}"</p>
+                <p className="text-xs font-medium text-primary mt-2">— {type.example.type}</p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="mt-10 max-w-2xl mx-auto text-center">
+        <div className="inline-flex items-center gap-2 rounded-full bg-roam-yellow/20 px-4 py-2 text-sm font-medium text-roam-blue">
+          <Building2 className="h-4 w-4" />
+          Many providers do BOTH — offer services at their location AND go mobile
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export function ClientTypes() {
   const clientTypes = [
+    {
+      title: "Salon Seekers",
+      description: "Travelers wanting a blowout, cut, or color before dinner or events",
+      icon: "💇",
+      avgBooking: "$85+",
+      type: "location",
+    },
     {
       title: "Vacation Rentals",
       description: "Guests at beach houses, condos, and Airbnbs looking for in-room services",
       icon: "🏖️",
       avgBooking: "$150+",
+      type: "mobile",
+    },
+    {
+      title: "Spa Day Visitors",
+      description: "Tourists booking facials, massages, and treatments at your spa",
+      icon: "🧖",
+      avgBooking: "$120+",
+      type: "location",
     },
     {
       title: "Bridal Parties",
-      description: "Bachelorettes, wedding prep, and special occasion groups",
+      description: "Bachelorettes, wedding prep — at your studio or their rental",
       icon: "💍",
       avgBooking: "$300+",
+      type: "both",
     },
     {
       title: "Luxury Travelers",
       description: "High-net-worth visitors who expect premium service",
       icon: "✨",
       avgBooking: "$200+",
+      type: "both",
     },
     {
       title: "Corporate Retreats",
-      description: "Team wellness events and executive services",
+      description: "Team wellness events at your location or theirs",
       icon: "🏢",
       avgBooking: "$500+",
-    },
-    {
-      title: "Resort Guests",
-      description: "Visitors at local resorts seeking mobile wellness",
-      icon: "🌴",
-      avgBooking: "$175+",
-    },
-    {
-      title: "Wellness Retreats",
-      description: "Group bookings for yoga, fitness, and holistic services",
-      icon: "🧘",
-      avgBooking: "$400+",
+      type: "both",
     },
   ];
 
@@ -69,11 +168,22 @@ export function ClientTypes() {
           </p>
         </div>
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 max-w-5xl mx-auto">
-          {clientTypes.map(({ title, description, icon, avgBooking }) => (
+          {clientTypes.map(({ title, description, icon, avgBooking, type }) => (
             <div
               key={title}
-              className="rounded-2xl border bg-card p-6 shadow-sm hover:shadow-md transition-shadow"
+              className="rounded-2xl border bg-card p-6 shadow-sm hover:shadow-md transition-shadow relative"
             >
+              <div className="absolute top-3 right-3">
+                <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
+                  type === "location" 
+                    ? "bg-blue-100 text-blue-700" 
+                    : type === "mobile" 
+                    ? "bg-green-100 text-green-700"
+                    : "bg-purple-100 text-purple-700"
+                }`}>
+                  {type === "location" ? "At Your Location" : type === "mobile" ? "Mobile" : "Both"}
+                </span>
+              </div>
               <div className="text-4xl mb-4">{icon}</div>
               <h3 className="text-lg font-semibold">{title}</h3>
               <p className="mt-2 text-sm text-muted-foreground">{description}</p>
@@ -86,10 +196,10 @@ export function ClientTypes() {
         </div>
         <div className="mt-10 max-w-2xl mx-auto text-center p-6 rounded-2xl bg-primary/5 border border-primary/20">
           <p className="text-lg font-medium text-foreground">
-            "ROAM is actually a <strong>Destination Concierge Client Pipeline</strong> — not just another booking app."
+            "ROAM is a <strong>Destination Concierge Client Pipeline</strong> — connecting travelers with local businesses and mobile providers."
           </p>
           <p className="mt-2 text-sm text-muted-foreground">
-            We market to travelers before they arrive, so they're ready to book when they land.
+            We market to travelers before they arrive, so they're ready to book — at your location or theirs.
           </p>
         </div>
       </div>
@@ -100,8 +210,13 @@ export function ClientTypes() {
 export function PerfectFor() {
   const idealFor = [
     {
+      icon: Store,
+      text: "Have a salon, spa, or studio",
+      description: "Get discovered by travelers looking for local services",
+    },
+    {
       icon: MapPin,
-      text: "Want mobile or private clients",
+      text: "Offer mobile services",
       description: "Serve clients at vacation rentals, homes, and events",
     },
     {
@@ -123,11 +238,6 @@ export function PerfectFor() {
       icon: Briefcase,
       text: "Hate marketing yourself",
       description: "We handle client acquisition so you can focus on your craft",
-    },
-    {
-      icon: TrendingUp,
-      text: "Ready to grow your business",
-      description: "Scale beyond word-of-mouth with a steady client pipeline",
     },
   ];
 
@@ -199,10 +309,12 @@ export function FoundingProvider() {
   ];
 
   const openings = [
-    { category: "Massage Therapists", spots: 5, area: "Destin" },
-    { category: "Hair & Makeup Artists", spots: 3, area: "30A Corridor" },
-    { category: "IV Therapy Providers", spots: 4, area: "Panama City Beach" },
-    { category: "Personal Trainers", spots: 6, area: "Santa Rosa Beach" },
+    { category: "Salons & Hair Studios", spots: 4, area: "Destin", type: "location" },
+    { category: "Day Spas & Med Spas", spots: 3, area: "30A Corridor", type: "location" },
+    { category: "Mobile Massage Therapists", spots: 5, area: "Emerald Coast", type: "mobile" },
+    { category: "Hair & Makeup Artists", spots: 3, area: "30A Corridor", type: "both" },
+    { category: "IV Therapy Providers", spots: 4, area: "Panama City Beach", type: "mobile" },
+    { category: "Personal Trainers", spots: 6, area: "Santa Rosa Beach", type: "both" },
   ];
 
   return (
@@ -255,7 +367,18 @@ export function FoundingProvider() {
                   className="flex items-center justify-between p-3 rounded-lg bg-secondary/50"
                 >
                   <div>
-                    <div className="font-medium text-sm">{o.category}</div>
+                    <div className="font-medium text-sm flex items-center gap-2">
+                      {o.category}
+                      <span className={`text-[9px] font-medium px-1.5 py-0.5 rounded ${
+                        o.type === "location" 
+                          ? "bg-blue-100 text-blue-700" 
+                          : o.type === "mobile" 
+                          ? "bg-green-100 text-green-700"
+                          : "bg-purple-100 text-purple-700"
+                      }`}>
+                        {o.type === "location" ? "Location" : o.type === "mobile" ? "Mobile" : "Both"}
+                      </span>
+                    </div>
                     <div className="text-xs text-muted-foreground">{o.area}</div>
                   </div>
                   <div className="text-right">
@@ -286,25 +409,28 @@ export function FoundingProvider() {
 export function ProviderTestimonials() {
   const testimonials = [
     {
-      quote: "ROAM filled my slow weekdays with vacation clients. I went from 3 bookings a week to 12 in my first month.",
-      author: "Maureen K.",
-      role: "Hair & Makeup Artist",
-      location: "Rosemary Beach",
-      metric: "4x more bookings",
-    },
-    {
-      quote: "The clients are amazing — travelers who appreciate quality and don't haggle on price. My average ticket went up 40%.",
-      author: "Michael T.",
-      role: "Licensed Massage Therapist",
-      location: "30A",
-      metric: "40% higher avg. booking",
-    },
-    {
-      quote: "I was skeptical about another platform, but ROAM actually delivers premium clients. Bridal parties alone have been a game-changer.",
-      author: "Sarah L.",
-      role: "Esthetician",
+      quote: "Travelers book appointments at my salon through ROAM before their beach vacations. I've added 25+ new clients this season without any marketing.",
+      author: "Jennifer R.",
+      role: "Salon Owner",
       location: "Destin",
+      metric: "25+ new clients",
+      type: "location",
+    },
+    {
+      quote: "I bring massage therapy to vacation rentals along 30A. The clients are amazing — travelers who appreciate quality and tip generously.",
+      author: "Michael T.",
+      role: "Mobile Massage Therapist",
+      location: "30A",
+      metric: "40% higher tips",
+      type: "mobile",
+    },
+    {
+      quote: "Bridal parties book at my studio AND I go to their rentals. ROAM gives me both options and the clients are premium.",
+      author: "Sarah L.",
+      role: "Hair & Makeup Artist",
+      location: "Santa Rosa Beach",
       metric: "$2,400/mo from bridal",
+      type: "both",
     },
   ];
 
@@ -336,7 +462,18 @@ export function ProviderTestimonials() {
             <div className="border-t pt-4">
               <div className="font-semibold text-foreground">{t.author}</div>
               <div className="text-xs text-muted-foreground">{t.role}</div>
-              <div className="text-xs text-primary">{t.location}</div>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-xs text-primary">{t.location}</span>
+                <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${
+                  t.type === "location" 
+                    ? "bg-blue-100 text-blue-700" 
+                    : t.type === "mobile" 
+                    ? "bg-green-100 text-green-700"
+                    : "bg-purple-100 text-purple-700"
+                }`}>
+                  {t.type === "location" ? "Location" : t.type === "mobile" ? "Mobile" : "Both"}
+                </span>
+              </div>
             </div>
           </div>
         ))}
@@ -405,22 +542,22 @@ export function ActivityProof() {
 export function ValueProps() {
   const items = [
     {
-      title: "Turn Vacation Season Into Your Highest-Earning Season",
-      body: "While other providers slow down, you'll be booked solid with travelers who pay premium rates. Zero commission means you keep every dollar.",
-      icon: TrendingUp,
-      highlight: "Keep 100%",
+      title: "New Clients Find You — At Your Location or Theirs",
+      body: "Travelers discover your salon, spa, or mobile services through ROAM. Whether they come to you or you go to them, you get booked.",
+      icon: Target,
+      highlight: "Zero marketing",
     },
     {
-      title: "Premium Clients Who Don't Price Shop",
-      body: "Vacation travelers value convenience over cost. They're prepaid, pre-vetted, and ready to tip well for great service.",
+      title: "Premium Clients Who Value Quality",
+      body: "Vacation travelers don't price shop. They're prepaid, pre-vetted, and ready to tip well for great service.",
       icon: DollarSign,
       highlight: "Higher tips",
     },
     {
-      title: "We Bring You Travelers — You Focus on Your Craft",
-      body: "We handle marketing, payments, scheduling, and client communication. You just show up and do what you love.",
-      icon: Target,
-      highlight: "Zero marketing",
+      title: "Keep 100% of What You Charge",
+      body: "Zero commission on your services. Customers pay a platform fee — you keep every dollar you earn.",
+      icon: TrendingUp,
+      highlight: "Keep 100%",
     },
   ];
 
@@ -428,10 +565,10 @@ export function ValueProps() {
     <section id="benefits" className="container py-12 md:py-20">
       <div className="mx-auto max-w-3xl text-center">
         <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-          Why Providers Are Switching to ROAM
+          Why Providers Are Growing with ROAM
         </h2>
         <p className="mt-3 text-muted-foreground">
-          Stop chasing clients. Start getting booked by travelers.
+          Stop chasing clients. Let travelers find you.
         </p>
       </div>
       <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">

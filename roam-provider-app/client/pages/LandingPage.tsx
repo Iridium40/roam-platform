@@ -10,6 +10,7 @@ import {
   FoundingProvider,
   PerfectFor,
   ClientTypes,
+  ProviderTypes,
 } from "@/components/marketing/Sections";
 import { Check } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -20,6 +21,7 @@ export default function LandingPage() {
       <Hero />
       <ActivityProof />
       <ProviderTestimonials />
+      <ProviderTypes />
       <ValueProps />
       <ClientTypes />
       <PerfectFor />
@@ -35,11 +37,11 @@ export default function LandingPage() {
 
 function Hero() {
   const bullets = [
-    "Vacation Rentals & Beach Houses",
-    "Bridal Parties & Special Events",
-    "Luxury Condos & Resorts",
-    "Travelers Who Pay Premium Rates",
-    "Zero Commission — Keep 100%",
+    "Travelers book at your salon or spa",
+    "Mobile bookings at vacation rentals",
+    "Bridal parties & special events",
+    "Premium clients who value quality",
+    "Zero commission — Keep 100%",
   ];
 
   return (
@@ -55,11 +57,11 @@ function Hero() {
             Now Accepting Providers in 30A & Emerald Coast
           </div>
           <h1 className="text-4xl font-extrabold leading-tight tracking-tight sm:text-5xl">
-            Get Booked by Travelers
-            <br className="hidden sm:block" /> Visiting the Emerald Coast
+            Grow Your Client Base
+            <br className="hidden sm:block" /> on the Emerald Coast
           </h1>
           <p className="mt-4 max-w-xl text-lg text-muted-foreground">
-            Turn vacation season into your highest-earning season. ROAM connects you with premium clients — travelers, bridal parties, and luxury guests who don't price shop.
+            Whether clients visit your location or you go to them — ROAM connects you with travelers, bridal parties, and premium guests who value quality over price.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Button asChild className="min-w-40">
@@ -73,7 +75,7 @@ function Hero() {
             </Button>
           </div>
           <div className="mt-8">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">Your Clients Include:</p>
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">How You Get Clients:</p>
             <ul className="grid gap-2 sm:grid-cols-2">
               {bullets.map((b) => (
                 <li
@@ -95,7 +97,7 @@ function Hero() {
             />
           </div>
           <p className="mt-3 text-center text-xs text-muted-foreground">
-            Your Mobile Business Command Center
+            Your Business Command Center
           </p>
         </div>
       </div>

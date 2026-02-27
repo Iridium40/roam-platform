@@ -8,28 +8,46 @@ function formatCurrency(n: number) {
 
 const serviceExamples = [
   {
-    category: "Massage Therapy",
-    avgPrice: "$120-180",
+    category: "Salon Services",
+    avgPrice: "$65-150",
+    avgBookings: "10-20/week",
+    topEarners: "$8,000+/mo",
+    type: "location",
+  },
+  {
+    category: "Spa & Facials",
+    avgPrice: "$120-200",
+    avgBookings: "8-15/week",
+    topEarners: "$7,500+/mo",
+    type: "location",
+  },
+  {
+    category: "Mobile Massage",
+    avgPrice: "$150-200",
     avgBookings: "8-15/week",
     topEarners: "$6,000+/mo",
+    type: "mobile",
   },
   {
     category: "Hair & Makeup",
     avgPrice: "$150-350",
     avgBookings: "5-12/week",
     topEarners: "$8,000+/mo",
+    type: "both",
   },
   {
     category: "IV Therapy",
     avgPrice: "$175-300",
     avgBookings: "10-20/week",
     topEarners: "$12,000+/mo",
+    type: "mobile",
   },
   {
     category: "Personal Training",
     avgPrice: "$80-150",
     avgBookings: "15-25/week",
     topEarners: "$7,500+/mo",
+    type: "both",
   },
 ];
 
@@ -58,11 +76,11 @@ export default function EarningsCalculator() {
         <p className="text-sm font-medium text-center text-muted-foreground mb-4">
           What providers in your category typically earn on ROAM:
         </p>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
           {serviceExamples.map((ex) => (
             <div
               key={ex.category}
-              className="rounded-xl border bg-card p-4 text-center hover:border-primary/50 transition-colors cursor-pointer"
+              className="rounded-xl border bg-card p-4 text-center hover:border-primary/50 transition-colors cursor-pointer relative"
               onClick={() => {
                 const avgPrice = parseInt(ex.avgPrice.split("-")[0].replace("$", ""));
                 const avgBookings = parseInt(ex.avgBookings.split("-")[0]);
@@ -70,7 +88,18 @@ export default function EarningsCalculator() {
                 setBookings(avgBookings);
               }}
             >
-              <div className="text-sm font-semibold text-foreground">{ex.category}</div>
+              <div className="absolute top-2 right-2">
+                <span className={`text-[9px] font-medium px-1.5 py-0.5 rounded ${
+                  ex.type === "location" 
+                    ? "bg-blue-100 text-blue-700" 
+                    : ex.type === "mobile" 
+                    ? "bg-green-100 text-green-700"
+                    : "bg-purple-100 text-purple-700"
+                }`}>
+                  {ex.type === "location" ? "Location" : ex.type === "mobile" ? "Mobile" : "Both"}
+                </span>
+              </div>
+              <div className="text-sm font-semibold text-foreground mt-3">{ex.category}</div>
               <div className="text-xs text-muted-foreground mt-1">{ex.avgPrice}/session</div>
               <div className="text-xs text-muted-foreground">{ex.avgBookings}</div>
               <div className="text-sm font-bold text-primary mt-2">{ex.topEarners}</div>
