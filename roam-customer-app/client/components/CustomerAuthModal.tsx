@@ -65,11 +65,10 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
     phone: "",
   });
 
-  // SMS consent state - both SMS checkboxes must be unchecked by default and optional per Twilio mixed use case rules
   const [consent, setConsent] = useState({
-    serviceMessages: false,     // Must default to unchecked, not required to submit
-    marketingMessages: false,   // Must default to unchecked, not required to submit
-    termsAccepted: false,       // Required to submit
+    serviceMessages: false,
+    marketingMessages: false,
+    termsAccepted: false,
   });
 
   const resetForm = () => {
@@ -82,7 +81,11 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
       confirmPassword: "",
       phone: "",
     });
-    setConsent({ serviceMessages: false, marketingMessages: false, termsAccepted: false });
+    setConsent({
+      serviceMessages: false,
+      marketingMessages: false,
+      termsAccepted: false,
+    });
     setError(null);
     setSuccess(null);
     setShowPassword(false);
@@ -706,9 +709,7 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
                       </div>
                     )}
 
-                  {/* SMS Consent Section - Both SMS checkboxes are optional per Twilio mixed use case compliance */}
                   <div className="space-y-3">
-                    {/* Transactional/Informational SMS - Optional, unchecked by default */}
                     <div className="flex items-start space-x-3 p-3 bg-muted/50 rounded-lg">
                       <Checkbox
                         id="service-messages"
@@ -723,17 +724,14 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
                           htmlFor="service-messages"
                           className="text-sm leading-tight cursor-pointer"
                         >
-                          By checking, you are allowing to receive{' '}
-                          <strong>transactional/informational SMS</strong>{' '}
-                          communications regarding account notifications, booking
-                          confirmations, appointment reminders, customer care, etc,
-                          from <strong>ROAM</strong>. Messages frequency may vary.
-                          Data rates may apply, <strong>reply STOP to opt-out.</strong>
+                          I agree to receive booking confirmations, appointment
+                          reminders, and account notifications via SMS. Message
+                          and data rates may apply.
+                          {' '}<span className="text-destructive">*</span>
                         </label>
                       </div>
                     </div>
 
-                    {/* Promotional/Marketing SMS - Optional, unchecked by default */}
                     <div className="flex items-start space-x-3 p-3 bg-muted/50 rounded-lg">
                       <Checkbox
                         id="marketing-messages"
@@ -748,16 +746,16 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
                           htmlFor="marketing-messages"
                           className="text-sm leading-tight cursor-pointer"
                         >
-                          By checking, you are allowing to receive{' '}
-                          <strong>promotional/marketing SMS</strong>{' '}
-                          communications from <strong>ROAM</strong>. Frequency may
-                          vary, Data rates may apply,{' '}
-                          <strong>reply HELP for help or STOP to opt-out.</strong>
+                          I'd like to receive promotional offers, discounts, and
+                          announcements via SMS from <strong>ROAM</strong>. Msg
+                          frequency varies. Msg & data rates may apply. Reply STOP
+                          to cancel anytime. Reply HELP for help. This is not
+                          required to create an account or use ROAM services.
+                          Consent is not a condition of any purchase.
                         </label>
                       </div>
                     </div>
 
-                    {/* Terms & Privacy - Required */}
                     <div className="flex items-start space-x-3 p-3 bg-muted/50 rounded-lg">
                       <Checkbox
                         id="terms-accepted"
@@ -772,7 +770,7 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
                           htmlFor="terms-accepted"
                           className="text-sm leading-tight cursor-pointer"
                         >
-                          By checking, I accept{' '}
+                          I accept the{' '}
                           <a
                             href="/terms"
                             target="_blank"
@@ -790,6 +788,7 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
                           >
                             Privacy Policy
                           </a>.
+                          {' '}<span className="text-destructive">*</span>
                         </label>
                       </div>
                     </div>
@@ -798,7 +797,7 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
                   <Button
                     type="submit"
                     className="w-full bg-roam-blue hover:bg-roam-blue/90"
-                    disabled={loading || !consent.termsAccepted}
+                    disabled={loading || !consent.termsAccepted || !consent.serviceMessages}
                   >
                     {loading ? (
                       <>

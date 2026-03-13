@@ -20,9 +20,9 @@ export default function SignIn() {
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
   const [consent, setConsent] = useState({
-    serviceMessages: false,     // Must default to unchecked, not required to submit
-    marketingMessages: false,   // Must default to unchecked, not required to submit
-    termsAccepted: false,       // Required to submit
+    serviceMessages: false,
+    marketingMessages: false,
+    termsAccepted: false,
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -272,10 +272,8 @@ export default function SignIn() {
                   )}
                 </div>
 
-                {/* SMS Consent Section - Both SMS checkboxes are optional per Twilio mixed use case compliance */}
                 {isSignUp && (
                   <div className="space-y-3">
-                    {/* Transactional/Informational SMS - Optional, unchecked by default */}
                     <div className="flex items-start space-x-3 p-3 bg-muted/50 rounded-lg">
                       <Checkbox
                         id="service-messages-page"
@@ -290,17 +288,14 @@ export default function SignIn() {
                           htmlFor="service-messages-page"
                           className="text-sm leading-tight cursor-pointer"
                         >
-                          By checking, you are allowing to receive{' '}
-                          <strong>transactional/informational SMS</strong>{' '}
-                          communications regarding account notifications, booking
-                          confirmations, appointment reminders, customer care, etc,
-                          from <strong>ROAM</strong>. Messages frequency may vary.
-                          Data rates may apply, <strong>reply STOP to opt-out.</strong>
+                          I agree to receive booking confirmations, appointment
+                          reminders, and account notifications via SMS. Message
+                          and data rates may apply.
+                          {' '}<span className="text-destructive">*</span>
                         </label>
                       </div>
                     </div>
 
-                    {/* Promotional/Marketing SMS - Optional, unchecked by default */}
                     <div className="flex items-start space-x-3 p-3 bg-muted/50 rounded-lg">
                       <Checkbox
                         id="marketing-messages-page"
@@ -315,16 +310,16 @@ export default function SignIn() {
                           htmlFor="marketing-messages-page"
                           className="text-sm leading-tight cursor-pointer"
                         >
-                          By checking, you are allowing to receive{' '}
-                          <strong>promotional/marketing SMS</strong>{' '}
-                          communications from <strong>ROAM</strong>. Frequency may
-                          vary, Data rates may apply,{' '}
-                          <strong>reply HELP for help or STOP to opt-out.</strong>
+                          I'd like to receive promotional offers, discounts, and
+                          announcements via SMS from <strong>ROAM</strong>. Msg
+                          frequency varies. Msg & data rates may apply. Reply STOP
+                          to cancel anytime. Reply HELP for help. This is not
+                          required to create an account or use ROAM services.
+                          Consent is not a condition of any purchase.
                         </label>
                       </div>
                     </div>
 
-                    {/* Terms & Privacy - Required */}
                     <div className="flex items-start space-x-3 p-3 bg-muted/50 rounded-lg">
                       <Checkbox
                         id="terms-accepted-page"
@@ -339,7 +334,7 @@ export default function SignIn() {
                           htmlFor="terms-accepted-page"
                           className="text-sm leading-tight cursor-pointer"
                         >
-                          By checking, I accept{' '}
+                          I accept the{' '}
                           <Link to="/terms" className="text-roam-blue underline hover:text-roam-blue/80">
                             Terms of Service
                           </Link>
@@ -347,6 +342,7 @@ export default function SignIn() {
                           <Link to="/privacy" className="text-roam-blue underline hover:text-roam-blue/80">
                             Privacy Policy
                           </Link>.
+                          {' '}<span className="text-destructive">*</span>
                         </label>
                       </div>
                     </div>
@@ -356,7 +352,7 @@ export default function SignIn() {
                 <Button 
                   type="submit" 
                   className="w-full bg-roam-blue hover:bg-roam-blue/90"
-                  disabled={loading || (isSignUp && !consent.termsAccepted)}
+                  disabled={loading || (isSignUp && (!consent.termsAccepted || !consent.serviceMessages))}
                 >
                   {loading ? (
                     <>

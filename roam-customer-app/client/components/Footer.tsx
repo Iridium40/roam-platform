@@ -81,11 +81,13 @@ export function Footer() {
 
           {/* SMS Terms Disclosure */}
           <p className="text-xs text-foreground/40 mt-4 leading-relaxed">
-            <strong>SMS Terms:</strong> By checking the optional marketing messages box during sign-up, 
-            you consent to receive recurring automated promotional text messages from ROAM at the 
-            number provided. Consent to receive marketing messages is not a condition of purchase 
-            or use of our services. Msg frequency varies. Msg & data rates may apply. 
-            Reply STOP to unsubscribe, HELP for help. View our{' '}
+            <strong>SMS Terms:</strong> By creating an account, you consent to receive transactional 
+            SMS messages (booking confirmations, appointment reminders, account notifications) from 
+            ROAM at the number provided. You may also opt in to receive promotional SMS messages; 
+            consent to receive marketing messages is not a condition of purchase or use of our 
+            services. Msg frequency varies. Msg & data rates may apply. Reply STOP to unsubscribe, 
+            HELP for help. No mobile information will be shared with third parties for 
+            marketing/promotional purposes. View our{' '}
             <Link to="/terms-and-conditions" className="underline hover:text-roam-blue transition-colors">
               Terms
             </Link>{' '}&{' '}

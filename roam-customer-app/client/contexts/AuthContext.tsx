@@ -458,8 +458,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         first_name: customerData.firstName,
         last_name: customerData.lastName,
         phone: customerData.phone || "",
-        sms_service_consent: customerData.smsServiceConsent ?? true,
-        sms_service_consent_date: (customerData.smsServiceConsent ?? true) ? now : null,
+        sms_service_consent: customerData.smsServiceConsent ?? false,
+        sms_service_consent_date: customerData.smsServiceConsent ? now : null,
         sms_marketing_consent: customerData.smsMarketingConsent ?? false,
         sms_marketing_consent_date: customerData.smsMarketingConsent ? now : null,
       };
