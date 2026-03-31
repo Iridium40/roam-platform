@@ -185,13 +185,13 @@ export default function MarketingLanding() {
         href="https://roamprovider.com/roampro"
         target="_blank"
         rel="noopener noreferrer"
-        className="block bg-gradient-to-r from-roam-blue to-blue-700 hover:from-roam-blue/95 hover:to-blue-700/95 transition-all"
+        className="block bg-roam-blue hover:bg-roam-blue/90 transition-colors"
       >
-        <div className="container mx-auto flex items-center justify-center gap-3 py-4 px-4 text-white">
+        <div className="container mx-auto flex items-center justify-center gap-3 py-4 px-4 text-roam-yellow">
           <span className="text-sm md:text-base font-semibold">
             Are you a wellness professional? Join ROAM and grow your business.
           </span>
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 backdrop-blur-sm px-4 py-1.5 text-sm font-semibold whitespace-nowrap hover:bg-white/30 transition-colors">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-roam-yellow text-roam-blue px-4 py-1.5 text-sm font-bold whitespace-nowrap hover:bg-roam-yellow/90 transition-colors">
             Become a Provider
             <ArrowRight className="h-4 w-4" />
           </span>
