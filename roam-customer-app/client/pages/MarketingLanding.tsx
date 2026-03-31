@@ -10,9 +10,8 @@ import ServicesShowcase from "@/components/roam/ServicesShowcase";
 import TrustSafety from "@/components/roam/TrustSafety";
 import LocationBenefits from "@/components/roam/LocationBenefits";
 import SocialProof from "@/components/roam/SocialProof";
-import BecomeProvider from "@/components/roam/BecomeProvider";
 import FAQ from "@/components/roam/FAQ";
-import { ChevronDown, Loader2, CheckCircle, AlertCircle } from "lucide-react";
+import { ChevronDown, Loader2, CheckCircle, AlertCircle, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import Turnstile from "react-turnstile";
 
@@ -180,13 +179,31 @@ export default function MarketingLanding() {
 
       {/* Marketing Sections */}
       <Hero />
+
+      {/* Become a Provider Banner */}
+      <a
+        href="https://roamprovider.com/roampro"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="block bg-gradient-to-r from-roam-blue to-blue-700 hover:from-roam-blue/95 hover:to-blue-700/95 transition-all"
+      >
+        <div className="container mx-auto flex items-center justify-center gap-3 py-4 px-4 text-white">
+          <span className="text-sm md:text-base font-semibold">
+            Are you a wellness professional? Join ROAM and grow your business.
+          </span>
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 backdrop-blur-sm px-4 py-1.5 text-sm font-semibold whitespace-nowrap hover:bg-white/30 transition-colors">
+            Become a Provider
+            <ArrowRight className="h-4 w-4" />
+          </span>
+        </div>
+      </a>
+
       <ValueProps />
       <MarketingHowItWorks />
       <ServicesShowcase />
       <TrustSafety />
       <LocationBenefits />
       <SocialProof />
-      <BecomeProvider />
       <FAQ />
       <Footer />
     </div>
