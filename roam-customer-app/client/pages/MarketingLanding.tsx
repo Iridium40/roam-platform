@@ -10,6 +10,7 @@ import ServicesShowcase from "@/components/roam/ServicesShowcase";
 import TrustSafety from "@/components/roam/TrustSafety";
 import LocationBenefits from "@/components/roam/LocationBenefits";
 import SocialProof from "@/components/roam/SocialProof";
+import BecomeProvider from "@/components/roam/BecomeProvider";
 import FAQ from "@/components/roam/FAQ";
 import { ChevronDown, Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -185,6 +186,7 @@ export default function MarketingLanding() {
       <TrustSafety />
       <LocationBenefits />
       <SocialProof />
+      <BecomeProvider />
       <FAQ />
       <Footer />
     </div>

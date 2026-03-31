@@ -274,7 +274,7 @@ export function PerfectFor() {
           If you checked 2 or more, ROAM was built for you.
         </p>
         <a
-          href="/provider-portal"
+          href="/provider-signup"
           className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-lg font-semibold hover:bg-primary/90 transition-colors"
         >
           See If You Qualify →
@@ -394,7 +394,7 @@ export function FoundingProvider() {
               </p>
             </div>
             <a
-              href="/provider-portal"
+              href="/provider-signup"
               className="mt-4 block w-full text-center bg-primary text-primary-foreground py-3 rounded-lg font-semibold hover:bg-primary/90 transition-colors"
             >
               Claim Your Founding Spot →

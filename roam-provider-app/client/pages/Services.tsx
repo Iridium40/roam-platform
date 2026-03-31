@@ -64,7 +64,7 @@ function Hero() {
           </p>
           <div className="flex flex-wrap items-center justify-center gap-4">
             <Button asChild size="lg" className="bg-white text-roam-blue hover:bg-white/90 button-shine">
-              <Link to="/provider-portal">Become a Provider</Link>
+              <Link to="/provider-signup">Become a Provider</Link>
             </Button>
             <Button asChild size="lg" className="bg-roam-yellow text-roam-blue hover:bg-roam-yellow/90 font-semibold">
               <Link to="/contact">Talk to Our Team</Link>
@@ -322,7 +322,7 @@ function FinalCTA() {
           </p>
           <div className="flex flex-wrap items-center justify-center gap-4">
             <Button asChild size="lg" className="bg-white text-roam-blue hover:bg-white/90 button-shine">
-              <Link to="/provider-portal">Apply Now</Link>
+              <Link to="/provider-signup">Apply Now</Link>
             </Button>
             <Button asChild size="lg" className="bg-roam-yellow text-roam-blue hover:bg-roam-yellow/90 font-semibold">
               <Link to="/contact">Contact Support</Link>

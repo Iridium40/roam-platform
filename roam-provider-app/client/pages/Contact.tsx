@@ -14,6 +14,7 @@ export default function Contact() {
       name: String(fd.get("name") || ""),
       email: String(fd.get("email") || ""),
       phone: String(fd.get("phone") || ""),
+      reason: String(fd.get("reason") || ""),
       message: String(fd.get("message") || ""),
     };
 
@@ -151,6 +152,26 @@ function ContactSection({ onSubmit, loading }: { onSubmit: (e: React.FormEvent<H
                   placeholder="(555) 123-4567"
                   />
                 </div>
+              <div className="grid gap-2">
+                <label htmlFor="reason" className="text-sm font-medium">
+                  Reason for Contact <span className="text-red-500">*</span>
+                </label>
+                <select
+                  id="reason"
+                  name="reason"
+                  required
+                  defaultValue=""
+                  className="h-11 rounded-lg border bg-background px-4 outline-none ring-offset-background transition-all focus-visible:ring-2 focus-visible:ring-roam-blue appearance-none"
+                >
+                  <option value="" disabled>Select a reason...</option>
+                  <option value="Sign Up Help">Sign Up Help</option>
+                  <option value="Demo">Demo</option>
+                  <option value="General Questions">General Questions</option>
+                  <option value="New Services Request">New Services Request</option>
+                  <option value="New Feature Request">New Feature Request</option>
+                  <option value="Technical Support">Technical Support</option>
+                </select>
+              </div>
                 <div className="grid gap-2">
                   <label htmlFor="message" className="text-sm font-medium">
                   How can we help? <span className="text-red-500">*</span>

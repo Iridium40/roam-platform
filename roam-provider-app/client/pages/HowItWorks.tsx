@@ -343,7 +343,7 @@ function WhyChooseROAM() {
         <div className="text-center mt-10">
           <div className="inline-flex flex-wrap items-center justify-center gap-4">
             <Button asChild size="lg" className="bg-roam-blue text-white hover:bg-roam-blue/90 button-shine">
-              <Link to="/provider-portal">Get Started</Link>
+              <Link to="/provider-signup">Get Started</Link>
             </Button>
             <Button asChild size="lg" variant="outline" className="border-roam-blue text-roam-blue hover:bg-roam-blue/10">
               <Link to="/contact">Talk to Our Team</Link>
@@ -371,7 +371,7 @@ function FinalCTA() {
           </p>
           <div className="flex flex-wrap items-center justify-center gap-4">
             <Button asChild size="lg" className="bg-white text-roam-blue hover:bg-white/90 button-shine">
-              <Link to="/provider-portal">Apply Now</Link>
+              <Link to="/provider-signup">Apply Now</Link>
             </Button>
             <Button asChild size="lg" className="bg-roam-yellow text-roam-blue hover:bg-roam-yellow/90 font-semibold">
               <Link to="/contact">Contact Support</Link>

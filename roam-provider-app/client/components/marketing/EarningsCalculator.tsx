@@ -180,7 +180,7 @@ export default function EarningsCalculator() {
             </p>
           </div>
           <Button className="mt-6 w-full" asChild>
-            <a href="/provider-portal">Start Earning Today →</a>
+            <a href="/provider-signup">Start Earning Today →</a>
           </Button>
         </div>
       </div>

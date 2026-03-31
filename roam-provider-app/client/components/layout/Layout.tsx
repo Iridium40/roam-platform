@@ -78,7 +78,7 @@ function MarketingHeader() {
             <ShareMenu />
           </div>
           <Button asChild className="hidden sm:inline-flex">
-            <Link to="/provider-portal">Become a Provider</Link>
+            <Link to="/provider-signup">Become a Provider</Link>
           </Button>
         </div>
       </div>
@@ -117,7 +117,7 @@ function MarketingHeader() {
             </Link>
             <div className="pt-4 border-t">
               <Button asChild className="w-full">
-                <Link to="/provider-portal" onClick={() => setIsMobileMenuOpen(false)}>
+                <Link to="/provider-signup" onClick={() => setIsMobileMenuOpen(false)}>
                   Become a Provider
                 </Link>
               </Button>
@@ -169,12 +169,12 @@ function MarketingFooter() {
           <h4 className="mb-3 font-semibold">For Providers</h4>
           <ul className="space-y-2 text-sm text-muted-foreground">
             <li>
-              <Link to="/provider-portal" className="hover:text-foreground">
+              <Link to="/provider-signup" className="hover:text-foreground">
                 Provider Sign Up
               </Link>
             </li>
             <li>
-              <Link to="/provider-portal" className="hover:text-foreground">
+              <Link to="/provider-login" className="hover:text-foreground">
                 Provider Login
               </Link>
             </li>

@@ -19,6 +19,7 @@ function getContactFormEmailTemplate(
   name: string,
   email: string,
   phone: string | null,
+  reason: string | null,
   message: string
 ): string {
   return `
@@ -118,6 +119,12 @@ function getContactFormEmailTemplate(
               <div class="field-value">${phone}</div>
             </div>
             ` : ''}
+            ${reason ? `
+            <div class="field">
+              <div class="field-label">Reason for Contact:</div>
+              <div class="field-value">${reason}</div>
+            </div>
+            ` : ''}
             <div class="field">
               <div class="field-label">Message:</div>
               <div class="field-value" style="white-space: pre-wrap; margin-top: 10px;">${message}</div>
@@ -154,7 +161,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { name, email, phone, message } = req.body;
+    const { name, email, phone, reason, message } = req.body;
 
     // Validate required fields
     if (!name || !email || !message) {
@@ -172,17 +179,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    console.log('📧 Sending contact form email:', { name, email, phone: phone || 'not provided' });
+    console.log('📧 Sending contact form email:', { name, email, phone: phone || 'not provided', reason: reason || 'not specified' });
 
     // Send email to support team
     if (process.env.RESEND_API_KEY) {
-      const emailHtml = getContactFormEmailTemplate(name, email, phone || null, message);
+      const emailHtml = getContactFormEmailTemplate(name, email, phone || null, reason || null, message);
 
       const { data: emailData, error: emailError } = await resend.emails.send({
         from: `${ROAM_EMAIL_CONFIG.fromName} <${ROAM_EMAIL_CONFIG.fromEmail}>`,
         to: [ROAM_EMAIL_CONFIG.supportEmail],
         replyTo: email, // Allow replying directly to the sender
-        subject: `New Contact Form Submission from ${name}`,
+        subject: `[${reason || 'General'}] Contact from ${name}`,
         html: emailHtml,
       });
 

@@ -208,6 +208,27 @@ export default function ProviderSignup() {
                     </ul>
                   </div>
 
+                  {/* Help & Demo CTA */}
+                  <div className="bg-roam-yellow/10 border border-roam-yellow/30 rounded-lg p-5 text-center">
+                    <h4 className="font-semibold text-foreground mb-1">
+                      Need help getting started?
+                    </h4>
+                    <p className="text-sm text-foreground/70 mb-4">
+                      Request a one-on-one walkthrough of the sign-up process or
+                      schedule a live demo of the ROAM platform — our team is
+                      happy to help.
+                    </p>
+                    <Button
+                      asChild
+                      variant="outline"
+                      className="border-roam-blue text-roam-blue hover:bg-roam-blue/10"
+                    >
+                      <Link to="/contact">
+                        Request a Demo or Sign-Up Assistance
+                      </Link>
+                    </Button>
+                  </div>
+
                   {/* Already Have Account */}
                   <div className="text-center pt-4 border-t border-border/50">
                     <p className="text-sm text-foreground/60 mb-3">

@@ -65,7 +65,7 @@ function Hero() {
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Button asChild className="min-w-40">
-              <Link to="/provider-portal">Apply Now — Limited Spots</Link>
+              <Link to="/provider-signup">Apply Now — Limited Spots</Link>
             </Button>
             <Button
               asChild
@@ -125,7 +125,7 @@ function CTA() {
                 variant="secondary"
                 className="bg-white text-foreground hover:bg-white/90"
               >
-                <Link to="/become-a-provider">Create Provider Profile</Link>
+                <Link to="/provider-signup">Become a Provider</Link>
               </Button>
               <Button
                 asChild
