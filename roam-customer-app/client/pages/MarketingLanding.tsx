@@ -177,9 +177,6 @@ export default function MarketingLanding() {
         </div>
       </section>
 
-      {/* Marketing Sections */}
-      <Hero />
-
       {/* Become a Provider Banner */}
       <a
         href="https://roamprovider.com/roampro"
@@ -198,6 +195,8 @@ export default function MarketingLanding() {
         </div>
       </a>
 
+      {/* Marketing Sections */}
+      <Hero />
       <ValueProps />
       <MarketingHowItWorks />
       <ServicesShowcase />
