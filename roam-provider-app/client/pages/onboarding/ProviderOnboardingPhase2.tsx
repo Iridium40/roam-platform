@@ -395,12 +395,23 @@ export default function ProviderOnboardingPhase2() {
                 />
               </div>
             </div>
-            <Badge
-              variant="outline"
-              className="border-roam-blue text-roam-blue"
-            >
-              Business Onboarding - Phase 2
-            </Badge>
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <Button variant="outline" size="sm" className="shrink-0 border-roam-blue text-roam-blue hover:bg-roam-blue/10" asChild>
+                <a
+                  href="https://www.roamprovider.com/contact"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Need On-Boarding Help?
+                </a>
+              </Button>
+              <Badge
+                variant="outline"
+                className="shrink-0 border-roam-blue text-roam-blue"
+              >
+                Business Onboarding - Phase 2
+              </Badge>
+            </div>
           </div>
         </div>
       </nav>
