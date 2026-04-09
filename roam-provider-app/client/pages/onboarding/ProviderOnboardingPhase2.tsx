@@ -396,7 +396,12 @@ export default function ProviderOnboardingPhase2() {
               </div>
             </div>
             <div className="flex flex-wrap items-center justify-end gap-2">
-              <Button variant="outline" size="sm" className="shrink-0 border-roam-blue text-roam-blue hover:bg-roam-blue/10" asChild>
+              <Button
+                variant="default"
+                size="sm"
+                className="shrink-0 bg-orange-500 text-white hover:bg-orange-600 border-orange-500 focus-visible:ring-orange-500/40"
+                asChild
+              >
                 <a
                   href="https://www.roamprovider.com/contact"
                   target="_blank"
