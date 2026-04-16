@@ -75,6 +75,16 @@ function Hero() {
           <p className="text-lg text-white/90 mb-4">
             Questions, demos, partnerships—send a message and we'll respond within one business day.
           </p>
+          <p className="text-base text-white/90">
+            <span className="block sm:inline sm:mr-2 text-white/80">Support phone:</span>
+            <a
+              href="tel:+18504049029"
+              className="font-semibold text-white underline-offset-4 hover:underline inline-flex items-center gap-2 justify-center"
+            >
+              <Phone className="w-5 h-5 shrink-0" aria-hidden />
+              +1 (850) 404-9029
+            </a>
+          </p>
         </div>
       </div>
     </div>
@@ -89,6 +99,13 @@ function ContactSection({ onSubmit, loading }: { onSubmit: (e: React.FormEvent<H
       detail: "providersupport@roamyourbestlife.com",
       description: "Best for detailed inquiries",
       link: "mailto:providersupport@roamyourbestlife.com",
+    },
+    {
+      icon: Phone,
+      title: "Phone",
+      detail: "+1 (850) 404-9029",
+      description: "Support and onboarding help",
+      link: "tel:+18504049029",
     },
     {
       icon: Clock,
@@ -227,12 +244,22 @@ function ContactSection({ onSubmit, loading }: { onSubmit: (e: React.FormEvent<H
                       <p className="text-sm text-foreground font-medium mb-1">{method.detail}</p>
                       <p className="text-xs text-muted-foreground">{method.description}</p>
                       {method.link && (
-                        <a 
+                        <a
                           href={method.link}
                           className="inline-flex items-center gap-1 text-xs text-roam-blue hover:underline mt-2"
-                >
-                          Contact us <Mail className="w-3 h-3" />
-                </a>
+                        >
+                          {method.link.startsWith("tel:") ? (
+                            <>
+                              <Phone className="w-3 h-3" />
+                              Call us
+                            </>
+                          ) : (
+                            <>
+                              <Mail className="w-3 h-3" />
+                              Email us
+                            </>
+                          )}
+                        </a>
                       )}
                     </div>
                   </div>
@@ -399,11 +426,19 @@ function FAQ() {
         ))}
       </div>
       
-      <div className="mt-12 text-center">
-        <p className="text-muted-foreground mb-4">Still have questions?</p>
-        <Button asChild size="lg" className="bg-roam-blue text-white hover:bg-roam-blue/90 button-shine">
-          <a href="mailto:providersupport@roamyourbestlife.com">Email Our Team</a>
-        </Button>
+      <div className="mt-12 text-center space-y-4">
+        <p className="text-muted-foreground">Still have questions?</p>
+        <div className="flex flex-col sm:flex-row flex-wrap items-center justify-center gap-3">
+          <Button asChild size="lg" className="bg-roam-blue text-white hover:bg-roam-blue/90 button-shine">
+            <a href="mailto:providersupport@roamyourbestlife.com">Email Our Team</a>
+          </Button>
+          <Button asChild size="lg" variant="outline" className="border-roam-blue text-roam-blue hover:bg-roam-blue/10">
+            <a href="tel:+18504049029" className="inline-flex items-center gap-2">
+              <Phone className="w-4 h-4" />
+              +1 (850) 404-9029
+            </a>
+          </Button>
+        </div>
       </div>
     </div>
   );
